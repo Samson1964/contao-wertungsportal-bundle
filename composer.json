@@ -1,0 +1,36 @@
+{
+    "name": "schachbulle/contao-wertungsportal-bundle",
+    "type": "contao-bundle",
+    "description": "Wertungsportal-Bundle für Contao 4",
+    "license": "LGPL-3.0-or-later",
+    "authors": [
+        {
+            "name": "Frank Binding",
+            "homepage": "https://www.schachbulle.de/"
+        }
+    ],
+    "require": {
+        "php": "^7.0 || ^8.0",
+        "contao/core-bundle": "^4"
+    },
+    "conflict": {
+        "contao/core": "*",
+        "contao/manager-plugin": "<2.0 || >=3.0"
+    },
+    "require-dev": {
+        "contao/manager-plugin": "^2.0",
+        "doctrine/doctrine-cache-bundle": "^1.3"
+    },
+    "extra": {
+        "contao-manager-plugin": "Schachbulle\\ContaoWertungsportalBundle\\ContaoManager\\Plugin"
+    },
+    "autoload": {
+        "psr-4": {
+            "Schachbulle\\ContaoWertungsportalBundle\\": "src/"
+        }
+    },
+    "support": {
+        "issues": "https://github.com/Samson1964/contao-wertungsportal-bundle/issues",
+        "source": "https://github.com/Samson1964/contao-wertungsportal-bundle"
+    }
+}
