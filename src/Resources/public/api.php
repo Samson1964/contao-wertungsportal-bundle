@@ -17,10 +17,10 @@ define('TL_SCRIPT', 'bundles/contaowertungsportal/api.php');
 require($_SERVER['DOCUMENT_ROOT'].'/../system/initialize.php');
 
 /**
- * Class Wertungsportal
+ * Class Wertungsportal_API
  *
  */
-class Wertungsportal
+class Wertungsportal_API
 {
 
 	public function __construct()
@@ -29,9 +29,22 @@ class Wertungsportal
 
 	public function run()
 	{
-		$id = intval(\Input::get('id'));
-		$option = \Input::get('option');
-
+		
+		try 
+		{
+			$portal = new \Schachbulle\ContaoWertungsportalBundle\Classes\Wertungsportal();
+			
+			$result = $portal->callApiWithRefresh('/dwz/dwzliste/clubs');
+			
+			echo "\n?? API-Antwort (HTTP {$result['http_code']}):\n";
+			echo json_encode($result['body'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
+		
+		} 
+		catch(RuntimeException $e) 
+		{
+			echo "\n? Fehler: " . $e->getMessage() . "\n";
+			exit(1);
+		}
 	}
 
 }
@@ -39,5 +52,5 @@ class Wertungsportal
 /**
  * Instantiate controller
  */
-$objWertungsportal = new Wertungsportal();
+$objWertungsportal = new Wertungsportal_API();
 $objWertungsportal->run();
