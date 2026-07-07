@@ -1,0 +1,73 @@
+<?php if(isset($this->daten_vb)): ?>
+
+	<table class="header">
+		<tbody>
+			<tr>
+				<td width="30%" class="label right-line">Gefundene Verbände:</td>
+				<td width="70%" class="value"><?= $this->anzahl_vb ?></td>
+			</tr>
+		</tbody>
+	</table>
+
+	<?php if($this->daten_vb): ?>
+		<table class="body">
+			<thead>
+				<tr>
+					<th width="30%" class="label right-line">ZPS</td>
+					<th width="70%" class="value">Verbandsname</td>
+				</tr>
+			</thead>
+			<tbody>
+			<?php $x = 0; ?>
+			<?php foreach($this->daten_vb as $d): ?>
+				<?php $x++; $class = ($x < count($this->daten_vb)) ? ' bottom-line' : ''; ?>
+				<tr>
+					<td class="right-line<?= $class ?>"><?= $d['zps'] ?></td>
+					<td class="<?= $class ?>"><?= $d['name'] ?></td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+	<?php endif; ?>
+
+<?php endif; ?>
+
+<?php if(isset($this->daten_vn)): ?>
+
+	<table class="header">
+		<tbody>
+			<tr>
+				<td width="30%" class="label right-line">Gefundene Vereine:</td>
+				<td width="70%" class="value"><?= $this->anzahl_vn ?></td>
+			</tr>
+		</tbody>
+	</table>
+
+	<?php if($this->daten_vn): ?>
+		<table class="body">
+			<thead>
+				<tr>
+					<th width="30%" class="label right-line">ZPS</td>
+					<th width="70%" class="value">Vereinsname</td>
+				</tr>
+			</thead>
+			<tbody>
+			<?php $x = 0; ?>
+			<?php foreach($this->daten_vn as $d): ?>
+				<?php $x++; $class = ($x < count($this->daten_vn)) ? ' bottom-line' : ''; ?>
+				<tr>
+					<td class="right-line<?= $class ?>"><?= $d['zps'] ?></td>
+					<td class="<?= $class ?>"><?= $d['name'] ?></td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+	<?php endif; ?>
+
+<?php endif; ?>
+
+<?php if($this->debugausgabe): ?>
+<pre>
+	<?php print_r($this->debugausgabe); ?>
+</pre>
+<?php endif; ?>

@@ -1,0 +1,106 @@
+<?php
+/**
+ * Einfaches Frontend-Modul-Template für Contao 4
+ *
+ * Ablageort: templates/mod_myModule.html5
+ *
+ * Verfügbare Standard-Variablen:
+ *   $this->headline   Überschrift (falls im Modul gesetzt)
+ *   $this->hl         HTML-Tag der Überschrift (h1–h6)
+ *   $this->class      CSS-Klasse(n) des Moduls
+ *   $this->cssID      id-Attribut des Moduls
+ *
+ * Eigene Variablen werden in der Modulklasse per
+ *   $this->Template->foo = 'bar';
+ * bereitgestellt.
+ */
+?>
+<?php
+	$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/default.css';
+	$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/chosen.css';
+	$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/chosen.jquery.min.js';
+?>
+<script>
+(function($)
+{
+	$(document).ready(function(){
+		$(".tl_chosen").chosen();
+	});
+})(jQuery);
+</script>
+
+<div class="<?= $this->class ?> dewis block"<?= $this->cssID; ?> style="<?php if ($this->margin): ?><?= trim($this->margin) ?><?php endif; ?> <?php if ($this->style): ?><?= $this->style ?><?php endif; ?>">
+
+	<?php if ($this->headline): ?>
+		<<?= $this->hl ?>><?= $this->headline ?></<?= $this->hl ?>>
+	<?php endif; ?>
+	
+	<?php $this->block('content'); ?>
+	
+		<div class="dewislinks noprint">
+			<ul>
+			<?php foreach($this->navigation as $d): ?>
+				<?= $d ?>
+			<?php endforeach; ?>
+			</ul>
+		</div>
+
+		<?php if($this->subHeadline): ?>
+			<h2><?= $this->subHeadline ?></h2>
+		<?php endif; ?>
+
+	<table class="header">
+		<tbody>
+			<tr>
+				<td width="30%" class="label">Suchbegriff:</td>
+				<td width="70%" class="value"><?= $this->search_keyword ?></td>
+			</tr>
+			<tr>
+				<td width="30%" class="label">Verband:</td>
+				<td width="70%" class="value"><?= $this->search_verband ?></td>
+			</tr>
+			<tr>
+				<td width="30%" class="label">Von Monat/Jahr:</td>
+				<td width="70%" class="value"><?= $this->search_from ?></td>
+			</tr>
+			<tr>
+				<td width="30%" class="label">Bis Monat/Jahr:</td>
+				<td width="70%" class="value"><?= $this->search_to ?></td>
+			</tr>
+			<tr>
+				<td width="30%" class="label">Gefundene Turniere:</td>
+				<td width="70%" class="value"><?= $this->anzahl ?></td>
+			</tr>
+		</tbody>
+	</table>
+	
+	<table id="dewisTable" class="body tablesorter">
+		<thead>
+			<tr>
+				<th class="right-line">Code</th>
+				<th class="right-line">Turnier</th>
+				<th class="right-line">Region</th>
+				<th class="right-line">Turnier-<br>ende</th>
+				<th class="right-line">Spieler</th>
+				<th>Auswerter</th>
+			</tr>
+		</thead>
+		<tbody>
+		<?php $x = 0; ?>
+		<?php foreach($this->daten as $d): ?>
+			<?php $x++; $class = ($x < count($this->daten)) ? 'bottom-line' : ''; ?>
+			<tr>
+				<td class="right-line <?= $class ?>"><?= $d['Turniercode'] ?></td>
+				<td class="right-line <?= $class ?>"><?= $d['Turniername'] ?></td>
+				<td class="right-line <?= $class ?>"><?= $d['Turnierregion'] ?></td>
+				<td class="right-line <?= $class ?>"><?= $d['Turnierende'] ?></td>
+				<td class="right-line <?= $class ?>"><?= $d['Teilnehmer'] ?></td>
+				<td class="<?= $class ?>"><?= $d['Auswerter'] ?></td>
+			</tr>
+		<?php endforeach; ?>
+		</tbody>
+	</table>
+	
+	<?php $this->endblock(); ?>
+
+</div>

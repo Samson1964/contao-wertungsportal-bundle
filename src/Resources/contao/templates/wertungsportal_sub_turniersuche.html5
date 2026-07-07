@@ -1,0 +1,82 @@
+<?php if(isset($this->daten)): ?>
+	<table class="header">
+		<tbody>
+			<tr>
+				<td width="30%" class="label">Suchbegriff:</td>
+				<td width="70%" class="value"><?= $this->search_keyword ?></td>
+			</tr>
+			<tr>
+				<td width="30%" class="label">Verband:</td>
+				<td width="70%" class="value"><?= $this->search_verband ?></td>
+			</tr>
+			<tr>
+				<td width="30%" class="label">Von Monat/Jahr:</td>
+				<td width="70%" class="value"><?= $this->search_from ?></td>
+			</tr>
+			<tr>
+				<td width="30%" class="label">Bis Monat/Jahr:</td>
+				<td width="70%" class="value"><?= $this->search_to ?></td>
+			</tr>
+			<tr>
+				<td width="30%" class="label">Gefundene Turniere:</td>
+				<td width="70%" class="value"><?= $this->anzahl ?></td>
+			</tr>
+		</tbody>
+	</table>
+	
+	<?php if($this->daten): ?>
+		<?php
+			$GLOBALS['TL_CSS'][] = 'bundles/contaodewis/css/tablesorter.css';
+			$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaodewis/js/jquery.tablesorter.min.js';
+		?>
+		<script>
+		(function($) 
+		{
+			$(document).ready(function(){
+				$.tablesorter.addParser({
+						id: 'germandate',
+						is: function(s) {
+							return false;
+						},
+						format: function(s) {
+							var a = s.split('.');
+							a[1] = a[1].replace(/^[0]+/g,"");
+							return new Date(a.reverse().join("/")).getTime();
+						},
+						type: 'numeric'
+					});
+			  $("#dewisTable").tablesorter({
+			  		headers: { 2: { sorter:'germandate' }}
+			  });
+			});
+		})(jQuery);
+
+		</script>
+		<table id="dewisTable" class="body tablesorter">
+			<thead>
+				<tr>
+					<th class="right-line">Code</th>
+					<th class="right-line">Turnier</th>
+					<th class="right-line">Region</th>
+					<th class="right-line">Turnier-<br>ende</th>
+					<th class="right-line">Spieler</th>
+					<th>Auswerter</th>
+				</tr>
+			</thead>
+			<tbody>
+			<?php $x = 0; ?>
+			<?php foreach($this->daten as $d): ?>
+				<?php $x++; $class = ($x < count($this->daten)) ? 'bottom-line' : ''; ?>
+				<tr>
+					<td class="right-line <?= $class ?>"><?= $d['Turniercode'] ?></td>
+					<td class="right-line <?= $class ?>"><?= $d['Turniername'] ?></td>
+					<td class="right-line <?= $class ?>"><?= $d['Turnierregion'] ?></td>
+					<td class="right-line <?= $class ?>"><?= $d['Turnierende'] ?></td>
+					<td class="right-line <?= $class ?>"><?= $d['Teilnehmer'] ?></td>
+					<td class="<?= $class ?>"><?= $d['Auswerter'] ?></td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+	<?php endif; ?>
+<?php endif; ?>

@@ -1,0 +1,133 @@
+<?php
+/**
+ * Einfaches Frontend-Modul-Template für Contao 4
+ *
+ * Ablageort: templates/mod_myModule.html5
+ *
+ * Verfügbare Standard-Variablen:
+ *   $this->headline   Überschrift (falls im Modul gesetzt)
+ *   $this->hl         HTML-Tag der Überschrift (h1–h6)
+ *   $this->class      CSS-Klasse(n) des Moduls
+ *   $this->cssID      id-Attribut des Moduls
+ *
+ * Eigene Variablen werden in der Modulklasse per
+ *   $this->Template->foo = 'bar';
+ * bereitgestellt.
+ */
+?>
+<?php
+	$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/default.css';
+	$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/chosen.css';
+	$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/chosen.jquery.min.js';
+?>
+<script>
+(function($)
+{
+	$(document).ready(function(){
+		$(".tl_chosen").chosen();
+	});
+})(jQuery);
+</script>
+
+<div class="<?= $this->class ?> dewis block"<?= $this->cssID; ?> style="<?php if ($this->margin): ?><?= trim($this->margin) ?><?php endif; ?> <?php if ($this->style): ?><?= $this->style ?><?php endif; ?>">
+
+	<?php if ($this->headline): ?>
+		<<?= $this->hl ?>><?= $this->headline ?></<?= $this->hl ?>>
+	<?php endif; ?>
+	
+	<?php $this->block('content'); ?>
+	
+		<div class="dewislinks noprint">
+			<ul>
+			<?php foreach($this->navigation as $d): ?>
+				<?= $d ?>
+			<?php endforeach; ?>
+			</ul>
+		</div>
+
+		<?php if($this->subHeadline): ?>
+			<h2><?= $this->subHeadline ?></h2>
+		<?php endif; ?>
+
+		<div class="table_responsiv">
+			<table class="header">
+				<tbody>
+					<tr class="row_1">
+						<td width="30%" class="col_1 label bottom-line">Code:</td>
+						<td width="70%" class="col_2 value bottom-line"><?= $this->turnierheader['Turniercode'] ?></td>
+					</tr>
+					<tr class="row_2">
+						<td class="col_1 label bottom-line">Auswerter:</td>
+						<td class="col_2 value bottom-line"><?= $this->turnierheader['Auswerter1'] ?></td>
+					</tr>
+					<tr class="row_3">
+						<td class="col_1 label bottom-line">Turnierende:</td>
+						<td class="col_2 value bottom-line"><?= $this->turnierheader['Turnierende'] ?></td>
+					</tr>
+					<tr class="row_4">
+						<td class="col_1 label bottom-line">Erste Berechnung am:</td>
+						<td class="col_2 value bottom-line"><?= $this->turnierheader['Berechnet'] ?></td>
+					</tr>
+					<tr class="row_5">
+						<td class="col_1 label bottom-line">Letzte Berechnung am:</td>
+						<td class="col_2 value bottom-line"><?= $this->turnierheader['Nachberechnet'] ?></td>
+					</tr>
+					<tr class="row_6">
+						<td class="col_1 label bottom-line">Spieler/Partien/Runden:</td>
+						<td class="col_2 value bottom-line"><?= $this->turnierheader['Spieler'] ?> / <?= $this->turnierheader['Partien'] ?> / <?= $this->turnierheader['Runden'] ?></td>
+					</tr>
+					<tr class="row_7">
+						<td class="col_1 label">Links:</td>
+						<td class="col_2 value"><?= $this->turnierheader['Turnierauswertunglink'] ?></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<div class="table_responsiv">
+			<table class="body">
+				<thead>
+					<tr class="head">
+						<th class="right-line">Nr.</th>
+						<th class="">Spielername</th>
+						<th class="right-line">&nbsp;</th>
+						<th class="right-line">DWZ</th>
+						<th class="right-line">Erg.</th>
+						<?php for($r=1; $r<=$this->turnierheader['Runden']; $r++): ?>
+							<?php $class = ($r+1 <= $this->turnierheader['Runden']) ? 'right-line' : ''; ?>
+							<th class="<?= $class ?>"><?= $r ?></th>
+						<?php endfor; ?>
+					</tr>
+				</thead>
+				<tbody>
+					<?php $x = 0; ?>
+					<?php if($this->spieler): ?>
+						<?php foreach($this->spieler as $d): ?>
+							<?php $x++; $class = ($x < count($this->spieler)) ? ' bottom-line' : ''; ?>
+							<tr>
+								<td class="align-right right-line<?= $class ?>"><?= $d['Nummer'] ?></td>
+								<td class="right-line<?= $class ?>"><?= $d['Spielername'] ?></td>
+								<td class="right-line<?= $class ?>"><?= $d['Scoresheet'] ?></td>
+								<td class="right-line<?= $class ?>"><?= $d['DWZ alt'] ?></td>
+								<td class="right-line<?= $class ?>"><?= $d['Ergebnis'] ?></td>
+								<?php for($r = 1; $r <= $this->turnierheader['Runden']; $r++): ?>
+									<td class="right-line<?= $class ?>">
+									<?php if($d['Ergebnisse'][$r]): ?>
+										<div class="<?= $d['Ergebnisse'][$r]['Farbklasse'] ?>" title="<?= $d['Ergebnisse'][$r]['Gegnername'] ?>">
+											<span class="result"><?= $d['Ergebnisse'][$r]['Resultat'] ?></span>
+											<span class=""><?= $d['Ergebnisse'][$r]['Farbe'] ?></span>
+											<span class="opponent"><?= $d['Ergebnisse'][$r]['Gegner'] ?></span>
+										</div>
+									<?php endif; ?>
+									</td>
+								<?php endfor; ?>
+							</tr>
+						<?php endforeach; ?>
+					<?php endif; ?>
+				</tbody>
+			</table>
+		</div>
+	
+	<?php $this->endblock(); ?>
+
+</div>

@@ -1,0 +1,136 @@
+<?php
+/**
+ * Einfaches Frontend-Modul-Template für Contao 4
+ *
+ * Ablageort: templates/mod_myModule.html5
+ *
+ * Verfügbare Standard-Variablen:
+ *   $this->headline   Überschrift (falls im Modul gesetzt)
+ *   $this->hl         HTML-Tag der Überschrift (h1–h6)
+ *   $this->class      CSS-Klasse(n) des Moduls
+ *   $this->cssID      id-Attribut des Moduls
+ *
+ * Eigene Variablen werden in der Modulklasse per
+ *   $this->Template->foo = 'bar';
+ * bereitgestellt.
+ */
+?>
+<?php
+	$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/default.css';
+	$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/chosen.css';
+	$GLOBALS['TL_CSS'][] = 'bundles/flag-icon-css/css/flag-icon.min.css|static';
+	$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/chosen.jquery.min.js';
+?>
+<script>
+(function($)
+{
+	$(document).ready(function(){
+		$(".tl_chosen").chosen();
+	});
+})(jQuery);
+</script>
+
+<div class="<?= $this->class ?> dewis block"<?= $this->cssID; ?> style="<?php if ($this->margin): ?><?= trim($this->margin) ?><?php endif; ?> <?php if ($this->style): ?><?= $this->style ?><?php endif; ?>">
+
+	<?php if ($this->headline): ?>
+		<<?= $this->hl ?>><?= $this->headline ?></<?= $this->hl ?>>
+	<?php endif; ?>
+	
+	<?php $this->block('content'); ?>
+	
+		<div class="dewislinks noprint">
+			<ul>
+			<?php foreach($this->navigation as $d): ?>
+				<?= $d ?>
+			<?php endforeach; ?>
+			</ul>
+		</div>
+
+		<?php if($this->subHeadline): ?>
+			<h2><?= $this->subHeadline ?></h2>
+		<?php endif; ?>
+
+		<?php if($this->fehler): ?>
+			<div class="error"><?= $this->fehler ?></div>
+		<?php endif; ?>
+
+		<div class="table_responsiv">
+			<table id="dewisTable" class="body tablesorter">
+				<thead>
+					<tr class="row_0">
+						<th class="col_1 right-line">Pl.</th>
+						<th class="col_2 right-line">Spielername</th>
+						<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_geschlecht_ausblenden']): ?><th class="col_3 right-line">Geschl.</th><?php endif; ?>
+						<th class="col_4 right-line">Letzte<br>Ausw.</th>
+						<th class="col_5 right-line">DWZ</th>
+						<th class="col_6 right-line">Elo</th>
+						<th class="col_7 right-line">FIDE-<br>Titel</th>
+						<th class="col_10 right-line">FIDE-<br>Nation</th>
+						<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_passive_ausblenden']): ?><th class="col_8 right-line">Sta-<br>tus</th><?php endif; ?>
+						<th class="col_9">Verein</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php $row = 1; ?>
+					<?php if($this->daten): ?>
+						<?php $x = 0; ?>
+						<?php foreach($this->daten as $d): ?>
+							<?php $x++; $class = ($x < count($this->daten)) ? ' bottom-line' : ''; ?>
+							<tr class="row_<?= $row ?>">
+								<td class="col_1 right-line<?= $class ?> align-right"><?= $d['Platz'] ?>.</td>
+								<td class="col_2 right-line<?= $class ?>"><?= $d['Spielername'] ?></td>
+								<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_geschlecht_ausblenden']): ?><td class="col_3 right-line<?= $class ?>"><?= $d['Geschlecht'] ?></td><?php endif; ?>
+								<td class="col_4 right-line<?= $class ?>"><?= $d['KW'] ?></td>
+								<td class="col_5 right-line<?= $class ?>"><?= $d['DWZ'] ?></td>
+								<td class="col_6 right-line<?= $class ?>"><?= $d['Elo'] ?></td>
+								<td class="col_7 right-line<?= $class ?>"><?= $d['FIDE-Titel'] ?></td>
+								<td class="col_10 right-line<?= $class ?>"><?= $d['FIDE-Nation'] ?></td>
+								<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_passive_ausblenden']): ?><td class="col_8 right-line<?= $class ?>"><?= $d['Status'] ?></td><?php endif; ?>
+								<td class="col_9<?= $class ?>"><?= $d['Verein'] ?></td>
+							</tr>
+							<?php $row++; ?>
+						<?php endforeach; ?>
+					<?php endif; ?>
+				</tbody>
+			</table>
+		</div>
+
+		<?php if($this->verbaende): ?>
+			<div class="table_responsiv">
+				<table class="body">
+					<thead>
+						<tr>
+							<th>Verbandszugehörigkeiten</th>
+						</tr>
+					</thead>
+					<tbody>
+					<?php $x = 0; ?>
+					<?php foreach($this->verbaende as $d): ?>
+						<?php $x++; $class = ($x < count($this->verbaende)) ? ' bottom-line' : ''; ?>
+						<tr>
+							<td class="<?= $d['ebene'] ?><?= $class ?>"><?= $d['url'] ?></td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+		<?php endif; ?>
+
+		<div class="table_responsiv">
+			<table class="body">
+				<thead>
+					<tr>
+						<th>Zuständiger Wertungsreferent</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td><?= $this->referent ?></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	
+	<?php $this->endblock(); ?>
+
+</div>

@@ -1,0 +1,37 @@
+<div class="anzahl">
+	<?php if($this->anzahl_vb): ?>
+		<?= $this->anzahl_vb ?> in der DWZ-Datenbank gefunden
+	<?php else: ?>
+		Keine Verbände in der DWZ-Datenbank gefunden
+	<?php endif; ?>
+</div>
+
+<table class="dewis">
+	<tbody>
+	<?php foreach($this->daten_vb as $d): ?>
+		<tr class="dwz_tabzeile">
+			<td class="align-left nowrap"><?= $d['zps'] ?></td>
+			<td class="align-left"><?= $d['name'] ?></td>
+		</tr>
+	<?php endforeach; ?>
+	</tbody>
+</table>
+
+<div class="anzahl">
+	<?php if($this->anzahl_vn): ?>
+		<?= $this->anzahl_vn ?> in der DWZ-Datenbank gefunden
+	<?php else: ?>
+		Keine Vereine in der DWZ-Datenbank gefunden
+	<?php endif; ?>
+</div>
+
+<table class="dewis">
+	<tbody>
+	<?php foreach($this->daten_vn as $d): ?>
+		<tr class="dwz_tabzeile">
+			<td class="align-left nowrap"><?= $d['zps'] ?></td>
+			<td class="align-left"><?= $d['name'] ?></td>
+		</tr>
+	<?php endforeach; ?>
+	</tbody>
+</table>

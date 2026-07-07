@@ -1,0 +1,126 @@
+<!-- indexer::stop -->
+<?php
+	$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/default.css';
+?>
+
+<div class="<?php echo $this->class; ?> dewis block"<?php echo $this->cssID; ?> style="<?php if ($this->margin): ?><?php echo trim($this->margin); ?><?php endif; ?> <?php if ($this->style): ?><?php echo $this->style; ?><?php endif; ?>">
+
+	<?php if($this->headline): ?>
+		<<?= $this->hl ?>><?= $this->headline ?></<?= $this->hl ?>>
+	<?php endif; ?>
+
+	<div class="dewislinks noprint">
+		<ul>
+		<?php foreach($this->navigation as $d): ?>
+			<?= $d ?>
+		<?php endforeach; ?>
+		</ul>
+	</div>
+
+	<div class="searchform clr noprint">
+		<form action="<?= \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseite() ?>.html" method="get">
+			<fieldset id="searchform" class="tl_box">
+				<legend>Suche</legend>
+				<div class="long">
+					<h3><label for "ctrl_search">Vereinsname</label></h3>
+					<input id="ctrl_search" type="text" class="tl_input_text" autofocus name="search" size="30" maxlength="30" value="<?= $this->search ?>">
+					<p class="tl_help">Erlaubt ist auch ein Namensbestandteil</p>
+				</div>
+				<?php if($this->fehler): ?>
+					<div class="error"><?= $this->fehler ?></div>
+				<?php endif; ?>
+			</fieldset>
+			<div class="tl_submit_container">
+				<input type="submit" class="tl_submit" value="Suche starten">
+			</div>
+		</form>
+	</div>
+
+	<?php if($this->subHeadline): ?>
+		<<?= $this->shl ?>><?= $this->subHeadline ?></<?= $this->shl ?>>
+	<?php endif; ?>
+
+	<?php if($this->searchresult): ?>
+		<div class="searchresult">
+			<?= $this->searchresult ?>
+		</div>
+	<?php endif; ?>
+
+	<?php if($this->sichtbar): ?>
+
+		<div class="listenlink"><?= $this->listenlink ?></div>
+
+		<div class="table_responsiv">
+			<table class="header">
+				<tbody>
+					<tr class="row_0">
+						<td class="col_0" rowspan="2" style="text-align:center;" width="25%">
+							<?php if($this->addImage): ?>
+								<?php $this->insert('image', $this->arrData); ?>
+								<br><a href="mailto:webmaster@schachbund.com" style="font-size:10px;">Logo senden</a>
+							<?php endif; ?>
+						</td>
+						<td class="col_1 top-line" width="25%">Homepage:</td>
+						<td class="col_2 value top-line">
+							<?php if($this->homepage): ?>
+								<a href="<?= $this->homepage ?>" target="_blank"><?= $this->homepage ?></a>
+							<?php endif; ?>
+						</td>
+					</tr>
+					<tr class="row_1">
+						<td class="col_1 top-line">Über den Verein:</td>
+						<td class="col_2 value top-line"><?= $this->info ?></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<div class="table_responsiv">
+			<table id="dewisTable" class="body tablesorter">
+				<thead>
+					<tr class="row_0">
+						<?php if($this->rangliste): ?><th class="col_0 right-line">Pl.</th><?php endif; ?>
+						<th class="col_1 right-line">Mgl-<br>Nr.</th>
+						<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_passive_ausblenden']): ?><th class="col_2 right-line">Sta-<br>tus</th><?php endif; ?>
+						<th class="col_3 right-line">Spielername</th>
+						<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_geschlecht_ausblenden']): ?><th class="col_4 right-line">Geschl.</th><?php endif; ?>
+						<th class="col_5 right-line">Letzte<br>Ausw.</th>
+						<th class="col_6 right-line">DWZ</th>
+						<th class="col_7 right-line">Elo</th>
+						<th class="col_8">FIDE-<br>Titel</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php $row = 1; ?>
+					<?php if($this->daten): ?>
+						<?php $x = 0; ?>
+						<?php foreach($this->daten as $d): ?>
+							<?php $x++; $class = ($x < count($this->daten)) ? ' bottom-line' : ''; ?>
+							<tr class="row_<?= $row ?>">
+								<?php if($this->rangliste): ?><td class="col_0 align-right right-line<?= $class ?>"><?= $d['Platz'] ?>.</td><?php endif; ?>
+								<td class="col_1 right-line<?= $class ?>"><?= $d['Mglnr'] ?></td>
+								<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_passive_ausblenden']): ?><td class="col_2 right-line align-center<?= $class ?>"><?= $d['Status'] ?></td><?php endif; ?>
+								<td class="col_3 right-line<?= $class ?>"><?= $d['Spielername'] ?></td>
+								<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_geschlecht_ausblenden']): ?><td class="col_4 right-line<?= $class ?>"><?= $d['Geschlecht'] ?></td><?php endif; ?>
+								<td class="col_5 right-line<?= $class ?>"><?= $d['KW'] ?></td>
+								<td class="col_6 right-line<?= $class ?>"><?= $d['DWZ'] ?></td>
+								<td class="col_7 right-line<?= $class ?>"><?= $d['Elo'] ?></td>
+								<td class="col_8<?= $class ?>"><?= $d['FIDE-Titel'] ?></td>
+							</tr>
+							<?php $row++; ?>
+						<?php endforeach; ?>
+					<?php endif; ?>
+				</tbody>
+			</table>
+		</div>
+
+	<?php endif; ?>
+
+	<?= $this->infobox ?>
+
+<?php if($this->hinweis): ?>
+	<?= $this->registrierung ?>
+<?php endif; ?>
+
+</div>
+<!-- indexer::continue -->

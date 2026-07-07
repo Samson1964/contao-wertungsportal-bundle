@@ -1,0 +1,357 @@
+/* Allgemein */
+
+.dewis .align-left
+{
+	text-align				: left;
+}
+
+.dewis .align-center
+{
+	text-align				: center;
+}
+
+.dewis .align-right
+{
+	text-align				: right;
+}
+
+.dewis .active
+{
+	background-color		: #FFFF00;
+}
+
+.dewis .summe
+{
+	background-color		: #D8D8D8;
+}
+
+/* Menü */
+
+.dewislinks
+{
+	border					: 1px solid #616161;
+	background-color		: #f4f4f4;
+	margin-bottom			: 20px;
+	padding					: 5px;
+}
+
+.dewislinks ul
+{
+	padding					: 0px;
+	margin					: 0px;
+}
+
+.dewislinks ul li
+{
+	display					: inline-block;
+}
+
+.dewislinks ul li:after
+{
+	content					: " |";
+}
+
+.dewislinks ul li.last:after
+{
+	content					: "";
+}
+
+/* Verbandszugehörigkeiten - Levelmarkierung */
+.dewis table.body .level_0
+{
+}
+
+.dewis table.body .level_1
+{
+	padding-left			: 20px !important;
+}
+
+.dewis table.body .level_2
+{
+	padding-left			: 40px !important;
+}
+
+.dewis table.body .level_3
+{
+	padding-left			: 60px !important;
+}
+
+.dewis table.body .level_4
+{
+	padding-left			: 80px !important;
+}
+
+.dewis table.body .active
+{
+	font-weight				: bold;
+}
+
+/* Formulare */
+.dewis .searchform .tl_box h3
+{
+	font-weight				: bold;
+	margin					: 0 !important;
+	padding					: 0 !important;
+	font-size				: 14px;
+	color					: #000 !important;
+}
+
+.dewis .tl_input_text
+{
+	background-color		: #ffffff;
+	font-weight				: bold;
+	border					: 1px solid #aaa;
+	border-radius			: 3px;
+	padding					: 2px 3px;
+}
+
+.dewis .tl_select
+{
+	background-color		: #ffffff;
+	font-weight				: bold;
+	border					: 1px solid #aaa;
+	border-radius			: 3px;
+	padding					: 2px 3px;
+}
+
+.dewis .tl_radio
+{
+	font-weight				: bold;
+	padding					: 2px 3px;
+	margin-top				: 7px;
+}
+
+.dewis .long
+{
+	width					: 100%;
+}
+
+.dewis div.w50
+{
+	float					: left;
+	height					: auto;
+	min-height				: 72px;
+	width					: 50%;
+}
+
+.dewis div.long input.tl_input_text, .dewis div.long select
+{
+	width					: 45%;
+}
+
+.dewis div.w50 input.tl_input_text
+{
+	width					: 90%;
+}
+
+.dewis div.w50 select
+{
+	width					: 92.5%;
+}
+
+.dewis .tl_help
+{
+	color					: #999;
+	font-size				: 11px;
+	line-height				: normal;
+	margin-bottom			: 0;
+	padding					: 1px 0;
+}
+
+.dewis .tl_submit_container
+{
+	margin					: 5px 0px 10px 2px;
+}
+
+.dewis input.tl_submit
+{
+	background				: #eee linear-gradient(to top, #ccc 0px, #eee 60%) repeat scroll 0 0;
+	border					: 1px solid #aaa;
+	border-radius			: 3px;
+	color					: #555;
+	cursor					: pointer;
+	line-height				: 1;
+	padding					: 5px 12px 5px 13px;
+	text-shadow				: 1px 1px 0 #eee;
+}
+
+.dewis input:focus, .dewis select:focus
+{
+	background-color		: #FFFFDF;
+}
+
+.dewis input:hover, .dewis select:hover
+{
+	background-color		: #D9ECFF;
+}
+
+.dewis .w25
+{
+	width					: 45.5% !important;
+}
+
+/* Kopftabelle bei Auswertungen/Karteikarten u.ä. */
+
+.dewis table.header
+{
+	border					: 1px solid #616161;
+	background-color		: #f4f4f4;
+	margin-bottom			: 20px;
+	width					: 100%;
+}
+
+.dewis table.header th, .dewis table.header td
+{
+	padding					: 4px;
+}
+
+.dewis table.header td.value
+{
+	font-weight				: bold;
+}
+
+.dewis table.header td.bottom-line, .dewis table.body td.bottom-line
+{
+	border-bottom			: 1px solid #acacac;
+}
+
+.dewis table.header th.right-line, .dewis table.body th.right-line
+{
+	border-right			: 1px solid #ffffff;
+}
+
+/* Datentabelle bei Auswertungen/Karteikarten u.ä. */
+
+.dewis table.body
+{
+	border					: 1px solid #616161;
+	background-color		: #f4f4f4;
+	margin-bottom			: 20px;
+	width					: 100%;
+}
+
+.dewis table.body th
+{
+	background-color		: #a7abb6;
+	border-bottom			: 1px solid #616161;
+	font-weight				: bold;
+}
+
+.dewis table.body td
+{
+	font-size				: 13px;
+}
+
+.dewis table.body th,.dewis table.body td
+{
+	padding					: 4px;
+	white-space				: nowrap;
+}
+
+.dewis table.body td.right-line
+{
+	border-right			: 1px solid #DBDBDB;
+}
+
+/* Ergebnisse */
+
+.dewis .black
+{
+	background-color		: #5F5F5F;
+	color					: white;
+}
+
+.dewis .white
+{
+	background-color		: white;
+	color					: black;
+}
+
+.dewis span.result
+{
+	font-weight				: bold;
+}
+
+.dewis span.opponent
+{
+	font-style				: italic;
+}
+
+.dewis .white span.opponent
+{
+	color					: #6B6B6B;
+}
+
+.dewis .black span.opponent
+{
+	color					: #E6E6E6;
+}
+
+/* Infotabelle */
+
+.dewis table.queryinfo
+{
+	border					: 1px solid #616161;
+	background-color		: #f4f4f4;
+	margin-bottom			: 20px;
+	opacity					: 0.5;
+	font-size				: 9px;
+}
+
+.dewis table.queryinfo th, .dewis table.queryinfo td
+{
+	padding					: 4px;
+	width					: 35px;
+}
+
+.dewis table.queryinfo td.value
+{
+	font-weight				: bold;
+}
+
+.dewis table.queryinfo th
+{
+	background-color		: #a7abb6;
+	border-bottom			: 1px solid #616161;
+	font-weight				: bold;
+}
+
+.dewis table.queryinfo td.bottom-line
+{
+	border-bottom			: 1px solid #acacac;
+}
+
+.dewis table.queryinfo th.right-line
+{
+	border-right			: 1px solid #ffffff;
+}
+
+.dewis table.queryinfo td.right-line
+{
+	border-right			: 1px solid #DBDBDB;
+}
+
+/* Select-Listen in Formularen */
+.dewis select .level_0
+{
+	font-weight				: bold;
+}
+
+/* Hinweis auf nötige Registrierung */
+.dewis .hinweis
+{
+	margin-bottom			: 10px;
+	border					: 1px solid #9D0000;
+	border-radius			: 5px;
+	background-color		: #FFE6E6;
+	padding					: 5px;
+	color					: #AA0000;
+}
+
+.dewis table.body td.font-small {
+	font-size               : 11px;
+}
+
+.dewis .table_responsiv {
+	overflow: auto;
+}

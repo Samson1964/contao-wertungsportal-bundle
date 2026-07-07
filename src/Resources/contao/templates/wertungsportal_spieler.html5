@@ -1,0 +1,211 @@
+<!-- indexer::stop -->
+
+<?php
+	$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/default.css';
+?>
+
+<div class="<?php echo $this->class; ?> dewis block"<?php echo $this->cssID; ?> style="<?php if ($this->margin): ?><?php echo trim($this->margin); ?><?php endif; ?> <?php if ($this->style): ?><?php echo $this->style; ?><?php endif; ?>">
+
+	<?php if($this->headline): ?>
+		<<?= $this->hl ?>><?= $this->headline ?></<?= $this->hl ?>>
+	<?php endif; ?> 
+
+	<div class="dewislinks noprint">
+		<ul>
+		<?php foreach($this->navigation as $d): ?>
+			<?= $d ?>
+		<?php endforeach; ?>
+		</ul>
+	</div>
+
+	<?php if($this->searchform): ?>
+		<div class="searchform clr noprint">
+			<form action="<?= \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseite() ?>.html" method="get">
+				<fieldset id="searchform" class="tl_box">
+					<legend>Suche</legend>
+					<div class="long">
+						<h3><label for "ctrl_search">Spielername</label></h3>
+						<input id="ctrl_search" type="text" class="tl_input_text" autofocus name="search" size="30" maxlength="30" value="<?= $this->search ?>">
+						<p class="tl_help">Name,Vorname oder nur Name</p>
+					</div>
+					<?php if($this->fehler): ?>
+						<div class="error"><?= $this->fehler ?></div>
+					<?php endif; ?> 
+				</fieldset>
+				<div class="tl_submit_container">
+					<input type="submit" class="tl_submit" value="Suche starten">
+				</div>
+			</form>
+		</div>
+	<?php endif; ?> 
+	
+	<?php if($this->subHeadline): ?>
+		<<?= $this->shl ?>><?= $this->subHeadline ?></<?= $this->shl ?>>
+	<?php endif; ?> 
+
+	<?php if($this->searchresult): ?>
+		<div class="searchresult">
+			<?= $this->searchresult ?>
+		</div>
+	<?php endif; ?> 
+
+	<?php if($this->sperre): ?>
+		<div class="error">
+		Sie müssen angemeldet sein, um Details des Spielers anschauen zu können!
+		</div>
+	<?php endif; ?> 
+
+	<?php if($this->sichtbar): ?>
+
+		<?php
+			$GLOBALS['TL_JQUERY'][] = '<script type="text/javascript" src="bundles/contaodewis/js/chartjs/dist/chart.js"></script>';
+		?>
+
+		<div class="table_responsiv">
+			<table class="header">
+				<tbody>
+					<tr class="row_0">
+						<td class="col_0" rowspan="6" style="text-align:center;">
+							<?php if($this->addImage): ?>
+								<?php $this->insert('image', $this->arrData); ?>
+								<br><a href="mailto:webmaster@schachbund.com" style="font-size:10px;">Foto senden</a>
+							<?php endif; ?>
+						</td>
+						<td class="col_1 bottom-line">Name:</td>
+						<td class="col_2 value bottom-line"><?= $this->spielername ?></td>
+						<td class="col_3 bottom-line">Geschlecht:</td>
+						<td class="col_4 value bottom-line"><?= $this->geschlecht ?></td>
+						<td class="col_5 bottom-line">Geburtsjahr:</td>
+						<td class="col_6 value bottom-line"><?= $this->geburtsjahr ?></td>
+					</tr>
+					<?php $row = 1; ?>
+					<?php if($this->vereine): ?>
+						<?php $x = 0; ?>
+						<?php foreach($this->vereine as $d): ?>
+							<?php $x++; $class = ($x == count($this->vereine)) ? ' bottom-line' : ''; ?>
+							<tr class="row_<?= $row ?>">
+								<td class="col_1<?= $class ?>">Verein:</td>
+								<td class="col_2 value<?= $class ?>"><?= $d['name'] ?></td>
+								<td class="col_3<?= $class ?>">ZPS-Nr.:</td>
+								<td class="col_4 value<?= $class ?>"><?= $d['zps'] ?></td>
+								<td class="col_5<?= $class ?>">Status:</td>
+								<td class="col_6 value<?= $class ?>"><?= $d['status'] ?></td>
+							</tr>
+							<?php $row++; ?>
+						<?php endforeach; ?>
+					<?php endif; ?>
+					<tr class="row_<?= $row ?>">
+						<td class="col_1">FIDE-Elo:</td>
+						<td class="col_2 value"><?= $this->elo ?></td>
+						<td class="col_3">ID-Code:</td>
+						<td class="col_4 value"><?= $this->fide_id ?></td>
+						<td class="col_5">Titel:</td>
+						<td class="col_6 value"><?= $this->fide_titel ?></td>
+					</tr>
+					<?php $row++; ?>
+					<tr class="row_<?= $row ?> fide">
+						<td class="col_1 bottom-line">&nbsp;</td>
+						<td class="col_2 bottom-line">&nbsp;</td>
+						<td class="col_3 bottom-line">Nation:</td>
+						<td class="col_4 bottom-line value"><?= $this->fide_nation ?></td>
+						<td class="col_5 bottom-line">&nbsp;</td>
+						<td class="col_6 bottom-line">&nbsp;</td>
+					</tr>
+					<?php $row++; ?>
+					<tr class="row_<?= $row ?> historie">
+						<td class="col_1 bottom-line">Historie:</td>
+						<td class="col_2 col_3 col_4 col_5 col_6 value bottom-line" colspan="5"><?= $this->historie ?></td>
+					</tr>
+					<?php $row++; ?>
+					<tr class="row_<?= $row ?> referent">
+						<td class="col_1 col_2" colspan="2">Zuständiger Wertungsreferent:</td>
+						<td class="col_3 col_4 col_5 col_6 value" colspan="4"><?= $this->referent ?></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<?php
+			$GLOBALS['TL_CSS'][] = 'bundles/contaodewis/css/tablesorter.css';
+			$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaodewis/js/jquery.tablesorter.min.js';
+		?>
+		<script>
+		(function($) 
+		{
+			$(document).ready(function(){
+			  $("#dewisTable").tablesorter({
+			  });
+			});
+		})(jQuery);
+		</script>
+		
+		<div class="table_responsiv">
+			<table id="dewisTable" class="body tablesorter">
+				<thead>
+					<tr class="row_0">
+						<th class="col_0 right-line">Nr.</th>
+						<th class="col_1 right-line">Jahr</th>
+						<th class="col_2 right-line">Turnier</th>
+						<th class="col_3 right-line">Pkt.</th>
+						<th class="col_4 right-line">Par.</th>
+						<th class="col_5 right-line">We</th>
+						<th class="col_6 right-line">E</th>
+						<th class="col_7 right-line">Gegn.</th>
+						<th class="col_8 right-line">Lstg.</th>
+						<th class="col_9">Akt. DWZ</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php $row = 1; ?>
+					<?php if($this->altkartei): ?>
+						<?php $x = 0; ?>
+						<?php foreach($this->altkartei as $d): ?>
+							<?php $x++; $class = ($x < count($this->altkartei)) ? ' bottom-line' : ''; ?>
+							<tr class="row_<?= $row ?> elobase">
+								<td class="col_0<?= $class ?> right-line"><?= $d['nummer'] ?></td>
+								<td class="col_1<?= $class ?> right-line"><?= $d['jahr'] ?></td>
+								<td class="col_2<?= $class ?> right-line"><?= $d['turnier'] ?></td>
+								<td class="col_3<?= $class ?> right-line"><?= $d['punkte'] ?></td>
+								<td class="col_4<?= $class ?> right-line"><?= $d['partien'] ?></td>
+								<td class="col_5<?= $class ?> right-line"><?= $d['we'] ?></td>
+								<td class="col_6<?= $class ?> right-line"><?= $d['e'] ?></td>
+								<td class="col_7<?= $class ?> right-line"><?= $d['gegner'] ?></td>
+								<td class="col_8<?= $class ?> right-line"><?= $d['leistung'] ?></td>
+								<td class="col_9<?= $class ?>"><?= $d['dwz-neu'] ?></td>
+							</tr>
+							<?php $row++; ?>
+						<?php endforeach; ?>
+					<?php endif; ?>
+					<?php if($this->kartei): ?>
+						<?php $x = 0; ?>
+						<?php foreach($this->kartei as $d): ?>
+							<?php $x++; $class = ($x < count($this->kartei)) ? ' bottom-line' : ''; ?>
+							<tr class="row_<?= $row ?> dewis">
+								<td class="col_0<?= $class ?> right-line align-right"><?= $d['nummer'] ?></td>
+								<td class="col_1<?= $class ?> right-line"><?= $d['jahr'] ?></td>
+								<td class="col_2<?= $class ?> right-line"><?= $d['turnier'] ?></td>
+								<td class="col_3<?= $class ?> right-line"><?= $d['punkte'] ?></td>
+								<td class="col_4<?= $class ?> right-line"><?= $d['partien'] ?></td>
+								<td class="col_5<?= $class ?> right-line"><?= $d['we'] ?></td>
+								<td class="col_6<?= $class ?> right-line"><?= $d['e'] ?></td>
+								<td class="col_7<?= $class ?> right-line"><?= $d['gegner'] ?></td>
+								<td class="col_8<?= $class ?> right-line"><?= $d['leistung'] ?></td>
+								<td class="col_9<?= $class ?>"><?= $d['dwz-neu'] ?></td>
+							</tr>
+							<?php $row++; ?>
+						<?php endforeach; ?>
+					<?php endif; ?>
+				</tbody>
+			</table>
+		</div>
+
+	<?php endif; ?>
+	
+	<?= $this->infobox ?>
+
+<?php if($this->hinweis): ?>
+	<?= $this->registrierung ?>
+<?php endif; ?> 
+
+</div>
+<!-- indexer::continue -->

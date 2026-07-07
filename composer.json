@@ -11,7 +11,11 @@
     ],
     "require": {
         "php": "^7.0 || ^8.0",
-        "contao/core-bundle": "^4"
+        "contao/core-bundle": "^4",
+        "codefog/contao-haste": "*",
+        "schachbulle/contao-helper-bundle": "*",
+        "menatwork/contao-multicolumnwizard-bundle": "^3.6",
+        "components/flag-icon-css": "^3.3"
     },
     "conflict": {
         "contao/core": "*",

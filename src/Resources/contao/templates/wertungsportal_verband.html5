@@ -1,0 +1,284 @@
+<!-- indexer::stop -->
+
+<?php
+	$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/default.css';
+	$GLOBALS['TL_CSS'][] = 'bundles/flag-icon-css/css/flag-icon.min.css|static';
+?>
+
+<div class="<?php echo $this->class; ?> dewis block"<?php echo $this->cssID; ?> style="<?php if ($this->margin): ?><?php echo trim($this->margin); ?><?php endif; ?> <?php if ($this->style): ?><?php echo $this->style; ?><?php endif; ?>">
+
+	<?php if($this->headline): ?>
+		<<?= $this->hl ?>><?= $this->headline ?></<?= $this->hl ?>>
+	<?php endif; ?> 
+
+	<div class="dewislinks noprint">
+		<ul>
+		<?php foreach($this->navigation as $d): ?>
+			<?= $d ?>
+		<?php endforeach; ?>
+		</ul>
+	</div>
+
+	<?php if($this->subHeadline): ?>
+		<<?= $this->shl ?>><?= $this->subHeadline ?></<?= $this->shl ?>>
+	<?php endif; ?> 
+
+	<?php if($this->searchform): ?>
+		<div class="searchform clr noprint">
+			<form action="<?= \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseite() ?>/<?= $this->zps ?>.html" method="get">
+				<fieldset id="searchform" class="tl_box">
+					<legend>Verbandslisten</legend>
+					<table>
+						<tr>
+							<td class="w50">
+								<h3><label for "ctrl_toplist">Rangliste</label></h3>
+								<select size="1" id="ctrl_toplist" class="tl_select" name="toplist">
+									<option value="10">Top 10</option>
+									<option value="25">Top 25</option>
+									<option value="50">Top 50</option>
+									<option value="100" selected>Top 100</option>
+									<option value="150">Top 150</option>
+									<option value="200">Top 200</option>
+									<option value="250">Top 250</option>
+									<option value="500">Top 500</option>
+									<option value="750">Top 750</option>
+									<option value="950">Top 950</option>
+								</select>
+								<p class="tl_help">Auswahl der Spieleranzahl für die Rangliste</p>
+							</td>
+							<td class="w50">
+								<h3><label>Geschlecht</label></h3>
+								<input type="radio" class="tl_radio" checked="" value="" name="sex"> Alle
+								<input type="radio" class="tl_radio" value="m" name="sex"> Männlich
+								<input type="radio" class="tl_radio" value="f" name="sex"> Weiblich
+								<p class="tl_help"></p>
+							</td>
+						</tr>
+						<tr>
+							<td class="w50">
+							</td>
+							<td class="w50">
+								<input type="checkbox" class="tl_checkbox" value="1" name="german"> nur deutsche Spieler
+								<p class="tl_help"></p>
+							</td>
+						</tr>
+						<tr>
+							<td class="w50">
+								<h3><label for "Alter_von">Alter von</label></h3>
+								<input type="text" class="tl_input_text" maxlength="3" size="3" value="0" id="Alter_von" name="age_from">
+								<p class="tl_help">Ganzzahliger Wert von 0 bis 140 Jahre</p>
+							</td>
+							<td class="w50">
+								<h3><label for "Alter_bis">Alter bis</label></h3>
+								<input type="text" class="tl_input_text" maxlength="3" size="3" value="140" id="Alter_bis" name="age_to">
+								<p class="tl_help">Ganzzahliger Wert von 0 bis 140 Jahre</p>
+							</td>
+						</tr>
+					</table>
+				</fieldset>
+				<div class="tl_submit_container">
+					<input type="submit" class="tl_submit" value="Liste anzeigen">
+				</div>
+			</form>
+		</div>
+
+	<?php endif; ?> 
+
+
+	<?php if($this->sichtbar): ?>
+
+		<?php
+			$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/tablesorter.css';
+			$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/jquery.tablesorter.min.js';
+		?>
+		<script>
+		(function($) 
+		{
+			$(document).ready(function(){
+
+				// Parser für letzte Auswertung 
+				$.tablesorter.addParser({ 
+					id: 'letzteAuswertung', 
+					is: function(s) { 
+						// return false so this parser is not auto detected 
+						return false; 
+					}, 
+					format: function(s) { 
+						// Wert zum Sortieren 
+						return s.substr(3) + s.substr(0,2);
+					}, 
+					// set type, either numeric or text 
+					type: 'numeric' 
+				}); 
+
+				// Parser für DWZ
+				$.tablesorter.addParser({ 
+					id: 'DWZ', 
+					is: function(s) { 
+						// return false so this parser is not auto detected 
+						return false; 
+					}, 
+					format: function(s) { 
+						// Wert zum Sortieren 
+						var dwz = s.split('-');
+						dwz[1] = '000' + dwz[1].trim();
+						var temp = dwz[0].trim() + dwz[1].substr(-3);
+						return temp;
+						//alert(temp);
+					}, 
+					// set type, either numeric or text 
+					type: 'numeric' 
+				}); 
+
+				// Parser für FIDE-Titel
+				$.tablesorter.addParser({ 
+					id: 'FIDE-Titel', 
+					is: function(s) { 
+						// return false so this parser is not auto detected 
+						return false; 
+					}, 
+					format: function(s) { 
+						// Wert zum Sortieren 
+						switch(s.trim()) {
+							case 'GM': return 9; break;
+							case 'IM': return 8; break;
+							case 'WGM': return 7; break;
+							case 'FM': return 6; break;
+							case 'WIM': return 5; break;
+							case 'CM': return 4; break;
+							case 'WFM': return 3; break;
+							case 'WCM': return 2; break;
+							default: return 0; break;
+						}
+					}, 
+					// set type, either numeric or text 
+					type: 'numeric' 
+				}); 
+
+				$("#dewisTable").tablesorter({
+					headers: { 
+						2: { 
+							sorter:'letzteAuswertung' 
+						},
+						3: { 
+							sorter:'DWZ' 
+						},
+						5: { 
+							sorter:'FIDE-Titel' 
+						} 
+					} 
+				});
+			});
+		})(jQuery);
+		</script>
+		
+		<div class="table_responsiv">
+			<table id="dewisTable" class="body tablesorter">
+				<thead>
+					<tr class="row_0">
+						<th class="col_1 right-line">Pl.</th>
+						<th class="col_2 right-line">Spielername</th>
+						<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_geschlecht_ausblenden']): ?><th class="col_3 right-line">Geschl.</th><?php endif; ?>
+						<th class="col_4 right-line">Letzte<br>Ausw.</th>
+						<th class="col_5 right-line">DWZ</th>
+						<th class="col_6 right-line">Elo</th>
+						<th class="col_7 right-line">FIDE-<br>Titel</th>
+						<th class="col_10 right-line">FIDE-<br>Nation</th>
+						<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_passive_ausblenden']): ?><th class="col_8 right-line">Sta-<br>tus</th><?php endif; ?>
+						<th class="col_9">Verein</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php $row = 1; ?>
+					<?php if($this->daten): ?>
+						<?php $x = 0; ?>
+						<?php foreach($this->daten as $d): ?>
+							<?php $x++; $class = ($x < count($this->daten)) ? ' bottom-line' : ''; ?>
+							<tr class="row_<?= $row ?>">
+								<td class="col_1 right-line<?= $class ?> align-right"><?= $d['Platz'] ?>.</td>
+								<td class="col_2 right-line<?= $class ?>"><?= $d['Spielername'] ?></td>
+								<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_geschlecht_ausblenden']): ?><td class="col_3 right-line<?= $class ?>"><?= $d['Geschlecht'] ?></td><?php endif; ?>
+								<td class="col_4 right-line<?= $class ?>"><?= $d['KW'] ?></td>
+								<td class="col_5 right-line<?= $class ?>"><?= $d['DWZ'] ?></td>
+								<td class="col_6 right-line<?= $class ?>"><?= $d['Elo'] ?></td>
+								<td class="col_7 right-line<?= $class ?>"><?= $d['FIDE-Titel'] ?></td>
+								<td class="col_10 right-line<?= $class ?>"><?= $d['FIDE-Nation'] ?></td>
+								<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_passive_ausblenden']): ?><td class="col_8 right-line<?= $class ?>"><?= $d['Status'] ?></td><?php endif; ?>
+								<td class="col_9<?= $class ?>"><?= $d['Verein'] ?></td>
+							</tr>
+							<?php $row++; ?>
+						<?php endforeach; ?>
+					<?php endif; ?>
+				</tbody>
+			</table>
+		</div>
+
+		<?php if($this->verbaende): ?>
+			<div class="table_responsiv">
+				<table class="body">
+					<thead>
+						<tr>
+							<th>Verbandszugehörigkeiten</th>
+						</tr>
+					</thead>
+					<tbody>
+					<?php $x = 0; ?>
+					<?php foreach($this->verbaende as $d): ?>
+						<?php $x++; $class = ($x < count($this->verbaende)) ? ' bottom-line' : ''; ?>
+						<tr>
+							<td class="<?= $d['ebene'] ?><?= $class ?>"><?= $d['url'] ?></td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+		<?php endif; ?>
+
+		<div class="table_responsiv">
+			<table class="body">
+				<thead>
+					<tr>
+						<th>Zuständiger Wertungsreferent</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td><?= $this->referent ?></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+	<?php else: ?>
+	
+		<?php if($this->verbaende): ?>
+			<div class="table_responsiv">
+				<table class="body">
+					<thead>
+						<tr>
+							<th>Verbandszugehörigkeiten</th>
+						</tr>
+					</thead>
+					<tbody>
+					<?php $x = 0; ?>
+					<?php foreach($this->verbaende as $d): ?>
+						<?php $x++; $class = ($x < count($this->verbaende)) ? ' bottom-line' : ''; ?>
+						<tr>
+							<td class="<?= $d['ebene'] ?><?= $class ?>"><?= $d['url'] ?></td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+		<?php endif; ?>
+
+	<?php endif; ?>
+
+	<?= $this->infobox ?>
+
+<?php if($this->hinweis): ?>
+	<?= $this->registrierung ?>
+<?php endif; ?> 
+
+</div>
+<!-- indexer::continue -->

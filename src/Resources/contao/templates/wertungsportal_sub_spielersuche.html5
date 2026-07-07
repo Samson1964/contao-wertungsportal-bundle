@@ -1,0 +1,44 @@
+<?php if($this->daten): ?>
+	<table class="header">
+		<tbody>
+			<tr>
+				<td width="30%" class="label">Gefundene Spieler:</td>
+				<td width="70%" class="value"><?= $this->anzahl ?></td>
+			</tr>
+		</tbody>
+	</table>
+
+	<table class="body">
+		<thead>
+			<tr>
+				<th class="right-line">Spielername</th>
+				<?php if(!$this->Sperre): ?><th class="right-line">Letzte<br>Ausw.</th><?php endif; ?>
+				<th class="right-line">DWZ</th>
+				<th class="right-line">Elo</th>
+				<th class="">Titel</th>
+				<th class="">Verein</th>
+			</tr>
+		</thead>
+		<tbody>
+		<?php $x = 0; ?>
+		<?php foreach($this->daten as $d): ?>
+			<?php $x++; $class = ($x < count($this->daten)) ? ' bottom-line' : ''; ?>
+			<tr>
+				<td class="right-line<?= $class ?>"><?= $d['Spielername'] ?></td>
+				<?php if(!$this->Sperre): ?><td class="right-line<?= $class ?>"><?= $d['KW'] ?></td><?php endif; ?>
+				<td class="right-line<?= $class ?>"><?= $d['DWZ'] ?></td>
+				<td class="right-line<?= $class ?>"><?= $d['Elo'] ?></td>
+				<td class="<?= $class ?>"><?= $d['Titel'] ?></td>
+				<td class="<?= $class ?>"><?= $d['Verein'] ?></td>
+			</tr>
+		<?php endforeach; ?>
+		</tbody>
+	</table>
+<?php endif; ?>
+
+<?php if($this->debugausgabe): ?>
+<pre>
+	<?php print_r($this->debugausgabe); ?>
+</pre>
+<?php endif; ?>
+
