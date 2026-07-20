@@ -1,0 +1,181 @@
+<?php
+
+/*
+ * DCA für tl_wertungsportal_persons_memberships (Contao 4.13)
+ *
+ * Kindtabelle von tl_wertungsportal_persons.
+ * Felddefinitionen gemäß DSB-Wertungsportal-API,
+ * Endpunkt GET /dwz/dwzliste/persons, Unter-Array "memberships":
+ * https://schachde-apps.liga.nu/dsbwertungsportal/apidocs/resource_DWZListeREST.html
+ */
+
+use Contao\DataContainer;
+use Contao\DC_Table;
+
+$GLOBALS['TL_DCA']['tl_wertungsportal_persons_memberships'] = [
+    // Config
+    'config' => [
+        'dataContainer'     => DC_Table::class,
+        'ptable'            => 'tl_wertungsportal_persons',
+        'enableVersioning'  => true,
+        'sql'               => [
+            'keys' => [
+                'id'           => 'primary',
+                'pid'          => 'index',
+                'vkz'          => 'index',
+                'vkz,memberNo' => 'index',
+            ],
+        ],
+    ],
+
+    // List
+    'list' => [
+        'sorting' => [
+            'mode'                  => DataContainer::MODE_PARENT,
+            'fields'                => ['clubName'],
+            'headerFields'          => ['lastname', 'firstname', 'birthyear', 'rating'],
+            'disableGrouping'       => true, // Keine Zwischenüberschriften zwischen den Datensätzen
+            'panelLayout'           => 'filter;search,limit',
+            'child_record_callback' => static function (array $row)
+            {
+                $licence = $GLOBALS['TL_LANG']['tl_wertungsportal_persons_memberships'][$row['licenceState']] ?? $row['licenceState'];
+
+                return '<div class="tl_content_left">' . $row['clubName'] . ' <span class="wp-meta">(' . $row['vkz'] . ($licence ? ', ' . $licence : '') . ')</span></div>';
+            },
+        ],
+        'global_operations' => [
+            'all' => [
+                'href'       => 'act=select',
+                'class'      => 'header_edit_all',
+                'attributes' => 'onclick="Backend.getScrollOffset()" accesskey="e"',
+            ],
+        ],
+        'operations' => [
+            'edit' => [
+                'href' => 'act=edit',
+                'icon' => 'edit.svg',
+            ],
+            'copy' => [
+                'href' => 'act=copy',
+                'icon' => 'copy.svg',
+            ],
+            'delete' => [
+                'href'       => 'act=delete',
+                'icon'       => 'delete.svg',
+                'attributes' => 'onclick="if(!confirm(\'' . ($GLOBALS['TL_LANG']['MSC']['deleteConfirm'] ?? null) . '\'))return false;Backend.getScrollOffset()"',
+            ],
+            'toggle' => [
+                'href'         => 'act=toggle&amp;field=published',
+                'icon'         => 'visible.svg',
+                'showInHeader' => true,
+            ],
+            'show' => [
+                'href' => 'act=show',
+                'icon' => 'show.svg',
+            ],
+        ],
+    ],
+
+    // Palettes
+    'palettes' => [
+        'default' => '{membership_legend},vkz,memberNo,clubName;{licence_legend},licenceState,spielgenehmigungVon,spielgenehmigungBis;{region_legend},regionName,federationName;{publish_legend},published',
+    ],
+
+    // Fields
+    'fields' => [
+        'id' => [
+            'sql' => 'int(10) unsigned NOT NULL auto_increment',
+        ],
+        'pid' => [
+            'foreignKey' => 'tl_wertungsportal_persons.lastname',
+            'sql'        => "int(10) unsigned NOT NULL default 0",
+            'relation'   => ['type' => 'belongsTo', 'load' => 'lazy'],
+        ],
+        'tstamp' => [
+            'sql' => "int(10) unsigned NOT NULL default 0",
+        ],
+
+        // Vereinskennziffer (VKZ) des Vereins
+        'vkz' => [
+            'exclude'   => true,
+            'search'    => true,
+            'inputType' => 'text',
+            'eval'      => ['mandatory' => true, 'maxlength' => 16, 'tl_class' => 'w50'],
+            'sql'       => "varchar(16) NOT NULL default ''",
+        ],
+
+        // DSB-Mitglieds-/Lizenznummer
+        'memberNo' => [
+            'exclude'   => true,
+            'search'    => true,
+            'inputType' => 'text',
+            'eval'      => ['maxlength' => 32, 'tl_class' => 'w50'],
+            'sql'       => "varchar(32) NOT NULL default ''",
+        ],
+
+        // Name des Vereins
+        'clubName' => [
+            'exclude'   => true,
+            'search'    => true,
+            'inputType' => 'text',
+            'eval'      => ['maxlength' => 255, 'tl_class' => 'w50'],
+            'sql'       => "varchar(255) NOT NULL default ''",
+        ],
+
+        // Lizenzstatus (aktiv/passiv/Sondermitgliedschaft/ohne Spielgenehmigung)
+        'licenceState' => [
+            'exclude'   => true,
+            'filter'    => true,
+            'inputType' => 'select',
+            'options'   => ['ACTIVE', 'PASSIVE', 'SONDER', 'OHNE'],
+            'reference' => &$GLOBALS['TL_LANG']['tl_wertungsportal_persons_memberships'],
+            'eval'      => ['includeBlankOption' => true, 'tl_class' => 'w50'],
+            'sql'       => "varchar(16) NOT NULL default ''",
+        ],
+
+        // Spielgenehmigung von (TT.MM.JJJJ, aus dem Vereinsmitglieder-CSV-Import)
+        'spielgenehmigungVon' => [
+            'exclude'   => true,
+            'inputType' => 'text',
+            'eval'      => ['maxlength' => 10, 'tl_class' => 'w50'],
+            'sql'       => "varchar(10) NOT NULL default ''",
+        ],
+
+        // Spielgenehmigung bis (TT.MM.JJJJ, aus dem Vereinsmitglieder-CSV-Import)
+        'spielgenehmigungBis' => [
+            'exclude'   => true,
+            'inputType' => 'text',
+            'eval'      => ['maxlength' => 10, 'tl_class' => 'w50'],
+            'sql'       => "varchar(10) NOT NULL default ''",
+        ],
+
+        // Name der Region
+        'regionName' => [
+            'exclude'   => true,
+            'search'    => true,
+            'filter'    => true,
+            'inputType' => 'text',
+            'eval'      => ['maxlength' => 255, 'tl_class' => 'w50'],
+            'sql'       => "varchar(255) NOT NULL default ''",
+        ],
+
+        // Name des Verbands
+        'federationName' => [
+            'exclude'   => true,
+            'search'    => true,
+            'filter'    => true,
+            'inputType' => 'text',
+            'eval'      => ['maxlength' => 255, 'tl_class' => 'w50'],
+            'sql'       => "varchar(255) NOT NULL default ''",
+        ],
+
+        'published' => [
+            'exclude'   => true,
+            'filter'    => true,
+            'toggle'    => true,
+            'inputType' => 'checkbox',
+            'eval'      => ['doNotCopy' => true, 'tl_class' => 'w50'],
+            'sql'       => "char(1) NOT NULL default ''",
+        ],
+    ],
+];

@@ -10,10 +10,10 @@
  * Backendmodule
  */
 $GLOBALS['TL_LANG']['MOD']['wertungsportal'] = array('Wertungsportal', 'Wertungsportal verwalten');
-$GLOBALS['TL_LANG']['MOD']['dwz-spieler'] = array('Spieler', 'Spieler verwalten');
-$GLOBALS['TL_LANG']['MOD']['dwz-vereine'] = array('Vereine', 'Vereine verwalten');
-$GLOBALS['TL_LANG']['MOD']['dwz-turniere'] = array('Turniere', 'Turniere verwalten');
-$GLOBALS['TL_LANG']['MOD']['dwz-bearbeiter'] = array('Bearbeiter', 'Bearbeiter verwalten');
+$GLOBALS['TL_LANG']['MOD']['wp-clubs'] = array('WP | Vereine', 'Vereine Wertungsportal verwalten');
+$GLOBALS['TL_LANG']['MOD']['wp-persons'] = array('WP | Personen', 'Personen und Mitgliedschaften Wertungsportal verwalten');
+$GLOBALS['TL_LANG']['MOD']['wp-tournaments'] = array('WP | Turniere', 'Turniere Wertungsportal verwalten');
+$GLOBALS['TL_LANG']['MOD']['wp-elo'] = array('WP | FIDE-Elo', 'FIDE-Elo-Daten für die Anreicherung verwalten');
 
 /**
  * Frontendmodule

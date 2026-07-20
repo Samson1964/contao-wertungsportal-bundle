@@ -49,6 +49,12 @@
 			<h2><?= $this->subHeadline ?></h2>
 		<?php endif; ?>
 
+		<?php if($this->fehler): ?>
+
+			<p class="error"><?= $this->fehler ?></p>
+
+		<?php else: ?>
+
 		<div class="table_responsiv">
 			<table class="header">
 				<tbody>
@@ -125,6 +131,8 @@
 			</table>
 		</div>
 	
+		<?php endif; ?>
+
 	<?php $this->endblock(); ?>
 
 </div>

@@ -20,7 +20,7 @@
 
 	<?php if($this->searchform): ?>
 		<div class="searchform clr noprint">
-			<form action="<?= \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseite() ?>.html" method="get">
+			<form action="<?= \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseiteUrl() ?>.html" method="get">
 				<fieldset id="searchform" class="tl_box">
 					<legend>Suche</legend>
 					<div class="long">
@@ -57,10 +57,6 @@
 
 	<?php if($this->sichtbar): ?>
 
-		<?php
-			$GLOBALS['TL_JQUERY'][] = '<script type="text/javascript" src="bundles/contaodewis/js/chartjs/dist/chart.js"></script>';
-		?>
-
 		<div class="table_responsiv">
 			<table class="header">
 				<tbody>
@@ -83,15 +79,24 @@
 						<?php $x = 0; ?>
 						<?php foreach($this->vereine as $d): ?>
 							<?php $x++; $class = ($x == count($this->vereine)) ? ' bottom-line' : ''; ?>
+							<?php // Untere Linie wandert auf die Verbände-Zeile, wenn eine folgt ?>
+							<?php $vclass = !empty($d['verbaende']) ? '' : $class; ?>
 							<tr class="row_<?= $row ?>">
-								<td class="col_1<?= $class ?>">Verein:</td>
-								<td class="col_2 value<?= $class ?>"><?= $d['name'] ?></td>
-								<td class="col_3<?= $class ?>">ZPS-Nr.:</td>
-								<td class="col_4 value<?= $class ?>"><?= $d['zps'] ?></td>
-								<td class="col_5<?= $class ?>">Status:</td>
-								<td class="col_6 value<?= $class ?>"><?= $d['status'] ?></td>
+								<td class="col_1<?= $vclass ?>">Verein:</td>
+								<td class="col_2 value<?= $vclass ?>"><?= $d['name'] ?></td>
+								<td class="col_3<?= $vclass ?>">ZPS-Nr.:</td>
+								<td class="col_4 value<?= $vclass ?>"><?= $d['zps'] ?></td>
+								<td class="col_5<?= $vclass ?>">Status:</td>
+								<td class="col_6 value<?= $vclass ?>"><?= $d['status'] ?></td>
 							</tr>
 							<?php $row++; ?>
+							<?php if(!empty($d['verbaende'])): ?>
+								<tr class="row_<?= $row ?> verbaende">
+									<td class="col_1<?= $class ?>">Verbände:</td>
+									<td class="col_2 col_3 col_4 col_5 col_6 value<?= $class ?>" colspan="5"><?= implode(' &rsaquo; ', array_column($d['verbaende'], 'url')) ?></td>
+								</tr>
+								<?php $row++; ?>
+							<?php endif; ?>
 						<?php endforeach; ?>
 					<?php endif; ?>
 					<tr class="row_<?= $row ?>">
@@ -199,8 +204,44 @@
 			</table>
 		</div>
 
+		<?php if($this->diagramm): ?>
+			<div class="diagramm">
+				<h3>DWZ und Leistung<?= $this->diagrammKomplett ? ' (letzte 50 Turniere)' : '' ?></h3>
+				<?= $this->diagramm ?>
+				<?php if($this->diagrammKomplett): ?>
+					<p class="noprint"><a href="#" id="dwzDiagrammAlleLink">Diagramm mit allen Turnieren anzeigen</a></p>
+					<div id="dwzDiagrammOverlay" class="dwz-diagramm-overlay">
+						<div class="dwz-diagramm-overlay-inner">
+							<a href="#" class="dwz-diagramm-schliessen" title="Schließen">&times;</a>
+							<h3>DWZ und Leistung (alle Turniere)</h3>
+							<div class="dwz-diagramm-scroll"><?= $this->diagrammKomplett ?></div>
+						</div>
+					</div>
+					<script>
+					(function()
+					{
+						var overlay = document.getElementById('dwzDiagrammOverlay');
+						document.getElementById('dwzDiagrammAlleLink').addEventListener('click', function(e)
+						{
+							e.preventDefault();
+							overlay.classList.add('offen');
+						});
+						overlay.addEventListener('click', function(e)
+						{
+							if(e.target === overlay || e.target.classList.contains('dwz-diagramm-schliessen'))
+							{
+								e.preventDefault();
+								overlay.classList.remove('offen');
+							}
+						});
+					})();
+					</script>
+				<?php endif; ?>
+			</div>
+		<?php endif; ?>
+
 	<?php endif; ?>
-	
+
 	<?= $this->infobox ?>
 
 <?php if($this->hinweis): ?>

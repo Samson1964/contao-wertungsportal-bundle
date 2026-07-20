@@ -6,7 +6,7 @@
  * Copyright (c) 2005-2016 Leo Feyer
  *
  * @package   Wertungsportal
- * @file      Spieler
+ * @file      Verband
  * @author    Frank Binding
  * @license   GNU/LGPL
  * @copyright Frank Binding 2026
@@ -16,6 +16,8 @@
  * Wertungsportal-Abfrage:
  * Ausgabe Verbandssuche / Ausgabe Verbandsliste
  *
+ * Die Aufbereitung der API-Daten für die Templates übernehmen die
+ * Helper-Klassen Verbandsnavigation und Verbandsrangliste.
  */
 
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
@@ -29,7 +31,7 @@ class Verband extends \Module
 	 */
 	protected $strTemplate = 'wertungsportal_verband';
 	protected $subTemplate = 'wertungsportal_sub_verbandsuche';
-	
+
 	/**
 	 * Display a wildcard in the back end
 	 * @return string
@@ -65,102 +67,38 @@ class Verband extends \Module
 	 */
 	protected function compile()
 	{
-	
 		global $objPage;
-
-		// Blacklist laden
-		$Blacklist = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Blacklist();
 
 		// ZPS-Variable holen
 		$zps = \Input::get('zps');
 		if(!$zps) $zps = '000';
 		// Listenvariablen holen und anpassen
 		$toplist = \Input::get('toplist');
-		if($toplist && $toplist > 950) $toplist = 950;
-		$sex = \Input::get('sex'); 
-		$age_from = \Input::get('age_from'); 
-		$age_to = \Input::get('age_to'); 
-		$german = \Input::get('german'); 
-		
-		$mitglied = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getMitglied(); // Daten des aktuellen Mitgliedes laden
-		
+		if($toplist && $toplist > 1000) $toplist = 1000;
+		$sex = \Input::get('sex');
+		$age_from = \Input::get('age_from');
+		$age_to = \Input::get('age_to');
+		$german = \Input::get('german');
+
 		$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 		$this->Template->shl = 'h2'; // Standard-Überschriftgröße 2
 		$this->Template->headline = 'DWZ - Verband'; // Standard-Überschrift
-		$this->Template->navigation   = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+		$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
 		$this->Template->zps = $zps; // Aktuelle ZPS-Nummer
-
-		// Sperrstatus festlegen
-		if($GLOBALS['TL_CONFIG']['wertungsportal_karteisperre_gaeste']) $gesperrt = $mitglied->id ? false : true;
-		else $gesperrt = false;
 
 		/*********************************************************
 		 * Ausgabe Verbandszugehörigkeiten (übergeordnete)
 		*/
 
-		// Verbände/Vereine laden
+		// Verbände/Vereine laden und Struktur aufbauen
 		$result = \Schachbulle\ContaoWertungsportalBundle\Helper\API::Verbandsliste('00000');
+		$navigation = new \Schachbulle\ContaoWertungsportalBundle\Helper\Verbandsnavigation($result, $zps);
+		$verbaende = $navigation->Verbaende;
 
-		//$log = "API Verbandsliste:\n".print_r($result, true);
-		//log_message($log, 'wertungsportal_oauth2client.log');
-
-		// Verbände entsprechend ZPS laden und strukturieren, DSB zuerst anlegen
-		$verbaende = array();
-		$verbaende['000'] = array
-		(
-			'vkz'   => '000',
-			'name'  => 'Deutscher Schachbund',
-			'url'   => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseite().'/%s.html">%s</a>', '000', 'Deutscher Schachbund'),
-			'ebene' => 'level_0'
-		);
-		foreach($result['verbaende'] as $verband)
-		{
-			// Landes- oder Mitgliedsverband des DSB zuweisen (Ebene 1), VKZ = ?00??
-			if(substr($verband['clubVkz'], 1, 2) == '00')
-			{
-				$verbaende[substr($verband['clubVkz'],0,3)] = array
-				(
-					'vkz'   => substr($verband['clubVkz'],0,3),
-					'name'  => $verband['clubName'],
-					'url'   => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseite().'/%s.html">%s</a>', substr($verband['clubVkz'],0,3), $verband['clubName']),
-					'ebene' => 'level_1'
-				);
-			}
-			// Bezirk zuweisen, wenn 1. Stelle VKZ mit Such-ZPS übereinstimmt
-			elseif(substr($zps,0,1) == substr($verband['clubVkz'],0,1) && substr($verband['clubVkz'],2,1) == '0')
-			{
-				$verbaende[substr($verband['clubVkz'],0,3)] = array
-				(
-					'vkz'   => substr($verband['clubVkz'],0,3),
-					'name'  => $verband['clubName'],
-					'url'   => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseite().'/%s.html">%s</a>', substr($verband['clubVkz'],0,3), $verband['clubName']),
-					'ebene' => 'level_2'
-				);
-			}
-			// Kreis zuweisen, wenn 1.+2. Stelle VKZ mit Such-ZPS übereinstimmt
-			elseif(substr($zps,0,2) == substr($verband['clubVkz'],0,2))
-			{
-				$verbaende[substr($verband['clubVkz'],0,3)] = array
-				(
-					'vkz'   => substr($verband['clubVkz'],0,3),
-					'name'  => $verband['clubName'],
-					'url'   => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseite().'/%s.html">%s</a>', substr($verband['clubVkz'],0,3), $verband['clubName']),
-					'ebene' => 'level_3'
-				);
-			}
-		}
-
-		// Vereine-Link ergänzen bei aktuell angeforderten Verband
-		if($zps != '000')
-		{
-			$verbaende[$zps]['url'] = '<b>'.$verbaende[$zps]['url'].sprintf(' - <a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseite().'/%s.html">Vereine</a>', $zps).'</b>';
-		}
-		
-		//print_r($verbaende);
-		$this->Template->verbaende    = $verbaende;
+		$this->Template->verbaende = $verbaende;
 
 		/*********************************************************
-		* Ausgabe Suchformular, wenn keine Toplistenausgabe angefordert wurde
+		 * Ausgabe Suchformular, wenn keine Toplistenausgabe angefordert wurde
 		*/
 
 		if(!$toplist)
@@ -172,88 +110,56 @@ class Verband extends \Module
 		}
 
 		/*********************************************************
-		* Ausgabe Topliste des Verbandes
+		 * Ausgabe Topliste des Verbandes
 		*/
 
 		if($zps && $toplist)
 		{
-
 			// Abfrageparameter einstellen
 			$param = array
 			(
 				'funktion'    => 'Verbandsliste',
 				'cachekey'    => $zps.'-'.$toplist.'-'.$sex.'-'.$age_from.'-'.$age_to.'-'.$german,
-				'zps'         => $zps == '000' ? false : $zps,
+				'zps'         => $zps == '000' ? false : rtrim($zps, '0'), // Führt z.B. bei 100 sonst zu 0 Treffern, weil es keine Spieler mit ZPS 100xx in Baden gibt
 				'limit'       => $german ? $toplist + 500 : $toplist + 50,
-				'alter_von'   => $age_from,
-				'alter_bis'   => $age_to,
-				'geschlecht'  => $sex,
+				'alter_von'   => $age_from ? (int)$age_from : '',
+				'alter_bis'   => $age_to == 140 ? '' : (int)$age_to,
+				'geschlecht'  => $sex == 'f' ? 'FEMALE' : ($sex == 'm' ? 'MALE' : ''),
 			);
-
 			$resultArr = \Schachbulle\ContaoWertungsportalBundle\Helper\API::autoQuery($param); // Abfrage ausführen
 
 			/*********************************************************
-			 * Ausgabe der Verbandsrangliste
+			 * Verbandsname ermitteln
+			*/
+			$param = array
+			(
+				'funktion' => 'Vereinsname',
+				'cachekey' => $zps.'00',
+				'zps'      => $zps.'00'
+			);
+			$resultVerein = \Schachbulle\ContaoWertungsportalBundle\Helper\API::autoQuery($param); // Abfrage ausführen
+			$verbandsname = $zps == '000' ? 'Deutscher Schachbund' : ($resultVerein['body']['data'] ? $resultVerein['body']['data'][0]['clubName'] : 'Unbekannter Verband');
+
+			/*********************************************************
+			 * Rangliste für das Template aufbereiten
 			*/
 
-			$rangliste = [];
-			$platz = 0;
-			if(!$resultArr['error'])
-			{
-				foreach($resultArr['body']['data'] as $spieler)
-				{
-					// Auf nichtexistierende Variablen prüfen, die aber benötigt werden:
-					if(!array_key_exists('fideId', $spieler)) $spieler['fideId'] = false;
-            	
-					// FIDE-Daten aus Tabelle tl_dwz_elo holen
-					$fide = \Schachbulle\ContaoWertungsportalBundle\Helper\API::getFIDE($spieler['fideId']); // Abfrage ausführen
-					$fide_nation = $fide['land'];
-					$fide_elo = $fide['elo'];
-					$fide_titel = $fide['titel'];
-            	
-					$flag_css = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Laendercode($fide_nation);
-					// Flagge anzeigen, wenn vorhanden
-					if($flag_css)
-						$flag_content = '<span class="'.$flag_css.'" title="'.$fide_nation.'"></span>';
-					else
-						$flag_content = '<span class="ioc_code" title="'.$fide_nation.'">'.$fide_nation.'</span>';
-            	
-					// Daten zuweisen
-					$platz++;
-					$rangliste[] = array
-					(
-						'Platz'       => $platz,
-						'PKZ'         => $spieler['nuLigaPersonId'],
-						'Mglnr'       => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getMitgliedsnummer($spieler, $zps),
-						'Status'      => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getMitgliedsstatus($spieler, $zps),
-						'Spielername' => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Spielername($spieler),
-						'Geschlecht'  => $spieler['gender'] == 'MALE' ? 'M' : ($spieler['gender'] == 'FEMALE' ? 'W' : strtoupper($spieler['gender'])),
-						'KW'          => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Kalenderwoche($spieler),
-						'DWZ'         => $spieler['rating'].' - '.$spieler['index'],
-						'Elo'         => $fide_elo,
-						'FIDE-Titel'  => $fide_titel,
-						'FIDE-Nation' => $flag_content,
-						'Verein'      => '',
-					);
-				}
-			}
+			$rangliste = new \Schachbulle\ContaoWertungsportalBundle\Helper\Verbandsrangliste($resultArr, $zps, $toplist, $german);
 
 			// Seitentitel/Unterüberschrift generieren
-			
-			$titel = '{Verbandsname}'.' Top '.$toplist.(($sex == 'm')?' männlich':(($sex == 'f')?' weiblich':'')).(($age_from) ? ' '.$age_from.' - '.$age_to.' Jahre' : (($age_to == 140) ? '' : ' '.$age_from.' - '.$age_to.' Jahre'));
+			$titel = $verbandsname.' | Top '.$toplist.(($sex == 'm')?' männlich':(($sex == 'f')?' weiblich':'')).(($age_from) ? ' '.$age_from.' - '.$age_to.' Jahre' : (($age_to == 140) ? '' : ' '.$age_from.' - '.$age_to.' Jahre'));
 			$objPage->pageTitle = $titel;
 
 			$this->Template = new \FrontendTemplate('wertungsportal_verbandsliste');
 			$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 			$this->Template->shl = 'h2'; // Standard-Überschriftgröße 2
 			$this->Template->headline = 'DWZ - Verband'; // Standard-Überschrift
-			$this->Template->navigation   = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+			$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
 			$this->Template->subHeadline = $titel;
-			$this->Template->daten = $rangliste;
+			$this->Template->daten = $rangliste->Rangliste;
 			$this->Template->fehler = $resultArr['error'] ? $resultArr['error_message'] : false;
-			$this->Template->verbaende    = $verbaende;
+			$this->Template->verbaende = $verbaende;
 		}
-
 	}
 
 }

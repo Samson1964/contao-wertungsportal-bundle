@@ -1,0 +1,185 @@
+<?php // Backend-Template: FIDE-Elo-Import aus der Ratinglisten-XML ?>
+
+<div id="tl_buttons">
+	<a href="<?= ampersand($this->zurueck) ?>" class="header_back" title="Zurück zur Elo-Liste" accesskey="b">Zurück</a>
+</div>
+
+<h2 class="sub_headline">FIDE-Elo-Import (Ratinglisten-XML)</h2>
+
+<div class="tl_formbody_edit">
+
+	<fieldset class="tl_box">
+		<legend>XML-Datei ausw&auml;hlen</legend>
+		<div class="widget">
+			<p>Erwartet wird die FIDE-Ratingliste von ratings.fide.com — am besten direkt als
+			Zip-Datei (<em>players_list_xml.zip</em>, ca. 50&nbsp;MB Upload; wird serverseitig entpackt),
+			alternativ die entpackte XML (<em>players_list_xml_foa.xml</em>, ca. 835&nbsp;MB Upload).
+			Die Liste enth&auml;lt ca. 1,9 Millionen Spieler; Upload und Import laufen deshalb in
+			kleinen Schritten — der erste Import kann l&auml;nger dauern, Folgel&auml;ufe schreiben
+			nur ge&auml;nderte Datens&auml;tze. Vorhandene Datens&auml;tze werden anhand der FIDE-ID
+			&uuml;berschrieben, es wird nichts gel&ouml;scht.</p>
+			<p><input type="file" id="wpEloDatei" accept=".xml,.zip,text/xml,application/zip"></p>
+			<p><button id="wpEloStart" class="tl_submit" disabled>Import starten</button></p>
+		</div>
+	</fieldset>
+
+	<fieldset class="tl_box" id="wpEloFortschritt" style="display:none">
+		<legend>Fortschritt</legend>
+		<div class="widget">
+			<p>1. Upload: <progress id="wpEloUploadBar" max="100" value="0" style="width:300px"></progress> <span id="wpEloUploadText">0&nbsp;%</span></p>
+			<p>2. Import: <progress id="wpEloImportBar" max="100" value="0" style="width:300px"></progress> <span id="wpEloImportText">0&nbsp;%</span></p>
+			<p id="wpEloStatus"></p>
+		</div>
+	</fieldset>
+
+	<fieldset class="tl_box" id="wpEloErgebnis" style="display:none">
+		<legend>Ergebnis</legend>
+		<div class="widget">
+			<table class="tl_listing">
+				<tr><td>Verarbeitete Spieler:</td><td style="text-align:right"><span id="wpEloErgVerarbeitet">0</span></td></tr>
+				<tr><td>Neu angelegt:</td><td style="text-align:right"><span id="wpEloErgNeu">0</span></td></tr>
+				<tr><td>Aktualisiert:</td><td style="text-align:right"><span id="wpEloErgAktualisiert">0</span></td></tr>
+				<tr><td>Unver&auml;ndert:</td><td style="text-align:right"><span id="wpEloErgUnveraendert">0</span></td></tr>
+				<tr><td>&Uuml;bersprungen (ohne FIDE-ID/Parse-Fehler):</td><td style="text-align:right"><span id="wpEloErgUebersprungen">0</span></td></tr>
+			</table>
+		</div>
+	</fieldset>
+
+	<fieldset class="tl_box" id="wpEloFehlerBox" style="display:none">
+		<legend>Fehler</legend>
+		<div class="widget">
+			<p class="tl_error" id="wpEloFehlerText"></p>
+			<p><button id="wpEloNeustart" class="tl_submit">Neu starten</button></p>
+		</div>
+	</fieldset>
+
+</div>
+
+<script>
+(function()
+{
+	var url = <?= json_encode(\Contao\Environment::get('request')) ?>;
+	var token = '<?= REQUEST_TOKEN ?>';
+	var BLOCK = 2 * 1024 * 1024; // Upload-Blockgröße: 2 MB
+
+	var eingabe = document.getElementById('wpEloDatei');
+	var startKnopf = document.getElementById('wpEloStart');
+
+	eingabe.addEventListener('change', function() { startKnopf.disabled = !eingabe.files.length; });
+
+	document.getElementById('wpEloNeustart').addEventListener('click', function() { location.reload(); });
+
+	function zeige(id, an) { document.getElementById(id).style.display = an ? '' : 'none'; }
+	function text(id, wert) { document.getElementById(id).textContent = wert; }
+	function balken(id, prozent) { document.getElementById(id).value = prozent; }
+
+	function fehler(meldung)
+	{
+		text('wpEloFehlerText', meldung);
+		zeige('wpEloFehlerBox', true);
+		text('wpEloStatus', 'Abgebrochen.');
+	}
+
+	async function post(fd)
+	{
+		fd.append('REQUEST_TOKEN', token);
+		// WICHTIG: KEIN X-Requested-With-Header — sonst fängt Contaos eigenes
+		// Ajax-System die Anfrage ab ("Missing Ajax action"), bevor der
+		// key=importElo-Callback ausgeführt wird
+		var antwort = await fetch(url, { method: 'POST', body: fd });
+		if(!antwort.ok) throw new Error('HTTP-Fehler ' + antwort.status);
+		return antwort.json();
+	}
+
+	// Datei blockweise hochladen
+	async function hochladen(datei)
+	{
+		var offset = 0;
+		while(offset < datei.size)
+		{
+			var fd = new FormData();
+			fd.append('wpEloAktion', 'upload');
+			fd.append('offset', offset);
+			fd.append('chunk', datei.slice(offset, offset + BLOCK), 'chunk.xml');
+
+			var res = await post(fd);
+			if(res.fehler) throw new Error(res.fehler);
+
+			offset = res.groesse;
+			var prozent = Math.round(offset / datei.size * 100);
+			balken('wpEloUploadBar', prozent);
+			text('wpEloUploadText', prozent + ' %');
+		}
+	}
+
+	// Import in Spieler-Paketen ausführen; das Listendatum (elodate) wird
+	// einmalig beim Start erzeugt, damit alle Datensätze des Laufs
+	// dasselbe elodate bekommen
+	async function importieren()
+	{
+		var offset = 0;
+		var elodate = Math.floor(Date.now() / 1000);
+		var summe = { verarbeitet: 0, neu: 0, aktualisiert: 0, unveraendert: 0, uebersprungen: 0 };
+		var res;
+
+		do
+		{
+			var fd = new FormData();
+			fd.append('wpEloAktion', 'import');
+			fd.append('offset', offset);
+			fd.append('elodate', elodate);
+
+			res = await post(fd);
+			if(res.fehler) throw new Error(res.fehler);
+
+			offset = res.offset;
+			summe.verarbeitet += res.verarbeitet;
+			summe.neu += res.neu;
+			summe.aktualisiert += res.aktualisiert;
+			summe.unveraendert += res.unveraendert;
+			summe.uebersprungen += res.uebersprungen;
+
+			var prozent = res.gesamt > 0 ? Math.round(offset / res.gesamt * 100) : 100;
+			balken('wpEloImportBar', prozent);
+			text('wpEloImportText', prozent + ' %');
+			text('wpEloStatus', summe.verarbeitet.toLocaleString('de-DE') + ' Spieler verarbeitet …');
+		}
+		while(!res.fertig);
+
+		return summe;
+	}
+
+	startKnopf.addEventListener('click', async function()
+	{
+		var datei = eingabe.files[0];
+		if(!datei) return;
+
+		startKnopf.disabled = true;
+		eingabe.disabled = true;
+		zeige('wpEloFehlerBox', false);
+		zeige('wpEloFortschritt', true);
+		text('wpEloStatus', 'Datei wird hochgeladen …');
+
+		try
+		{
+			await hochladen(datei);
+			text('wpEloStatus', 'Import läuft …');
+			var summe = await importieren();
+
+			text('wpEloErgVerarbeitet', summe.verarbeitet.toLocaleString('de-DE'));
+			text('wpEloErgNeu', summe.neu.toLocaleString('de-DE'));
+			text('wpEloErgAktualisiert', summe.aktualisiert.toLocaleString('de-DE'));
+			text('wpEloErgUnveraendert', summe.unveraendert.toLocaleString('de-DE'));
+			text('wpEloErgUebersprungen', summe.uebersprungen.toLocaleString('de-DE'));
+			zeige('wpEloErgebnis', true);
+			text('wpEloStatus', 'Import abgeschlossen.');
+		}
+		catch(e)
+		{
+			fehler(e.message || String(e));
+			startKnopf.disabled = false;
+			eingabe.disabled = false;
+		}
+	});
+})();
+</script>

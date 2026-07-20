@@ -431,6 +431,62 @@ class Helper extends \Frontend
 
 	}
 
+	/**
+	 * Zwischenspeicher für die generierten Seiten-URLs (pro Request)
+	 */
+	protected static $seitenUrlCache = array();
+
+	/**
+	 * Liefert die generierte URL der Spielerseite OHNE das URL-Suffix (.html)
+	 * als Basis für Modul-Links zurück. Im Gegensatz zum Alias enthält die
+	 * generierte URL im Vorschaumodus das preview.php-Präfix, so dass Links
+	 * und Formulare die Vorschau nicht mehr verlassen.
+	 */
+	public static function getSpielerseiteUrl()
+	{
+		if(!isset(self::$seitenUrlCache['spieler']))
+		{
+			self::$seitenUrlCache['spieler'] = preg_replace('/\.html$/', '', self::getSpielerseite(false));
+		}
+		return self::$seitenUrlCache['spieler'];
+	}
+
+	/**
+	 * Liefert die generierte URL der Turnierseite ohne URL-Suffix zurück (siehe getSpielerseiteUrl)
+	 */
+	public static function getTurnierseiteUrl()
+	{
+		if(!isset(self::$seitenUrlCache['turnier']))
+		{
+			self::$seitenUrlCache['turnier'] = preg_replace('/\.html$/', '', self::getTurnierseite(false));
+		}
+		return self::$seitenUrlCache['turnier'];
+	}
+
+	/**
+	 * Liefert die generierte URL der Vereinseite ohne URL-Suffix zurück (siehe getSpielerseiteUrl)
+	 */
+	public static function getVereinseiteUrl()
+	{
+		if(!isset(self::$seitenUrlCache['verein']))
+		{
+			self::$seitenUrlCache['verein'] = preg_replace('/\.html$/', '', self::getVereinseite(false));
+		}
+		return self::$seitenUrlCache['verein'];
+	}
+
+	/**
+	 * Liefert die generierte URL der Verbandseite ohne URL-Suffix zurück (siehe getSpielerseiteUrl)
+	 */
+	public static function getVerbandseiteUrl()
+	{
+		if(!isset(self::$seitenUrlCache['verband']))
+		{
+			self::$seitenUrlCache['verband'] = preg_replace('/\.html$/', '', self::getVerbandseite(false));
+		}
+		return self::$seitenUrlCache['verband'];
+	}
+
 	// ─────────────────────────────────────────────
 	//  Funktion Gesperrt
 	//  Für Gäste der Website Karteisperre = TRUE setzen
@@ -463,10 +519,19 @@ class Helper extends \Frontend
 		{
 			case 'Spielerliste': // Spielerliste einer Suche
 			case 'Vereinsliste': // Spielerliste eines Vereins
+				// FIDE-Daten für alle Spieler in einem Rutsch laden statt je Spieler einzeln
+				$fideids = array();
+				for($x = 0; $x < count($result['body']['data']); $x++)
+				{
+					if(!empty($result['body']['data'][$x]['fideId'])) $fideids[] = $result['body']['data'][$x]['fideId'];
+				}
+				$fideliste = self::getFIDEDatenListe($fideids);
+				$leer = array('land' => '', 'elo' => '', 'titel' => '');
+
 				for($x = 0; $x < count($result['body']['data']); $x++)
 				{
 					$fideid = isset($result['body']['data'][$x]['fideId']) ? $result['body']['data'][$x]['fideId'] : false;
-					$fide = self::getFIDEDatenLokal($fideid);
+					$fide = $fideid && isset($fideliste[$fideid]) ? $fideliste[$fideid] : $leer;
 					$result['body']['data'][$x]['fideElo'] = $fide['elo'];
 					$result['body']['data'][$x]['fideTitle'] = $fide['titel'];
 					$result['body']['data'][$x]['fideNation'] = $fide['land'];
@@ -493,7 +558,7 @@ class Helper extends \Frontend
 		if($fideid)
 		{
 			// FIDE-ID in lokaler Datenbank suchen
-			$objPlayer = \Database::getInstance()->prepare("SELECT * FROM tl_dwz_elo WHERE fideid = ?")
+			$objPlayer = \Database::getInstance()->prepare("SELECT * FROM tl_wertungsportal_elo WHERE fideid = ?")
 			                                     ->execute($fideid);
 			if($objPlayer->numRows)
 			{
@@ -509,9 +574,176 @@ class Helper extends \Frontend
 	}
 
 	/**
+	 * Lädt die FIDE-Daten (Elo, Titel, Nation) für mehrere FIDE-IDs in einem
+	 * Rutsch aus der lokalen Tabelle tl_wertungsportal_elo — vermeidet die Einzelabfrage
+	 * je Spieler bei großen Listen.
+	 *
+	 * @param     array $fideids  FIDE-IDs (leere Werte werden ignoriert)
+	 * @return    array           FIDE-ID => array('land' => ..., 'elo' => ..., 'titel' => ...)
+	 */
+	public static function getFIDEDatenListe($fideids)
+	{
+		$liste = array();
+
+		// Leere Werte entfernen, Duplikate zusammenfassen
+		$fideids = array_values(array_unique(array_filter((array) $fideids)));
+		if(!count($fideids)) return $liste;
+
+		// Blockweise laden, um sehr lange IN-Listen zu vermeiden
+		foreach(array_chunk($fideids, 500) as $chunk)
+		{
+			$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
+			$objPlayer = \Database::getInstance()->prepare("SELECT fideid, country, rating, title FROM tl_wertungsportal_elo WHERE fideid IN ($platzhalter)")
+			                                     ->execute($chunk);
+			while($objPlayer->next())
+			{
+				$liste[$objPlayer->fideid] = array
+				(
+					'land'  => $objPlayer->country,
+					'elo'   => $objPlayer->rating ? $objPlayer->rating : '',
+					'titel' => $objPlayer->title
+				);
+			}
+		}
+
+		return $liste;
+	}
+
+	/**
+	 * Löst die Verbandskette eines Vereins über tl_wertungsportal_clubs auf:
+	 * vom Verein aufwärts über das Feld federation bis zur obersten Ebene.
+	 * Der DSB wird als oberste Ebene immer ergänzt (analog Verbandsnavigation).
+	 * Lokal unbekannte VKZ beenden die Kette — die Rückgabe ist dann so
+	 * vollständig, wie es die synchronisierten Daten hergeben.
+	 *
+	 * @param     String $vkz  VKZ des Vereins (5-stellig)
+	 * @return    array        Verbände von oben nach unten: array('vkz' => ..., 'name' => ..., 'url' => ...);
+	 *                         leer, wenn der Verein lokal nicht bekannt ist
+	 */
+	public static function getVerbandskette($vkz)
+	{
+		$kette = array();
+		$besucht = array();
+		$aktuell = (string) $vkz;
+		$gefunden = false;
+
+		for($x = 0; $x < 6; $x++) // Sicherheitsgrenze gegen Zirkelbezüge
+		{
+			if($aktuell == '' || isset($besucht[$aktuell])) break;
+			$besucht[$aktuell] = true;
+
+			// Datensatz zur VKZ suchen — Verbände können 3-stellig (Navigations-
+			// Kurzform) oder 5-stellig (?00-Auffüllung) abgelegt sein
+			$alternative = (strlen($aktuell) == 3) ? $aktuell.'00' : $aktuell;
+			$objClub = \Database::getInstance()->prepare("SELECT clubVkz, clubName, federation FROM tl_wertungsportal_clubs WHERE clubVkz = ? OR clubVkz = ?")
+			                                   ->limit(1)
+			                                   ->execute($aktuell, $alternative);
+			if(!$objClub->numRows) break;
+			$gefunden = true;
+
+			// Den Verein selbst nicht in die Kette aufnehmen, nur die Verbände darüber
+			if($x > 0)
+			{
+				array_unshift($kette, array
+				(
+					'vkz'  => $objClub->clubVkz,
+					'name' => $objClub->clubName,
+					'url'  => sprintf('<a href="'.self::getVerbandseiteUrl().'/%s.html">%s</a>', substr($objClub->clubVkz, 0, 3), $objClub->clubName),
+				));
+			}
+
+			$aktuell = (string) $objClub->federation;
+		}
+
+		// DSB als oberste Ebene ergänzen, sobald der Verein lokal bekannt ist
+		if($gefunden)
+		{
+			array_unshift($kette, array
+			(
+				'vkz'  => '000',
+				'name' => 'Deutscher Schachbund',
+				'url'  => sprintf('<a href="'.self::getVerbandseiteUrl().'/%s.html">%s</a>', '000', 'Deutscher Schachbund'),
+			));
+		}
+
+		return $kette;
+	}
+
+	/**
+	 * Zwischenspeicher für bereits geprüfte Blacklist-IDs (pro Request)
+	 */
+	protected static $blacklistCache = array();
+
+	/**
+	 * Prüft nu-Personen-IDs gegen die Blacklist (tl_wertungsportal_persons,
+	 * Feld blocked) und liefert die gesperrten IDs als Array id => true
+	 * zurück — eine Bulk-Abfrage statt Einzelabfragen je Spieler.
+	 * Gesperrte Personen dürfen in keiner Ausgabe der Website erscheinen.
+	 *
+	 * @param     array $nuIds  nu-Personen-IDs (leere Werte werden ignoriert)
+	 * @return    array         nuLigaPersonId => true für gesperrte Personen
+	 */
+	public static function getBlacklist($nuIds)
+	{
+		// Die Spalte blocked existiert erst nach contao:migrate —
+		// bis dahin gibt es keine Sperren (kein SQL-Fehler im Frontend)
+		static $spalteVorhanden = null;
+		if($spalteVorhanden === null) $spalteVorhanden = \Database::getInstance()->fieldExists('blocked', 'tl_wertungsportal_persons');
+		if(!$spalteVorhanden) return array();
+
+		$nuIds = array_values(array_unique(array_filter((array) $nuIds)));
+
+		// Noch nicht geprüfte IDs ermitteln
+		$offen = array();
+		foreach($nuIds as $id)
+		{
+			if(!array_key_exists((string) $id, self::$blacklistCache)) $offen[] = (string) $id;
+		}
+
+		// Offene IDs blockweise abfragen und Ergebnis im Request-Cache merken
+		if(count($offen))
+		{
+			foreach($offen as $id) self::$blacklistCache[$id] = false;
+
+			foreach(array_chunk($offen, 500) as $chunk)
+			{
+				$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
+				$objPerson = \Database::getInstance()->prepare("SELECT nuLigaPersonId FROM tl_wertungsportal_persons WHERE blocked = '1' AND nuLigaPersonId IN ($platzhalter)")
+				                                     ->execute($chunk);
+				while($objPerson->next())
+				{
+					self::$blacklistCache[(string) $objPerson->nuLigaPersonId] = true;
+				}
+			}
+		}
+
+		// Gesperrte IDs der angefragten Liste zurückgeben
+		$liste = array();
+		foreach($nuIds as $id)
+		{
+			if(!empty(self::$blacklistCache[(string) $id])) $liste[(string) $id] = true;
+		}
+
+		return $liste;
+	}
+
+	/**
+	 * Prüft eine einzelne nu-Personen-ID gegen die Blacklist
+	 *
+	 * @param     String $nuId  nu-Personen-ID
+	 * @return    bool          true, wenn die Person gesperrt ist
+	 */
+	public static function istGeblockt($nuId)
+	{
+		if(!$nuId) return false;
+
+		return count(self::getBlacklist(array($nuId))) > 0;
+	}
+
+	/**
 	 * Leitet auf die im System definierte 404-Seite weiter
 	 */
-	public static function get404()
+	public static function get404($fehler = '')
 	{
 		throw new \CoreBundle\Exception\PageNotFoundException('Page not found: '.\Environment::get('uri'));
 	}
@@ -637,6 +869,67 @@ class Helper extends \Frontend
 	}
 
 	/**
+	 * Füllt fehlende Felder eines Spieler-DTOs der Wertungsportal-API
+	 * (players, whitePlayer, blackPlayer) mit Standardwerten auf, damit
+	 * Zugriffe auf optionale Felder keine Fehler auslösen.
+	 *
+	 * @param       Array $player Spieler-DTO aus der API (kann unvollständig sein)
+	 * @return      Array
+	 */
+	public static function PlayerDefaults($player)
+	{
+		if(!is_array($player)) $player = array();
+
+		$defaults = array
+		(
+			'playerUuid'               => false,
+			'nuLigaPersonId'           => false,
+			'firstname'                => false,
+			'lastname'                 => false,
+			'birthyear'                => false,
+			'vkz'                      => false,
+			'memberNo'                 => false,
+			'clubName'                 => false,
+			'fideId'                   => false,
+			'playerNo'                 => false,
+			'eloPlayer'                => false,
+			'ratingOld'                => false,
+			'indexOld'                 => false,
+			'ratingNew'                => false,
+			'indexNew'                 => false,
+			'factorK'                  => false,
+			'averageRatingCompetitors' => false,
+			'wins'                     => false,
+			'numberOfGames'            => false,
+			'winsExpected'             => false,
+			'tournamentPerformance'    => false,
+		);
+
+		return array_merge($defaults, $player);
+	}
+
+	/**
+	 * Formatiert ein Datum aus der Wertungsportal-API fehlertolerant um.
+	 * Fehlt der Wert oder passt er nicht zum Eingabeformat (z. B. wenn ein
+	 * Turnier noch nie berechnet wurde und lastCalculated fehlt), wird der
+	 * Standardwert zurückgegeben statt einen Fehler auszulösen.
+	 *
+	 * @param       String $wert      Datumswert aus der API (kann fehlen/leer sein)
+	 * @param       String $informat  Eingabeformat, z. B. 'Y-m-d' oder 'Y-m-d\TH:i:s'
+	 * @param       String $outformat Ausgabeformat, z. B. 'd.m.Y' oder 'd.m.Y H:i'
+	 * @param       String $default   Rückgabe, wenn kein gültiges Datum vorliegt
+	 * @return      String
+	 */
+	public static function ApiDatum($wert, $informat = 'Y-m-d', $outformat = 'd.m.Y', $default = 'unbekannt')
+	{
+		if(!$wert || !is_string($wert)) return $default;
+
+		$datum = \DateTime::createFromFormat($informat, $wert);
+
+		return $datum ? $datum->format($outformat) : $default;
+	}
+
+	/**
 	 * Ersetzt in einem numerischen Array 0-Werte durch einen Mittelwert der Nachbarwerte
 	 * @param 		Array
 	 * @return		Array
@@ -698,7 +991,7 @@ class Helper extends \Frontend
 	 */
 	public static function Spielername($person)
 	{
-		if($person['nuLigaPersonId']) $return = sprintf('<a href="'.self::getSpielerseite().'/%s.html">%s</a>', $person['nuLigaPersonId'], sprintf('%s, %s', $person['lastname'], $person['firstname']));
+		if($person['nuLigaPersonId']) $return = sprintf('<a href="'.self::getSpielerseiteUrl().'/%s.html">%s</a>', $person['nuLigaPersonId'], sprintf('%s, %s', $person['lastname'], $person['firstname']));
 		else $return = sprintf('%s', sprintf('%s, %s', $person['lastname'], $person['firstname']));
 
 		return $return;
@@ -824,30 +1117,6 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Liefert die Blacklist zurück
-	 *
-	 */
-	public static function Blacklist()
-	{
-		// Gesperrte ID's einlesen
-		$result = \Database::getInstance()->prepare("SELECT dewisID FROM tl_dwz_spi WHERE blocked = ?")
-		                                  ->execute(1);
-
-		$blacklist = array();
-		// Übernehmen
-		if($result->numRows)
-		{
-			while($result->next())
-			{
-				// Frage: Was ist schneller? Dieser Indexzugriff oder später in_array?
-				$blacklist[$result->dewisID] = true;
-			}
-		}
-
-		return $blacklist;
-	}
-
-	/**
 	 * Schreibt Werte aus einem Array vom Array in ein neues Array
 	 * @param 		Array
 	 * 				Beispiel:
@@ -876,6 +1145,10 @@ class Helper extends \Frontend
 	 */
 	public static function checkSearchstringPlayer($search)
 	{
+		// Rückgabefelder vorbelegen, damit auch pkz/zps sowie der Komma-Zweig
+		// keine undefinierten Variablen zurückgeben
+		$vorname = $vorname2 = $nachname = $nachname2 = '';
+
 		if(is_numeric($search)) $typ = 'pkz'; // Eine PKZ wurde übergeben
 		elseif(strlen($search) == 10 && substr($search,5,1) == '-') $typ = 'zps'; // Eine ZPS wurde übergeben
 		else
@@ -951,6 +1224,80 @@ class Helper extends \Frontend
 			}
 		}
 		return '';
+	}
+
+	/**
+	 * Funktion DownloadDatei
+	 * Lädt eine Datei per Curl herunter und prüft das Ergebnis:
+	 * Curl-Fehler, HTTP-Status 200 und (optional) gültiges Zip-Archiv.
+	 * Bei Fehlschlag wird der Download nach einer kurzen Pause wiederholt,
+	 * unvollständige Dateien werden gelöscht statt liegen gelassen
+	 * (der nu-Server liefert gelegentlich abgeschnittene Zips).
+	 *
+	 * @param     string $url      Quell-URL
+	 * @param     string $ziel     Zielpfad im Dateisystem
+	 * @param     int    $versuche Maximale Anzahl Versuche
+	 * @param     bool   $zipCheck Datei nach dem Download als Zip-Archiv prüfen
+	 * @return    array            array('success' => bool, 'error' => string, 'versuche' => int)
+	 */
+	public static function DownloadDatei($url, $ziel, $versuche = 3, $zipCheck = true)
+	{
+		$fehler = '';
+
+		for($versuch = 1; $versuch <= $versuche; $versuch++)
+		{
+			if($versuch > 1) sleep(5); // Kurze Pause vor der Wiederholung
+
+			$fp = fopen($ziel, 'w');
+
+			if($fp === false)
+			{
+				return array('success' => false, 'error' => 'Zieldatei kann nicht geschrieben werden: '.$ziel, 'versuche' => $versuch);
+			}
+
+			$ch = curl_init($url);
+			curl_setopt($ch, CURLOPT_FILE, $fp);
+			curl_setopt($ch, CURLOPT_TIMEOUT, 3600);
+			curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+			curl_exec($ch);
+			$curlFehler = curl_errno($ch) ? curl_error($ch) : '';
+			$httpCode = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+			curl_close($ch);
+			fclose($fp);
+
+			if($curlFehler)
+			{
+				$fehler = 'Curl-Fehler: '.$curlFehler;
+			}
+			elseif($httpCode != 200)
+			{
+				$fehler = 'HTTP-Status '.$httpCode;
+			}
+			elseif($zipCheck)
+			{
+				// Zip-Konsistenzprüfung erkennt auch abgeschnittene Downloads
+				$zip = new \ZipArchive();
+				$res = $zip->open($ziel, \ZipArchive::CHECKCONS);
+
+				if($res === true)
+				{
+					$zip->close();
+					return array('success' => true, 'error' => '', 'versuche' => $versuch);
+				}
+
+				$fehler = 'Zip-Archiv defekt oder unvollständig (Code '.$res.')';
+			}
+			else
+			{
+				return array('success' => true, 'error' => '', 'versuche' => $versuch);
+			}
+
+			@unlink($ziel); // Defekte Datei nicht liegen lassen
+		}
+
+		return array('success' => false, 'error' => $fehler, 'versuche' => $versuche);
 	}
 
 }

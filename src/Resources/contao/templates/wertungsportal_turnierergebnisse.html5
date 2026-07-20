@@ -49,6 +49,12 @@
 			<h2><?= $this->subHeadline ?></h2>
 		<?php endif; ?>
 
+		<?php if($this->fehler): ?>
+
+			<p class="error"><?= $this->fehler ?></p>
+
+		<?php else: ?>
+
 		<div class="table_responsiv">
 			<table class="header">
 				<tbody>
@@ -113,11 +119,13 @@
 								<?php for($r = 1; $r <= $this->turnierheader['Runden']; $r++): ?>
 									<td class="right-line<?= $class ?>">
 									<?php if($d['Ergebnisse'][$r]): ?>
-										<div class="<?= $d['Ergebnisse'][$r]['Farbklasse'] ?>" title="<?= $d['Ergebnisse'][$r]['Gegnername'] ?>">
-											<span class="result"><?= $d['Ergebnisse'][$r]['Resultat'] ?></span>
-											<span class=""><?= $d['Ergebnisse'][$r]['Farbe'] ?></span>
-											<span class="opponent"><?= $d['Ergebnisse'][$r]['Gegner'] ?></span>
+										<?php foreach($d['Ergebnisse'][$r] as $erg): ?>
+										<div class="<?= $erg['Farbklasse'] ?>" title="<?= $erg['Gegnername'] ?>">
+											<span class="result"><?= $erg['Resultat'] ?></span>
+											<span class=""><?= $erg['Farbe'] ?></span>
+											<span class="opponent"><?= $erg['Gegner'] ?></span>
 										</div>
+										<?php endforeach; ?>
 									<?php endif; ?>
 									</td>
 								<?php endfor; ?>
@@ -128,6 +136,8 @@
 			</table>
 		</div>
 	
+		<?php endif; ?>
+
 	<?php $this->endblock(); ?>
 
 </div>

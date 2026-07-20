@@ -23,6 +23,49 @@
 	background:url("/bundles/contaowertungsportal/images/rating.png") 3px 2px no-repeat;
 }
 
+/* Unveröffentlichte Datensätze in den Backendlisten von tl_wertungsportal_clubs
+   und tl_wertungsportal_persons rot darstellen.
+   Reagiert über :has() auf den Zustand des Toggle-Buttons und greift dadurch
+   auch sofort beim Betätigen des Togglers (Ajax tauscht Icon und data-state). */
+tr:has(a[href*="do=wp-clubs"][href*="act=toggle"][data-state="0"]) td,
+tr:has(a[href*="do=wp-clubs"][href*="act=toggle"] img[src*="visible_"]) td,
+tr:has(a[href*="do=wp-clubs"][href*="act=toggle"] img[src*="invisible"]) td,
+tr:has(a[href*="do=wp-persons"][href*="act=toggle"][data-state="0"]) td,
+tr:has(a[href*="do=wp-persons"][href*="act=toggle"] img[src*="visible_"]) td,
+tr:has(a[href*="do=wp-persons"][href*="act=toggle"] img[src*="invisible"]) td,
+tr:has(a[href*="do=wp-tournaments"][href*="act=toggle"][data-state="0"]) td,
+tr:has(a[href*="do=wp-tournaments"][href*="act=toggle"] img[src*="visible_"]) td,
+tr:has(a[href*="do=wp-tournaments"][href*="act=toggle"] img[src*="invisible"]) td
+{
+	color              : #cc0000;
+}
+
+/* Graue Zusatzinfos in der Datensatzdarstellung (z. B. Mitgliedschaften) */
+.wp-meta
+{
+	color              : #999999;
+	padding-left       : 3px;
+}
+
+/* Unveröffentlichte Datensätze in der Elternansicht rot darstellen
+   (Kindtabellen von wp-persons und wp-tournaments).
+   Die Elternansicht nutzt div.tl_content statt Tabellenzeilen. */
+div.tl_content:has(a[href*="do=wp-persons"][href*="act=toggle"][data-state="0"]) div.tl_content_left,
+div.tl_content:has(a[href*="do=wp-persons"][href*="act=toggle"][data-state="0"]) .wp-meta,
+div.tl_content:has(a[href*="do=wp-persons"][href*="act=toggle"] img[src*="visible_"]) div.tl_content_left,
+div.tl_content:has(a[href*="do=wp-persons"][href*="act=toggle"] img[src*="visible_"]) .wp-meta,
+div.tl_content:has(a[href*="do=wp-persons"][href*="act=toggle"] img[src*="invisible"]) div.tl_content_left,
+div.tl_content:has(a[href*="do=wp-persons"][href*="act=toggle"] img[src*="invisible"]) .wp-meta,
+div.tl_content:has(a[href*="do=wp-tournaments"][href*="act=toggle"][data-state="0"]) div.tl_content_left,
+div.tl_content:has(a[href*="do=wp-tournaments"][href*="act=toggle"][data-state="0"]) .wp-meta,
+div.tl_content:has(a[href*="do=wp-tournaments"][href*="act=toggle"] img[src*="visible_"]) div.tl_content_left,
+div.tl_content:has(a[href*="do=wp-tournaments"][href*="act=toggle"] img[src*="visible_"]) .wp-meta,
+div.tl_content:has(a[href*="do=wp-tournaments"][href*="act=toggle"] img[src*="invisible"]) div.tl_content_left,
+div.tl_content:has(a[href*="do=wp-tournaments"][href*="act=toggle"] img[src*="invisible"]) .wp-meta
+{
+	color              : #cc0000;
+}
+
 /*table.api_statistik {
 	width              : 100%;
 	border             : 1px solid #C0C0C0;

@@ -14,8 +14,8 @@
         "contao/core-bundle": "^4",
         "codefog/contao-haste": "*",
         "schachbulle/contao-helper-bundle": "*",
-        "menatwork/contao-multicolumnwizard-bundle": "^3.6",
-        "components/flag-icon-css": "^3.3"
+        "schachbulle/contao-flaggen-bundle": "*",
+        "menatwork/contao-multicolumnwizard-bundle": "^3.6"
     },
     "conflict": {
         "contao/core": "*",

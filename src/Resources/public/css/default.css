@@ -355,3 +355,50 @@
 .dewis .table_responsiv {
 	overflow: auto;
 }
+
+/* Karteikarte: DWZ/Leistungs-Diagramm und Overlay (Lightbox) fuer alle Turniere */
+.dewis .diagramm {
+	margin-top				: 20px;
+}
+
+.dwz-diagramm-overlay {
+	display					: none;
+	position				: fixed;
+	top						: 0;
+	right					: 0;
+	bottom					: 0;
+	left					: 0;
+	background				: rgba(0, 0, 0, 0.7);
+	z-index					: 9999;
+	padding					: 20px;
+}
+
+.dwz-diagramm-overlay.offen {
+	display					: flex;
+	align-items				: center;
+	justify-content			: center;
+}
+
+.dwz-diagramm-overlay-inner {
+	background				: #ffffff;
+	padding					: 20px;
+	border-radius			: 4px;
+	max-width				: 95%;
+	max-height				: 90%;
+	overflow				: auto;
+	position				: relative;
+}
+
+.dwz-diagramm-schliessen {
+	position				: absolute;
+	top						: 6px;
+	right					: 12px;
+	font-size				: 24px;
+	line-height				: 1;
+	text-decoration			: none;
+	color					: #333333;
+}
+
+.dwz-diagramm-scroll {
+	overflow-x				: auto;
+}

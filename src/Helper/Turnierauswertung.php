@@ -47,11 +47,11 @@ class Turnierauswertung
 		if(!array_key_exists('additionalReferentFirstname', $this->apiTurnierinfo['body']['tournament'])) $this->apiTurnierinfo['body']['tournament']['additionalReferentFirstname'] = false;
 
 		$this->daten['Turniername']           = $this->apiTurnierinfo['body']['tournament']['label'];
-		$this->daten['Turnierergebnislink']   = sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseite().'/%s/Ergebnisse.html">Turnierergebnisse</a>', $this->apiTurnierinfo['body']['tournament']['uuid']);
+		$this->daten['Turnierergebnislink']   = sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/Ergebnisse.html">Turnierergebnisse</a>', $this->apiTurnierinfo['body']['tournament']['uuid']);
 		$this->daten['Turniercode']           = $this->apiTurnierinfo['body']['tournament']['uuid'];
-		$this->daten['Turnierende']           = \DateTime::createFromFormat('Y-m-d', $this->apiTurnierinfo['body']['tournament']['enddate'])->format('d.m.Y');
+		$this->daten['Turnierende']           = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::ApiDatum($this->apiTurnierinfo['body']['tournament']['enddate'] ?? null, 'Y-m-d', 'd.m.Y');
 		$this->daten['Berechnet']             = 'unbekannt';
-		$this->daten['Nachberechnet']         = \DateTime::createFromFormat('Y-m-d\TH:i:s', $this->apiTurnierinfo['body']['tournament']['lastCalculated'])->format('d.m.Y H:i');
+		$this->daten['Nachberechnet']         = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::ApiDatum($this->apiTurnierinfo['body']['tournament']['lastCalculated'] ?? null, 'Y-m-d\TH:i:s', 'd.m.Y H:i');
 		$this->daten['Auswerter1']            = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Gesperrt() ? 'Sie müssen sich anmelden, um diese Daten sehen zu können.' : $this->apiTurnierinfo['body']['tournament']['referentFirstname'].' '.$this->apiTurnierinfo['body']['tournament']['referentLastname'].' / {{email::'.$this->apiTurnierinfo['body']['tournament']['referentEmail'].'}}';
 		$this->daten['Auswerter2']            = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Gesperrt() ? 'Sie müssen sich anmelden, um diese Daten sehen zu können.' : $this->apiTurnierinfo['body']['tournament']['additionalReferentFirstname'].' '.$this->apiTurnierinfo['body']['tournament']['additionalReferentLastname'];
 		$this->daten['AnzahlSpieler']         = $this->apiTurnierinfo['body']['tournament']['playerCount'];
@@ -65,19 +65,22 @@ class Turnierauswertung
 
 		if(isset($this->apiTurnierinfo['body']['players']))
 		{
+			// FIDE-Daten für alle Spieler in einem Rutsch laden statt je Spieler einzeln
+			$fideids = array();
+			foreach($this->apiTurnierinfo['body']['players'] as $t)
+			{
+				if(!empty($t['fideId'])) $fideids[] = $t['fideId'];
+			}
+			$fideliste = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getFIDEDatenListe($fideids);
+
+			// Gesperrte Personen (Blacklist) in einem Rutsch ermitteln
+			$blacklist = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getBlacklist(array_column($this->apiTurnierinfo['body']['players'], 'nuLigaPersonId'));
+
 			foreach($this->apiTurnierinfo['body']['players'] as $t)
 			{
 				// Auf nichtexistierende Variablen prüfen, die aber benötigt werden:
-				if(!array_key_exists('nuLigaPersonId', $t)) $t['nuLigaPersonId'] = false;
-				if(!array_key_exists('ratingNew', $t)) $t['ratingNew'] = false;
-				if(!array_key_exists('ratingOld', $t)) $t['ratingOld'] = false;
-				if(!array_key_exists('indexNew', $t)) $t['indexNew'] = false;
-				if(!array_key_exists('indexOld', $t)) $t['indexOld'] = false;
-				if(!array_key_exists('tournamentPerformance', $t)) $t['tournamentPerformance'] = false;
-				if(!array_key_exists('fideId', $t)) $t['fideId'] = false;
-				if(!array_key_exists('memberNo', $t)) $t['memberNo'] = false;
-				if(!array_key_exists('vkz', $t)) $t['vkz'] = false;
-				if(!array_key_exists('clubName', $t)) $t['clubName'] = false;
+				// Fehlende Felder des Spieler-DTOs mit Standardwerten auffüllen
+				$t = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::PlayerDefaults($t);
 
 				// Ratingdifferenz errechnen
 				$ratingdiff = $t['ratingNew'] - $t['ratingOld'];
@@ -87,20 +90,20 @@ class Turnierauswertung
 				$key = \StringUtil::generateAlias(sprintf('%04d', $t['playerNo']).$t['lastname'].$t['firstname']);
 
 				// FIDE-Daten laden
-				$fide = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getFIDEDatenLokal($t['fideId']);
+				$fide = $t['fideId'] && isset($fideliste[$t['fideId']]) ? $fideliste[$t['fideId']] : array('land' => '', 'elo' => '', 'titel' => '');
 
 				$this->daten['Spieler'][$key] = array
 				(
 					'Nummer'        => $t['playerNo'],
 					'PKZ'           => $t['nuLigaPersonId'],
 					'Spielername'   => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Spielername($t),
-					'Scoresheet'    => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseite().'/%s/%s.html" title="%s">SC</a>', $this->apiTurnierinfo['body']['tournament']['uuid'], $t['playerUuid'], 'Spielberichtsbogen von '.$t['firstname'].' '.$t['lastname'].' aufrufen'),
+					'Scoresheet'    => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/%s.html" title="%s">SC</a>', $this->apiTurnierinfo['body']['tournament']['uuid'], $t['playerUuid'], 'Spielberichtsbogen von '.$t['firstname'].' '.$t['lastname'].' aufrufen'),
 					'DWZ alt'       => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::DWZ($t['ratingOld'], $t['indexOld']),
 					'DWZ neu'       => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::DWZ($t['ratingNew'], $t['indexNew']),
 					'MglNr'         => sprintf('%04d', $t['memberNo']),
-					'VKZ'           => $t['memberNo'] ? sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseite().'/%s.html">%s</a>', $t['vkz'], sprintf('%s-%s', $t['vkz'], sprintf('%04d', $t['memberNo']))) : '',
+					'VKZ'           => $t['memberNo'] ? sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl().'/%s.html">%s</a>', $t['vkz'], sprintf('%s-%s', $t['vkz'], sprintf('%04d', $t['memberNo']))) : '',
 					'ZPS'           => sprintf('%s-%s', $t['vkz'], sprintf('%04d', $t['memberNo'])),
-					'Verein'        => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseite()."/%s.html\">%s</a>", $t['vkz'], $t['clubName']),
+					'Verein'        => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s.html\">%s</a>", $t['vkz'], $t['clubName']),
 					'Geburt'        => $t['birthyear'],
 					'Geschlecht'    => '',
 					'Elo'           => $fide['elo'],
@@ -115,6 +118,25 @@ class Turnierauswertung
 					'Niveau'        => $t['averageRatingCompetitors'],
 					'Leistung'      => $t['tournamentPerformance'],
 				);
+
+				// Blacklist: Die Zeile bleibt wegen der Turnier-Querbezüge erhalten,
+				// aber ohne Personenbezug (kein Name, keine Links, kein Verein)
+				if(!empty($t['nuLigaPersonId']) && isset($blacklist[$t['nuLigaPersonId']]))
+				{
+					$this->daten['Spieler'][$key] = array_merge($this->daten['Spieler'][$key], array
+					(
+						'PKZ'         => '',
+						'Spielername' => '<i>gesperrt</i>',
+						'Scoresheet'  => '',
+						'MglNr'       => '',
+						'VKZ'         => '',
+						'ZPS'         => '',
+						'Verein'      => '',
+						'Geburt'      => '',
+						'Elo'         => '',
+						'Titel'       => '',
+					));
+				}
 			}
 			// Liste nach dem Schlüssel (Nr./Nachname/Vorname) sortieren 
 			ksort($this->daten['Spieler']);

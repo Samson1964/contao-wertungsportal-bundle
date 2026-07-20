@@ -3,7 +3,7 @@
 /**
  * palettes
  */
-$GLOBALS['TL_DCA']['tl_settings']['palettes']['default'] .= ';{wertungsportal_legend:hide},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband,wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe,wertungsportal_cache,wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize,wertungsportal_eloLocal';
+$GLOBALS['TL_DCA']['tl_settings']['palettes']['default'] .= ';{wertungsportal_legend:hide},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband,wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe,wertungsportal_crontoken,wertungsportal_cache,wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize,wertungsportal_debuglog';
 
 /**
  * fields
@@ -192,6 +192,18 @@ $GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_scopeListe'] = array
 	),
 );
 
+// Geheimer Schlüssel für die Cron-Download-Skripte
+$GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_crontoken'] = array
+(
+	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_crontoken'],
+	'inputType'               => 'text',
+	'eval'                    => array
+	(
+		'mandatory'           => false,
+		'tl_class'            => 'w50',
+	),
+);
+
 // Cache ein- oder ausschalten
 $GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_cache'] = array
 (
@@ -265,14 +277,13 @@ $GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_clubImageSize'] = ar
 	},
 ); 
 
-// Elo von lokaler Quelle laden
-$GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_eloLocal'] = array
+// Anzeige passive Mitglieder ausblenden
+$GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_debuglog'] = array
 (
-	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_eloLocal'],
+	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_debuglog'],
 	'inputType'               => 'checkbox',
 	'eval'                    => array
 	(
-		'tl_class'            => 'clr w50',
+		'tl_class'            => 'w50'
 	)
 );
-

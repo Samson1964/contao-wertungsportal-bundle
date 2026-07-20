@@ -24,6 +24,7 @@ $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_tokenURL'] = array('Token-Adr
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_clientID'] = array('Client-ID', 'Client-Identifikationsnummer');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_clientSecret'] = array('Client Secret', 'Geheimes Passwort');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_scopeListe'] = array('Scope (Bereiche)', 'Bereiche eintragen, für die Zugriff gegeben werden soll.');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_crontoken'] = array('Cron-Token', 'Geheimer Schlüssel für die Download-Skripte (Aufruf mit ?key=SCHLÜSSEL). Ohne Eintrag sind die Skripte gesperrt.');
 
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cache'] = array('Cache aktivieren','Cache für das Wertungsportal aktivieren');
 
@@ -32,4 +33,4 @@ $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_playerImageSize'] = array('Bi
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_clubDefaultImage'] = array('Vereinsbild', 'Standardbild/-logo für Vereine');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_clubImageSize'] = array('Bildgröße', 'Größe der Vereinsbilder/Logos');
 
-$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_eloLocal'] = array('FIDE-Daten von lokaler Quelle laden', 'Die FIDE-Daten (Nation, Titel, Elo) werden aus der Tabelle tl_dwz_elo geladen und nicht aus dem Wertungsportal.');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_debuglog'] = array('Debug-Log', 'Debug-Log aktivieren');

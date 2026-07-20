@@ -18,7 +18,7 @@
 	</div>
 
 	<div class="searchform clr noprint">
-		<form action="<?= \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseite() ?>.html" method="get">
+		<form action="<?= \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl() ?>.html" method="get">
 			<fieldset id="searchform" class="tl_box">
 				<legend>Suche</legend>
 				<div class="long">

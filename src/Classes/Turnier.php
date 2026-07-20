@@ -6,7 +6,7 @@
  * Copyright (c) 2005-2016 Leo Feyer
  *
  * @package   Wertungsportal
- * @file      Spieler
+ * @file      Turnier
  * @author    Frank Binding
  * @license   GNU/LGPL
  * @copyright Frank Binding 2026
@@ -16,6 +16,9 @@
  * Wertungsportal-Abfrage:
  * Ausgabe Turniersuche / Ausgabe Turnierauswertung
  *
+ * Die Aufbereitung der API-Daten für die Templates übernehmen die
+ * Helper-Klassen Turniersuche, Scoresheet, Turnierergebnisse,
+ * Turnierauswertung und Turnierformular.
  */
 
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
@@ -61,42 +64,28 @@ class Turnier extends \Module
 	 */
 	protected function compile()
 	{
-
 		global $objPage;
 
-		// Blacklist laden
-		$Blacklist = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Blacklist();
-
-		$code = \Input::get('code'); // Turniercode angefordert?
 		$search = \Input::get('search'); // Turniersuche aktiv?
 		$turniercode = str_replace(' ','+',\Input::get('code')); // Turniercode, Leerzeichen durch + ersetzen, da der Browser aus + Leerzeichen macht
 		$id = \Input::get('id'); // Spieler-ID
 		$view = \Input::get('view'); // View
 
-		$log = "GET-Parameter Turnier-Klasse\n";
-		$log .= print_r($_GET, true)."\n";
-		log_message($log, 'wertungsportal_oauth2client.log');
-
-		$mitglied = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getMitglied(); // Daten des aktuellen Mitgliedes laden
+		// GET-Parameter nur bei aktiviertem Debug-Log protokollieren
+		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])
+		{
+			$log = "GET-Parameter Turnier-Klasse\n";
+			$log .= print_r($_GET, true)."\n";
+			log_message($log, 'wertungsportal_oauth2client.log');
+		}
 
 		$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 		$this->Template->shl = 'h2'; // Standard-Überschriftgröße 2
 		$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
-		$this->Template->navigation   = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
-
-		// Sperrstatus festlegen
-		if($GLOBALS['TL_CONFIG']['wertungsportal_karteisperre_gaeste']) $gesperrt = $mitglied->id ? false : true;
-		else $gesperrt = false;
-
-		// DeWIS-Klasse initialisieren
-		$dewis = new \Schachbulle\ContaoWertungsportalBundle\Helper\API();
-
-		// Verbands- und Vereinsliste holen
-		$liste = \Schachbulle\ContaoWertungsportalBundle\Helper\API::Verbandsliste('00000');
+		$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
 
 		if($search)
 		{
-
 			/*********************************************************
 			 * Turniersuche
 			*/
@@ -151,7 +140,7 @@ class Turnier extends \Module
 			$this->Template = new \FrontendTemplate('wertungsportal_turniersuche');
 			$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 			$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
-			$this->Template->navigation   = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+			$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
 			$this->Template->subHeadline = $title; // Unterüberschrift Turnier setzen
 			$this->Template->daten = $trefferliste->Turnierliste;
 			$this->Template->anzahl = count($trefferliste->Turnierliste);
@@ -159,7 +148,6 @@ class Turnier extends \Module
 			$this->Template->search_verband = $zps;
 			$this->Template->search_from = $from_month.'/'.$from_year;
 			$this->Template->search_to = $to_month.'/'.$to_year;
-
 		}
 		elseif($turniercode && $id)
 		{
@@ -186,8 +174,34 @@ class Turnier extends \Module
 			);
 			$resultErg = \Schachbulle\ContaoWertungsportalBundle\Helper\API::autoQuery($param); // Abfrage ausführen
 
+			// API-Fehler im Template ausgeben statt auf die 404-Seite umzuleiten
+			if($resultTur['error'] || $resultTur['http_code'] != 200)
+			{
+				$this->templateFehler('wertungsportal_spielberichtsbogen', 'Spielberichtsbogen', $resultTur);
+				return;
+			}
+			if($resultErg['error'] || $resultErg['http_code'] != 200)
+			{
+				$this->templateFehler('wertungsportal_spielberichtsbogen', 'Spielberichtsbogen', $resultErg);
+				return;
+			}
+
 			// Turnierinfo und Scoresheet auswerten
 			$scoresheet = new \Schachbulle\ContaoWertungsportalBundle\Helper\Scoresheet($resultTur, $resultErg);
+
+			// Blacklist: Spielberichtsbogen gesperrter Personen nicht anzeigen
+			if($scoresheet->Gesperrt)
+			{
+				$objPage->pageTitle = 'Spielberichtsbogen';
+
+				$this->Template = new \FrontendTemplate('wertungsportal_spielberichtsbogen');
+				$this->Template->hl = 'h1'; // Standard-Überschriftgröße
+				$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
+				$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+				$this->Template->subHeadline = $scoresheet->Turniername; // Unterüberschrift Turnier setzen
+				$this->Template->fehler = 'Dieser Spielberichtsbogen ist nicht verfügbar.';
+				return;
+			}
 
 			$theader = array
 			(
@@ -211,13 +225,12 @@ class Turnier extends \Module
 			$this->Template = new \FrontendTemplate('wertungsportal_spielberichtsbogen');
 			$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 			$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
-			$this->Template->navigation   = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+			$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
 			$this->Template->subHeadline = $scoresheet->Turniername; // Unterüberschrift Turnier setzen
 			$this->Template->playerHeadline = 'Spielberichtsbogen <b>'.$scoresheet->Spieler['Name'].'</b>'.($scoresheet->Spieler['DWZ alt'] ? ' / DWZ '.$scoresheet->Spieler['DWZ alt'] : ''); // Unterüberschrift Spieler setzen
 			$this->Template->turnierheader = $theader;
 			$this->Template->partien = $scoresheet->Ergebnisse;
 			$this->Template->spieler = $scoresheet->Spieler;
-
 		}
 		elseif($turniercode && !$id && $view == 'results')
 		{
@@ -243,6 +256,18 @@ class Turnier extends \Module
 			);
 			$resultErg = \Schachbulle\ContaoWertungsportalBundle\Helper\API::autoQuery($param); // Abfrage ausführen
 
+			// API-Fehler im Template ausgeben statt auf die 404-Seite umzuleiten
+			if($resultTur['error'] || $resultTur['http_code'] != 200)
+			{
+				$this->templateFehler('wertungsportal_turnierergebnisse', 'Turnierergebnisse', $resultTur);
+				return;
+			}
+			if($resultErg['error'] || $resultErg['http_code'] != 200)
+			{
+				$this->templateFehler('wertungsportal_turnierergebnisse', 'Turnierergebnisse', $resultErg);
+				return;
+			}
+
 			// Turnierinfo und Turnierergebnisse auswerten
 			$ergebnisse = new \Schachbulle\ContaoWertungsportalBundle\Helper\Turnierergebnisse($resultTur, $resultErg);
 
@@ -266,11 +291,10 @@ class Turnier extends \Module
 			$this->Template = new \FrontendTemplate('wertungsportal_turnierergebnisse');
 			$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 			$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
-			$this->Template->navigation   = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+			$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
 			$this->Template->subHeadline = $ergebnisse->Turniername; // Unterüberschrift Turnier setzen
 			$this->Template->turnierheader = $theader;
 			$this->Template->spieler = $ergebnisse->Spieler;
-
 		}
 		elseif($turniercode && !$id)
 		{
@@ -286,6 +310,13 @@ class Turnier extends \Module
 				'turnier'   => \Input::get('code')
 			);
 			$resultTur = \Schachbulle\ContaoWertungsportalBundle\Helper\API::autoQuery($param); // Abfrage ausführen
+
+			// API-Fehler (z. B. "No evaluation found") im Template ausgeben statt auf die 404-Seite umzuleiten
+			if($resultTur['error'] || $resultTur['http_code'] != 200)
+			{
+				$this->templateFehler('wertungsportal_turnierauswertung', 'DWZ-Auswertung', $resultTur);
+				return;
+			}
 
 			// Turnierauswertung auswerten
 			$auswertung = new \Schachbulle\ContaoWertungsportalBundle\Helper\Turnierauswertung($resultTur);
@@ -312,102 +343,56 @@ class Turnier extends \Module
 			$this->Template = new \FrontendTemplate('wertungsportal_turnierauswertung');
 			$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 			$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
-			$this->Template->navigation   = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+			$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
 			$this->Template->subHeadline = $auswertung->Turniername; // Unterüberschrift Turnier setzen
 			$this->Template->turnierheader = $theader;
 			$this->Template->spieler = $auswertung->Spieler;
-
 		}
 		else
 		{
-
 			/*********************************************************
 			 * Suche nicht aktiv, deshalb Suchformular initialisieren
 			*/
 
-			// ZPS der Verbände in Cookie gespeichert?
-			$zpscookie = \Input::cookie('dewis-verband-zps');
+			// Verbands- und Vereinsliste holen (nur hier benötigt)
+			$liste = \Schachbulle\ContaoWertungsportalBundle\Helper\API::Verbandsliste('00000');
 
-			// DSB eintragen
-			$opArray = array('<option value="" class="level_0"'.($zpscookie ? '' : ' selected').'><b>0 - Alle Verbände</b></option>');
-			// Auswahl Verbände
-			foreach($liste['verbaende'] as $key => $value)
-			{
-				$kurz = rtrim($value['clubVkz'],0);
-				$kurzlaenge = strlen($kurz);
-				if($zpscookie)
-				{
-					// Verband vorselektieren, wenn Cookie gesetzt ist
-					$selected = ($zpscookie == $kurz) ? ' selected' : '';
-				}
-				else
-				{
-					// Kein oder leeres Cookie, ZPS 0 setzen
-					$selected = ($kurzlaenge) ? '' : ' selected';
-				}
+			// Auswahlfelder des Formulars aufbereiten
+			$formular = new \Schachbulle\ContaoWertungsportalBundle\Helper\Turnierformular($liste);
 
-				switch($kurzlaenge)
-				{
-					case 1:
-						$opArray[] = sprintf('<option value="%s00" class="level_1"'.$selected.'>%s - %s</option>', $kurz, $kurz, $value['clubName']);
-						break;
-					case 2:
-						$opArray[] = sprintf('<option value="%s0" class="level_2"'.$selected.'>%s - %s</option>', $kurz, $kurz, $value['clubName']);
-						break;
-					case 3:
-						$opArray[] = sprintf('<option value="%s" class="level_3"'.$selected.'>%s - %s</option>', $kurz, $kurz, $value['clubName']);
-						break;
-					default:
-				}
-			}
-
-			$this->Template->form_verbaende = implode("\n",$opArray);
-
-			// Auswahl Zeitraum
-			$aktjahr = date("Y");
-			$aktmonat = date("n");
-			$monate = array
-			(
-				1 => "Januar",
-				2 => "Februar",
-				3 => "März",
-				4 => "April",
-				5 => "Mai",
-				6 => "Juni",
-				7 => "Juli",
-				8 => "August",
-				9 => "September",
-				10 => "Oktober",
-				11 => "November",
-				12 => "Dezember"
-			);
-
-			// Auswahl Von-Monat/Bis-Monat
-			$opArray = array();
-			for($x = 1; $x <= 12; $x++)
-			{
-				$opArray[] = ($x == $aktmonat) ? '<option value="'.sprintf("%02d",$x).'" selected>'.$monate[$x].'</option>' : '<option value="'.sprintf("%02d",$x).'">'.$monate[$x].'</option>';
-			}
-			$this->Template->form_monat = implode("\n",$opArray);
-
-			// Auswahl Von-Jahr
-			$opArray = array();
-			for($x = 2011; $x <= $aktjahr; $x++)
-			{
-				$opArray[] = ($x == $aktjahr - 1) ? '<option value="'.$x.'" selected>'.$x.'</option>' : '<option value="'.$x.'">'.$x.'</option>';
-			}
-			$this->Template->form_vonjahr = implode("\n",$opArray);
-
-			// Auswahl Bis-Jahr
-			$opArray = array();
-			for($x = 2011; $x <= $aktjahr; $x++)
-			{
-				$opArray[] = ($x == $aktjahr) ? '<option value="'.$x.'" selected>'.$x.'</option>' : '<option value="'.$x.'">'.$x.'</option>';
-			}
-			$this->Template->form_bisjahr = implode("\n",$opArray);
+			$this->Template->form_verbaende = $formular->FormVerbaende;
+			$this->Template->form_monat = $formular->FormMonat;
+			$this->Template->form_vonjahr = $formular->FormVonjahr;
+			$this->Template->form_bisjahr = $formular->FormBisjahr;
 		}
+	}
 
+	/**
+	 * Bereitet das Template für die Ausgabe eines API-Fehlers vor.
+	 * Der Besucher bleibt auf der Seite und sieht die Meldung der API,
+	 * statt auf die 404-Seite umgeleitet zu werden.
+	 *
+	 * @param string $strTemplate    Name des Templates (z. B. wertungsportal_turnierauswertung)
+	 * @param string $strSubHeadline Unterüberschrift der Seite
+	 * @param array  $arrResult      Rückgabe von API::autoQuery
+	 */
+	protected function templateFehler($strTemplate, $strSubHeadline, $arrResult)
+	{
+		global $objPage;
 
+		// Fehlermeldung der API ermitteln (body ist im Fehlerfall meist ein String)
+		$meldung = '';
+		if(isset($arrResult['body']) && is_string($arrResult['body']) && $arrResult['body'] != '') $meldung = $arrResult['body'];
+		elseif(!empty($arrResult['error_message'])) $meldung = $arrResult['error_message'];
+
+		$objPage->pageTitle = $strSubHeadline;
+
+		$this->Template = new \FrontendTemplate($strTemplate);
+		$this->Template->hl = 'h1'; // Standard-Überschriftgröße
+		$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
+		$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+		$this->Template->subHeadline = $strSubHeadline; // Unterüberschrift setzen
+		$this->Template->fehler = 'Die Wertungsportal-API meldet einen Fehler (HTTP-Code '.$arrResult['http_code'].')'.($meldung ? ': '.$meldung : '');
 	}
 
 }

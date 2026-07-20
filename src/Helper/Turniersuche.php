@@ -50,9 +50,9 @@ class Turniersuche
 				(
 					'Teilnehmer'    => '?', //$t->cntPlayer,
 					'Turniercode'   => $t['uuid'],
-					'Turniername'   => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseite().'/%s.html" title="%s">%s</a>', $t['uuid'], $t['label'], \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Turnierkurzname($t['label'])),
+					'Turniername'   => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s.html" title="%s">%s</a>', $t['uuid'], $t['label'], \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Turnierkurzname($t['label'])),
 					'Turnierregion' => $t['vkz'],
-					'Turnierende'   => \DateTime::createFromFormat('Y-m-d', $t['enddate'])->format('d.m.Y'),
+					'Turnierende'   => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::ApiDatum($t['enddate'] ?? null, 'Y-m-d', 'd.m.Y', ''),
 					'Auswerter'     => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Gesperrt() ? 'Sie müssen sich anmelden, um diese Daten sehen zu können.' : ($t['referentLastname'] ? $t['referentFirstname'].' '.$t['referentLastname'] : '?'),
 				);
 			}

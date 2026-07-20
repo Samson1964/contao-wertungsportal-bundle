@@ -25,7 +25,7 @@
 
 	<?php if($this->searchform): ?>
 		<div class="searchform clr noprint">
-			<form action="<?= \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseite() ?>/<?= $this->zps ?>.html" method="get">
+			<form action="<?= \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl() ?>/<?= $this->zps ?>.html" method="get">
 				<fieldset id="searchform" class="tl_box">
 					<legend>Verbandslisten</legend>
 					<table>
@@ -42,7 +42,7 @@
 									<option value="250">Top 250</option>
 									<option value="500">Top 500</option>
 									<option value="750">Top 750</option>
-									<option value="950">Top 950</option>
+									<option value="1000">Top 1000</option>
 								</select>
 								<p class="tl_help">Auswahl der Spieleranzahl für die Rangliste</p>
 							</td>

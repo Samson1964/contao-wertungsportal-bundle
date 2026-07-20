@@ -1,5 +1,14 @@
 <?php
 
+use Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalClubsModel;
+use Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalPersonsModel;
+use Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalPersonsMembershipsModel;
+use Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalPersonsTournamentsModel;
+use Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalPersonsUpgradesModel;
+use Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTournamentsModel;
+use Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTournamentsEvaluationModel;
+use Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTournamentsMatchesModel;
+
 /**
  * Contao Open Source CMS
  *
@@ -17,42 +26,49 @@
 
 $GLOBALS['BE_MOD']['wertungsportal'] = array
 (
-	'dwz-spieler'    => array
+	'wp-clubs'    => array
 	(
 		'tables'         => array
 		(
-			'tl_dwz_spi', 
-			'tl_dwz_spiver',
-			'tl_dwz_kar',
-			'tl_dwz_inf',
-			'tl_dwz_fid',
+			'tl_wertungsportal_clubs',
 		),
-		'icon'           => 'bundles/contaowertungsportal/images/icon_spieler.png',
+		// Globale Operation: Altdaten-Übernahme aus tl_dwz_ver (key=importDwzVer)
+		'importDwzVer'   => array('Schachbulle\ContaoWertungsportalBundle\Classes\AltdatenImport', 'runVereine'),
 	),
-	'dwz-vereine'    => array
+	'wp-persons'    => array
 	(
 		'tables'         => array
 		(
-			'tl_dwz_ver', 
+			'tl_wertungsportal_persons',
+			'tl_wertungsportal_persons_memberships',
+			'tl_wertungsportal_persons_tournaments',
+			'tl_wertungsportal_persons_upgrades',
 		),
-		'icon'           => 'bundles/contaowertungsportal/images/icon_vereine.png',
+		// Globale Operation: Personen-Import aus der Vereinsmitglieder-CSV (key=importPersons)
+		'importPersons'  => array('Schachbulle\ContaoWertungsportalBundle\Classes\PersonenImport', 'run'),
+		// Globale Operation: Spielerbild-Übernahme aus tl_dwz_spi (key=importPhotos)
+		'importPhotos'   => array('Schachbulle\ContaoWertungsportalBundle\Classes\AltdatenImport', 'runPersonen'),
 	),
-	'dwz-turniere'    => array
+	'wp-tournaments'    => array
 	(
 		'tables'         => array
 		(
-			'tl_dwz_tur', 
+			'tl_wertungsportal_tournaments',
+			'tl_wertungsportal_tournaments_evaluation',
+			'tl_wertungsportal_tournaments_matches',
 		),
-		'icon'           => 'bundles/contaowertungsportal/images/icon_turniere.png',
 	),
-	'dwz-bearbeiter'    => array
+	'wp-elo'    => array
 	(
 		'tables'         => array
 		(
-			'tl_dwz_bea', 
+			'tl_wertungsportal_elo',
 		),
-		'icon'           => 'bundles/contaowertungsportal/images/icon_bearbeiter.png',
+		// Globale Operation: FIDE-Elo-Import aus der Ratinglisten-XML (key=importElo)
+		'importElo'      => array('Schachbulle\ContaoWertungsportalBundle\Classes\EloImport', 'run'),
 	),
+	// Die DeWIS-Module (tl_dwz_*) verwaltet wieder das contao-dewis-bundle,
+	// das für die Übergangszeit parallel installiert ist
 );
 
 /**
@@ -86,6 +102,7 @@ $GLOBALS['TL_CONFIG']['wertungsportal_karteisperre_gaeste'] = 0;
 $GLOBALS['TL_CONFIG']['wertungsportal_passive_ausblenden'] = 0;
 $GLOBALS['TL_CONFIG']['wertungsportal_geburtsjahr_ausblenden'] = 1;
 $GLOBALS['TL_CONFIG']['wertungsportal_geschlecht_ausblenden'] = 1;
+$GLOBALS['TL_CONFIG']['wertungsportal_debuglog'] = 0;
 
 /**
  * -------------------------------------------------------------------------
@@ -93,5 +110,17 @@ $GLOBALS['TL_CONFIG']['wertungsportal_geschlecht_ausblenden'] = 1;
  * -------------------------------------------------------------------------
  */
 
+// Die DwzSpi-/DwzVer-Models bleiben registriert: Sie werden für die
+// Altdaten-Übernahmen und die Foto-/Logo-Fallbacks weiter gelesen
+// (die DCA-Verwaltung der tl_dwz_*-Tabellen liegt beim contao-dewis-bundle)
 $GLOBALS['TL_MODELS']['tl_dwz_spi'] = \Schachbulle\ContaoWertungsportalBundle\Models\DwzSpiModel::class;
 $GLOBALS['TL_MODELS']['tl_dwz_ver'] = \Schachbulle\ContaoWertungsportalBundle\Models\DwzVerModel::class;
+$GLOBALS['TL_MODELS']['tl_wertungsportal_elo'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalEloModel::class;
+$GLOBALS['TL_MODELS']['tl_wertungsportal_clubs'] = WertungsportalClubsModel::class;
+$GLOBALS['TL_MODELS']['tl_wertungsportal_persons'] = WertungsportalPersonsModel::class;
+$GLOBALS['TL_MODELS']['tl_wertungsportal_persons_memberships'] = WertungsportalPersonsMembershipsModel::class;
+$GLOBALS['TL_MODELS']['tl_wertungsportal_persons_tournaments'] = WertungsportalPersonsTournamentsModel::class;
+$GLOBALS['TL_MODELS']['tl_wertungsportal_persons_upgrades'] = WertungsportalPersonsUpgradesModel::class;
+$GLOBALS['TL_MODELS']['tl_wertungsportal_tournaments'] = WertungsportalTournamentsModel::class;
+$GLOBALS['TL_MODELS']['tl_wertungsportal_tournaments_evaluation'] = WertungsportalTournamentsEvaluationModel::class;
+$GLOBALS['TL_MODELS']['tl_wertungsportal_tournaments_matches'] = WertungsportalTournamentsMatchesModel::class;

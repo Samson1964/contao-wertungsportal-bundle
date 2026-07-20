@@ -1,0 +1,192 @@
+<?php // Backend-Template: Personen-Import aus der Vereinsmitglieder-CSV ?>
+
+<div id="tl_buttons">
+	<a href="<?= ampersand($this->zurueck) ?>" class="header_back" title="Zurück zur Personenliste" accesskey="b">Zurück</a>
+</div>
+
+<h2 class="sub_headline">Personen-Import (Vereinsmitglieder-CSV)</h2>
+
+<div class="tl_formbody_edit">
+
+	<fieldset class="tl_box">
+		<legend>CSV-Datei ausw&auml;hlen</legend>
+		<div class="widget">
+			<p>Erwartet wird die Vereinsmitglieder-Exportdatei: Semikolon-getrennt, UTF-8,
+			mit Kopfzeile (Pflichtspalten: <?= $this->pflichtspalten ?>). Die Zuordnung erfolgt
+			&uuml;ber die Spaltennamen. Eine Zeile je Vereinsmitgliedschaft; Personen werden
+			anhand der InterneNr (nuLiga-Personen-ID) angelegt bzw. aktualisiert.</p>
+			<p><input type="file" id="wpDatei" accept=".csv,text/csv"></p>
+			<p><button id="wpStart" class="tl_submit" disabled>Import starten</button></p>
+		</div>
+	</fieldset>
+
+	<fieldset class="tl_box" id="wpFortschritt" style="display:none">
+		<legend>Fortschritt</legend>
+		<div class="widget">
+			<p>1. Upload: <progress id="wpUploadBar" max="100" value="0" style="width:300px"></progress> <span id="wpUploadText">0&nbsp;%</span></p>
+			<p>2. Import: <progress id="wpImportBar" max="100" value="0" style="width:300px"></progress> <span id="wpImportText">0&nbsp;%</span></p>
+			<p id="wpStatus"></p>
+		</div>
+	</fieldset>
+
+	<fieldset class="tl_box" id="wpErgebnis" style="display:none">
+		<legend>Ergebnis</legend>
+		<div class="widget">
+			<table class="tl_listing">
+				<tr><td>Verarbeitete Zeilen:</td><td style="text-align:right"><span id="wpErgZeilen">0</span></td></tr>
+				<tr><td>Neu angelegte Personen:</td><td style="text-align:right"><span id="wpErgNeu">0</span></td></tr>
+				<tr><td>Aktualisierte Personen:</td><td style="text-align:right"><span id="wpErgAktualisiert">0</span></td></tr>
+				<tr><td>Unver&auml;nderte Personen:</td><td style="text-align:right"><span id="wpErgUnveraendert">0</span></td></tr>
+				<tr><td>Neu angelegte Mitgliedschaften:</td><td style="text-align:right"><span id="wpErgMNeu">0</span></td></tr>
+				<tr><td>Aktualisierte Mitgliedschaften:</td><td style="text-align:right"><span id="wpErgMAktualisiert">0</span></td></tr>
+				<tr><td>Unver&auml;nderte Mitgliedschaften:</td><td style="text-align:right"><span id="wpErgMUnveraendert">0</span></td></tr>
+				<tr><td>&Uuml;bersprungene Zeilen (ohne InterneNr):</td><td style="text-align:right"><span id="wpErgUebersprungen">0</span></td></tr>
+			</table>
+			<p id="wpErgHinweis">Hinweis: Mehrfachzeilen derselben Person (Mehrfachmitgliedschaften) z&auml;hlen ab der zweiten Zeile als &bdquo;unver&auml;ndert&ldquo;.</p>
+		</div>
+	</fieldset>
+
+	<fieldset class="tl_box" id="wpFehlerBox" style="display:none">
+		<legend>Fehler</legend>
+		<div class="widget">
+			<p class="tl_error" id="wpFehlerText"></p>
+			<p><button id="wpNeustart" class="tl_submit">Neu starten</button></p>
+		</div>
+	</fieldset>
+
+</div>
+
+<script>
+(function()
+{
+	var url = <?= json_encode(\Contao\Environment::get('request')) ?>;
+	var token = '<?= REQUEST_TOKEN ?>';
+	var BLOCK = 2 * 1024 * 1024; // Upload-Blockgröße: 2 MB
+
+	var eingabe = document.getElementById('wpDatei');
+	var startKnopf = document.getElementById('wpStart');
+
+	eingabe.addEventListener('change', function() { startKnopf.disabled = !eingabe.files.length; });
+
+	document.getElementById('wpNeustart').addEventListener('click', function() { location.reload(); });
+
+	function zeige(id, an) { document.getElementById(id).style.display = an ? '' : 'none'; }
+	function text(id, wert) { document.getElementById(id).textContent = wert; }
+	function balken(id, prozent) { document.getElementById(id).value = prozent; }
+
+	function fehler(meldung)
+	{
+		text('wpFehlerText', meldung);
+		zeige('wpFehlerBox', true);
+		text('wpStatus', 'Abgebrochen.');
+	}
+
+	async function post(fd)
+	{
+		fd.append('REQUEST_TOKEN', token);
+		// WICHTIG: KEIN X-Requested-With-Header — sonst fängt Contaos eigenes
+		// Ajax-System die Anfrage ab ("Missing Ajax action"), bevor der
+		// key=importPersons-Callback ausgeführt wird
+		var antwort = await fetch(url, { method: 'POST', body: fd });
+		if(!antwort.ok) throw new Error('HTTP-Fehler ' + antwort.status);
+		return antwort.json();
+	}
+
+	// Datei blockweise hochladen
+	async function hochladen(datei)
+	{
+		var offset = 0;
+		while(offset < datei.size)
+		{
+			var fd = new FormData();
+			fd.append('wpImportAktion', 'upload');
+			fd.append('offset', offset);
+			fd.append('chunk', datei.slice(offset, offset + BLOCK), 'chunk.csv');
+
+			var res = await post(fd);
+			if(res.fehler) throw new Error(res.fehler);
+
+			offset = res.groesse;
+			var prozent = Math.round(offset / datei.size * 100);
+			balken('wpUploadBar', prozent);
+			text('wpUploadText', prozent + ' %');
+		}
+	}
+
+	// Import in Zeilenpaketen ausführen
+	// Der Original-Dateiname wird mitgeschickt, damit der Server Datum und
+	// Uhrzeit (Vereine__Vereinsmitglieder__JJJJMMTTHHIISS) als tstamp der
+	// importierten Datensätze setzen kann
+	async function importieren(dateiname)
+	{
+		var offset = 0;
+		var summe = { zeilen: 0, neu: 0, aktualisiert: 0, unveraendert: 0, uebersprungen: 0, mNeu: 0, mAktualisiert: 0, mUnveraendert: 0 };
+		var res;
+
+		do
+		{
+			var fd = new FormData();
+			fd.append('wpImportAktion', 'import');
+			fd.append('offset', offset);
+			fd.append('dateiname', dateiname);
+
+			res = await post(fd);
+			if(res.fehler) throw new Error(res.fehler);
+
+			offset = res.offset;
+			summe.zeilen += res.zeilen;
+			summe.neu += res.neu;
+			summe.aktualisiert += res.aktualisiert;
+			summe.unveraendert += res.unveraendert;
+			summe.uebersprungen += res.uebersprungen;
+			summe.mNeu += res.mNeu;
+			summe.mAktualisiert += res.mAktualisiert;
+			summe.mUnveraendert += res.mUnveraendert;
+
+			var prozent = res.gesamt > 0 ? Math.round(offset / res.gesamt * 100) : 100;
+			balken('wpImportBar', prozent);
+			text('wpImportText', prozent + ' %');
+			text('wpStatus', summe.zeilen.toLocaleString('de-DE') + ' Zeilen verarbeitet …');
+		}
+		while(!res.fertig);
+
+		return summe;
+	}
+
+	startKnopf.addEventListener('click', async function()
+	{
+		var datei = eingabe.files[0];
+		if(!datei) return;
+
+		startKnopf.disabled = true;
+		eingabe.disabled = true;
+		zeige('wpFehlerBox', false);
+		zeige('wpFortschritt', true);
+		text('wpStatus', 'Datei wird hochgeladen …');
+
+		try
+		{
+			await hochladen(datei);
+			text('wpStatus', 'Import läuft …');
+			var summe = await importieren(datei.name);
+
+			text('wpErgZeilen', summe.zeilen.toLocaleString('de-DE'));
+			text('wpErgNeu', summe.neu.toLocaleString('de-DE'));
+			text('wpErgAktualisiert', summe.aktualisiert.toLocaleString('de-DE'));
+			text('wpErgUnveraendert', summe.unveraendert.toLocaleString('de-DE'));
+			text('wpErgMNeu', summe.mNeu.toLocaleString('de-DE'));
+			text('wpErgMAktualisiert', summe.mAktualisiert.toLocaleString('de-DE'));
+			text('wpErgMUnveraendert', summe.mUnveraendert.toLocaleString('de-DE'));
+			text('wpErgUebersprungen', summe.uebersprungen.toLocaleString('de-DE'));
+			zeige('wpErgebnis', true);
+			text('wpStatus', 'Import abgeschlossen.');
+		}
+		catch(e)
+		{
+			fehler(e.message || String(e));
+			startKnopf.disabled = false;
+			eingabe.disabled = false;
+		}
+	});
+})();
+</script>

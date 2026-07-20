@@ -51,12 +51,12 @@ class Scoresheet
 		if(!array_key_exists('additionalReferentFirstname', $this->apiTurnierinfo['body'])) $this->apiTurnierinfo['body']['additionalReferentFirstname'] = false;
 
 		$this->daten['Turniername']           = $this->apiTurnierinfo['body']['label'];
-		$this->daten['Turnierauswertunglink'] = sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseite().'/%s.html">Turnierauswertung</a>', $this->apiTurnierinfo['body']['uuid']);
-		$this->daten['Turnierergebnislink']   = sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseite().'/%s/Ergebnisse.html">Turnierergebnisse</a>', $this->apiTurnierinfo['body']['uuid']);
+		$this->daten['Turnierauswertunglink'] = sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s.html">Turnierauswertung</a>', $this->apiTurnierinfo['body']['uuid']);
+		$this->daten['Turnierergebnislink']   = sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/Ergebnisse.html">Turnierergebnisse</a>', $this->apiTurnierinfo['body']['uuid']);
 		$this->daten['Turniercode']           = $this->apiTurnierinfo['body']['uuid'];
-		$this->daten['Turnierende']           = \DateTime::createFromFormat('Y-m-d', $this->apiTurnierinfo['body']['enddate'])->format('d.m.Y');
+		$this->daten['Turnierende']           = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::ApiDatum($this->apiTurnierinfo['body']['enddate'] ?? null, 'Y-m-d', 'd.m.Y');
 		$this->daten['Berechnet']             = 'unbekannt';
-		$this->daten['Nachberechnet']         = \DateTime::createFromFormat('Y-m-d\TH:i:s', $this->apiTurnierinfo['body']['lastCalculated'])->format('d.m.Y H:i');
+		$this->daten['Nachberechnet']         = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::ApiDatum($this->apiTurnierinfo['body']['lastCalculated'] ?? null, 'Y-m-d\TH:i:s', 'd.m.Y H:i');
 		$this->daten['Auswerter1']            = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Gesperrt() ? 'Sie müssen sich anmelden, um diese Daten sehen zu können.' : $this->apiTurnierinfo['body']['referentFirstname'].' '.$this->apiTurnierinfo['body']['referentLastname'].' / {{email::'.$this->apiTurnierinfo['body']['referentEmail'].'}}';
 		$this->daten['Auswerter2']            = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Gesperrt() ? 'Sie müssen sich anmelden, um diese Daten sehen zu können.' : $this->apiTurnierinfo['body']['additionalReferentFirstname'].' '.$this->apiTurnierinfo['body']['additionalReferentLastname'];
 		$this->daten['AnzahlSpieler']         = $this->apiTurnierinfo['body']['playerCount'];
@@ -64,24 +64,36 @@ class Scoresheet
 		$this->daten['AnzahlRunden']          = $this->apiTurnierinfo['body']['rounds'];
 		$this->daten['Spieler']               = array(); // Wird nachfolgend befüllt
 		$this->daten['Ergebnisse']            = array(); // Wird nachfolgend befüllt
+		$this->daten['Gesperrt']              = false; // Wird true, wenn der Scoresheet-Spieler auf der Blacklist steht
+
+		// Gesperrte Personen (Blacklist) in einem Rutsch ermitteln
+		$nuids = array();
+		foreach($this->apiSpielberichtsbogen['body']['matches'] as $partie)
+		{
+			if(!empty($partie['whitePlayer']['nuLigaPersonId'])) $nuids[] = $partie['whitePlayer']['nuLigaPersonId'];
+			if(!empty($partie['blackPlayer']['nuLigaPersonId'])) $nuids[] = $partie['blackPlayer']['nuLigaPersonId'];
+		}
+		$blacklist = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getBlacklist($nuids);
 
 		// Ergebnisse laden
 
 		foreach($this->apiSpielberichtsbogen['body']['matches'] as $partie)
 		{
 			// Auf nichtexistierende Variablen prüfen, die aber benötigt werden:
-			if(!array_key_exists('nuLigaPersonId', $partie['whitePlayer'])) $partie['whitePlayer']['nuLigaPersonId'] = false;
-			if(!array_key_exists('nuLigaPersonId', $partie['blackPlayer'])) $partie['blackPlayer']['nuLigaPersonId'] = false;
-			if(!array_key_exists('tournamentPerformance', $partie['whitePlayer'])) $partie['whitePlayer']['tournamentPerformance'] = false;
-			if(!array_key_exists('tournamentPerformance', $partie['blackPlayer'])) $partie['blackPlayer']['tournamentPerformance'] = false;
-			if(!array_key_exists('ratingOld', $partie['whitePlayer'])) $partie['whitePlayer']['ratingOld'] = false;
-			if(!array_key_exists('ratingOld', $partie['blackPlayer'])) $partie['blackPlayer']['ratingOld'] = false;
-			if(!array_key_exists('ratingNew', $partie['whitePlayer'])) $partie['whitePlayer']['ratingNew'] = false;
-			if(!array_key_exists('ratingNew', $partie['blackPlayer'])) $partie['blackPlayer']['ratingNew'] = false;
+			// Fehlende Felder der Spieler-DTOs mit Standardwerten auffüllen
+			$partie['whitePlayer'] = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::PlayerDefaults($partie['whitePlayer'] ?? null);
+			$partie['blackPlayer'] = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::PlayerDefaults($partie['blackPlayer'] ?? null);
+
+			// Blacklist: Gegner ohne Personenbezug ausgeben, gesperrten
+			// Scoresheet-Spieler über das Gesperrt-Flag komplett abfangen
+			$weissGesperrt = !empty($partie['whitePlayer']['nuLigaPersonId']) && isset($blacklist[$partie['whitePlayer']['nuLigaPersonId']]);
+			$schwarzGesperrt = !empty($partie['blackPlayer']['nuLigaPersonId']) && isset($blacklist[$partie['blackPlayer']['nuLigaPersonId']]);
 
 			if($this->idSpieler == $partie['whitePlayer']['playerUuid'])
 			{
 				// Der Scoresheet-Spieler hat Weiß, sein Gegner Schwarz
+				if($weissGesperrt) $this->daten['Gesperrt'] = true;
+
 				// Zuerst prüfen, ob die Daten des auszuwertenden Spielers da sind
 				if(!$this->daten['Spieler'])
 				{
@@ -103,17 +115,19 @@ class Scoresheet
 					'Runde'             => $partie['round'],
 					'Farbe'             => 'white',
 					'Ergebnis'          => mb_substr(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Resultat($partie['result']), 0, 1),
-					'Gegner_Name'       => $partie['blackPlayer']['nuLigaPersonId'] ? sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseite().'/%s.html" title="%s">%s</a>', $partie['blackPlayer']['nuLigaPersonId'], 'Karteikarte von '.$partie['blackPlayer']['firstname'].' '.$partie['blackPlayer']['lastname'].' aufrufen', $partie['blackPlayer']['lastname'].', '.$partie['blackPlayer']['firstname']) : $partie['blackPlayer']['lastname'].', '.$partie['blackPlayer']['firstname'],
+					'Gegner_Name'       => $schwarzGesperrt ? '<i>gesperrt</i>' : ($partie['blackPlayer']['nuLigaPersonId'] ? sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseiteUrl().'/%s.html" title="%s">%s</a>', $partie['blackPlayer']['nuLigaPersonId'], 'Karteikarte von '.$partie['blackPlayer']['firstname'].' '.$partie['blackPlayer']['lastname'].' aufrufen', $partie['blackPlayer']['lastname'].', '.$partie['blackPlayer']['firstname']) : $partie['blackPlayer']['lastname'].', '.$partie['blackPlayer']['firstname']),
 					'Gegner_UUID'       => $partie['blackPlayer']['playerUuid'],
 					'Gegner_nuID'       => $partie['blackPlayer']['nuLigaPersonId'],
 					'Gegner_DWZ'        => $partie['blackPlayer']['ratingOld'],
-					'Gegner_Scoresheet' => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseite().'/%s/%s.html" title="%s">SC</a>', $this->apiTurnierinfo['body']['uuid'], $partie['blackPlayer']['playerUuid'], 'Spielberichtsbogen von '.$partie['blackPlayer']['firstname'].' '.$partie['blackPlayer']['lastname'].' aufrufen'),
+					'Gegner_Scoresheet' => $schwarzGesperrt ? '' : sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/%s.html" title="%s">SC</a>', $this->apiTurnierinfo['body']['uuid'], $partie['blackPlayer']['playerUuid'], 'Spielberichtsbogen von '.$partie['blackPlayer']['firstname'].' '.$partie['blackPlayer']['lastname'].' aufrufen'),
 					'We'                => '0' // Wird später berechnet
 				);
 			}
 			else
 			{
 				// Der Scoresheet-Spieler hat Schwarz, sein Gegner Weiß
+				if($schwarzGesperrt) $this->daten['Gesperrt'] = true;
+
 				// Zuerst prüfen, ob die Daten des auszuwertenden Spielers da sind
 				if(!$this->daten['Spieler'])
 				{
@@ -135,11 +149,11 @@ class Scoresheet
 					'Runde'             => $partie['round'],
 					'Farbe'             => 'black',
 					'Ergebnis'          => mb_substr(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Resultat($partie['result']), -1),
-					'Gegner_Name'       => $partie['whitePlayer']['nuLigaPersonId'] ? sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseite().'/%s.html" title="%s">%s</a>', $partie['whitePlayer']['nuLigaPersonId'], 'Karteikarte von '.$partie['whitePlayer']['firstname'].' '.$partie['whitePlayer']['lastname'].' aufrufen', $partie['whitePlayer']['lastname'].', '.$partie['whitePlayer']['firstname']) : $partie['whitePlayer']['lastname'].', '.$partie['whitePlayer']['firstname'],
+					'Gegner_Name'       => $weissGesperrt ? '<i>gesperrt</i>' : ($partie['whitePlayer']['nuLigaPersonId'] ? sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseiteUrl().'/%s.html" title="%s">%s</a>', $partie['whitePlayer']['nuLigaPersonId'], 'Karteikarte von '.$partie['whitePlayer']['firstname'].' '.$partie['whitePlayer']['lastname'].' aufrufen', $partie['whitePlayer']['lastname'].', '.$partie['whitePlayer']['firstname']) : $partie['whitePlayer']['lastname'].', '.$partie['whitePlayer']['firstname']),
 					'Gegner_UUID'       => $partie['whitePlayer']['playerUuid'],
 					'Gegner_nuID'       => $partie['whitePlayer']['nuLigaPersonId'],
 					'Gegner_DWZ'        => $partie['whitePlayer']['ratingOld'],
-					'Gegner_Scoresheet' => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseite().'/%s/%s.html" title="%s">SC</a>', $this->apiTurnierinfo['body']['uuid'], $partie['whitePlayer']['playerUuid'], 'Spielberichtsbogen von '.$partie['whitePlayer']['firstname'].' '.$partie['whitePlayer']['lastname'].' aufrufen'),
+					'Gegner_Scoresheet' => $weissGesperrt ? '' : sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/%s.html" title="%s">SC</a>', $this->apiTurnierinfo['body']['uuid'], $partie['whitePlayer']['playerUuid'], 'Spielberichtsbogen von '.$partie['whitePlayer']['firstname'].' '.$partie['whitePlayer']['lastname'].' aufrufen'),
 					'We'                => '0' // Wird später berechnet
 				);
 			}

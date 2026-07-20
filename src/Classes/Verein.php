@@ -6,7 +6,7 @@
  * Copyright (c) 2005-2016 Leo Feyer
  *
  * @package   Wertungsportal
- * @file      Spieler
+ * @file      Verein
  * @author    Frank Binding
  * @license   GNU/LGPL
  * @copyright Frank Binding 2026
@@ -16,6 +16,8 @@
  * Wertungsportal-Abfrage:
  * Ausgabe Vereinssuche / Ausgabe Vereinsliste
  *
+ * Die Aufbereitung der API-Daten für die Templates übernehmen die
+ * Helper-Klassen Vereinssuche und Vereinsliste.
  */
 
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
@@ -29,7 +31,7 @@ class Verein extends \Module
 	 */
 	protected $strTemplate = 'wertungsportal_verein';
 	protected $subTemplate = 'wertungsportal_sub_vereinsuche';
-	
+
 	/**
 	 * Display a wildcard in the back end
 	 * @return string
@@ -62,7 +64,6 @@ class Verein extends \Module
 	 */
 	protected function compile()
 	{
-	
 		global $objPage;
 
 		// Vereinsliste angefordert?
@@ -76,93 +77,55 @@ class Verein extends \Module
 		$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 		$this->Template->shl = 'h2'; // Standard-Überschriftgröße 2
 		$this->Template->headline = 'Wertungsportal - Verein'; // Standard-Überschrift
-		$this->Template->navigation   = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+		$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+		$this->Template->search = $search;
 
-		// Auf ungültige Zeichen im Suchbegriff prüfen (alles außer Buchstaben, Zahlen, Umlaute, Leerzeichen ist nicht erlaubt)
-		if(!preg_match("#^[a-zA-Z0-9äöüÄÖÜß ]+$#", $search))
+		// Auf ungültige Zeichen im Suchbegriff prüfen (alles außer Buchstaben,
+		// Zahlen, Umlauten und Leerzeichen ist nicht erlaubt) — nur prüfen,
+		// wenn überhaupt ein Suchbegriff eingegeben wurde
+		if($search && !preg_match("#^[a-zA-Z0-9äöüÄÖÜß ]+$#", $search))
 		{
 			$this->Template->fehler = 'Der Suchbegriff darf nur Buchstaben, Zahlen und Leerzeichen enthalten!';
-			$this->Template->search = $search;
 			$search = '';
-		}
-		else
-		{
-			$this->Template->search = $search;
 		}
 
 		if($search)
 		{
+			/*********************************************************
+			 * Vereinssuche
+			*/
+
 			// Suchstring modifizieren, Umlaute u.ä. konvertieren
-			$search = \System::getContainer()->get('contao.slug')->generate($search, 1);  
+			$search = \System::getContainer()->get('contao.slug')->generate($search, 1);
 
-			/*********************************************************
-			 * Verbands- und Vereinsliste komplett holen
-			*/
+			// Verbands- und Vereinsliste komplett holen und durchsuchen
 			$liste = \Schachbulle\ContaoWertungsportalBundle\Helper\API::Verbandsliste();
+			$suche = new \Schachbulle\ContaoWertungsportalBundle\Helper\Vereinssuche($liste, $search);
 
-			/*********************************************************
-			 * Verbandsliste durchsuchen, Treffer in Array speichern
-			*/
-			//print_r($liste['verbaende']);
-			$result_vb = array();
-			foreach($liste['verbaende'] as $item)
-			{
-				if(stripos($item['clubName'], $search) !== false)
-				{
-					$result_vb[] = array
-					(
-						'zps'       => $item['clubVkz'],
-						'name'      => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseite().'/%s.html">%s</a>', $item['clubVkz'], $item['clubName']),
-					);
-				}
-			}
-
-			/*********************************************************
-			 * Vereinsliste durchsuchen, Treffer in Array speichern
-			*/
-			$result_vn = array();
-			foreach($liste['vereine'] as $item)
-			{
-				if(stripos($item['clubName'], $search) !== false)
-				{
-					$result_vn[] = array
-					(
-						'zps'       => $item['clubVkz'],
-						'name'      => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseite().'/%s.html">%s</a>', $item['clubVkz'], $item['clubName']),
-					);
-				}
-			}
-
-			/*********************************************************
-			 * Seitentitel ändern
-			*/
-
+			// Seitentitel ändern
 			$objPage->pageTitle = 'Suche nach '.$search;
 			$this->Template->subHeadline = 'Suche nach '.$search; // Unterüberschrift setzen
 
-			/*********************************************************
-			 * Direkt zum Verein springen, wenn nur 1 Treffer
-			*/
-			if(count($result_vb) == 0 && count($result_vn) == 1)
+			// Direkt zum Verein springen, wenn nur 1 Treffer
+			if(count($suche->Verbaende) == 0 && count($suche->Vereine) == 1)
 			{
-				header('Location:'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseite().'/'.$result_vn[0]['zps'].'.html');
+				header('Location:'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseite().'/'.$suche->Vereine[0]['zps'].'.html');
 			}
 
-			/*********************************************************
-			 * Templates füllen
-			*/
-			//print_r($result_vn);
+			// Templates füllen
 			$this->Subtemplate = new \FrontendTemplate($this->subTemplate);
-			$this->Subtemplate->daten_vb = $result_vb;
-			$this->Subtemplate->anzahl_vb = count($result_vb);
-			$this->Subtemplate->daten_vn = $result_vn;
-			$this->Subtemplate->anzahl_vn = count($result_vn);
+			$this->Subtemplate->daten_vb = $suche->Verbaende;
+			$this->Subtemplate->anzahl_vb = count($suche->Verbaende);
+			$this->Subtemplate->daten_vn = $suche->Vereine;
+			$this->Subtemplate->anzahl_vn = count($suche->Vereine);
 			$this->Template->searchresult = $this->Subtemplate->parse();
-			
 		}
 		// Vereinsliste anfordern
 		elseif($zps)
 		{
+			/*********************************************************
+			 * Vereinsliste (Rang- oder Alphaliste)
+			*/
 
 			// Abfrageparameter einstellen
 			$param = array
@@ -176,18 +139,29 @@ class Verein extends \Module
 			// Sichtbarkeit der Vereinsliste festlegen
 			$this->Template->sichtbar = true;
 
-			// Verein in tl_dwz_ver suchen
+			// Vereinsdaten (Logo, Homepage, Info, Alternativname): zuerst aus
+			// tl_wertungsportal_clubs, Fallback auf die Alttabelle tl_dwz_ver
+			$objClub = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalClubsModel::findByVkz($zps);
 			$objVerein = \Schachbulle\ContaoWertungsportalBundle\Models\DwzVerModel::findOneBy('zpsver', $zps);
-			$this->Template->homepage     = isset($objVerein->homepage) ? $objVerein->homepage : '';
-			$this->Template->info         = isset($objVerein->info) ? $objVerein->info : '';
+
+			if($objClub && $objClub->homepage != '') $this->Template->homepage = $objClub->homepage;
+			else $this->Template->homepage = isset($objVerein->homepage) ? $objVerein->homepage : '';
+
+			if($objClub && $objClub->info != '') $this->Template->info = $objClub->info;
+			else $this->Template->info = isset($objVerein->info) ? $objVerein->info : '';
 
 			/*********************************************************
 			 * Logo des Vereins
 			*/
 
-			if(isset($objVerein->addImage))
+			if($objClub && $objClub->addImage && $objClub->singleSRC !== null)
 			{
-				// Vereinslogo vorhanden
+				// Vereinslogo aus WP | Vereine
+				$objFile = \FilesModel::findByPk($objClub->singleSRC);
+			}
+			elseif(isset($objVerein->addImage))
+			{
+				// Vereinslogo aus der Alttabelle vorhanden
 				$objFile = \FilesModel::findByPk($objVerein->singleSRC);
 			}
 			else
@@ -226,71 +200,32 @@ class Verein extends \Module
 			$resultVerein = \Schachbulle\ContaoWertungsportalBundle\Helper\API::autoQuery($param); // Abfrage ausführen
 
 			/*********************************************************
-			 * Ausgabe Kopfdaten
+			 * Ausgabe Kopfdaten und Mitgliederliste
 			*/
-			$vereinsname = (isset($objVerein->altname) && $objVerein->altname != '') ? $objVerein->altname : $resultVerein['body']['data'][0]['clubName'];
-			$this->Template->listenlink = ($order == 'alpha') ? sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseite()."/%s.html?order=rang\">Rangliste</a>", $zps, $vereinsname) : sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseite()."/%s.html?order=alpha\">Alphaliste</a>", $zps, $vereinsname);
+			if($objClub && $objClub->altname != '') $vereinsname = $objClub->altname;
+			elseif(isset($objVerein->altname) && $objVerein->altname != '') $vereinsname = $objVerein->altname;
+			else $vereinsname = $resultVerein['body']['data'][0]['clubName'];
+			$this->Template->listenlink = ($order == 'alpha') ? sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s.html?order=rang\">Rangliste</a>", $zps) : sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s.html?order=alpha\">Alphaliste</a>", $zps);
 			$this->Template->vereinsname = $vereinsname;
-			$referent = ''; // Wertungsreferent zuweisen
 
-			/*********************************************************
-			 * Ausgabe der Vereinsliste
-			*/
-			$daten = array();
-			$z = 0;
 			// Seitentitel ändern
-			$objPage->pageTitle = ($order == 'alpha') ? 'DWZ-Vereinsliste '.$vereinsname : 'DWZ-Rangliste '.$vereinsname;
-			$this->Template->subHeadline = ($order == 'alpha') ? 'DWZ-Vereinsliste '.$vereinsname : 'DWZ-Rangliste '.$vereinsname; // Unterüberschrift setzen
-			foreach($resultArr['body']['data'] as $mitglied)
-			{
-				// Auf nichtexistierende Variablen prüfen, die aber benötigt werden:
-				if(!array_key_exists('rating', $mitglied)) $mitglied['rating'] = false;
-				if(!array_key_exists('index', $mitglied)) $mitglied['index'] = false;
+			$titel = ($order == 'alpha') ? 'DWZ-Vereinsliste '.$vereinsname : 'DWZ-Rangliste '.$vereinsname;
+			$objPage->pageTitle = $titel;
+			$this->Template->subHeadline = $titel; // Unterüberschrift setzen
 
-				// Schlüssel für Sortierung generieren
-				$z++;
-				$key = ($order == 'alpha') ? \StringUtil::generateAlias($mitglied['lastname'].$mitglied['firstname'].$z) : sprintf('%05d-%04d-%s-%03d', 10000 - $mitglied['rating'], 1000 - $mitglied['index'], ('') ? '' : 'Z', $z);
-				// Daten zuweisen
-				$daten[$key] = array
-				(
-					'PKZ'         => $mitglied['nuLigaPersonId'],
-					'Mglnr'       => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getMitgliedsnummer($mitglied, $zps),
-					'Status'      => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getMitgliedsstatus($mitglied, $zps),
-					'Spielername' => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Spielername($mitglied),
-					'Geschlecht'  => $mitglied['gender'] == 'MALE' ? 'M' : ($mitglied['gender'] == 'FEMALE' ? 'W' : strtoupper($mitglied['gender'])),
-					'KW'          => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Kalenderwoche($mitglied),
-					'DWZ'         => $mitglied['rating'].' - '.$mitglied['index'],
-					'Elo'         => isset($mitglied['fideElo']) ? $mitglied['fideElo'] : '',
-					'FIDE-Titel'  => isset($mitglied['fideTitle']) ? $mitglied['fideTitle'] : '',
-				);
-			}
+			// Mitgliederliste für das Template aufbereiten
+			$vereinsliste = new \Schachbulle\ContaoWertungsportalBundle\Helper\Vereinsliste($resultArr, $zps, $order);
+			$this->Template->rangliste = $vereinsliste->Rangliste;
+			$this->Template->daten = $vereinsliste->Daten;
+			$this->Template->referent = ''; // Wertungsreferent zuweisen
 
-			// Liste sortieren (ASC)
-			ksort($daten);
-			// Platzierung hinzufügen
-			if($order == 'rang')
-			{
-				$this->Template->rangliste = true;
-				$z = 1;
-				foreach($daten as $key => $value)
-				{
-					$daten[$key]['Platz'] = $z;
-					$z++;
-				}
-			}
-			$this->Template->daten = $daten;
-			
 			// Untertemplate initialisieren und füllen
 			$this->Subtemplate = new \FrontendTemplate($this->subTemplate);
-			$this->Subtemplate->daten = isset($daten) ? $daten : false;
-			//$this->Subtemplate->debugausgabe = isset($resultVerein) ? $resultVerein : false;
-			$this->Subtemplate->anzahl = isset($daten) ? count($daten) : 0;
+			$this->Subtemplate->daten = $vereinsliste->Daten;
+			$this->Subtemplate->anzahl = $vereinsliste->Anzahl;
 			$this->Template->searchresult = $this->Subtemplate->parse();
 			$this->Template->searchform = true;
-
-
 		}
-
 	}
 
 }
