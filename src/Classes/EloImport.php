@@ -173,8 +173,14 @@ class EloImport extends \Backend
 		// Spieler in die Datenbank schreiben (Upsert per fideid)
 		$ergebnis = $this->schreibeSpieler($arrSpieler, $elodate);
 
-		// Temporäre Datei nach dem letzten Schritt aufräumen
-		if($fertig && file_exists($datei)) unlink($datei);
+		// Nach dem letzten Schritt aufräumen: temporäre Datei löschen und den
+		// Wertungsportal-Cache leeren — gecachte Seiten tragen die FIDE-Werte
+		// eingebacken und würden sonst bis zu 24 h alte Elo/Titel zeigen
+		if($fertig)
+		{
+			if(file_exists($datei)) unlink($datei);
+			\Schachbulle\ContaoWertungsportalBundle\Helper\API::purgeCache();
+		}
 
 		$this->jsonAntwort(array
 		(
@@ -182,6 +188,7 @@ class EloImport extends \Backend
 			'offset'        => $neuerOffset,
 			'gesamt'        => $gesamt,
 			'fertig'        => $fertig,
+			'cacheGeleert'  => $fertig,
 			'verarbeitet'   => $verarbeitet,
 			'uebersprungen' => $uebersprungen,
 			'neu'           => $ergebnis['neu'],

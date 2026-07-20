@@ -81,10 +81,21 @@ $GLOBALS['FE_MOD']['wertungsportal'] = array
 	'wertungsportal_verein'          => 'Schachbulle\ContaoWertungsportalBundle\Classes\Verein',
 	'wertungsportal_verband'         => 'Schachbulle\ContaoWertungsportalBundle\Classes\Verband',
 	'wertungsportal_turnier'         => 'Schachbulle\ContaoWertungsportalBundle\Classes\Turnier',
+	'wertungsportal_bestenliste'     => 'Schachbulle\ContaoWertungsportalBundle\Classes\Bestenliste',
 );
 
 // http://de.contaowiki.org/Strukturierte_URLs
 $GLOBALS['TL_HOOKS']['getPageIdFromUrl'][] = array('Schachbulle\ContaoWertungsportalBundle\Helper\API', 'getParamsFromUrl');
+
+/**
+ * Purge jobs / Reinigungsarbeiten
+ * Stellt in der Systemwartung das Leeren des Wertungsportal-Caches bereit
+ * (läuft außerdem automatisch nach jedem FIDE-Elo-Import)
+ */
+$GLOBALS['TL_PURGE']['custom']['wertungsportal'] = array
+(
+	'callback' => array('Schachbulle\ContaoWertungsportalBundle\Helper\API', 'purgeCache')
+);
 
 if(TL_MODE == 'BE') 
 {

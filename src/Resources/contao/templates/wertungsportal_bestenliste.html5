@@ -1,0 +1,24 @@
+<?php $this->extend('block_unsearchable'); ?>
+
+<?php $this->block('content'); ?>
+
+<table>
+	<tr>
+		<th>Pl.</th>
+		<th>Name</th>
+		<th>Titel</th>
+		<th>DWZ</th>
+		<th>Verein</th>
+	</tr>
+<?php foreach($this->liste as $item): ?>
+	<tr>
+		<td style="text-align:center"><?= $item['Platz'] ?></td>
+		<td><?= $item['Spielername'] ?></td>
+		<td><?= $item['FIDE-Titel'] ?></td>
+		<td><?= $item['DWZ'] ?></td>
+		<td><?= $item['Verein'] ?></td>
+	</tr>
+<?php endforeach; ?>
+</table>
+
+<?php $this->endblock(); ?>

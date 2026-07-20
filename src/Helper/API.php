@@ -600,6 +600,67 @@ class API
 		return $fide;
 	}
 
+	/**
+	 * Liefert die Namen aller Cache-Speicher des Wertungsportals zurück
+	 * (entsprechen den funktion-Parametern von autoQuery, Präfix wp_)
+	 *
+	 * @return array
+	 */
+	public static function cacheSpeicher()
+	{
+		return array
+		(
+			'Spielerliste',
+			'Karteikarte',
+			'Karteikarte_Turniere',
+			'Vereinsliste',
+			'Vereinsname',
+			'Verbaende',
+			'Verbandsliste',
+			'Turnierliste',
+			'Turnierinfo',
+			'Turnierauswertung',
+			'Turnierergebnisse',
+			'Spielberichtsbogen',
+		);
+	}
+
+	/**
+	 * PurgeJob-Funktion:
+	 * Berechnet die Cache-Größe für die Anzeige in der Systemwartung
+	 */
+	public static function calcCache()
+	{
+		$string = '</label>';
+		foreach(self::cacheSpeicher() as $item)
+		{
+			$cache = new \Schachbulle\ContaoHelperBundle\Classes\Cache(array('name' => 'wp_'.$item, 'extension' => '.cache'));
+			$anzahl = count($cache->retrieveAll()); // Anzahl der Cache-Einträge
+			$text = ($anzahl == 1) ? 'Eintrag' : 'Einträge';
+			$string .= '<br><span style="font-weight:normal"><span style="color:black">'.$item.':</span> '.$anzahl.' '.$text.'</span>';
+		}
+		$string .= '<label>';
+
+		return $string;
+	}
+
+	/**
+	 * PurgeJob-Funktion:
+	 * Löscht alle Caches des Wertungsportals. Wird von der Systemwartung
+	 * (TL_PURGE) und automatisch nach jedem FIDE-Elo-Import aufgerufen,
+	 * damit keine Cache-Einträge mit alter FIDE-Anreicherung übrig bleiben.
+	 */
+	public static function purgeCache()
+	{
+		foreach(self::cacheSpeicher() as $item)
+		{
+			$cache = new \Schachbulle\ContaoHelperBundle\Classes\Cache(array('name' => 'wp_'.$item, 'extension' => '.cache'));
+			$cache->eraseAll(); // Cache löschen
+		}
+
+		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message('Wertungsportal-Cache geleert', 'wertungsportal.log');
+	}
+
 	public static function BugfixVerbaende($resultArr)
 	{
 		$missingFederations = array

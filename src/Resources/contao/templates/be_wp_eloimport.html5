@@ -172,7 +172,7 @@
 			text('wpEloErgUnveraendert', summe.unveraendert.toLocaleString('de-DE'));
 			text('wpEloErgUebersprungen', summe.uebersprungen.toLocaleString('de-DE'));
 			zeige('wpEloErgebnis', true);
-			text('wpEloStatus', 'Import abgeschlossen.');
+			text('wpEloStatus', 'Import abgeschlossen, Wertungsportal-Cache geleert.');
 		}
 		catch(e)
 		{

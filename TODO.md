@@ -370,8 +370,64 @@ Hinweise aus dem Test:
   Achtung fürs Backend-Skripting: input[name="wertungsportal_cache"] matcht
   zuerst ein Hidden-Feld — die echte Checkbox ist #opt_wertungsportal_cache_0.
 
+## Erledigt am 20.07.2026, Runde 3 (Upload + Test offen)
+
+* ☑ Backend-Modultitel ohne „WP | "-Prefix (Vereine, Personen, Turniere, FIDE-Elo;
+  de + en, Gruppenüberschrift „Wertungsportal" bleibt)
+* ☑ „Altdaten übernehmen" (Vereine): Vereine mit fehlender VKZ werden jetzt
+  automatisch in tl_wertungsportal_clubs angelegt — Name und Status aus
+  tl_dwz_ver, abgemeldete Vereine (Status L) mit Löschkennzeichen
+  DELETE_STATE_TRUE; die übernommenen Felder (Logo/Info/Homepage/Altname)
+  werden dabei direkt mitgeschrieben
+* ☑ BUGFIX „Bilder übernehmen": Die globale Operation importPhotos war nur in
+  der config.php registriert, der Button fehlte aber in der Personen-DCA —
+  deshalb war die Spielerbild-Übernahme im Backend nicht aufrufbar. Button ergänzt.
+* ☑ Englische FMD-Sprachlabels für die vier Frontend-Module ergänzt
+  (Registrierung der FE-Module in config.php war von Anfang an vorhanden —
+  die Dev-Seiten laufen über genau diese Modultypen; warum die Typen im
+  Dropdown fehlen sollen, ist noch zu klären → Livetest steht aus)
+
+## Livetest Runde 3 (20.07.2026, nach Upload)
+
+* ☑ Backend-Menü zeigt „Vereine, Personen, Turniere, FIDE-Elo" ohne Prefix
+* ☑ Frontend-Modultypen: Die Gruppe „Wertungsportal" ist im tl_module-Dropdown
+  VORHANDEN (alphabetisch zwischen „Anwendungen" und „Elo-Listen") mit genau
+  den vier Typen Spielersuche/Vereinssuche/Verbandssuche/Turniersuche — die
+  vier Modulinstanzen „DWZ - … (Wertungsportal)" existieren im Theme Open Sauce.
+  Nebenbefund: Es gibt KEINE DeWIS-Gruppe mehr — das dewis-Bundle ist auf dem
+  Dev-System nicht installiert, die alten dewis_*-Instanzen sind verwaiste Typen.
+* ☑ „Bilder übernehmen"-Button erscheint und funktioniert: 1 Quellspieler mit
+  Bild → 1 Person aktualisiert (externeNr=dewisID-Match trifft), Wiederholung
+  idempotent (0 Writes); Karteikarte zeigt das Personenbild
+* ☑/? „Altdaten übernehmen" (Vereine): Auf dem Dev-System nur 2 Quelldatensätze
+  mit Inhalten, alle VKZ vorhanden → 2 aktualisiert, 0 neu angelegt. Der
+  Anlege-Pfad (fehlende VKZ) konnte mangels Daten NICHT live getestet werden —
+  der Lauf mit „7 ohne passenden Verein" muss auf einem anderen Datenbestand
+  gelaufen sein (Produktion?)
+
+## Erledigt am 20.07.2026, Runde 4 (Upload + Test offen)
+
+* ☑ Wertungsportal-Cache wird nach jedem FIDE-Elo-Import automatisch geleert;
+  zusätzlich neuer Purge-Job „Wertungsportal-Cache leeren" in der Systemwartung
+  (API::purgeCache/calcCache mit Anzeige der Einträge je Speicher)
+* ☑ Neues Frontend-Modul „DWZ-Bestenliste" (wertungsportal_bestenliste,
+  Gruppe Wertungsportal; Felder Anzahl + Geschlecht wie in DeWIS — für
+  Top-100 alle und Top-100 Frauen zwei Modulinstanzen anlegen).
+  Optimierung: eine SQL-Abfrage auf die lokale Personentabelle statt
+  nu-API + FIDE-Nation-Einzelabrufe → kein Langzeit-Caching mehr nötig.
+  ACHTUNG Datenbasis: rating in tl_wertungsportal_persons wird nur durch die
+  API-Syncs gefüllt (der Vereinsmitglieder-CSV-Import enthält keine DWZ) —
+  die Bestenliste ist so vollständig wie die lokal gesyncten Wertungen!
+* ☑ Alle Änderungen im CHANGELOG (Version 1.0.0) dokumentiert
+
 ## Offene Aufgaben
 
+* Anlege-Pfad der Vereine-Übernahme auf dem System mit den 7 fehlenden VKZ
+  verifizieren (Ergebniszeile „Vereine neu angelegt: 7" erwartet; abgemeldete
+  Vereine bekommen DELETE_STATE_TRUE)
+* Bestenliste-Datenbasis absichern: DWZ-Werte aus der monatlichen DWZ-Liste
+  (spieler.csv des Converter-Skripts) in tl_wertungsportal_persons.rating
+  importieren, damit die Topliste nicht von zufälligen API-Syncs abhängt
 * Echten FIDE-Import einmal über die Import-Seite ausführen (players_list_xml.zip,
   ~50 MB Upload; danach Cache leeren)
 * Vereinsliste: Verbandszugehörigkeiten (bisher nur in der Karteikarte umgesetzt)

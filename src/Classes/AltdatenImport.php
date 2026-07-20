@@ -13,13 +13,14 @@
  *
  * Backend-Übernahme von Altdaten aus den DWZ-Tabellen des alten
  * contao-dewis-bundles in die Wertungsportal-Tabellen:
- * - runVereine (key=importDwzVer, WP | Vereine): Logo, Homepage, Info und
- *   Alternativname aus tl_dwz_ver nach tl_wertungsportal_clubs (Match per VKZ)
- * - runPersonen (key=importPhotos, WP | Personen): Spielerbild aus tl_dwz_spi
+ * - runVereine (key=importDwzVer, Modul Vereine): Logo, Homepage, Info und
+ *   Alternativname aus tl_dwz_ver nach tl_wertungsportal_clubs (Match per VKZ);
+ *   fehlende Vereine werden mit Name/Status aus tl_dwz_ver neu angelegt
+ * - runPersonen (key=importPhotos, Modul Personen): Spielerbild aus tl_dwz_spi
  *   nach tl_wertungsportal_persons (Match externeNr = dewisID)
  *
- * Es werden nur leere Zielfelder befüllt — die Übernahme ist damit idempotent
- * und überschreibt keine manuell gepflegten Daten.
+ * Bestehende Datensätze: Es werden nur leere Zielfelder befüllt — die
+ * Übernahme ist damit idempotent und überschreibt keine manuelle Pflege.
  */
 
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
@@ -27,8 +28,11 @@ namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 class AltdatenImport extends \Backend
 {
 	/**
-	 * Globale Operation unter WP | Vereine (key=importDwzVer):
-	 * Logo, Homepage, Info und Alternativname aus tl_dwz_ver übernehmen
+	 * Globale Operation unter Vereine (key=importDwzVer):
+	 * Logo, Homepage, Info und Alternativname aus tl_dwz_ver übernehmen.
+	 * Vereine, deren VKZ noch nicht in tl_wertungsportal_clubs existiert,
+	 * werden automatisch mit angelegt (Name und Status aus tl_dwz_ver;
+	 * abgemeldete Vereine erhalten das Löschkennzeichen DELETE_STATE_TRUE).
 	 *
 	 * @param  object $dc DataContainer
 	 * @return string     HTML der Ergebnisseite
@@ -37,11 +41,11 @@ class AltdatenImport extends \Backend
 	{
 		$aktualisiert = 0;
 		$unveraendert = 0;
-		$ohneZiel = 0;
+		$angelegt = 0;
 
 		// Quelldatensätze mit übernehmbaren Inhalten laden (VKZ => Datensatz)
 		$arrQuelle = array();
-		$objQuelle = \Database::getInstance()->execute("SELECT zpsver, altname, homepage, info, addImage, singleSRC FROM tl_dwz_ver WHERE altname != '' OR homepage != '' OR (info IS NOT NULL AND info != '') OR (addImage = '1' AND singleSRC IS NOT NULL)");
+		$objQuelle = \Database::getInstance()->execute("SELECT zpsver, name, status, altname, homepage, info, addImage, singleSRC FROM tl_dwz_ver WHERE altname != '' OR homepage != '' OR (info IS NOT NULL AND info != '') OR (addImage = '1' AND singleSRC IS NOT NULL)");
 
 		while($objQuelle->next())
 		{
@@ -65,7 +69,30 @@ class AltdatenImport extends \Backend
 		{
 			if(!isset($arrZiel[$vkz]))
 			{
-				$ohneZiel++;
+				// Verein fehlt im Wertungsportal — mit Stammdaten aus tl_dwz_ver
+				// anlegen (Status L = abgemeldet => Löschkennzeichen setzen)
+				$set = array
+				(
+					'tstamp'   => time(),
+					'clubVkz'  => $vkz,
+					'clubName' => $alt['name'] != '' ? $alt['name'] : ($alt['altname'] != '' ? $alt['altname'] : $vkz),
+					'state'    => ($alt['status'] == 'L') ? 'DELETE_STATE_TRUE' : 'DELETE_STATE_FALSE',
+					'published' => '1',
+				);
+
+				if($alt['altname'] != '') $set['altname'] = $alt['altname'];
+				if($alt['homepage'] != '') $set['homepage'] = $alt['homepage'];
+				if($alt['info'] !== null && $alt['info'] != '') $set['info'] = $alt['info'];
+				if($alt['addImage'] == '1' && $alt['singleSRC'] !== null)
+				{
+					$set['addImage'] = '1';
+					$set['singleSRC'] = $alt['singleSRC'];
+				}
+
+				\Database::getInstance()->prepare("INSERT INTO tl_wertungsportal_clubs %s")
+				                        ->set($set)
+				                        ->execute();
+				$angelegt++;
 				continue;
 			}
 
@@ -101,12 +128,12 @@ class AltdatenImport extends \Backend
 			'Quelldatensätze mit übernehmbaren Inhalten: '.count($arrQuelle),
 			'Vereine aktualisiert: '.$aktualisiert,
 			'Ohne Änderung (Zielfelder bereits gefüllt): '.$unveraendert,
-			'Ohne passenden Verein (VKZ nicht in WP | Vereine): '.$ohneZiel,
+			'Vereine neu angelegt (VKZ fehlte, Name/Status aus tl_dwz_ver): '.$angelegt,
 		), 'importDwzVer');
 	}
 
 	/**
-	 * Globale Operation unter WP | Personen (key=importPhotos):
+	 * Globale Operation unter Personen (key=importPhotos):
 	 * Spielerbild aus tl_dwz_spi übernehmen (Match externeNr = dewisID)
 	 *
 	 * @param  object $dc DataContainer
@@ -166,7 +193,7 @@ class AltdatenImport extends \Backend
 			'Quellspieler mit Bild: '.count($arrQuelle),
 			'Personen aktualisiert: '.$aktualisiert,
 			'Ohne Änderung (Person hat bereits ein Bild): '.$unveraendert,
-			'Ohne passende Person (externe Nummer nicht in WP | Personen): '.$ohneZiel,
+			'Ohne passende Person (externe Nummer nicht unter Personen): '.$ohneZiel,
 		), 'importPhotos');
 	}
 

@@ -55,6 +55,11 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_persons'] = [
                 'class'      => 'header_theme_import',
                 'attributes' => 'onclick="Backend.getScrollOffset()"',
             ],
+            'importPhotos' => [
+                'href'       => 'key=importPhotos',
+                'class'      => 'header_theme_import',
+                'attributes' => 'onclick="Backend.getScrollOffset()"',
+            ],
             'all' => [
                 'href'       => 'act=select',
                 'class'      => 'header_edit_all',
