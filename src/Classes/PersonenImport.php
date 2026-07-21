@@ -26,9 +26,14 @@ namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 class PersonenImport extends \Backend
 {
 	/**
-	 * Pflichtspalten der CSV-Datei (Zuordnung erfolgt über die Kopfzeile)
+	 * Pflichtspalten der Vereinsmitglieder-CSV (Zuordnung über die Kopfzeile)
 	 */
 	const PFLICHTSPALTEN = array('InterneNr', 'ExterneNr', 'Nachname', 'Vorname');
+
+	/**
+	 * Pflichtspalten der Spielgenehmigungen-CSVs (An-/Abmeldungen im Zeitraum)
+	 */
+	const PFLICHTSPALTEN_GENEHMIGUNGEN = array('InterneNr', 'ExterneNr', 'Nachname', 'Vorname', 'VereinNr', 'Mitgliedernummer', 'Spielgenehmigung', 'SpielgenehmigungAb', 'SpielgenehmigungBis');
 
 	/**
 	 * Zeilen pro Import-Schritt
@@ -52,8 +57,29 @@ class PersonenImport extends \Backend
 		$objTemplate = new \BackendTemplate('be_wp_personenimport');
 		$objTemplate->zurueck = str_replace('&key=importPersons', '', \Environment::get('request'));
 		$objTemplate->pflichtspalten = implode(', ', self::PFLICHTSPALTEN);
+		$objTemplate->pflichtspaltenGenehmigungen = implode(', ', self::PFLICHTSPALTEN_GENEHMIGUNGEN);
 
 		return $objTemplate->parse();
+	}
+
+	/**
+	 * Erkennt den Dateityp am Original-Dateinamen:
+	 * - Vereine__Vereinsmitglieder__...                 => mitglieder
+	 * - Spielgenehmigungen__Angemeldete_im_Zeitraum__.. => anmeldungen
+	 * - Spielgenehmigungen__Abgemeldete_im_Zeitraum__.. => abmeldungen
+	 *
+	 * @param  string $dateiname Original-Dateiname
+	 * @return string            mitglieder|anmeldungen|abmeldungen oder '' (unbekannt)
+	 */
+	public static function typAusDateiname($dateiname)
+	{
+		$dateiname = (string) $dateiname;
+
+		if(stripos($dateiname, 'Angemeldete_im_Zeitraum') !== false) return 'anmeldungen';
+		if(stripos($dateiname, 'Abgemeldete_im_Zeitraum') !== false) return 'abmeldungen';
+		if(stripos($dateiname, 'Vereinsmitglieder') !== false) return 'mitglieder';
+
+		return '';
 	}
 
 	/**
@@ -106,10 +132,17 @@ class PersonenImport extends \Backend
 		$datei = $this->tempDatei();
 
 		// tstamp der importierten Datensätze: Datum und Uhrzeit aus dem
-		// Original-Dateinamen (Vereine__Vereinsmitglieder__JJJJMMTTHHIISS),
-		// Fallback aktuelle Zeit. Die Importdaten haben höhere Priorität und
-		// überschreiben Bestandsdaten auch dann, wenn deren tstamp jünger ist.
+		// Original-Dateinamen (JJJJMMTTHHIISS), Fallback aktuelle Zeit.
+		// Die Importdaten haben höhere Priorität und überschreiben
+		// Bestandsdaten auch dann, wenn deren tstamp jünger ist.
 		$tstamp = self::tstampAusDateiname((string) \Input::post('dateiname'));
+
+		// Dateityp: explizite Auswahl des Benutzers oder automatische
+		// Erkennung aus dem Dateinamen (Fallback Vereinsmitglieder)
+		$typ = (string) \Input::post('typ');
+		if($typ == '' || $typ == 'auto') $typ = self::typAusDateiname((string) \Input::post('dateiname'));
+		if($typ == '') $typ = 'mitglieder';
+		$genehmigungen = ($typ == 'anmeldungen' || $typ == 'abmeldungen');
 
 		if(!file_exists($datei))
 		{
@@ -133,12 +166,15 @@ class PersonenImport extends \Backend
 		$header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
 		$spalten = array_flip($header);
 
-		foreach(self::PFLICHTSPALTEN as $pflicht)
+		$pflichtspalten = $genehmigungen ? self::PFLICHTSPALTEN_GENEHMIGUNGEN : self::PFLICHTSPALTEN;
+		$erwartet = $genehmigungen ? 'Spielgenehmigungen-Exportdatei (An-/Abmeldungen im Zeitraum)' : 'Vereinsmitglieder-Exportdatei';
+
+		foreach($pflichtspalten as $pflicht)
 		{
 			if(!isset($spalten[$pflicht]))
 			{
 				fclose($fp);
-				$this->jsonAntwort(array('fehler' => 'Pflichtspalte "'.$pflicht.'" fehlt in der CSV-Datei. Es wird die Vereinsmitglieder-Exportdatei erwartet.'));
+				$this->jsonAntwort(array('fehler' => 'Pflichtspalte "'.$pflicht.'" fehlt in der CSV-Datei. Es wird die '.$erwartet.' erwartet.'));
 			}
 		}
 
@@ -154,7 +190,7 @@ class PersonenImport extends \Backend
 		while($zeilen < self::ZEILEN_PRO_SCHRITT && ($row = fgetcsv($fp, 0, ';')) !== false)
 		{
 			$zeilen++;
-			$person = self::mappeZeile($row, $spalten);
+			$person = $genehmigungen ? self::mappeZeileGenehmigung($row, $spalten) : self::mappeZeile($row, $spalten);
 
 			if($person === null)
 			{
@@ -169,13 +205,16 @@ class PersonenImport extends \Backend
 				$arrPersonen[$person['nuLigaPersonId']] = $person['felder'];
 			}
 
-			// Mitgliedschaft der Zeile einsammeln (Schlüssel VKZ + Mitgliedsnummer)
+			// Mitgliedschaft der Zeile einsammeln (Schlüssel VKZ + Mitgliedsnummer).
+			// Vereinsmitglieder: erste Zeile gewinnt (Zeilen sind identisch);
+			// Spielgenehmigungen: LETZTE Zeile gewinnt — bei mehreren Anträgen
+			// zur selben Genehmigungsnummer ist die spätere Zeile der neuere Stand
 			if($person['mitgliedschaft'] !== null)
 			{
 				$m = $person['mitgliedschaft'];
 				$key = $m['vkz'].'|'.$m['memberNo'];
 
-				if(!isset($arrMitgliedschaften[$key]))
+				if($genehmigungen || !isset($arrMitgliedschaften[$key]))
 				{
 					$arrMitgliedschaften[$key] = array
 					(
@@ -229,6 +268,7 @@ class PersonenImport extends \Backend
 		$this->jsonAntwort(array
 		(
 			'ok'             => true,
+			'typ'            => $typ,
 			'offset'         => $neuerOffset,
 			'gesamt'         => $gesamt,
 			'fertig'         => $fertig,
@@ -270,11 +310,7 @@ class PersonenImport extends \Backend
 		else $geschlecht = ''; // 'unbekannt' u.ä.
 
 		// Spielgenehmigung auf den Lizenzstatus der API abbilden
-		$lizenz = $wert('Spielgenehmigung');
-		if($lizenz == 'Aktiv') $lizenz = 'ACTIVE';
-		elseif($lizenz == 'Passiv') $lizenz = 'PASSIVE';
-		elseif($lizenz == 'Sondermitgliedschaft') $lizenz = 'SONDER';
-		elseif($lizenz == 'ohne Spielgenehmigung') $lizenz = 'OHNE';
+		$lizenz = self::mappeLizenz($wert('Spielgenehmigung'));
 
 		// Mitgliedschaft der Zeile (Schlüssel: VKZ + Mitgliedsnummer)
 		$mitgliedschaft = null;
@@ -338,9 +374,88 @@ class PersonenImport extends \Backend
 	}
 
 	/**
+	 * Mappt eine Zeile der Spielgenehmigungen-CSVs (Angemeldete/Abgemeldete
+	 * im Zeitraum) auf die DB-Felder. Beide Dateitypen haben dieselben
+	 * Spalten; jede Zeile beschreibt eine Spielgenehmigung mit Ab-/Bis-Datum
+	 * (Bis leer = laufende Genehmigung).
+	 *
+	 * Die Personenfelder sind bewusst auf externeNr/Name/Geburtsdatum
+	 * beschränkt — bestehende Personen werden damit VERVOLLSTÄNDIGT, ohne
+	 * die übrigen Felder (Adresse, Datenschutz usw.) anzufassen; fehlende
+	 * Personen (z. B. Abgemeldete, die nicht im Vereinsmitglieder-CSV
+	 * stehen) werden neu angelegt.
+	 *
+	 * @return array|null wie mappeZeile()
+	 */
+	public static function mappeZeileGenehmigung($row, $spalten)
+	{
+		$wert = function($name) use ($row, $spalten)
+		{
+			return isset($spalten[$name], $row[$spalten[$name]]) ? trim($row[$spalten[$name]]) : '';
+		};
+
+		$nuId = $wert('InterneNr');
+		if($nuId === '') return null;
+
+		// Genehmigung der Zeile (Schlüssel: VKZ + Mitgliedernummer)
+		$mitgliedschaft = null;
+
+		if($wert('VereinNr') !== '' && $wert('Mitgliedernummer') !== '')
+		{
+			$mitgliedschaft = array
+			(
+				'vkz'      => $wert('VereinNr'),
+				'memberNo' => $wert('Mitgliedernummer'),
+				'felder'   => array
+				(
+					'clubName'            => $wert('VereinName'),
+					'licenceState'        => self::mappeLizenz($wert('Spielgenehmigung')),
+					'spielgenehmigungVon' => $wert('SpielgenehmigungAb'),
+					'spielgenehmigungBis' => $wert('SpielgenehmigungBis'),
+					'antragstyp'          => $wert('Antragstyp'),
+					'antragszeitpunkt'    => $wert('Antragszeitpunkt'),
+					'antragsteller'       => $wert('Antragsteller'),
+				),
+			);
+		}
+
+		return array
+		(
+			'nuLigaPersonId' => $nuId,
+			'mitgliedschaft' => $mitgliedschaft,
+			'felder' => array
+			(
+				'externeNr' => $wert('ExterneNr'),
+				'firstname' => $wert('Vorname'),
+				'lastname'  => $wert('Nachname'),
+				'birthyear' => $wert('Geburtsdatum'), // volles Datum TT.MM.JJJJ
+			),
+		);
+	}
+
+	/**
+	 * Bildet den Spielgenehmigungs-Text der CSV-Dateien auf den
+	 * Lizenzstatus der API ab
+	 *
+	 * @param  string $lizenz Wert der Spalte Spielgenehmigung
+	 * @return string         ACTIVE/PASSIVE/SONDER/OHNE oder Originalwert
+	 */
+	public static function mappeLizenz($lizenz)
+	{
+		if($lizenz == 'Aktiv') return 'ACTIVE';
+		if($lizenz == 'Passiv') return 'PASSIVE';
+		if($lizenz == 'Sondermitgliedschaft') return 'SONDER';
+		if($lizenz == 'ohne Spielgenehmigung') return 'OHNE';
+
+		return $lizenz;
+	}
+
+	/**
 	 * Liest Datum und Uhrzeit aus dem Namen der Importdatei
-	 * (Vereine__Vereinsmitglieder__JJJJMMTTHHIISS.csv) und liefert den
-	 * Unix-Timestamp zurück; 0, wenn der Name kein gültiges Datum enthält.
+	 * (z. B. Vereine__Vereinsmitglieder__JJJJMMTTHHIISS.csv oder
+	 * Spielgenehmigungen__Angemeldete_im_Zeitraum__JJJJMMTTHHIISS.csv)
+	 * und liefert den Unix-Timestamp zurück; 0, wenn der Name kein
+	 * gültiges Datum enthält.
 	 *
 	 * @param  string $dateiname Original-Dateiname
 	 * @return int               Unix-Timestamp oder 0

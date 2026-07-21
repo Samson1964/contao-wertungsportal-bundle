@@ -134,7 +134,18 @@ class AltdatenImport extends \Backend
 
 	/**
 	 * Globale Operation unter Personen (key=importPhotos):
-	 * Spielerbild aus tl_dwz_spi übernehmen (Match externeNr = dewisID)
+	 * Spielerbild aus tl_dwz_spi übernehmen (Match externeNr = dewisID).
+	 *
+	 * Quellspieler ohne Treffer über die externe Nummer (z. B. abgemeldete
+	 * Personen, die nicht im Vereinsmitglieder-CSV stehen) werden dreistufig
+	 * behandelt:
+	 * 1. Existiert die Person unter ihrer nuLiga-ID, wird sie zugeordnet
+	 *    (externe Nummer ergänzt) und das Bild übernommen.
+	 * 2. Sonst wird die Person mit den Stammdaten aus tl_dwz_spi neu angelegt.
+	 * 3. Hat tl_dwz_spi KEINE nuLiga-ID, wird NICHT angelegt — ein späterer
+	 *    CSV-Import würde dieselbe Person über die InterneNr sonst doppelt
+	 *    anlegen. Diese Spieler werden ins System-Log geschrieben und auf
+	 *    der Ergebnisseite aufgelistet.
 	 *
 	 * @param  object $dc DataContainer
 	 * @return string     HTML der Ergebnisseite
@@ -143,11 +154,14 @@ class AltdatenImport extends \Backend
 	{
 		$aktualisiert = 0;
 		$unveraendert = 0;
-		$ohneZiel = 0;
+		$zugeordnet = 0;
+		$angelegt = 0;
+		$nichtAnlegbar = array();
 
-		// Quellspieler mit Bild laden (dewisID => Datensatz)
+		// Quellspieler mit Bild laden (dewisID => Datensatz) — die Stammdaten
+		// werden für das automatische Anlegen fehlender Personen mitgeladen
 		$arrQuelle = array();
-		$objQuelle = \Database::getInstance()->execute("SELECT dewisID, addImage, singleSRC FROM tl_dwz_spi WHERE addImage = '1' AND singleSRC IS NOT NULL AND dewisID > 0");
+		$objQuelle = \Database::getInstance()->execute("SELECT dewisID, nuLigaPersonId, vorname, nachname, geschlecht, geburtstag, fideID, verstorben, addImage, singleSRC FROM tl_dwz_spi WHERE addImage = '1' AND singleSRC IS NOT NULL AND dewisID > 0");
 
 		while($objQuelle->next())
 		{
@@ -167,11 +181,87 @@ class AltdatenImport extends \Backend
 			}
 		}
 
+		// nuLiga-IDs der Quellspieler normalisieren: Die Personentabelle führt
+		// sie mit NU-Präfix (z. B. NU4168433) — rein numerische Werte aus
+		// tl_dwz_spi werden entsprechend ergänzt
+		foreach($arrQuelle as $dewisID => $alt)
+		{
+			$nuId = trim((string) $alt['nuLigaPersonId']);
+			if($nuId != '' && preg_match('/^\d+$/', $nuId)) $nuId = 'NU'.$nuId;
+			$arrQuelle[$dewisID]['nuLigaPersonId'] = $nuId;
+		}
+
+		// Für Quellspieler ohne externeNr-Treffer: Personen über die
+		// nuLiga-ID blockweise nachschlagen (z. B. per API-Sync angelegt,
+		// aber ohne externe Nummer)
+		$arrNuIds = array();
+		foreach($arrQuelle as $dewisID => $alt)
+		{
+			if(!isset($arrZiel[$dewisID]) && $alt['nuLigaPersonId'] != '') $arrNuIds[] = $alt['nuLigaPersonId'];
+		}
+
+		$arrPerNuId = array();
+		foreach(array_chunk($arrNuIds, 500) as $chunk)
+		{
+			$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
+			$objZiel = \Database::getInstance()->prepare("SELECT id, nuLigaPersonId, externeNr, addImage FROM tl_wertungsportal_persons WHERE nuLigaPersonId IN ($platzhalter)")
+			                                   ->execute($chunk);
+			while($objZiel->next())
+			{
+				$arrPerNuId[(string) $objZiel->nuLigaPersonId] = $objZiel->row();
+			}
+		}
+
 		foreach($arrQuelle as $dewisID => $alt)
 		{
 			if(!isset($arrZiel[$dewisID]))
 			{
-				$ohneZiel++;
+				if($alt['nuLigaPersonId'] == '')
+				{
+					// Ohne nuLiga-ID nicht anlegbar (Dublettengefahr beim CSV-Import)
+					$nichtAnlegbar[] = 'dewisID '.$dewisID.': '.$alt['nachname'].', '.$alt['vorname'];
+					continue;
+				}
+
+				if(isset($arrPerNuId[$alt['nuLigaPersonId']]))
+				{
+					// Person existiert unter ihrer nuLiga-ID: externe Nummer
+					// ergänzen und Bild übernehmen (sofern noch keins gesetzt)
+					$ziel = $arrPerNuId[$alt['nuLigaPersonId']];
+					$set = array('tstamp' => time());
+					if($ziel['externeNr'] == '') $set['externeNr'] = (string) $dewisID;
+					if($ziel['addImage'] != '1')
+					{
+						$set['addImage'] = '1';
+						$set['singleSRC'] = $alt['singleSRC'];
+					}
+
+					\Database::getInstance()->prepare("UPDATE tl_wertungsportal_persons %s WHERE id=?")
+					                        ->set($set)
+					                        ->execute($ziel['id']);
+					$zugeordnet++;
+					continue;
+				}
+
+				// Person mit den Stammdaten aus tl_dwz_spi neu anlegen
+				\Database::getInstance()->prepare("INSERT INTO tl_wertungsportal_persons %s")
+				                        ->set(array
+				                        (
+					                        'tstamp'         => time(),
+					                        'nuLigaPersonId' => $alt['nuLigaPersonId'],
+					                        'externeNr'      => (string) $dewisID,
+					                        'firstname'      => $alt['vorname'],
+					                        'lastname'       => $alt['nachname'],
+					                        'gender'         => $alt['geschlecht'] == 'M' ? 'MALE' : ($alt['geschlecht'] == 'W' ? 'FEMALE' : ''),
+					                        'birthyear'      => self::geburtstagAusSpi($alt['geburtstag']),
+					                        'fideId'         => (int) $alt['fideID'],
+					                        'verstorben'     => $alt['verstorben'] == '1' ? '1' : '',
+					                        'addImage'       => '1',
+					                        'singleSRC'      => $alt['singleSRC'],
+					                        'published'      => '1',
+				                        ))
+				                        ->execute();
+				$angelegt++;
 				continue;
 			}
 
@@ -188,13 +278,51 @@ class AltdatenImport extends \Backend
 			$aktualisiert++;
 		}
 
-		return $this->ergebnis('Spielerbild-Übernahme aus DWZ-Spieler (tl_dwz_spi)', array
+		// Nicht anlegbare Spieler ins Contao-System-Log schreiben
+		if(count($nichtAnlegbar))
+		{
+			\System::log('Spielerbild-Übernahme: '.count($nichtAnlegbar).' Spieler aus tl_dwz_spi ohne nuLiga-ID nicht angelegt: '.implode('; ', $nichtAnlegbar), __METHOD__, TL_GENERAL);
+		}
+
+		$zeilen = array
 		(
 			'Quellspieler mit Bild: '.count($arrQuelle),
 			'Personen aktualisiert: '.$aktualisiert,
 			'Ohne Änderung (Person hat bereits ein Bild): '.$unveraendert,
-			'Ohne passende Person (externe Nummer nicht unter Personen): '.$ohneZiel,
-		), 'importPhotos');
+			'Über die nuLiga-ID zugeordnet (externe Nummer ergänzt): '.$zugeordnet,
+			'Personen neu angelegt (Stammdaten + Bild aus tl_dwz_spi): '.$angelegt,
+			'Nicht anlegbar, ins System-Log geschrieben (keine nuLiga-ID in tl_dwz_spi): '.count($nichtAnlegbar),
+		);
+
+		foreach($nichtAnlegbar as $eintrag)
+		{
+			$zeilen[] = '&mdash; '.$eintrag;
+		}
+
+		return $this->ergebnis('Spielerbild-Übernahme aus DWZ-Spieler (tl_dwz_spi)', $zeilen, 'importPhotos');
+	}
+
+	/**
+	 * Wandelt den Geburtstag aus tl_dwz_spi (int: JJJJMMTT, JJJJMM oder JJJJ)
+	 * in das birthyear-Format der Personentabelle um (TT.MM.JJJJ oder JJJJ)
+	 *
+	 * @param  mixed  $wert Geburtstag aus tl_dwz_spi
+	 * @return string
+	 */
+	public static function geburtstagAusSpi($wert)
+	{
+		$wert = (string) (int) $wert;
+
+		switch(strlen($wert))
+		{
+			case 8: // JJJJMMTT -> TT.MM.JJJJ
+				return substr($wert, 6, 2).'.'.substr($wert, 4, 2).'.'.substr($wert, 0, 4);
+			case 6: // JJJJMM -> JJJJ
+			case 4: // JJJJ
+				return substr($wert, 0, 4);
+			default:
+				return '';
+		}
 	}
 
 	/**

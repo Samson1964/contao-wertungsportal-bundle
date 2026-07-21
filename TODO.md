@@ -420,8 +420,57 @@ Hinweise aus dem Test:
   die Bestenliste ist so vollständig wie die lokal gesyncten Wertungen!
 * ☑ Alle Änderungen im CHANGELOG (Version 1.0.0) dokumentiert
 
+## Erledigt am 20.07.2026, Runde 5 (Upload + Test offen)
+
+* ☑ Spielerbild-Übernahme: Quellspieler ohne externeNr-Treffer (die 27
+  abgemeldeten im Livesystem) werden jetzt dreistufig behandelt:
+  1. Person existiert unter ihrer nuLiga-ID → zuordnen (externeNr ergänzen)
+     + Bild übernehmen
+  2. sonst Person mit Stammdaten aus tl_dwz_spi neu anlegen (Name, Geschlecht,
+     Geburtsdatum, FIDE-ID, Verstorben, Bild)
+  3. KEINE nuLiga-ID in tl_dwz_spi → bewusst NICHT anlegen (der CSV-Import
+     matcht über die InterneNr und würde die Person später doppelt anlegen) —
+     stattdessen Contao-System-Log + Auflistung auf der Ergebnisseite
+  nuLiga-IDs aus tl_dwz_spi werden normalisiert (numerisch → NU-Präfix)
+* ☑ CHANGELOG als Version 1.0.1 fortgesetzt
+
+## Erledigt am 21.07.2026 (Upload + Test offen)
+
+* ☑ Personen-Import um die Spielgenehmigungen-Dateien erweitert
+  (Angemeldete/Abgemeldete im Zeitraum): Dateityp-Erkennung aus dem
+  Dateinamen (+ manuelle Auswahl), Personen werden vervollständigt
+  (externeNr/Name/Geburtsdatum) bzw. neu angelegt, Genehmigungen landen mit
+  Lizenzstatus, Zeitraum und den neuen Antragsfeldern (antragstyp/
+  antragszeitpunkt/antragsteller) in den Mitgliedschaften.
+  Mapping offline mit den echten Dateien verifiziert: 950.163 Zeilen,
+  408.129 eindeutige Personen, 587.531 Genehmigungen, 4.168 Vereine,
+  0 übersprungen. ACHTUNG: contao:migrate nötig (3 neue Felder)!
+  Empfohlene Import-Reihenfolge im Livesystem: 1. Abmeldungen, 2. Anmeldungen
+  (bei gleicher Genehmigungsnummer gewinnt der jüngere Import), danach
+  „Bilder übernehmen" — die 27 sollten dann per externeNr zuordenbar sein.
+
+## Erledigt am 21.07.2026, Runde 2 (Upload + Test offen)
+
+* ☑ Import-Dialog: Hinweis auf die empfohlene Reihenfolge (Abmeldungen vor
+  Anmeldungen)
+* ☑ Mitgliedschaftsliste: Genehmigungszeitraum wird angezeigt (Von – Bis bzw.
+  „laufend"); Sortierung: unbeendete zuerst, dann Ende absteigend
+* ☑ Vereins-Import (CSV-Import unter Vereine): Stammdaten/Adressen/
+  Sportstätten-Datei, Upsert per VKZ, Status Archiv → Löschkennzeichen,
+  48 neue Felder (Gründungsjahr erlaubt Jahr ODER volles Datum).
+  Offline mit der echten Datei verifiziert: 4.497 Zeilen, 4.496 Vereine,
+  0 übersprungen; PLZ-Felder wegen Mehrfach-PLZ (bis 26 Zeichen) auf 32
+  ausgelegt. ACHTUNG: contao:migrate nötig (Clubs- UND Memberships-Felder)!
+
 ## Offene Aufgaben
 
+* Vereins-Import im Livesystem ausführen (Vereine__Stammdaten__...csv);
+  Reihenfolge-Empfehlung: Vereins-Import VOR den Spielgenehmigungen (damit
+  die Vereine samt Status da sind)
+* Spielgenehmigungen-Import im Livesystem ausführen (2× ~68 MB, je ~460-490
+  Schritte — dauert einige Minuten je Datei); danach Spielerbild-Übernahme
+* Spielerbild-Übernahme im Livesystem erneut ausführen — die 27 sollten jetzt
+  zugeordnet/angelegt werden bzw. im System-Log stehen (Backend → System-Log)
 * Anlege-Pfad der Vereine-Übernahme auf dem System mit den 7 fehlenden VKZ
   verifizieren (Ergebniszeile „Vereine neu angelegt: 7" erwartet; abgemeldete
   Vereine bekommen DELETE_STATE_TRUE)

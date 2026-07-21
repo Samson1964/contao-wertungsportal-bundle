@@ -32,7 +32,15 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_persons_memberships'] = [
     'list' => [
         'sorting' => [
             'mode'                  => DataContainer::MODE_PARENT,
-            'fields'                => ['clubName'],
+            // Zuerst die unbeendeten Mitgliedschaften (leeres Bis-Datum),
+            // danach nach Mitgliedschaftsende absteigend (jüngste zuerst).
+            // Das Bis-Datum liegt als TT.MM.JJJJ vor und wird für die
+            // Sortierung per SQL nach JJJJMMTT umgestellt.
+            'fields'                => [
+                "(spielgenehmigungBis = '') DESC",
+                "CONCAT(SUBSTRING(spielgenehmigungBis, 7, 4), SUBSTRING(spielgenehmigungBis, 4, 2), SUBSTRING(spielgenehmigungBis, 1, 2)) DESC",
+                'clubName',
+            ],
             'headerFields'          => ['lastname', 'firstname', 'birthyear', 'rating'],
             'disableGrouping'       => true, // Keine Zwischenüberschriften zwischen den Datensätzen
             'panelLayout'           => 'filter;search,limit',
@@ -40,7 +48,13 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_persons_memberships'] = [
             {
                 $licence = $GLOBALS['TL_LANG']['tl_wertungsportal_persons_memberships'][$row['licenceState']] ?? $row['licenceState'];
 
-                return '<div class="tl_content_left">' . $row['clubName'] . ' <span class="wp-meta">(' . $row['vkz'] . ($licence ? ', ' . $licence : '') . ')</span></div>';
+                // Zeitraum der Spielgenehmigung anzeigen (leeres Bis = laufend)
+                $zeitraum = '';
+                if ($row['spielgenehmigungVon'] || $row['spielgenehmigungBis']) {
+                    $zeitraum = ', ' . ($row['spielgenehmigungVon'] ?: '?') . ' &ndash; ' . ($row['spielgenehmigungBis'] ?: 'laufend');
+                }
+
+                return '<div class="tl_content_left">' . $row['clubName'] . ' <span class="wp-meta">(' . $row['vkz'] . ($licence ? ', ' . $licence : '') . $zeitraum . ')</span></div>';
             },
         ],
         'global_operations' => [
@@ -78,7 +92,7 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_persons_memberships'] = [
 
     // Palettes
     'palettes' => [
-        'default' => '{membership_legend},vkz,memberNo,clubName;{licence_legend},licenceState,spielgenehmigungVon,spielgenehmigungBis;{region_legend},regionName,federationName;{publish_legend},published',
+        'default' => '{membership_legend},vkz,memberNo,clubName;{licence_legend},licenceState,spielgenehmigungVon,spielgenehmigungBis;{antrag_legend:hide},antragstyp,antragszeitpunkt,antragsteller;{region_legend},regionName,federationName;{publish_legend},published',
     ],
 
     // Fields
@@ -147,6 +161,37 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_persons_memberships'] = [
             'inputType' => 'text',
             'eval'      => ['maxlength' => 10, 'tl_class' => 'w50'],
             'sql'       => "varchar(10) NOT NULL default ''",
+        ],
+
+        // ─────────────────────────────────────────────
+        // Antragsdaten aus dem Spielgenehmigungen-CSV-Import
+        // (Angemeldete/Abgemeldete im Zeitraum)
+        // ─────────────────────────────────────────────
+
+        // Antragstyp (z. B. Neuantrag Aktiv, Ummeldung, Vereinswechsel)
+        'antragstyp' => [
+            'exclude'   => true,
+            'filter'    => true,
+            'inputType' => 'text',
+            'eval'      => ['maxlength' => 64, 'tl_class' => 'w50'],
+            'sql'       => "varchar(64) NOT NULL default ''",
+        ],
+
+        // Zeitpunkt des Antrags (TT.MM.JJJJ HH:MM)
+        'antragszeitpunkt' => [
+            'exclude'   => true,
+            'inputType' => 'text',
+            'eval'      => ['maxlength' => 20, 'tl_class' => 'w50'],
+            'sql'       => "varchar(20) NOT NULL default ''",
+        ],
+
+        // Antragsteller (z. B. SYSTEM oder Benutzername)
+        'antragsteller' => [
+            'exclude'   => true,
+            'search'    => true,
+            'inputType' => 'text',
+            'eval'      => ['maxlength' => 64, 'tl_class' => 'w50'],
+            'sql'       => "varchar(64) NOT NULL default ''",
         ],
 
         // Name der Region

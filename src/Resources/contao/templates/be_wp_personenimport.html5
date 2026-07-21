@@ -11,11 +11,35 @@
 	<fieldset class="tl_box">
 		<legend>CSV-Datei ausw&auml;hlen</legend>
 		<div class="widget">
-			<p>Erwartet wird die Vereinsmitglieder-Exportdatei: Semikolon-getrennt, UTF-8,
-			mit Kopfzeile (Pflichtspalten: <?= $this->pflichtspalten ?>). Die Zuordnung erfolgt
-			&uuml;ber die Spaltennamen. Eine Zeile je Vereinsmitgliedschaft; Personen werden
-			anhand der InterneNr (nuLiga-Personen-ID) angelegt bzw. aktualisiert.</p>
+			<p>Unterst&uuml;tzte Exportdateien (Semikolon-getrennt, UTF-8, mit Kopfzeile;
+			die Zuordnung erfolgt &uuml;ber die Spaltennamen):</p>
+			<ul>
+				<li><b>Vereine__Vereinsmitglieder__...csv</b> &mdash; kompletter Mitgliederbestand
+				(Pflichtspalten: <?= $this->pflichtspalten ?>)</li>
+				<li><b>Spielgenehmigungen__Angemeldete_im_Zeitraum__...csv</b> und
+				<b>Spielgenehmigungen__Abgemeldete_im_Zeitraum__...csv</b> &mdash; Genehmigungshistorie
+				(Pflichtspalten: <?= $this->pflichtspaltenGenehmigungen ?>). Vervollst&auml;ndigt
+				Personen (externe Nummer, Name, Geburtsdatum) und legt fehlende Personen an
+				(z.&nbsp;B. Abgemeldete); je Genehmigung werden Verein, Lizenzstatus,
+				Zeitraum und Antragsdaten in den Mitgliedschaften gespeichert.</li>
+			</ul>
+			<p>Personen werden anhand der InterneNr (nuLiga-Personen-ID) angelegt bzw.
+			aktualisiert; Datum/Uhrzeit aus dem Dateinamen wird als &Auml;nderungszeitpunkt
+			der Datens&auml;tze gesetzt.</p>
+			<p><b>Empfohlene Reihenfolge bei den Spielgenehmigungen: zuerst die
+			Abmeldungen, danach die Anmeldungen importieren</b> &mdash; bei gleicher
+			Genehmigungsnummer gewinnt der sp&auml;tere Import, und die Anmeldungen-Datei
+			enth&auml;lt die laufenden Genehmigungen (leeres Bis-Datum).</p>
+			<p>
+				<select id="wpTyp" class="tl_select" style="width:auto">
+					<option value="auto">Dateityp automatisch erkennen (aus dem Dateinamen)</option>
+					<option value="mitglieder">Vereinsmitglieder (kompletter Bestand)</option>
+					<option value="anmeldungen">Spielgenehmigungen: Angemeldete im Zeitraum</option>
+					<option value="abmeldungen">Spielgenehmigungen: Abgemeldete im Zeitraum</option>
+				</select>
+			</p>
 			<p><input type="file" id="wpDatei" accept=".csv,text/csv"></p>
+			<p id="wpTypInfo" style="font-weight:bold"></p>
 			<p><button id="wpStart" class="tl_submit" disabled>Import starten</button></p>
 		</div>
 	</fieldset>
@@ -65,8 +89,35 @@
 
 	var eingabe = document.getElementById('wpDatei');
 	var startKnopf = document.getElementById('wpStart');
+	var typWahl = document.getElementById('wpTyp');
 
-	eingabe.addEventListener('change', function() { startKnopf.disabled = !eingabe.files.length; });
+	var typNamen = {
+		'mitglieder': 'Vereinsmitglieder (kompletter Bestand)',
+		'anmeldungen': 'Spielgenehmigungen: Angemeldete im Zeitraum',
+		'abmeldungen': 'Spielgenehmigungen: Abgemeldete im Zeitraum'
+	};
+
+	// Dateityp aus dem Dateinamen erkennen (Server erkennt unabhängig ebenso)
+	function typErkennen(name)
+	{
+		if(name.indexOf('Angemeldete_im_Zeitraum') !== -1) return 'anmeldungen';
+		if(name.indexOf('Abgemeldete_im_Zeitraum') !== -1) return 'abmeldungen';
+		if(name.indexOf('Vereinsmitglieder') !== -1) return 'mitglieder';
+		return '';
+	}
+
+	function typAnzeigen()
+	{
+		var info = document.getElementById('wpTypInfo');
+		if(!eingabe.files.length) { info.textContent = ''; return; }
+
+		var typ = (typWahl.value === 'auto') ? typErkennen(eingabe.files[0].name) : typWahl.value;
+		if(typ === '') info.textContent = 'Dateityp nicht erkannt — es wird die Vereinsmitglieder-Datei angenommen. Bei Bedarf oben manuell wählen.';
+		else info.textContent = 'Import als: ' + typNamen[typ];
+	}
+
+	eingabe.addEventListener('change', function() { startKnopf.disabled = !eingabe.files.length; typAnzeigen(); });
+	typWahl.addEventListener('change', typAnzeigen);
 
 	document.getElementById('wpNeustart').addEventListener('click', function() { location.reload(); });
 
@@ -129,6 +180,7 @@
 			fd.append('wpImportAktion', 'import');
 			fd.append('offset', offset);
 			fd.append('dateiname', dateiname);
+			fd.append('typ', typWahl.value);
 
 			res = await post(fd);
 			if(res.fehler) throw new Error(res.fehler);

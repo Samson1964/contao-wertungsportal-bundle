@@ -69,7 +69,7 @@ class WertungsportalPersonsMembershipsModel extends Model
     /**
      * String-Felder des Vereinsmitglieder-CSV-Imports (DB-Namen).
      */
-    public const CSV_FIELDS = ['clubName', 'licenceState', 'regionName', 'federationName', 'spielgenehmigungVon', 'spielgenehmigungBis'];
+    public const CSV_FIELDS = ['clubName', 'licenceState', 'regionName', 'federationName', 'spielgenehmigungVon', 'spielgenehmigungBis', 'antragstyp', 'antragszeitpunkt', 'antragsteller'];
 
     /**
      * Importiert Mitgliedschaften aus dem Vereinsmitglieder-CSV in einem

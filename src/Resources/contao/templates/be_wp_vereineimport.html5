@@ -1,0 +1,182 @@
+<?php // Backend-Template: Vereins-Import aus der Stammdaten-CSV ?>
+
+<div id="tl_buttons">
+	<a href="<?= ampersand($this->zurueck) ?>" class="header_back" title="Zurück zur Vereinsliste" accesskey="b">Zurück</a>
+</div>
+
+<h2 class="sub_headline">Vereins-Import (Stammdaten/Adressen/Sportst&auml;tten-CSV)</h2>
+
+<div class="tl_formbody_edit">
+
+	<fieldset class="tl_box">
+		<legend>CSV-Datei ausw&auml;hlen</legend>
+		<div class="widget">
+			<p>Erwartet wird die Exportdatei
+			<b>Vereine__Stammdaten__Adressen__Sportstaetten__JJJJMMTTHHIISS.csv</b>:
+			Semikolon-getrennt, UTF-8, mit Kopfzeile (Pflichtspalten: <?= $this->pflichtspalten ?>).
+			Die Zuordnung erfolgt &uuml;ber die Spaltennamen. Eine Zeile je Verein; Vereine werden
+			anhand der VereinNr (VKZ) angelegt bzw. aktualisiert, der Status &bdquo;Archiv&ldquo;
+			wird auf das L&ouml;schkennzeichen abgebildet. Datum/Uhrzeit aus dem Dateinamen wird
+			als &Auml;nderungszeitpunkt der Datens&auml;tze gesetzt.</p>
+			<p><input type="file" id="wpVDatei" accept=".csv,text/csv"></p>
+			<p><button id="wpVStart" class="tl_submit" disabled>Import starten</button></p>
+		</div>
+	</fieldset>
+
+	<fieldset class="tl_box" id="wpVFortschritt" style="display:none">
+		<legend>Fortschritt</legend>
+		<div class="widget">
+			<p>1. Upload: <progress id="wpVUploadBar" max="100" value="0" style="width:300px"></progress> <span id="wpVUploadText">0&nbsp;%</span></p>
+			<p>2. Import: <progress id="wpVImportBar" max="100" value="0" style="width:300px"></progress> <span id="wpVImportText">0&nbsp;%</span></p>
+			<p id="wpVStatus"></p>
+		</div>
+	</fieldset>
+
+	<fieldset class="tl_box" id="wpVErgebnis" style="display:none">
+		<legend>Ergebnis</legend>
+		<div class="widget">
+			<table class="tl_listing">
+				<tr><td>Verarbeitete Zeilen:</td><td style="text-align:right"><span id="wpVErgZeilen">0</span></td></tr>
+				<tr><td>Neu angelegte Vereine:</td><td style="text-align:right"><span id="wpVErgNeu">0</span></td></tr>
+				<tr><td>Aktualisierte Vereine:</td><td style="text-align:right"><span id="wpVErgAktualisiert">0</span></td></tr>
+				<tr><td>Unver&auml;nderte Vereine:</td><td style="text-align:right"><span id="wpVErgUnveraendert">0</span></td></tr>
+				<tr><td>&Uuml;bersprungene Zeilen (ohne VereinNr):</td><td style="text-align:right"><span id="wpVErgUebersprungen">0</span></td></tr>
+			</table>
+		</div>
+	</fieldset>
+
+	<fieldset class="tl_box" id="wpVFehlerBox" style="display:none">
+		<legend>Fehler</legend>
+		<div class="widget">
+			<p class="tl_error" id="wpVFehlerText"></p>
+			<p><button id="wpVNeustart" class="tl_submit">Neu starten</button></p>
+		</div>
+	</fieldset>
+
+</div>
+
+<script>
+(function()
+{
+	var url = <?= json_encode(\Contao\Environment::get('request')) ?>;
+	var token = '<?= REQUEST_TOKEN ?>';
+	var BLOCK = 2 * 1024 * 1024; // Upload-Blockgröße: 2 MB
+
+	var eingabe = document.getElementById('wpVDatei');
+	var startKnopf = document.getElementById('wpVStart');
+
+	eingabe.addEventListener('change', function() { startKnopf.disabled = !eingabe.files.length; });
+
+	document.getElementById('wpVNeustart').addEventListener('click', function() { location.reload(); });
+
+	function zeige(id, an) { document.getElementById(id).style.display = an ? '' : 'none'; }
+	function text(id, wert) { document.getElementById(id).textContent = wert; }
+	function balken(id, prozent) { document.getElementById(id).value = prozent; }
+
+	function fehler(meldung)
+	{
+		text('wpVFehlerText', meldung);
+		zeige('wpVFehlerBox', true);
+		text('wpVStatus', 'Abgebrochen.');
+	}
+
+	async function post(fd)
+	{
+		fd.append('REQUEST_TOKEN', token);
+		// WICHTIG: KEIN X-Requested-With-Header — sonst fängt Contaos eigenes
+		// Ajax-System die Anfrage ab ("Missing Ajax action"), bevor der
+		// key=importClubs-Callback ausgeführt wird
+		var antwort = await fetch(url, { method: 'POST', body: fd });
+		if(!antwort.ok) throw new Error('HTTP-Fehler ' + antwort.status);
+		return antwort.json();
+	}
+
+	// Datei blockweise hochladen
+	async function hochladen(datei)
+	{
+		var offset = 0;
+		while(offset < datei.size)
+		{
+			var fd = new FormData();
+			fd.append('wpVereineAktion', 'upload');
+			fd.append('offset', offset);
+			fd.append('chunk', datei.slice(offset, offset + BLOCK), 'chunk.csv');
+
+			var res = await post(fd);
+			if(res.fehler) throw new Error(res.fehler);
+
+			offset = res.groesse;
+			var prozent = Math.round(offset / datei.size * 100);
+			balken('wpVUploadBar', prozent);
+			text('wpVUploadText', prozent + ' %');
+		}
+	}
+
+	// Import in Zeilenpaketen ausführen (Dateiname für tstamp mitschicken)
+	async function importieren(dateiname)
+	{
+		var offset = 0;
+		var summe = { zeilen: 0, neu: 0, aktualisiert: 0, unveraendert: 0, uebersprungen: 0 };
+		var res;
+
+		do
+		{
+			var fd = new FormData();
+			fd.append('wpVereineAktion', 'import');
+			fd.append('offset', offset);
+			fd.append('dateiname', dateiname);
+
+			res = await post(fd);
+			if(res.fehler) throw new Error(res.fehler);
+
+			offset = res.offset;
+			summe.zeilen += res.zeilen;
+			summe.neu += res.neu;
+			summe.aktualisiert += res.aktualisiert;
+			summe.unveraendert += res.unveraendert;
+			summe.uebersprungen += res.uebersprungen;
+
+			var prozent = res.gesamt > 0 ? Math.round(offset / res.gesamt * 100) : 100;
+			balken('wpVImportBar', prozent);
+			text('wpVImportText', prozent + ' %');
+			text('wpVStatus', summe.zeilen.toLocaleString('de-DE') + ' Zeilen verarbeitet …');
+		}
+		while(!res.fertig);
+
+		return summe;
+	}
+
+	startKnopf.addEventListener('click', async function()
+	{
+		var datei = eingabe.files[0];
+		if(!datei) return;
+
+		startKnopf.disabled = true;
+		eingabe.disabled = true;
+		zeige('wpVFehlerBox', false);
+		zeige('wpVFortschritt', true);
+		text('wpVStatus', 'Datei wird hochgeladen …');
+
+		try
+		{
+			await hochladen(datei);
+			text('wpVStatus', 'Import läuft …');
+			var summe = await importieren(datei.name);
+
+			text('wpVErgZeilen', summe.zeilen.toLocaleString('de-DE'));
+			text('wpVErgNeu', summe.neu.toLocaleString('de-DE'));
+			text('wpVErgAktualisiert', summe.aktualisiert.toLocaleString('de-DE'));
+			text('wpVErgUnveraendert', summe.unveraendert.toLocaleString('de-DE'));
+			text('wpVErgUebersprungen', summe.uebersprungen.toLocaleString('de-DE'));
+			zeige('wpVErgebnis', true);
+			text('wpVStatus', 'Import abgeschlossen.');
+		}
+		catch(e)
+		{
+			fehler(e.message || String(e));
+			startKnopf.disabled = false;
+			eingabe.disabled = false;
+		}
+	});
+})();
+</script>

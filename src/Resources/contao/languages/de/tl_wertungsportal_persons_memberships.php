@@ -7,6 +7,7 @@
 // Legends
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons_memberships']['membership_legend'] = 'Mitgliedschaft';
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons_memberships']['licence_legend']    = 'Lizenz';
+$GLOBALS['TL_LANG']['tl_wertungsportal_persons_memberships']['antrag_legend']     = 'Antrag';
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons_memberships']['region_legend']     = 'Region und Verband';
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons_memberships']['publish_legend']    = 'Veröffentlichung';
 
@@ -20,6 +21,9 @@ $GLOBALS['TL_LANG']['tl_wertungsportal_persons_memberships']['federationName'] =
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons_memberships']['published']      = ['Veröffentlichen', 'Die Mitgliedschaft auf der Webseite anzeigen.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons_memberships']['spielgenehmigungVon'] = ['Spielgenehmigung von', 'Beginn der Spielgenehmigung (TT.MM.JJJJ).'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons_memberships']['spielgenehmigungBis'] = ['Spielgenehmigung bis', 'Ende der Spielgenehmigung (TT.MM.JJJJ).'];
+$GLOBALS['TL_LANG']['tl_wertungsportal_persons_memberships']['antragstyp']          = ['Antragstyp', 'Art des Antrags (z. B. Neuantrag Aktiv, Ummeldung, Vereinswechsel).'];
+$GLOBALS['TL_LANG']['tl_wertungsportal_persons_memberships']['antragszeitpunkt']    = ['Antragszeitpunkt', 'Zeitpunkt des Antrags (TT.MM.JJJJ HH:MM).'];
+$GLOBALS['TL_LANG']['tl_wertungsportal_persons_memberships']['antragsteller']       = ['Antragsteller', 'Wer den Antrag gestellt hat (z. B. SYSTEM oder Benutzername).'];
 
 // References (Optionen des Feldes "licenceState")
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons_memberships']['ACTIVE']  = 'Aktiv';

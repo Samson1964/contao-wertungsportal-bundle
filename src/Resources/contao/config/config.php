@@ -32,6 +32,8 @@ $GLOBALS['BE_MOD']['wertungsportal'] = array
 		(
 			'tl_wertungsportal_clubs',
 		),
+		// Globale Operation: Vereins-Import aus der Stammdaten-CSV (key=importClubs)
+		'importClubs'    => array('Schachbulle\ContaoWertungsportalBundle\Classes\VereineImport', 'run'),
 		// Globale Operation: Altdaten-Übernahme aus tl_dwz_ver (key=importDwzVer)
 		'importDwzVer'   => array('Schachbulle\ContaoWertungsportalBundle\Classes\AltdatenImport', 'runVereine'),
 	),
