@@ -134,42 +134,44 @@ class AltdatenImport extends \Backend
 
 	/**
 	 * Globale Operation unter Personen (key=importPhotos):
-	 * Spielerbild aus tl_dwz_spi übernehmen (Match externeNr = dewisID).
+	 * Spielerbild aus tl_dwz_spi in vorhandene Personen übernehmen.
 	 *
-	 * Quellspieler ohne Treffer über die externe Nummer (z. B. abgemeldete
-	 * Personen, die nicht im Vereinsmitglieder-CSV stehen) werden dreistufig
-	 * behandelt:
-	 * 1. Existiert die Person unter ihrer nuLiga-ID, wird sie zugeordnet
-	 *    (externe Nummer ergänzt) und das Bild übernommen.
-	 * 2. Sonst wird die Person mit den Stammdaten aus tl_dwz_spi neu angelegt.
-	 * 3. Hat tl_dwz_spi KEINE nuLiga-ID, wird NICHT angelegt — ein späterer
-	 *    CSV-Import würde dieselbe Person über die InterneNr sonst doppelt
-	 *    anlegen. Diese Spieler werden ins System-Log geschrieben und auf
-	 *    der Ergebnisseite aufgelistet.
+	 * Die Personen kommen über die CSV-Importe (Vereinsmitglieder,
+	 * Spielgenehmigungen) in tl_wertungsportal_persons; der Bild-Import legt
+	 * daher KEINE Personen an, sondern ordnet die Fotos den bestehenden
+	 * Personen zu. Der Match läuft dreistufig, jeweils nur für die noch nicht
+	 * zugeordneten Quellspieler:
+	 *   1. externe Nummer = DeWIS-Spielernummer (Regelfall — die dewisID wurde
+	 *      von nu als externeNr übernommen)
+	 *   2. FIDE-ID (falls nu die externeNr auf einen "C"-Präfix mit abweichender
+	 *      Nummer geändert hat; die FIDE-ID ist in beiden Tabellen dieselbe)
+	 *   3. Nachname + Vorname + Geburtsjahr, aber NUR wenn auf beiden Seiten
+	 *      eindeutig (schützt vor Fehlzuordnung bei Namensgleichheit)
+	 * Wer sich keiner Person zuordnen lässt, wird ins System-Log geschrieben
+	 * und auf der Ergebnisseite aufgelistet.
 	 *
 	 * @param  object $dc DataContainer
 	 * @return string     HTML der Ergebnisseite
 	 */
 	public function runPersonen($dc)
 	{
-		$aktualisiert = 0;
+		$ueberExtern = 0;
+		$ueberFide = 0;
+		$ueberName = 0;
 		$unveraendert = 0;
-		$zugeordnet = 0;
-		$angelegt = 0;
-		$nichtAnlegbar = array();
+		$nichtZugeordnet = array();
 
-		// Quellspieler mit Bild laden (dewisID => Datensatz) — die Stammdaten
-		// werden für das automatische Anlegen fehlender Personen mitgeladen
+		// Quellspieler mit Bild laden (dewisID => Datensatz)
 		$arrQuelle = array();
-		$objQuelle = \Database::getInstance()->execute("SELECT dewisID, nuLigaPersonId, vorname, nachname, geschlecht, geburtstag, fideID, verstorben, addImage, singleSRC FROM tl_dwz_spi WHERE addImage = '1' AND singleSRC IS NOT NULL AND dewisID > 0");
+		$objQuelle = \Database::getInstance()->execute("SELECT dewisID, vorname, nachname, geburtstag, fideID, addImage, singleSRC FROM tl_dwz_spi WHERE addImage = '1' AND singleSRC IS NOT NULL AND dewisID > 0");
 
 		while($objQuelle->next())
 		{
 			$arrQuelle[(string) $objQuelle->dewisID] = $objQuelle->row();
 		}
 
-		// Zielpersonen blockweise über die externe Nummer laden
-		$arrZiel = array();
+		// 1. Zielpersonen blockweise über die externe Nummer laden
+		$arrPerExtern = array();
 		foreach(array_chunk(array_keys($arrQuelle), 500) as $chunk)
 		{
 			$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
@@ -177,129 +179,167 @@ class AltdatenImport extends \Backend
 			                                   ->execute($chunk);
 			while($objZiel->next())
 			{
-				$arrZiel[(string) $objZiel->externeNr] = $objZiel->row();
+				$arrPerExtern[(string) $objZiel->externeNr] = $objZiel->row();
 			}
 		}
 
-		// nuLiga-IDs der Quellspieler normalisieren: Die Personentabelle führt
-		// sie mit NU-Präfix (z. B. NU4168433) — rein numerische Werte aus
-		// tl_dwz_spi werden entsprechend ergänzt
+		// 2. Für Spieler ohne externeNr-Treffer, aber mit FIDE-ID: Personen
+		// über die FIDE-ID nachschlagen (mehrdeutige FIDE-IDs überspringen)
+		$arrFideIds = array();
 		foreach($arrQuelle as $dewisID => $alt)
 		{
-			$nuId = trim((string) $alt['nuLigaPersonId']);
-			if($nuId != '' && preg_match('/^\d+$/', $nuId)) $nuId = 'NU'.$nuId;
-			$arrQuelle[$dewisID]['nuLigaPersonId'] = $nuId;
+			if(!isset($arrPerExtern[$dewisID]) && (int) $alt['fideID'] > 0) $arrFideIds[] = (int) $alt['fideID'];
 		}
 
-		// Für Quellspieler ohne externeNr-Treffer: Personen über die
-		// nuLiga-ID blockweise nachschlagen (z. B. per API-Sync angelegt,
-		// aber ohne externe Nummer)
-		$arrNuIds = array();
-		foreach($arrQuelle as $dewisID => $alt)
-		{
-			if(!isset($arrZiel[$dewisID]) && $alt['nuLigaPersonId'] != '') $arrNuIds[] = $alt['nuLigaPersonId'];
-		}
-
-		$arrPerNuId = array();
-		foreach(array_chunk($arrNuIds, 500) as $chunk)
+		$arrPerFide = array();
+		$arrFideMehrdeutig = array();
+		foreach(array_chunk(array_values(array_unique($arrFideIds)), 500) as $chunk)
 		{
 			$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
-			$objZiel = \Database::getInstance()->prepare("SELECT id, nuLigaPersonId, externeNr, addImage FROM tl_wertungsportal_persons WHERE nuLigaPersonId IN ($platzhalter)")
+			$objZiel = \Database::getInstance()->prepare("SELECT id, fideId, addImage FROM tl_wertungsportal_persons WHERE fideId > 0 AND fideId IN ($platzhalter)")
 			                                   ->execute($chunk);
 			while($objZiel->next())
 			{
-				$arrPerNuId[(string) $objZiel->nuLigaPersonId] = $objZiel->row();
+				$fid = (int) $objZiel->fideId;
+				if(isset($arrPerFide[$fid])) $arrFideMehrdeutig[$fid] = true; // FIDE-ID mehrfach → nicht verwenden
+				else $arrPerFide[$fid] = $objZiel->row();
 			}
 		}
 
+		// 3. Für die verbleibenden Spieler: Match über Nachname + Vorname +
+		// Geburtsjahr vorbereiten. Quellseitig mehrdeutige Schlüssel werden
+		// ausgeschlossen; die Nachnamen werden für die gezielte Ziel-Abfrage
+		// gesammelt (nur die relevanten Personen laden statt der ganzen Tabelle).
+		$arrNamensSchluessel = array();
+		$arrRestNachnamen = array();
 		foreach($arrQuelle as $dewisID => $alt)
 		{
-			if(!isset($arrZiel[$dewisID]))
+			if(isset($arrPerExtern[$dewisID])) continue;
+			if((int) $alt['fideID'] > 0 && isset($arrPerFide[(int) $alt['fideID']]) && !isset($arrFideMehrdeutig[(int) $alt['fideID']])) continue;
+			$key = self::namensSchluessel($alt['nachname'], $alt['vorname'], self::geburtstagAusSpi($alt['geburtstag']));
+			if($key !== '')
 			{
-				if($alt['nuLigaPersonId'] == '')
-				{
-					// Ohne nuLiga-ID nicht anlegbar (Dublettengefahr beim CSV-Import)
-					$nichtAnlegbar[] = 'dewisID '.$dewisID.': '.$alt['nachname'].', '.$alt['vorname'];
-					continue;
-				}
-
-				if(isset($arrPerNuId[$alt['nuLigaPersonId']]))
-				{
-					// Person existiert unter ihrer nuLiga-ID: externe Nummer
-					// ergänzen und Bild übernehmen (sofern noch keins gesetzt)
-					$ziel = $arrPerNuId[$alt['nuLigaPersonId']];
-					$set = array('tstamp' => time());
-					if($ziel['externeNr'] == '') $set['externeNr'] = (string) $dewisID;
-					if($ziel['addImage'] != '1')
-					{
-						$set['addImage'] = '1';
-						$set['singleSRC'] = $alt['singleSRC'];
-					}
-
-					\Database::getInstance()->prepare("UPDATE tl_wertungsportal_persons %s WHERE id=?")
-					                        ->set($set)
-					                        ->execute($ziel['id']);
-					$zugeordnet++;
-					continue;
-				}
-
-				// Person mit den Stammdaten aus tl_dwz_spi neu anlegen
-				\Database::getInstance()->prepare("INSERT INTO tl_wertungsportal_persons %s")
-				                        ->set(array
-				                        (
-					                        'tstamp'         => time(),
-					                        'nuLigaPersonId' => $alt['nuLigaPersonId'],
-					                        'externeNr'      => (string) $dewisID,
-					                        'firstname'      => $alt['vorname'],
-					                        'lastname'       => $alt['nachname'],
-					                        'gender'         => $alt['geschlecht'] == 'M' ? 'MALE' : ($alt['geschlecht'] == 'W' ? 'FEMALE' : ''),
-					                        'birthyear'      => self::geburtstagAusSpi($alt['geburtstag']),
-					                        'fideId'         => (int) $alt['fideID'],
-					                        'verstorben'     => $alt['verstorben'] == '1' ? '1' : '',
-					                        'addImage'       => '1',
-					                        'singleSRC'      => $alt['singleSRC'],
-					                        'published'      => '1',
-				                        ))
-				                        ->execute();
-				$angelegt++;
-				continue;
+				$arrNamensSchluessel[$key] = ($arrNamensSchluessel[$key] ?? 0) + 1;
+				$arrRestNachnamen[(string) $alt['nachname']] = true;
 			}
-
-			// Nur Personen ohne eigenes Bild befüllen (keine manuelle Pflege überschreiben)
-			if($arrZiel[$dewisID]['addImage'] == '1')
-			{
-				$unveraendert++;
-				continue;
-			}
-
-			\Database::getInstance()->prepare("UPDATE tl_wertungsportal_persons %s WHERE id=?")
-			                        ->set(array('addImage' => '1', 'singleSRC' => $alt['singleSRC'], 'tstamp' => time()))
-			                        ->execute($arrZiel[$dewisID]['id']);
-			$aktualisiert++;
 		}
 
-		// Nicht anlegbare Spieler ins Contao-System-Log schreiben
-		if(count($nichtAnlegbar))
+		// Personen mit passendem Nachnamen laden (Index auf lastname), daraus
+		// die Namensschlüssel bilden und zielseitig mehrdeutige merken
+		$arrPerName = array();
+		$arrNameMehrdeutig = array();
+		foreach(array_chunk(array_keys($arrRestNachnamen), 500) as $chunk)
 		{
-			\System::log('Spielerbild-Übernahme: '.count($nichtAnlegbar).' Spieler aus tl_dwz_spi ohne nuLiga-ID nicht angelegt: '.implode('; ', $nichtAnlegbar), __METHOD__, TL_GENERAL);
+			$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
+			$objZiel = \Database::getInstance()->prepare("SELECT id, lastname, firstname, birthyear, addImage FROM tl_wertungsportal_persons WHERE lastname IN ($platzhalter)")
+			                                   ->execute($chunk);
+			while($objZiel->next())
+			{
+				$key = self::namensSchluessel($objZiel->lastname, $objZiel->firstname, $objZiel->birthyear);
+				if($key === '') continue;
+				if(isset($arrPerName[$key])) $arrNameMehrdeutig[$key] = true;
+				else $arrPerName[$key] = $objZiel->row();
+			}
+		}
+
+		// ─── Zuordnung durchführen ───
+		foreach($arrQuelle as $dewisID => $alt)
+		{
+			// 1. externe Nummer = dewisID
+			if(isset($arrPerExtern[$dewisID]))
+			{
+				$this->bildZuweisen($arrPerExtern[$dewisID], $alt['singleSRC'], $ueberExtern, $unveraendert);
+				continue;
+			}
+
+			// 2. FIDE-ID (nur eindeutige)
+			$fid = (int) $alt['fideID'];
+			if($fid > 0 && isset($arrPerFide[$fid]) && !isset($arrFideMehrdeutig[$fid]))
+			{
+				$this->bildZuweisen($arrPerFide[$fid], $alt['singleSRC'], $ueberFide, $unveraendert);
+				continue;
+			}
+
+			// 3. Nachname + Vorname + Geburtsjahr (nur beidseitig eindeutig)
+			$key = self::namensSchluessel($alt['nachname'], $alt['vorname'], self::geburtstagAusSpi($alt['geburtstag']));
+			if($key !== '' && ($arrNamensSchluessel[$key] ?? 0) == 1 && isset($arrPerName[$key]) && !isset($arrNameMehrdeutig[$key]))
+			{
+				$this->bildZuweisen($arrPerName[$key], $alt['singleSRC'], $ueberName, $unveraendert);
+				continue;
+			}
+
+			$nichtZugeordnet[] = 'dewisID '.$dewisID.': '.$alt['nachname'].', '.$alt['vorname'];
+		}
+
+		// Nicht zugeordnete Spieler ins Contao-System-Log schreiben
+		if(count($nichtZugeordnet))
+		{
+			\System::log('Spielerbild-Übernahme: '.count($nichtZugeordnet).' Spieler aus tl_dwz_spi keiner Person zugeordnet (kein Treffer über externe Nummer, FIDE-ID oder Name): '.implode('; ', $nichtZugeordnet), __METHOD__, TL_GENERAL);
 		}
 
 		$zeilen = array
 		(
 			'Quellspieler mit Bild: '.count($arrQuelle),
-			'Personen aktualisiert: '.$aktualisiert,
+			'Zugeordnet über die externe Nummer: '.$ueberExtern,
+			'Zugeordnet über die FIDE-ID: '.$ueberFide,
+			'Zugeordnet über Name + Geburtsjahr: '.$ueberName,
 			'Ohne Änderung (Person hat bereits ein Bild): '.$unveraendert,
-			'Über die nuLiga-ID zugeordnet (externe Nummer ergänzt): '.$zugeordnet,
-			'Personen neu angelegt (Stammdaten + Bild aus tl_dwz_spi): '.$angelegt,
-			'Nicht anlegbar, ins System-Log geschrieben (keine nuLiga-ID in tl_dwz_spi): '.count($nichtAnlegbar),
+			'Nicht zugeordnet, ins System-Log geschrieben: '.count($nichtZugeordnet),
 		);
 
-		foreach($nichtAnlegbar as $eintrag)
+		foreach($nichtZugeordnet as $eintrag)
 		{
 			$zeilen[] = '&mdash; '.$eintrag;
 		}
 
 		return $this->ergebnis('Spielerbild-Übernahme aus DWZ-Spieler (tl_dwz_spi)', $zeilen, 'importPhotos');
+	}
+
+	/**
+	 * Weist einer Zielperson das Spielerbild zu, sofern sie noch keins hat
+	 * (keine manuelle Pflege überschreiben), und zählt das Ergebnis.
+	 *
+	 * @param  array  $ziel         Zielperson (Zeile mit id, addImage)
+	 * @param  mixed  $singleSRC    UUID der Bilddatei aus tl_dwz_spi
+	 * @param  int    &$zaehlerNeu  Zähler für übernommene Bilder
+	 * @param  int    &$zaehlerAlt  Zähler für bereits vorhandene Bilder
+	 */
+	protected function bildZuweisen($ziel, $singleSRC, &$zaehlerNeu, &$zaehlerAlt)
+	{
+		if($ziel['addImage'] == '1')
+		{
+			$zaehlerAlt++;
+			return;
+		}
+
+		\Database::getInstance()->prepare("UPDATE tl_wertungsportal_persons %s WHERE id=?")
+		                        ->set(array('addImage' => '1', 'singleSRC' => $singleSRC, 'tstamp' => time()))
+		                        ->execute($ziel['id']);
+		$zaehlerNeu++;
+	}
+
+	/**
+	 * Bildet einen normalisierten Namensschlüssel (nachname|vorname|jahr) für
+	 * den Namens-Match. Liefert '' bei fehlendem Namen oder Jahr, damit
+	 * unvollständige Datensätze nicht fälschlich zusammengeführt werden.
+	 *
+	 * @param  string $nachname
+	 * @param  string $vorname
+	 * @param  string $geburt   Geburtsjahr (JJJJ) oder volles Datum (TT.MM.JJJJ)
+	 * @return string
+	 */
+	public static function namensSchluessel($nachname, $vorname, $geburt)
+	{
+		$nachname = trim(mb_strtolower((string) $nachname));
+		$vorname = trim(mb_strtolower((string) $vorname));
+
+		// Geburtsjahr extrahieren (vierstellige Jahreszahl)
+		$jahr = '';
+		if(preg_match('/(\d{4})/', (string) $geburt, $m)) $jahr = $m[1];
+
+		if($nachname === '' || $vorname === '' || $jahr === '') return '';
+
+		return $nachname.'|'.$vorname.'|'.$jahr;
 	}
 
 	/**
