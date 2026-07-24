@@ -55,7 +55,7 @@ class Wertungsportal_Download
 		
 		$url = 'https://schachde-apps.liga.nu/dsbwertungsportal/rs/dwz/dwzliste/download/';
 		$datum = date('Ymd');
-		$zielpfad = substr($_SERVER['DOCUMENT_ROOT'], 0, -3).'files/wertungsportal/'; // web-Ordner entfernen und Zielordner anhängen
+		$zielpfad = substr($_SERVER['DOCUMENT_ROOT'], 0, -3).'files/wertungsportal/downloads/'; // web-Ordner entfernen und Zielordner anhängen
 		$fehlschlaege = 0;
 
 		foreach($links as $link)

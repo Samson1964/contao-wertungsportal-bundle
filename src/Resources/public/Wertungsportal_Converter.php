@@ -42,13 +42,13 @@ class Wertungsportal_Converter
 	 */
 	public function __construct()
 	{
-		$this->zielpfad = substr($_SERVER['DOCUMENT_ROOT'], 0, -3).'files/wertungsportal/tmp/'; // web-Ordner entfernen und Zielordner anhängen
+		$this->zielpfad = substr($_SERVER['DOCUMENT_ROOT'], 0, -3).'files/wertungsportal/downloads/tmp/'; // web-Ordner entfernen und Zielordner anhängen
 		if(!file_exists($this->zielpfad)) mkdir($this->zielpfad, 0777);
-		$this->packpfad = substr($_SERVER['DOCUMENT_ROOT'], 0, -3).'files/wertungsportal/raw/'; // web-Ordner entfernen und Zielordner anhängen
+		$this->packpfad = substr($_SERVER['DOCUMENT_ROOT'], 0, -3).'files/wertungsportal/downloads/raw/'; // web-Ordner entfernen und Zielordner anhängen
 		if(!file_exists($this->packpfad)) mkdir($this->packpfad, 0777);
-		$this->archivpfad = substr($_SERVER['DOCUMENT_ROOT'], 0, -3).'files/wertungsportal/'.date('Y').'/'; // web-Ordner entfernen und Zielordner anhängen
+		$this->archivpfad = substr($_SERVER['DOCUMENT_ROOT'], 0, -3).'files/wertungsportal/downloads/'.date('Y').'/'; // web-Ordner entfernen und Zielordner anhängen
 		if(!file_exists($this->archivpfad)) mkdir($this->archivpfad, 0777);
-		$this->exportpfad = substr($_SERVER['DOCUMENT_ROOT'], 0, -3).'files/wertungsportal/export/'; // web-Ordner entfernen und Zielordner anhängen
+		$this->exportpfad = substr($_SERVER['DOCUMENT_ROOT'], 0, -3).'files/wertungsportal/downloads/export/'; // web-Ordner entfernen und Zielordner anhängen
 		if(!file_exists($this->exportpfad)) mkdir($this->exportpfad, 0777);
 		$this->suchen = array('Ü', 'Ö', 'Ä', 'ü', 'ö', 'ä', 'ß', 'ú', 'ó', 'á', 'é', 'à', 'ò');
 		$this->ersetzen = array('Ue', 'Oe', 'Ae', 'ue', 'oe', 'ae', 'ss', 'u', 'o', 'a', 'e', 'a', 'o');

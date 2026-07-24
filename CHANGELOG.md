@@ -1,5 +1,9 @@
 # Wertungsportal-Anbindung
 
+## Version 1.0.4 (2026-07-24)
+
+* Change: Download-Ordner in public Skripten ergänzt
+
 ## Version 1.0.3 (2026-07-21)
 
 * Fix: Spielerbild-Übernahme brach mit SQL-Fehler ab (Unknown column 'nuLigaPersonId'), weil das Feld in tl_dwz_spi nicht mehr existiert (in allen Installationen entfernt). Die gesamte nuLigaPersonId-basierte Zuordnungs- und Neuanlage-Logik wurde entfernt — der Bild-Import legt keine Personen mehr an (die kommen über die CSV-Importe), sondern ordnet die Fotos den vorhandenen Personen dreistufig zu: 1. externe Nummer = DeWIS-Spielernummer (Regelfall, die dewisID wurde von nu als externeNr übernommen); 2. FIDE-ID (falls nu die externeNr auf einen "C"-Präfix mit abweichender Nummer geändert hat — die FIDE-ID ist in beiden Tabellen dieselbe); 3. Nachname + Vorname + Geburtsjahr, aber nur bei beidseitiger Eindeutigkeit (schützt vor Fehlzuordnung bei Namensgleichheit). Wer sich nicht zuordnen lässt, wird ins System-Log geschrieben und auf der Ergebnisseite aufgelistet. Match-Schlüssel jeweils blockweise/indexgestützt geladen. Am Fall Ledyankina verifiziert (externeNr CO3331587 ≠ dewisID 10915863, aber FIDE-ID 55644155 identisch → Bild wird über die FIDE-ID zugeordnet)
