@@ -1,5 +1,19 @@
 # Wertungsportal-Anbindung
 
+## Version 1.0.5 (2026-07-26)
+
+* Add: DWZ-Umstufungen (upgrades-Array parallel zu entries in der history-Antwort) werden in die Karteikarten-Turnierliste eingearbeitet — chronologisch zwischen die Turniere einsortiert (Turnier: enddate, Umstufung: referenceDate; bei gleichem Datum gewinnt das Turnier) und farblich hervorgehoben (heller Hintergrund, kursiv). Die Turnier-Nummerierung (AKT/laufende Nummer) bleibt den Turnieren vorbehalten
+* Change: Karteikarten-Kopf zeigt hinter "Verband:" (statt "Verbände:") nur noch den direkt übergeordneten Verband — dreistellige VKZ aus den ersten drei Stellen der Vereins-VKZ (kann Landesverband, Bezirk oder Kreis sein), Name lokal aus tl_wertungsportal_clubs, Fallback federationName der API. Die frühere Verbandskette zeigte durch fehlende federation-Verknüpfungen praktisch immer nur "Deutscher Schachbund" (Helper::getVerbandskette durch das schlankere getVerbandName ersetzt)
+* Add: Karteikarten-Kopf hat unter dem Namen eine Zeile "Aktuelle DWZ:"
+* Fix: Karteikarten-Kopf als Flex-Layout (Bild links, Datentabelle rechts) statt fester rowspan="6"-Bildzelle — die Datenspalten rutschen bei vielen Vereinsmitgliedschaften nicht mehr unter das Spielerbild
+* Change: FIDE-Nation-Link auf der Karteikarte korrigiert auf https://ratings.fide.com/rankings.phtml?country=XXX
+* Add: In der Turnierergebnis-Kreuztabelle wird die Partiefarbe hervorgehoben — nur das Ergebnis (nicht die ganze Zelle, damit es sich nicht mit den grauen Blindfeldern beisst): Weiß auf weißem Grund fett, Schwarz auf dunklem Grund mit heller Schrift
+* Add: Turnierergebnisse werden bei Rundenturnieren (Round-Robin) als Kreuztabelle Spieler × Spieler dargestellt statt in Rundenspalten. Erkennung: gerade Spielerzahl mit Spielerzahl−1 Runden oder ungerade Spielerzahl mit Spielerzahl Runden (Freilos); sonst weiterhin die Rundendarstellung. Die Diagonale ist grau hinterlegt, jede Zelle zeigt das Ergebnis aus Sicht des Zeilenspielers (Round-Robin-Erkennung mit 11 Fällen verifiziert)
+* Add: Turnierergebnis-/Kreuztabellen sind horizontal scrollbar mit einer zusätzlichen oberen Scrollleiste (per JS mit der Tabelle synchronisiert), damit breite Tabellen auch ohne Scrollen bis zum Seitenende bedienbar sind
+* Fix: Karteikartensperre (wertungsportal_karteisperre_gaeste) wirkte nicht — eine spätere Zuweisung setzte sichtbar wieder auf true und überschrieb die Sperrentscheidung. Für Gäste bleibt die Karteikarte jetzt gesperrt, wenn die Option aktiv ist
+* Add: FIDE-Nation auf der Karteikarte ist mit der FIDE-Länderrangliste verlinkt
+* Change: Diagramm DWZ/Leistung — Jahreszahlen der X-Achse steiler gedreht (60° statt 45°, fast senkrecht); die Legende sitzt jetzt oberhalb der Skala im freien Rand, damit hohe Leistungswerte sie nicht mehr überschreiben
+
 ## Version 1.0.4 (2026-07-24)
 
 * Change: Download-Ordner in public Skripten ergänzt

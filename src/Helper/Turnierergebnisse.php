@@ -186,6 +186,47 @@ class Turnierergebnisse
 			}
 		}
 
+		/*********************************************************
+		 * Kreuztabelle (nur bei Rundenturnieren / Round-Robin)
+		 *
+		 * Erkennung: Bei gerader Spielerzahl hat ein vollständiges
+		 * Rundenturnier Spielerzahl − 1 Runden (Rundenzahl + 1 = Spielerzahl);
+		 * bei ungerader Spielerzahl (Freilos je Runde) sind es Spielerzahl
+		 * Runden (Rundenzahl = Spielerzahl, beide ungerade).
+		*/
+		$spielerzahl = (int) $this->apiTurnierinfo['body']['playerCount'];
+		$roundRobin = ($runden + 1 == $spielerzahl && $spielerzahl % 2 == 0)   // gerade Spielerzahl: n−1 Runden
+		           || ($runden == $spielerzahl && $spielerzahl % 2 == 1);        // ungerade Spielerzahl: n Runden (Freilos)
+
+		$this->daten['istKreuztabelle'] = $roundRobin;
+
+		if($roundRobin)
+		{
+			// Je Spieler eine nach Gegner-Startnummer indizierte Ergebnisliste
+			// aufbauen (Resultat ist bereits aus Sicht des jeweiligen Spielers).
+			// Mehrfachpartien gegen denselben Gegner werden gesammelt.
+			foreach($this->daten['Spieler'] as $nr => $sp)
+			{
+				$kreuz = array();
+				if(!empty($sp['Ergebnisse']))
+				{
+					foreach($sp['Ergebnisse'] as $ergListe)
+					{
+						foreach($ergListe as $erg)
+						{
+							$kreuz[$erg['Gegner']][] = array
+							(
+								'Resultat'   => $erg['Resultat'],
+								'Farbe'      => $erg['Farbe'],
+								'Farbklasse' => $erg['Farbklasse'],
+							);
+						}
+					}
+				}
+				$this->daten['Spieler'][$nr]['Kreuz'] = $kreuz;
+			}
+		}
+
 		$log = print_r($this->daten['Spieler'], true)."\n";
 		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal.log');
 

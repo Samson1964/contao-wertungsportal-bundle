@@ -1,5 +1,7 @@
 # Composer
 /composer.lock
+/OFFEN.md
+/CLAUDE.md
 /vendor/
 /.DAV
 

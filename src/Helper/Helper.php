@@ -610,63 +610,25 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Löst die Verbandskette eines Vereins über tl_wertungsportal_clubs auf:
-	 * vom Verein aufwärts über das Feld federation bis zur obersten Ebene.
-	 * Der DSB wird als oberste Ebene immer ergänzt (analog Verbandsnavigation).
-	 * Lokal unbekannte VKZ beenden die Kette — die Rückgabe ist dann so
-	 * vollständig, wie es die synchronisierten Daten hergeben.
+	 * Liefert den Namen des direkt übergeordneten Verbands zu einer VKZ.
+	 * Der übergeordnete Verband ergibt sich aus den ersten drei Stellen der
+	 * (fünfstelligen) Vereins-VKZ und kann Landesverband, Bezirk oder Kreis
+	 * sein. Der Name wird lokal aus tl_wertungsportal_clubs nachgeschlagen;
+	 * Verbände liegen dort 3-stellig oder 5-stellig (?00-Auffüllung) vor.
 	 *
-	 * @param     String $vkz  VKZ des Vereins (5-stellig)
-	 * @return    array        Verbände von oben nach unten: array('vkz' => ..., 'name' => ..., 'url' => ...);
-	 *                         leer, wenn der Verein lokal nicht bekannt ist
+	 * @param     String $vkz  VKZ des Vereins oder des Verbands
+	 * @return    String       Name des Verbands, '' wenn lokal nicht bekannt
 	 */
-	public static function getVerbandskette($vkz)
+	public static function getVerbandName($vkz)
 	{
-		$kette = array();
-		$besucht = array();
-		$aktuell = (string) $vkz;
-		$gefunden = false;
+		$vkz3 = substr((string) $vkz, 0, 3);
+		if($vkz3 == '') return '';
 
-		for($x = 0; $x < 6; $x++) // Sicherheitsgrenze gegen Zirkelbezüge
-		{
-			if($aktuell == '' || isset($besucht[$aktuell])) break;
-			$besucht[$aktuell] = true;
+		$objClub = \Database::getInstance()->prepare("SELECT clubName FROM tl_wertungsportal_clubs WHERE clubVkz = ? OR clubVkz = ?")
+		                                   ->limit(1)
+		                                   ->execute($vkz3, $vkz3.'00');
 
-			// Datensatz zur VKZ suchen — Verbände können 3-stellig (Navigations-
-			// Kurzform) oder 5-stellig (?00-Auffüllung) abgelegt sein
-			$alternative = (strlen($aktuell) == 3) ? $aktuell.'00' : $aktuell;
-			$objClub = \Database::getInstance()->prepare("SELECT clubVkz, clubName, federation FROM tl_wertungsportal_clubs WHERE clubVkz = ? OR clubVkz = ?")
-			                                   ->limit(1)
-			                                   ->execute($aktuell, $alternative);
-			if(!$objClub->numRows) break;
-			$gefunden = true;
-
-			// Den Verein selbst nicht in die Kette aufnehmen, nur die Verbände darüber
-			if($x > 0)
-			{
-				array_unshift($kette, array
-				(
-					'vkz'  => $objClub->clubVkz,
-					'name' => $objClub->clubName,
-					'url'  => sprintf('<a href="'.self::getVerbandseiteUrl().'/%s.html">%s</a>', substr($objClub->clubVkz, 0, 3), $objClub->clubName),
-				));
-			}
-
-			$aktuell = (string) $objClub->federation;
-		}
-
-		// DSB als oberste Ebene ergänzen, sobald der Verein lokal bekannt ist
-		if($gefunden)
-		{
-			array_unshift($kette, array
-			(
-				'vkz'  => '000',
-				'name' => 'Deutscher Schachbund',
-				'url'  => sprintf('<a href="'.self::getVerbandseiteUrl().'/%s.html">%s</a>', '000', 'Deutscher Schachbund'),
-			));
-		}
-
-		return $kette;
+		return $objClub->numRows ? $objClub->clubName : '';
 	}
 
 	/**

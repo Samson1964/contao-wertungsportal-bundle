@@ -233,7 +233,9 @@ class Spieler extends \Module
 				 * Ausgabe Kopfdaten, Vereine und Turnierauswertungen
 				*/
 
-				$this->Template->sichtbar     = true;
+				// sichtbar wurde oben bereits anhand der Gästesperre gesetzt
+				// (sichtbar = !$gesperrt) — hier NICHT erneut auf true setzen,
+				// sonst wirkt die Karteikartensperre nicht
 				$this->Template->spielername  = $kartei->Spielername;
 				$this->Template->geburtsjahr  = $kartei->Geburtsjahr;
 				$this->Template->geschlecht   = $kartei->Geschlecht;

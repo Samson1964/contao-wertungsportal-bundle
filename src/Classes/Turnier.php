@@ -295,6 +295,7 @@ class Turnier extends \Module
 			$this->Template->subHeadline = $ergebnisse->Turniername; // Unterüberschrift Turnier setzen
 			$this->Template->turnierheader = $theader;
 			$this->Template->spieler = $ergebnisse->Spieler;
+			$this->Template->istKreuztabelle = $ergebnisse->istKreuztabelle;
 		}
 		elseif($turniercode && !$id)
 		{

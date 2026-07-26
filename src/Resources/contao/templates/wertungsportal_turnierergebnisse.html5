@@ -90,24 +90,27 @@
 			</table>
 		</div>
 
-		<div class="table_responsiv">
-			<table class="body">
-				<thead>
-					<tr class="head">
-						<th class="right-line">Nr.</th>
-						<th class="">Spielername</th>
-						<th class="right-line">&nbsp;</th>
-						<th class="right-line">DWZ</th>
-						<th class="right-line">Erg.</th>
-						<?php for($r=1; $r<=$this->turnierheader['Runden']; $r++): ?>
-							<?php $class = ($r+1 <= $this->turnierheader['Runden']) ? 'right-line' : ''; ?>
-							<th class="<?= $class ?>"><?= $r ?></th>
-						<?php endfor; ?>
-					</tr>
-				</thead>
-				<tbody>
-					<?php $x = 0; ?>
-					<?php if($this->spieler): ?>
+		<?php // Obere Scrollleiste (wird per JS mit der Tabelle synchronisiert) ?>
+		<div class="table_responsiv_top noprint"><div class="table_responsiv_top_inner"></div></div>
+		<div class="table_responsiv scrollsync">
+			<?php if($this->istKreuztabelle): ?>
+
+				<?php // Kreuztabelle (Rundenturnier): Zeilen und Spalten = Spieler ?>
+				<table class="body kreuztabelle">
+					<thead>
+						<tr class="head">
+							<th class="right-line">Nr.</th>
+							<th class="">Spielername</th>
+							<th class="right-line">&nbsp;</th>
+							<th class="right-line">DWZ</th>
+							<th class="right-line">Erg.</th>
+							<?php foreach($this->spieler as $s): ?>
+								<th class="kreuz-zelle right-line" title="<?= strip_tags($s['Spielername']) ?>"><?= $s['Nummer'] ?></th>
+							<?php endforeach; ?>
+						</tr>
+					</thead>
+					<tbody>
+						<?php $x = 0; ?>
 						<?php foreach($this->spieler as $d): ?>
 							<?php $x++; $class = ($x < count($this->spieler)) ? ' bottom-line' : ''; ?>
 							<tr>
@@ -116,26 +119,98 @@
 								<td class="right-line<?= $class ?>"><?= $d['Scoresheet'] ?></td>
 								<td class="right-line<?= $class ?>"><?= $d['DWZ alt'] ?></td>
 								<td class="right-line<?= $class ?>"><?= $d['Ergebnis'] ?></td>
-								<?php for($r = 1; $r <= $this->turnierheader['Runden']; $r++): ?>
-									<td class="right-line<?= $class ?>">
-									<?php if($d['Ergebnisse'][$r]): ?>
-										<?php foreach($d['Ergebnisse'][$r] as $erg): ?>
-										<div class="<?= $erg['Farbklasse'] ?>" title="<?= $erg['Gegnername'] ?>">
-											<span class="result"><?= $erg['Resultat'] ?></span>
-											<span class=""><?= $erg['Farbe'] ?></span>
-											<span class="opponent"><?= $erg['Gegner'] ?></span>
-										</div>
-										<?php endforeach; ?>
+								<?php foreach($this->spieler as $gegner): ?>
+									<?php $j = $gegner['Nummer']; ?>
+									<?php if($j == $d['Nummer']): ?>
+										<td class="kreuz-zelle kreuz-diagonale right-line<?= $class ?>"></td>
+									<?php else: ?>
+										<td class="kreuz-zelle right-line<?= $class ?>">
+											<?php if(!empty($d['Kreuz'][$j])): ?>
+												<?php // Farbe der Partie: Weiß fett, Schwarz mit dunklem Ergebnis-Hintergrund ?>
+												<?php foreach($d['Kreuz'][$j] as $erg): ?><span class="result kreuz-<?= $erg['Farbe'] ?>" title="mit <?= $erg['Farbe'] == 'w' ? 'Weiß' : 'Schwarz' ?>"><?= $erg['Resultat'] ?></span><?php endforeach; ?>
+											<?php endif; ?>
+										</td>
 									<?php endif; ?>
-									</td>
-								<?php endfor; ?>
+								<?php endforeach; ?>
 							</tr>
 						<?php endforeach; ?>
-					<?php endif; ?>
-				</tbody>
-			</table>
+					</tbody>
+				</table>
+
+			<?php else: ?>
+
+				<?php // Standarddarstellung: eine Spalte je Runde ?>
+				<table class="body">
+					<thead>
+						<tr class="head">
+							<th class="right-line">Nr.</th>
+							<th class="">Spielername</th>
+							<th class="right-line">&nbsp;</th>
+							<th class="right-line">DWZ</th>
+							<th class="right-line">Erg.</th>
+							<?php for($r=1; $r<=$this->turnierheader['Runden']; $r++): ?>
+								<?php $class = ($r+1 <= $this->turnierheader['Runden']) ? 'right-line' : ''; ?>
+								<th class="<?= $class ?>"><?= $r ?></th>
+							<?php endfor; ?>
+						</tr>
+					</thead>
+					<tbody>
+						<?php $x = 0; ?>
+						<?php if($this->spieler): ?>
+							<?php foreach($this->spieler as $d): ?>
+								<?php $x++; $class = ($x < count($this->spieler)) ? ' bottom-line' : ''; ?>
+								<tr>
+									<td class="align-right right-line<?= $class ?>"><?= $d['Nummer'] ?></td>
+									<td class="right-line<?= $class ?>"><?= $d['Spielername'] ?></td>
+									<td class="right-line<?= $class ?>"><?= $d['Scoresheet'] ?></td>
+									<td class="right-line<?= $class ?>"><?= $d['DWZ alt'] ?></td>
+									<td class="right-line<?= $class ?>"><?= $d['Ergebnis'] ?></td>
+									<?php for($r = 1; $r <= $this->turnierheader['Runden']; $r++): ?>
+										<td class="right-line<?= $class ?>">
+										<?php if($d['Ergebnisse'][$r]): ?>
+											<?php foreach($d['Ergebnisse'][$r] as $erg): ?>
+											<div class="<?= $erg['Farbklasse'] ?>" title="<?= $erg['Gegnername'] ?>">
+												<span class="result"><?= $erg['Resultat'] ?></span>
+												<span class=""><?= $erg['Farbe'] ?></span>
+												<span class="opponent"><?= $erg['Gegner'] ?></span>
+											</div>
+											<?php endforeach; ?>
+										<?php endif; ?>
+										</td>
+									<?php endfor; ?>
+								</tr>
+							<?php endforeach; ?>
+						<?php endif; ?>
+					</tbody>
+				</table>
+
+			<?php endif; ?>
 		</div>
-	
+
+		<script>
+		(function()
+		{
+			// Obere Scrollleiste mit der Tabelle synchronisieren, damit auch
+			// breite Kreuztabellen ohne Scrollen bis zum Seitenende bedienbar sind
+			document.querySelectorAll('.dewis .table_responsiv.scrollsync').forEach(function(unten)
+			{
+				var oben = unten.previousElementSibling;
+				if(!oben || !oben.classList.contains('table_responsiv_top')) return;
+				var inner = oben.firstElementChild;
+				var tabelle = unten.querySelector('table');
+				if(!tabelle) return;
+
+				function breite() { inner.style.width = tabelle.offsetWidth + 'px'; }
+				breite();
+				window.addEventListener('resize', breite);
+
+				var sperre = false;
+				oben.addEventListener('scroll', function() { if(sperre) return; sperre = true; unten.scrollLeft = oben.scrollLeft; sperre = false; });
+				unten.addEventListener('scroll', function() { if(sperre) return; sperre = true; oben.scrollLeft = unten.scrollLeft; sperre = false; });
+			});
+		})();
+		</script>
+
 		<?php endif; ?>
 
 	<?php $this->endblock(); ?>

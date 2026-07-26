@@ -57,77 +57,86 @@
 
 	<?php if($this->sichtbar): ?>
 
-		<div class="table_responsiv">
-			<table class="header">
-				<tbody>
-					<tr class="row_0">
-						<td class="col_0" rowspan="6" style="text-align:center;">
-							<?php if($this->addImage): ?>
-								<?php $this->insert('image', $this->arrData); ?>
-								<br><a href="mailto:webmaster@schachbund.com" style="font-size:10px;">Foto senden</a>
-							<?php endif; ?>
-						</td>
-						<td class="col_1 bottom-line">Name:</td>
-						<td class="col_2 value bottom-line"><?= $this->spielername ?></td>
-						<td class="col_3 bottom-line">Geschlecht:</td>
-						<td class="col_4 value bottom-line"><?= $this->geschlecht ?></td>
-						<td class="col_5 bottom-line">Geburtsjahr:</td>
-						<td class="col_6 value bottom-line"><?= $this->geburtsjahr ?></td>
-					</tr>
-					<?php $row = 1; ?>
-					<?php if($this->vereine): ?>
-						<?php $x = 0; ?>
-						<?php foreach($this->vereine as $d): ?>
-							<?php $x++; $class = ($x == count($this->vereine)) ? ' bottom-line' : ''; ?>
-							<?php // Untere Linie wandert auf die Verbände-Zeile, wenn eine folgt ?>
-							<?php $vclass = !empty($d['verbaende']) ? '' : $class; ?>
-							<tr class="row_<?= $row ?>">
-								<td class="col_1<?= $vclass ?>">Verein:</td>
-								<td class="col_2 value<?= $vclass ?>"><?= $d['name'] ?></td>
-								<td class="col_3<?= $vclass ?>">ZPS-Nr.:</td>
-								<td class="col_4 value<?= $vclass ?>"><?= $d['zps'] ?></td>
-								<td class="col_5<?= $vclass ?>">Status:</td>
-								<td class="col_6 value<?= $vclass ?>"><?= $d['status'] ?></td>
-							</tr>
-							<?php $row++; ?>
-							<?php if(!empty($d['verbaende'])): ?>
-								<tr class="row_<?= $row ?> verbaende">
-									<td class="col_1<?= $class ?>">Verbände:</td>
-									<td class="col_2 col_3 col_4 col_5 col_6 value<?= $class ?>" colspan="5"><?= implode(' &rsaquo; ', array_column($d['verbaende'], 'url')) ?></td>
+		<?php // Kopf als Flex-Layout: Bild links, Datentabelle rechts. So rutschen
+		      // die Spalten auch bei vielen Vereinsmitgliedschaften nicht mehr unter
+		      // das Spielerbild (früher rowspan="6" fest an der Bildzelle). ?>
+		<div class="karteikarte-kopf">
+			<?php if($this->addImage): ?>
+				<div class="karteikarte-bild">
+					<?php $this->insert('image', $this->arrData); ?>
+					<br><a href="mailto:webmaster@schachbund.com" style="font-size:10px;">Foto senden</a>
+				</div>
+			<?php endif; ?>
+			<div class="karteikarte-daten table_responsiv">
+				<table class="header">
+					<tbody>
+						<tr class="row_0">
+							<td class="col_1 bottom-line">Name:</td>
+							<td class="col_2 value bottom-line" colspan="5"><?= $this->spielername ?></td>
+						</tr>
+						<tr class="row_dwz">
+							<td class="col_1 bottom-line">Aktuelle DWZ:</td>
+							<td class="col_2 value bottom-line"><?= $this->dwz ?></td>
+							<td class="col_3 bottom-line">Geschlecht:</td>
+							<td class="col_4 value bottom-line"><?= $this->geschlecht ?></td>
+							<td class="col_5 bottom-line">Geburtsjahr:</td>
+							<td class="col_6 value bottom-line"><?= $this->geburtsjahr ?></td>
+						</tr>
+						<?php $row = 1; ?>
+						<?php if($this->vereine): ?>
+							<?php $x = 0; ?>
+							<?php foreach($this->vereine as $d): ?>
+								<?php $x++; $class = ($x == count($this->vereine)) ? ' bottom-line' : ''; ?>
+								<?php // Untere Linie wandert auf die Verband-Zeile, wenn eine folgt ?>
+								<?php $vclass = !empty($d['verband']) ? '' : $class; ?>
+								<tr class="row_<?= $row ?>">
+									<td class="col_1<?= $vclass ?>">Verein:</td>
+									<td class="col_2 value<?= $vclass ?>"><?= $d['name'] ?></td>
+									<td class="col_3<?= $vclass ?>">ZPS-Nr.:</td>
+									<td class="col_4 value<?= $vclass ?>"><?= $d['zps'] ?></td>
+									<td class="col_5<?= $vclass ?>">Status:</td>
+									<td class="col_6 value<?= $vclass ?>"><?= $d['status'] ?></td>
 								</tr>
 								<?php $row++; ?>
-							<?php endif; ?>
-						<?php endforeach; ?>
-					<?php endif; ?>
-					<tr class="row_<?= $row ?>">
-						<td class="col_1">FIDE-Elo:</td>
-						<td class="col_2 value"><?= $this->elo ?></td>
-						<td class="col_3">ID-Code:</td>
-						<td class="col_4 value"><?= $this->fide_id ?></td>
-						<td class="col_5">Titel:</td>
-						<td class="col_6 value"><?= $this->fide_titel ?></td>
-					</tr>
-					<?php $row++; ?>
-					<tr class="row_<?= $row ?> fide">
-						<td class="col_1 bottom-line">&nbsp;</td>
-						<td class="col_2 bottom-line">&nbsp;</td>
-						<td class="col_3 bottom-line">Nation:</td>
-						<td class="col_4 bottom-line value"><?= $this->fide_nation ?></td>
-						<td class="col_5 bottom-line">&nbsp;</td>
-						<td class="col_6 bottom-line">&nbsp;</td>
-					</tr>
-					<?php $row++; ?>
-					<tr class="row_<?= $row ?> historie">
-						<td class="col_1 bottom-line">Historie:</td>
-						<td class="col_2 col_3 col_4 col_5 col_6 value bottom-line" colspan="5"><?= $this->historie ?></td>
-					</tr>
-					<?php $row++; ?>
-					<tr class="row_<?= $row ?> referent">
-						<td class="col_1 col_2" colspan="2">Zuständiger Wertungsreferent:</td>
-						<td class="col_3 col_4 col_5 col_6 value" colspan="4"><?= $this->referent ?></td>
-					</tr>
-				</tbody>
-			</table>
+								<?php if(!empty($d['verband'])): ?>
+									<tr class="row_<?= $row ?> verband">
+										<td class="col_1<?= $class ?>">Verband:</td>
+										<td class="col_2 col_3 col_4 col_5 col_6 value<?= $class ?>" colspan="5"><?= $d['verband'] ?></td>
+									</tr>
+									<?php $row++; ?>
+								<?php endif; ?>
+							<?php endforeach; ?>
+						<?php endif; ?>
+						<tr class="row_<?= $row ?>">
+							<td class="col_1">FIDE-Elo:</td>
+							<td class="col_2 value"><?= $this->elo ?></td>
+							<td class="col_3">ID-Code:</td>
+							<td class="col_4 value"><?= $this->fide_id ?></td>
+							<td class="col_5">Titel:</td>
+							<td class="col_6 value"><?= $this->fide_titel ?></td>
+						</tr>
+						<?php $row++; ?>
+						<tr class="row_<?= $row ?> fide">
+							<td class="col_1 bottom-line">&nbsp;</td>
+							<td class="col_2 bottom-line">&nbsp;</td>
+							<td class="col_3 bottom-line">Nation:</td>
+							<td class="col_4 bottom-line value"><?= $this->fide_nation ?></td>
+							<td class="col_5 bottom-line">&nbsp;</td>
+							<td class="col_6 bottom-line">&nbsp;</td>
+						</tr>
+						<?php $row++; ?>
+						<tr class="row_<?= $row ?> historie">
+							<td class="col_1 bottom-line">Historie:</td>
+							<td class="col_2 col_3 col_4 col_5 col_6 value bottom-line" colspan="5"><?= $this->historie ?></td>
+						</tr>
+						<?php $row++; ?>
+						<tr class="row_<?= $row ?> referent">
+							<td class="col_1 col_2" colspan="2">Zuständiger Wertungsreferent:</td>
+							<td class="col_3 col_4 col_5 col_6 value" colspan="4"><?= $this->referent ?></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
 		</div>
 
 		<?php
@@ -185,7 +194,8 @@
 						<?php $x = 0; ?>
 						<?php foreach($this->kartei as $d): ?>
 							<?php $x++; $class = ($x < count($this->kartei)) ? ' bottom-line' : ''; ?>
-							<tr class="row_<?= $row ?> dewis">
+							<?php // DWZ-Umstufungen (typ=upgrade) farblich hervorheben ?>
+							<tr class="row_<?= $row ?> <?= (isset($d['typ']) && $d['typ'] == 'upgrade') ? 'upgrade' : 'dewis' ?>">
 								<td class="col_0<?= $class ?> right-line align-right"><?= $d['nummer'] ?></td>
 								<td class="col_1<?= $class ?> right-line"><?= $d['jahr'] ?></td>
 								<td class="col_2<?= $class ?> right-line"><?= $d['turnier'] ?></td>

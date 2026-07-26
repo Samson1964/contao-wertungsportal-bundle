@@ -25,7 +25,7 @@
 	background-color		: #D8D8D8;
 }
 
-/* Menü */
+/* Menï¿½ */
 
 .dewislinks
 {
@@ -56,7 +56,7 @@
 	content					: "";
 }
 
-/* Verbandszugehörigkeiten - Levelmarkierung */
+/* Verbandszugehï¿½rigkeiten - Levelmarkierung */
 .dewis table.body .level_0
 {
 }
@@ -190,7 +190,7 @@
 	width					: 45.5% !important;
 }
 
-/* Kopftabelle bei Auswertungen/Karteikarten u.ä. */
+/* Kopftabelle bei Auswertungen/Karteikarten u.ï¿½. */
 
 .dewis table.header
 {
@@ -220,7 +220,7 @@
 	border-right			: 1px solid #ffffff;
 }
 
-/* Datentabelle bei Auswertungen/Karteikarten u.ä. */
+/* Datentabelle bei Auswertungen/Karteikarten u.ï¿½. */
 
 .dewis table.body
 {
@@ -337,7 +337,7 @@
 	font-weight				: bold;
 }
 
-/* Hinweis auf nötige Registrierung */
+/* Hinweis auf nï¿½tige Registrierung */
 .dewis .hinweis
 {
 	margin-bottom			: 10px;
@@ -354,6 +354,77 @@
 
 .dewis .table_responsiv {
 	overflow: auto;
+}
+
+/* Obere Scrollleiste (per JS mit der Tabelle synchronisiert), damit breite
+   Turnierergebnis-/Kreuztabellen auch von oben horizontal gescrollt werden */
+.dewis .table_responsiv_top {
+	overflow-x				: auto;
+	overflow-y				: hidden;
+}
+
+.dewis .table_responsiv_top_inner {
+	height					: 1px;
+}
+
+/* Kreuztabelle (Rundenturniere) */
+.dewis table.body.kreuztabelle td.kreuz-zelle,
+.dewis table.body.kreuztabelle th.kreuz-zelle {
+	text-align				: center;
+	min-width				: 22px;
+}
+
+.dewis table.body.kreuztabelle td.kreuz-diagonale {
+	background-color		: #5F5F5F;
+}
+
+/* Kreuztabelle: Farbe der Partie hervorheben â€” nur das Ergebnis (nicht die
+   ganze Zelle, damit es sich nicht mit den grauen Blindfeldern beisst).
+   Weiss = weisser Grund, fett; Schwarz = dunkler Grund, helle Schrift. */
+.dewis table.body.kreuztabelle span.result.kreuz-w {
+	display					: inline-block;
+	min-width				: 12px;
+	padding					: 0 3px;
+	background-color		: #ffffff;
+	color					: #000000;
+	border					: 1px solid #cccccc;
+	border-radius			: 2px;
+	font-weight				: bold;
+}
+
+.dewis table.body.kreuztabelle span.result.kreuz-s {
+	display					: inline-block;
+	min-width				: 12px;
+	padding					: 0 3px;
+	background-color		: #5F5F5F;
+	color					: #ffffff;
+	border-radius			: 2px;
+	font-weight				: normal;
+}
+
+/* Karteikarte-Kopf: Bild links, Datentabelle rechts (Flex statt rowspan),
+   damit die Spalten bei vielen Vereinen nicht unter das Bild rutschen */
+.dewis .karteikarte-kopf {
+	display					: flex;
+	align-items				: flex-start;
+	gap						: 12px;
+	margin-bottom			: 10px;
+}
+
+.dewis .karteikarte-bild {
+	flex					: 0 0 auto;
+	text-align				: center;
+}
+
+.dewis .karteikarte-daten {
+	flex					: 1 1 auto;
+	min-width				: 0;
+}
+
+/* Karteikarte: DWZ-Umstufungen (upgrades) in der Turnierliste hervorheben */
+.dewis table.body tr.upgrade td {
+	background-color		: #FFF3D9;
+	font-style				: italic;
 }
 
 /* Karteikarte: DWZ/Leistungs-Diagramm und Overlay (Lightbox) fuer alle Turniere */
