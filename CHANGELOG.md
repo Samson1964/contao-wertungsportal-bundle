@@ -1,5 +1,14 @@
 # Wertungsportal-Anbindung
 
+## Version 1.0.6 (2026-07-26)
+
+* Change: Verband-Anzeige der Karteikarte wählt jetzt den spezifischsten tatsächlich existierenden übergeordneten Verband über eine Fallback-Kaskade (Beispiel Verein 55223: Kreis 552 → Bezirk 550 → Landesverband 500 → DSB 000). Angezeigt und verlinkt wird der erste lokal (tl_wertungsportal_clubs) vorhandene Verband; existiert keiner, greift der Deutsche Schachbund als harter Fallback (Helper::getVerbandName durch getVerband ersetzt, liefert VKZ + Name). Mit echtem MySQL für alle Kaskadenstufen verifiziert
+* Change: Karteikarten-Nummerierung zählt die DWZ-Umstufungen (upgrades) mit — die laufende Nummer bzw. AKT wird über Turniere UND Umstufungen gemeinsam vergeben; der chronologisch neueste Eintrag (egal ob Turnier oder Umstufung) bekommt AKT, die übrigen absteigende Nummern
+* Add: Die DWZ-Umstufungen erscheinen jetzt auch im DWZ/Leistungs-Diagramm als DWZ-Punkte (mit ihrer Eintragsnummer im Tooltip). Der Tooltip aller Diagrammpunkte nennt zusätzlich die Nummer des Eintrags. Turniere ohne Auswertung (0 Partien) werden im Diagramm übersprungen
+* Change: Diagramm — Jahreszahlen der X-Achse jetzt senkrecht (90° statt 60°)
+* Fix: Verbandsranglisten zeigen pro Spieler den Verein, der zum abgefragten Verband gehört (statt der ersten Mitgliedschaft): die Verein-VKZ muss zum VKZ-Präfix des Verbands passen, dessen Länge sich aus der Verbandsebene ergibt (Landesverband X00 → 1 Stelle, Bezirk XY0 → 2, Kreis XYZ → 3, DSB 000 → alle); aktive Mitgliedschaft bevorzugt, Fallback auf die erste
+* Fix: Karteikarten-Spielerbild oben bündig mit der Datentabelle (Browser-Default-Margin des figure entfernt)
+
 ## Version 1.0.5 (2026-07-26)
 
 * Add: DWZ-Umstufungen (upgrades-Array parallel zu entries in der history-Antwort) werden in die Karteikarten-Turnierliste eingearbeitet — chronologisch zwischen die Turniere einsortiert (Turnier: enddate, Umstufung: referenceDate; bei gleichem Datum gewinnt das Turnier) und farblich hervorgehoben (heller Hintergrund, kursiv). Die Turnier-Nummerierung (AKT/laufende Nummer) bleibt den Turnieren vorbehalten

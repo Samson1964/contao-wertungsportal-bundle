@@ -42,6 +42,16 @@ class Verbandsrangliste
 		$rangliste = array();
 		$platz = 0;
 
+		// Signifikanter VKZ-Präfix des abgefragten Verbands: die Verbandsebene
+		// ergibt sich aus den nachfolgenden Nullen (Landesverband X00 → 1 Stelle,
+		// Bezirk XY0 → 2, Kreis XYZ → 3; DSB 000 → alle). Damit wird pro Spieler
+		// die Mitgliedschaft im passenden Verein gewählt statt der ersten.
+		$zps3 = substr((string) $this->zps, 0, 3);
+		if($zps3 === '' || $zps3 === '000') $verbandsPrefix = '';
+		elseif(substr($zps3, 1, 2) === '00') $verbandsPrefix = substr($zps3, 0, 1);
+		elseif(substr($zps3, 2, 1) === '0') $verbandsPrefix = substr($zps3, 0, 2);
+		else $verbandsPrefix = $zps3;
+
 		if(empty($this->apiErgebnisse['error']) && isset($this->apiErgebnisse['body']['data']) && is_array($this->apiErgebnisse['body']['data']))
 		{
 			// FIDE-Daten für alle Spieler in einem Rutsch laden statt je Spieler einzeln
@@ -76,15 +86,31 @@ class Verbandsrangliste
 					continue; // Nur Deutsche gesucht, also nächsten Datensatz prüfen
 				}
 
-				// Mitgliedschaft durchsuchen, bei aktiver abbrechen
+				// Mitgliedschaft im abgefragten Verband suchen (Verein-VKZ muss
+				// mit dem Verbands-Präfix beginnen), aktive bevorzugen. Fallback
+				// auf die erste Mitgliedschaft, falls keine passt.
 				$mitgliedschaft = array('verein' => '', 'status' => '');
 				if(isset($spieler['memberships']))
 				{
+					$gefunden = false;
 					foreach($spieler['memberships'] as $mitglied)
 					{
+						if($verbandsPrefix !== '' && strncmp((string) $mitglied['vkz'], $verbandsPrefix, strlen($verbandsPrefix)) !== 0) continue;
+
 						$mitgliedschaft['verein'] = sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s.html\">%s</a>", $mitglied['vkz'], $mitglied['clubName']);
 						$mitgliedschaft['status'] = $mitglied['licenceState'] == 'ACTIVE' ? '' : substr($mitglied['licenceState'], 0, 1);
+						$gefunden = true;
 						if($mitglied['licenceState'] == 'ACTIVE') break; // Abbruch wenn A-Status gefunden
+					}
+
+					if(!$gefunden)
+					{
+						foreach($spieler['memberships'] as $mitglied)
+						{
+							$mitgliedschaft['verein'] = sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s.html\">%s</a>", $mitglied['vkz'], $mitglied['clubName']);
+							$mitgliedschaft['status'] = $mitglied['licenceState'] == 'ACTIVE' ? '' : substr($mitglied['licenceState'], 0, 1);
+							if($mitglied['licenceState'] == 'ACTIVE') break;
+						}
 					}
 				}
 

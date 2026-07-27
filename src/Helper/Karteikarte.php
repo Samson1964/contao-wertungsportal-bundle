@@ -71,14 +71,11 @@ class Karteikarte
 				$zps_nr = sprintf("%s-%04d", $mitglied['vkz'], $mitglied['memberNo']);
 				$verein = sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s.html\">%s</a>", $mitglied['vkz'], $mitglied['clubName']);
 
-				// Direkt übergeordneter Verband: dreistellige VKZ aus den ersten
-				// drei Stellen der fünfstelligen Vereins-VKZ (kann Landesverband,
-				// Bezirk oder Kreis sein). Namen lokal nachschlagen, Fallback auf
-				// den von der API gelieferten federationName.
-				$vkz3 = substr((string) $mitglied['vkz'], 0, 3);
-				$verbandName = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandName($vkz3);
-				if($verbandName == '' && isset($mitglied['federationName'])) $verbandName = $mitglied['federationName'];
-				$verband = $verbandName != '' ? sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl()."/%s.html\">%s</a>", $vkz3, $verbandName) : '';
+				// Direkt übergeordneter Verband: spezifischster lokal existierender
+				// Verband über der Vereins-VKZ (Kreis → Bezirk → Landesverband →
+				// DSB als Fallback). Liefert VKZ und Namen für den Link.
+				$verbandInfo = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerband($mitglied['vkz']);
+				$verband = sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl()."/%s.html\">%s</a>", $verbandInfo['vkz'], $verbandInfo['name']);
 
 				$sortiert[$status.$zps_nr] = array
 				(
@@ -125,14 +122,16 @@ class Karteikarte
 				return strcmp($b['datum'], $a['datum']);
 			});
 
-			$anzahlTurniere = count($entries);
-			$i = $anzahlTurniere + 1;
+			// Durchgehende Nummerierung über ALLE Einträge (Turniere UND
+			// Umstufungen): der neueste Eintrag (oben) bekommt AKT, die
+			// übrigen laufende Nummern absteigend
+			$gesamt = count($eintraege);
+			$laufNr = $gesamt;
 
-			foreach($eintraege as $eintrag)
+			foreach($eintraege as $index => $eintrag)
 			{
 				if($eintrag['typ'] == 'turnier')
 				{
-					$i--;
 					$turnier = $eintrag['data'];
 
 					// Auf nichtexistierende Variablen prüfen, die aber benötigt werden:
@@ -148,11 +147,12 @@ class Karteikarte
 					if(!array_key_exists('numberOfGames', $turnier['player'])) $turnier['player']['numberOfGames'] = '';
 
 					$dwz_neu = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::DWZ($turnier['player']['ratingNew'], $turnier['player']['indexNew']);
+					$nummer = ($index == 0 && $dwz_neu != '&nbsp;') ? 'AKT' : $laufNr;
 
 					$kartei[] = array
 					(
 						'typ'        => 'turnier',
-						'nummer'     => ($i == $anzahlTurniere && $dwz_neu != '&nbsp;') ? 'AKT' : $i,
+						'nummer'     => $nummer,
 						'jahr'       => substr($turnier['tournament']['enddate'], 0, 4),
 						'turnier'    => sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl()."/%s/%s.html\" title=\"%s\">%s</a>", $turnier['tournament']['uuid'], $turnier['player']['playerUuid'], $turnier['tournament']['label'], \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Turnierkurzname($turnier['tournament']['label'])),
 						'punkte'     => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Punkte($turnier['player']['wins']),
@@ -165,29 +165,36 @@ class Karteikarte
 						'ungewertet' => '',
 					);
 
-					// Rohwerte für das Diagramm (0 = kein Wert vorhanden);
-					// Gegnerschnitt/Punkte/Partien werden für die Leistungsschätzung
-					// bei Turnieren unter 5 Partien gebraucht
-					$diagramm[] = array
-					(
-						'jahr'     => substr($turnier['tournament']['enddate'], 0, 4),
-						'dwz'      => (int) $turnier['player']['ratingNew'],
-						'leistung' => (int) $turnier['player']['tournamentPerformance'],
-						'gegner'   => (int) $turnier['player']['averageRatingCompetitors'],
-						'punkte'   => (float) $turnier['player']['wins'],
-						'partien'  => (int) $turnier['player']['numberOfGames'],
-						'turnier'  => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Turnierkurzname($turnier['tournament']['label']),
-					);
+					// Rohwerte für das Diagramm — Turniere ohne Auswertung
+					// (0 Partien) werden übersprungen. Gegnerschnitt/Punkte/
+					// Partien werden für die Leistungsschätzung gebraucht.
+					if((int) $turnier['player']['numberOfGames'] > 0)
+					{
+						$diagramm[] = array
+						(
+							'nummer'   => $nummer,
+							'jahr'     => substr($turnier['tournament']['enddate'], 0, 4),
+							'dwz'      => (int) $turnier['player']['ratingNew'],
+							'leistung' => (int) $turnier['player']['tournamentPerformance'],
+							'gegner'   => (int) $turnier['player']['averageRatingCompetitors'],
+							'punkte'   => (float) $turnier['player']['wins'],
+							'partien'  => (int) $turnier['player']['numberOfGames'],
+							'bezeichnung' => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Turnierkurzname($turnier['tournament']['label']),
+						);
+					}
 				}
 				else
 				{
 					// DWZ-Umstufung (administrativ, kein Turnier) — als
 					// hervorgehobene Zeile mit Name und resultierender DWZ
 					$up = $eintrag['data'];
+					$dwz_neu = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::DWZ($up['ratingNew'] ?? 0, $up['indexNew'] ?? 0);
+					$nummer = ($index == 0 && $dwz_neu != '&nbsp;') ? 'AKT' : $laufNr;
+
 					$kartei[] = array
 					(
 						'typ'        => 'upgrade',
-						'nummer'     => '',
+						'nummer'     => $nummer,
 						'jahr'       => substr((string) ($up['referenceDate'] ?? ''), 0, 4),
 						'turnier'    => \StringUtil::specialchars((string) ($up['name'] ?? 'DWZ-Umstufung')),
 						'punkte'     => '',
@@ -196,10 +203,25 @@ class Karteikarte
 						'e'          => '',
 						'gegner'     => '',
 						'leistung'   => '',
-						'dwz-neu'    => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::DWZ($up['ratingNew'] ?? 0, $up['indexNew'] ?? 0),
+						'dwz-neu'    => $dwz_neu,
 						'ungewertet' => '',
 					);
+
+					// Umstufung als DWZ-Punkt ins Diagramm (keine Leistung/Partien)
+					$diagramm[] = array
+					(
+						'nummer'   => $nummer,
+						'jahr'     => substr((string) ($up['referenceDate'] ?? ''), 0, 4),
+						'dwz'      => (int) ($up['ratingNew'] ?? 0),
+						'leistung' => 0,
+						'gegner'   => 0,
+						'punkte'   => 0,
+						'partien'  => 0,
+						'bezeichnung' => (string) ($up['name'] ?? 'DWZ-Umstufung'),
+					);
 				}
+
+				$laufNr--;
 			}
 		}
 
@@ -321,8 +343,8 @@ class Karteikarte
 			$svg .= '<text x="'.($links - 6).'" y="'.($y + 4).'" text-anchor="end" font-size="11" fill="#666666">'.$w.'</text>';
 		}
 
-		// X-Beschriftung: Jahr (nur beim Jahreswechsel), um 60° gedreht (fast
-		// senkrecht), damit sich die Jahreszahlen nicht überschneiden
+		// X-Beschriftung: Jahr (nur beim Jahreswechsel), senkrecht (90°),
+		// damit sich die Jahreszahlen nicht überschneiden
 		$jahr = '';
 		for($i = 0; $i < $n; $i++)
 		{
@@ -331,7 +353,7 @@ class Karteikarte
 				$jahr = $punkte[$i]['jahr'];
 				$lx = $xpos($i);
 				$ly = $oben + $innenH + 12;
-				$svg .= '<text x="'.$lx.'" y="'.$ly.'" transform="rotate(60 '.$lx.' '.$ly.')" text-anchor="start" font-size="11" fill="#666666">'.$jahr.'</text>';
+				$svg .= '<text x="'.$lx.'" y="'.$ly.'" transform="rotate(90 '.$lx.' '.$ly.')" text-anchor="start" font-size="11" fill="#666666">'.$jahr.'</text>';
 			}
 		}
 
@@ -355,14 +377,15 @@ class Karteikarte
 			$strich = ($serie == 'leistung') ? ' stroke-dasharray="4 3"' : '';
 			$svg .= '<path d="'.trim($pfad).'" fill="none" stroke="'.$farbe.'" stroke-width="2"'.$strich.'/>';
 
-			// Punkte mit Tooltip (Turnier, Jahr und Wert); geschätzte
-			// Leistungswerte als hohle Kreise mit Hinweis im Tooltip
+			// Punkte mit Tooltip (Nummer des Eintrags, Bezeichnung, Jahr und
+			// Wert); geschätzte Leistungswerte als hohle Kreise mit Hinweis
 			for($i = 0; $i < $n; $i++)
 			{
 				if($punkte[$i][$serie] <= 0) continue;
 				$geschaetzt = ($serie == 'leistung' && !empty($punkte[$i]['geschaetzt']));
 				$kreis = $geschaetzt ? 'fill="#ffffff" stroke="'.$farbe.'" stroke-width="1.5"' : 'fill="'.$farbe.'"';
-				$svg .= '<circle cx="'.$xpos($i).'" cy="'.$ypos($punkte[$i][$serie]).'" r="3" '.$kreis.'><title>'.\StringUtil::specialchars($punkte[$i]['turnier']).' ('.$punkte[$i]['jahr'].'): '.($serie == 'dwz' ? 'DWZ ' : 'Leistung ').$punkte[$i][$serie].($geschaetzt ? ' (geschätzt)' : '').'</title></circle>';
+				$nummer = isset($punkte[$i]['nummer']) && $punkte[$i]['nummer'] !== '' ? 'Nr. '.$punkte[$i]['nummer'].': ' : '';
+				$svg .= '<circle cx="'.$xpos($i).'" cy="'.$ypos($punkte[$i][$serie]).'" r="3" '.$kreis.'><title>'.$nummer.\StringUtil::specialchars($punkte[$i]['bezeichnung']).' ('.$punkte[$i]['jahr'].'): '.($serie == 'dwz' ? 'DWZ ' : 'Leistung ').$punkte[$i][$serie].($geschaetzt ? ' (geschätzt)' : '').'</title></circle>';
 			}
 		}
 

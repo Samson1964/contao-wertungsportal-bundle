@@ -416,6 +416,17 @@
 	text-align				: center;
 }
 
+/* Bild oben bündig mit der Datentabelle: Browser-Default-Margin des figure
+   entfernen, sonst startet das Bild tiefer als die Tabelle daneben */
+.dewis .karteikarte-bild figure,
+.dewis .karteikarte-bild .image_container {
+	margin					: 0;
+}
+
+.dewis .karteikarte-daten table.header {
+	margin-top				: 0;
+}
+
 .dewis .karteikarte-daten {
 	flex					: 1 1 auto;
 	min-width				: 0;

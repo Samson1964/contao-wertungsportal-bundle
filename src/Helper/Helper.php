@@ -610,25 +610,45 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Liefert den Namen des direkt übergeordneten Verbands zu einer VKZ.
-	 * Der übergeordnete Verband ergibt sich aus den ersten drei Stellen der
-	 * (fünfstelligen) Vereins-VKZ und kann Landesverband, Bezirk oder Kreis
-	 * sein. Der Name wird lokal aus tl_wertungsportal_clubs nachgeschlagen;
-	 * Verbände liegen dort 3-stellig oder 5-stellig (?00-Auffüllung) vor.
+	 * Liefert den direkt übergeordneten Verband zu einer Vereins-VKZ als
+	 * VKZ + Name. Aus den ersten drei Stellen der (fünfstelligen) Vereins-VKZ
+	 * werden Kandidaten von spezifisch nach allgemein gebildet und der ERSTE
+	 * lokal existierende Verband genommen — Beispiel Verein 55223:
+	 * 1. Kreis 552, sonst 2. Bezirk 550, sonst 3. Landesverband 500.
+	 * Existiert wider Erwarten keiner davon, wird als letzter Fallback der
+	 * Deutsche Schachbund (000) zurückgegeben.
+	 * Verbände liegen in tl_wertungsportal_clubs 3-stellig oder 5-stellig
+	 * (?00-Auffüllung) vor.
 	 *
-	 * @param     String $vkz  VKZ des Vereins oder des Verbands
-	 * @return    String       Name des Verbands, '' wenn lokal nicht bekannt
+	 * @param     String $vkz  VKZ des Vereins
+	 * @return    array        array('vkz' => '552', 'name' => '...')
 	 */
-	public static function getVerbandName($vkz)
+	public static function getVerband($vkz)
 	{
-		$vkz3 = substr((string) $vkz, 0, 3);
-		if($vkz3 == '') return '';
+		$vkz = (string) $vkz;
 
-		$objClub = \Database::getInstance()->prepare("SELECT clubName FROM tl_wertungsportal_clubs WHERE clubVkz = ? OR clubVkz = ?")
-		                                   ->limit(1)
-		                                   ->execute($vkz3, $vkz3.'00');
+		// Kandidaten von spezifisch (Kreis) nach allgemein (Landesverband);
+		// Duplikate zusammenfassen, Reihenfolge erhalten
+		$kandidaten = array_values(array_unique(array
+		(
+			substr($vkz, 0, 3),           // Kreis, z. B. 552
+			substr($vkz, 0, 2).'0',       // Bezirk, z. B. 550
+			substr($vkz, 0, 1).'00',      // Landesverband, z. B. 500
+		)));
 
-		return $objClub->numRows ? $objClub->clubName : '';
+		foreach($kandidaten as $kand)
+		{
+			if(strlen($kand) < 3) continue;
+
+			$objClub = \Database::getInstance()->prepare("SELECT clubName FROM tl_wertungsportal_clubs WHERE clubVkz = ? OR clubVkz = ?")
+			                                   ->limit(1)
+			                                   ->execute($kand, $kand.'00');
+
+			if($objClub->numRows) return array('vkz' => $kand, 'name' => $objClub->clubName);
+		}
+
+		// Harter Fallback: Deutscher Schachbund
+		return array('vkz' => '000', 'name' => 'Deutscher Schachbund');
 	}
 
 	/**
