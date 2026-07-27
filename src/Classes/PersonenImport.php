@@ -262,8 +262,16 @@ class PersonenImport extends \Backend
 
 		$ergebnisM = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalPersonsMembershipsModel::importCsvRows($arrImport, $tstamp);
 
-		// Temporäre Datei nach dem letzten Schritt aufräumen
-		if($fertig && file_exists($datei)) unlink($datei);
+		// Nach dem letzten Schritt: Datenstand des Mitgliederportal-Abgleichs
+		// merken (Datum aus dem Dateinamen = Exportdatum, Fallback jetzt) —
+		// Grundlage für die Backend-Warnung, wenn der nächste Import
+		// überfällig ist — und die temporäre Datei aufräumen
+		if($fertig)
+		{
+			\Config::persist('wertungsportal_personimport', $tstamp ?: time());
+			$GLOBALS['TL_CONFIG']['wertungsportal_personimport'] = $tstamp ?: time();
+			if(file_exists($datei)) unlink($datei);
+		}
 
 		$this->jsonAntwort(array
 		(

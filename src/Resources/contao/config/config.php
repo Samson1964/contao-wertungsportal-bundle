@@ -89,6 +89,10 @@ $GLOBALS['FE_MOD']['wertungsportal'] = array
 // http://de.contaowiki.org/Strukturierte_URLs
 $GLOBALS['TL_HOOKS']['getPageIdFromUrl'][] = array('Schachbulle\ContaoWertungsportalBundle\Helper\API', 'getParamsFromUrl');
 
+// Backend-Startseite: Warnung, wenn der Mitgliederdaten-Import überfällig ist
+// (älter als 31 Tage) — Abmeldungen kommen nur über die CSV-Importe an
+$GLOBALS['TL_HOOKS']['getSystemMessages'][] = array('Schachbulle\ContaoWertungsportalBundle\Classes\Systemmeldungen', 'importWarnung');
+
 /**
  * Purge jobs / Reinigungsarbeiten
  * Stellt in der Systemwartung das Leeren des Wertungsportal-Caches bereit

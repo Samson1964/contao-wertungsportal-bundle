@@ -1163,22 +1163,35 @@ class Helper extends \Frontend
 		$vorname = trim((string) $vorname);
 		if($nachname === '' && $vorname === '') return false;
 
-		// Suchbedingungen aufbauen (LIKE-Platzhalter im Suchbegriff entschärfen)
-		$bedingungen = array('published = ?');
-		$werte = array(1);
+		// Suchbedingungen aufbauen (LIKE-Platzhalter im Suchbegriff entschärfen).
+		// Abgemeldete Spieler dürfen nicht erscheinen: Es muss mindestens eine
+		// laufende Mitgliedschaft existieren (spielgenehmigungBis leer oder in
+		// der Zukunft; Datum liegt als TT.MM.JJJJ vor und wird wie in der
+		// Mitgliedschafts-Sortierung per SQL nach JJJJMMTT umgestellt).
+		// Verstorbene und Blacklist-Personen sind wie in der Bestenliste
+		// bereits im SQL ausgeschlossen
+		$laufend = "(m.spielgenehmigungBis = '' OR CONCAT(SUBSTRING(m.spielgenehmigungBis, 7, 4), SUBSTRING(m.spielgenehmigungBis, 4, 2), SUBSTRING(m.spielgenehmigungBis, 1, 2)) >= ?)";
+		$bedingungen = array
+		(
+			"p.published = '1'",
+			"p.verstorben != '1'",
+			"p.blocked != '1'",
+			"EXISTS (SELECT m.id FROM tl_wertungsportal_persons_memberships m WHERE m.pid = p.id AND m.published = '1' AND ".$laufend.")",
+		);
+		$werte = array(date('Ymd'));
 
 		if($nachname !== '')
 		{
-			$bedingungen[] = 'lastname LIKE ?';
+			$bedingungen[] = 'p.lastname LIKE ?';
 			$werte[] = '%'.addcslashes($nachname, '%_\\').'%';
 		}
 		if($vorname !== '')
 		{
-			$bedingungen[] = 'firstname LIKE ?';
+			$bedingungen[] = 'p.firstname LIKE ?';
 			$werte[] = '%'.addcslashes($vorname, '%_\\').'%';
 		}
 
-		$objPersonen = \Database::getInstance()->prepare("SELECT * FROM tl_wertungsportal_persons WHERE ".implode(' AND ', $bedingungen)." ORDER BY lastname, firstname LIMIT ".(int) $limit)
+		$objPersonen = \Database::getInstance()->prepare("SELECT p.* FROM tl_wertungsportal_persons p WHERE ".implode(' AND ', $bedingungen)." ORDER BY p.lastname, p.firstname LIMIT ".(int) $limit)
 		                                       ->execute(...$werte);
 
 		if(!$objPersonen->numRows) return false;
@@ -1203,8 +1216,11 @@ class Helper extends \Frontend
 		}
 
 		// Mitgliedschaften aller Treffer in einem Rutsch laden (ACTIVE zuerst,
-		// die Spielersuche-Aufbereitung bricht beim ersten Aktiv-Status ab)
-		$objMitgliedschaften = \Database::getInstance()->execute("SELECT pid, vkz, clubName, licenceState FROM tl_wertungsportal_persons_memberships WHERE pid IN (".implode(',', array_map('intval', array_keys($personen))).") AND published = 1 ORDER BY licenceState");
+		// die Spielersuche-Aufbereitung bricht beim ersten Aktiv-Status ab);
+		// beendete Mitgliedschaften bleiben außen vor, damit bei einem
+		// Vereinswechsel nicht der alte Verein angezeigt wird
+		$objMitgliedschaften = \Database::getInstance()->prepare("SELECT m.pid, m.vkz, m.clubName, m.licenceState FROM tl_wertungsportal_persons_memberships m WHERE m.pid IN (".implode(',', array_map('intval', array_keys($personen))).") AND m.published = 1 AND ".$laufend." ORDER BY m.licenceState")
+		                                               ->execute(date('Ymd'));
 		while($objMitgliedschaften->next())
 		{
 			if(!isset($personen[$objMitgliedschaften->pid])) continue;

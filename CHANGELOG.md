@@ -1,5 +1,11 @@
 # Wertungsportal-Anbindung
 
+## Version 1.0.8 (2026-07-27)
+
+* Fix: Die lokale Teilstring-Suche (Fallback der Spielersuche aus 1.0.7) schließt abgemeldete Spieler aus: Gefunden werden nur Personen mit mindestens einer laufenden Mitgliedschaft (spielgenehmigungBis leer oder in der Zukunft, Datumsumstellung TT.MM.JJJJ → JJJJMMTT wie in der Mitgliedschafts-Sortierung); Verstorbene und Blacklist-Personen sind wie in der Bestenliste bereits im SQL ausgeschlossen. Auch die Vereinsanzeige der Treffer ignoriert beendete Mitgliedschaften, damit bei Vereinswechslern nicht der alte Verein erscheint. Hinweis: Passive Spieler sind gemeldet und werden weiterhin gefunden
+* Add: Der Personen-Import speichert beim Abschluss den Datenstand des Mitgliederportal-Abgleichs (Exportdatum aus dem Dateinamen, Fallback Importzeitpunkt) in der Einstellung wertungsportal_personimport
+* Add: Systemmeldung auf der Backend-Startseite (Hook getSystemMessages, neue Klasse Classes/Systemmeldungen.php): Liegt der letzte Personen-Import mehr als 31 Tage zurück oder wurde noch keiner erfasst, erscheint eine Warnung mit Datenstand und Handlungsaufforderung — die nu-Schnittstelle liefert abgemeldete Spieler nicht mehr, Abmeldungen kommen also nur über die monatlichen CSV-Importe an
+
 ## Version 1.0.7 (2026-07-27)
 
 * Fix: Spielersuche mit Leerzeichen im Nachnamen ("von Dissen") lieferte keine Treffer — der Suchbegriff wurde als Ganzes geslugt, aus dem Leerzeichen wurde dabei ein Bindestrich ("von-dissen") und der ging so an die API. Neue Helper::slugName() sluggt jeden Namensteil einzeln und erhält die Leerzeichen; der Cachekey ersetzt Leerzeichen durch Unterstriche, damit er nicht mit echten Bindestrich-Namen kollidiert
