@@ -140,8 +140,9 @@
 		</div>
 
 		<?php
-			$GLOBALS['TL_CSS'][] = 'bundles/contaodewis/css/tablesorter.css';
-			$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaodewis/js/jquery.tablesorter.min.js';
+			// tablesorter kommt seit 1.0.7 aus diesem Bundle (vorher contaodewis)
+			$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/tablesorter.css';
+			$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/jquery.tablesorter.min.js';
 		?>
 		<script>
 		(function($) 

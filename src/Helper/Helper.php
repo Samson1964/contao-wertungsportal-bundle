@@ -1121,6 +1121,113 @@ class Helper extends \Frontend
 
 
 	/**
+	 * Konvertiert einen Namen für die Wertungsportal-API:
+	 * Jeder durch Leerzeichen getrennte Namensteil wird einzeln geslugt
+	 * (Umlaute u.ä.), die Leerzeichen bleiben erhalten — "von Dissen" darf
+	 * nicht als "von-dissen" an die API gehen, sonst gibt es keine Treffer
+	 * @param $name        Namensbestandteil (Nachname oder Vorname)
+	 * @return string      Konvertierter Name
+	 */
+	public static function slugName($name)
+	{
+		$name = trim((string) $name);
+		if($name === '') return '';
+
+		$slug = \System::getContainer()->get('contao.slug');
+		$teile = array();
+
+		foreach(preg_split('/\s+/', $name) as $teil)
+		{
+			$teil = $slug->generate($teil, 1);
+			if($teil !== '') $teile[] = $teil;
+		}
+
+		return implode(' ', $teile);
+	}
+
+	/**
+	 * Lokale Spielersuche in tl_wertungsportal_persons als Teilstring-Suche.
+	 * Wird als Fallback genutzt, wenn die Wertungsportal-API keine Treffer
+	 * liefert (die API vergleicht nur komplette Felder — "müll" findet dort
+	 * kein "müller"). Die Rückgabe hat das Format einer API-Antwort der
+	 * Funktion Spielerliste, damit die Helper-Klasse Spielersuche sie
+	 * unverändert aufbereiten kann.
+	 * @param $nachname    Nachname (Teilstring, Rohstring ohne Slug)
+	 * @param $vorname     Vorname (Teilstring, optional)
+	 * @param $limit       Maximale Trefferzahl
+	 * @return array|false API-förmiges Ergebnis oder false ohne Treffer
+	 */
+	public static function lokaleSpielersuche($nachname, $vorname = '', $limit = 300)
+	{
+		$nachname = trim((string) $nachname);
+		$vorname = trim((string) $vorname);
+		if($nachname === '' && $vorname === '') return false;
+
+		// Suchbedingungen aufbauen (LIKE-Platzhalter im Suchbegriff entschärfen)
+		$bedingungen = array('published = ?');
+		$werte = array(1);
+
+		if($nachname !== '')
+		{
+			$bedingungen[] = 'lastname LIKE ?';
+			$werte[] = '%'.addcslashes($nachname, '%_\\').'%';
+		}
+		if($vorname !== '')
+		{
+			$bedingungen[] = 'firstname LIKE ?';
+			$werte[] = '%'.addcslashes($vorname, '%_\\').'%';
+		}
+
+		$objPersonen = \Database::getInstance()->prepare("SELECT * FROM tl_wertungsportal_persons WHERE ".implode(' AND ', $bedingungen)." ORDER BY lastname, firstname LIMIT ".(int) $limit)
+		                                       ->execute(...$werte);
+
+		if(!$objPersonen->numRows) return false;
+
+		// Personen einsammeln (DTO im Format der API-Personendatensätze)
+		$personen = array();
+		while($objPersonen->next())
+		{
+			$row = $objPersonen->row();
+			$dto = array
+			(
+				'nuLigaPersonId' => $row['nuLigaPersonId'],
+				'firstname'      => $row['firstname'],
+				'lastname'       => $row['lastname'],
+				'rating'         => $row['rating'] ? (int) $row['rating'] : false,
+				'index'          => $row['index'] ? (int) $row['index'] : false,
+				'memberships'    => array(),
+			);
+			if($row['fideId']) $dto['fideId'] = $row['fideId'];
+			if((string) $row['weekOfLastTournamentEvaluation'] !== '') $dto['weekOfLastTournamentEvaluation'] = $row['weekOfLastTournamentEvaluation'];
+			$personen[$row['id']] = $dto;
+		}
+
+		// Mitgliedschaften aller Treffer in einem Rutsch laden (ACTIVE zuerst,
+		// die Spielersuche-Aufbereitung bricht beim ersten Aktiv-Status ab)
+		$objMitgliedschaften = \Database::getInstance()->execute("SELECT pid, vkz, clubName, licenceState FROM tl_wertungsportal_persons_memberships WHERE pid IN (".implode(',', array_map('intval', array_keys($personen))).") AND published = 1 ORDER BY licenceState");
+		while($objMitgliedschaften->next())
+		{
+			if(!isset($personen[$objMitgliedschaften->pid])) continue;
+			$personen[$objMitgliedschaften->pid]['memberships'][] = array
+			(
+				'vkz'          => $objMitgliedschaften->vkz,
+				'clubName'     => $objMitgliedschaften->clubName,
+				'licenceState' => $objMitgliedschaften->licenceState,
+			);
+		}
+
+		// API-förmige Antwort bauen und FIDE-Daten (Elo/Titel) anreichern
+		$result = array
+		(
+			'error'     => false,
+			'http_code' => 200,
+			'body'      => array('data' => array_values($personen)),
+		);
+
+		return self::setFIDEDaten($result, array('funktion' => 'Spielerliste'));
+	}
+
+	/**
 	 * Überprüft den Suchbegriff für eine Spielersuche
 	 * @param $search      Suchbegriff
 	 * @return array       Array mit Typ und Vorname+Nachname und Vorname+Nachname gedreht

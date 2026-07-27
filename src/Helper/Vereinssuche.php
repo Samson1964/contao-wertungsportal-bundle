@@ -41,7 +41,9 @@ class Vereinssuche
 		$this->daten['Verbaende'] = array();
 		foreach($this->liste['verbaende'] as $item)
 		{
-			if(stripos($item['clubName'], $this->suchbegriff) !== false)
+			// mb_stripos statt stripos: nur so werden Umlaute unabhängig von
+			// der Groß-/Kleinschreibung gefunden (königsspringer/Königsspringer)
+			if(mb_stripos($item['clubName'], $this->suchbegriff, 0, 'UTF-8') !== false)
 			{
 				$this->daten['Verbaende'][] = array
 				(
@@ -58,7 +60,7 @@ class Vereinssuche
 		$this->daten['Vereine'] = array();
 		foreach($this->liste['vereine'] as $item)
 		{
-			if(stripos($item['clubName'], $this->suchbegriff) !== false)
+			if(mb_stripos($item['clubName'], $this->suchbegriff, 0, 'UTF-8') !== false)
 			{
 				$this->daten['Vereine'][] = array
 				(

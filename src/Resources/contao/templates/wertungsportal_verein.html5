@@ -75,6 +75,22 @@
 			</table>
 		</div>
 
+		<?php
+			// Spaltensortierung per Klick auf die Spaltenköpfe (nochmaliger
+			// Klick dreht die Sortierrichtung um) — wie im DeWIS-Vorbild
+			$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/tablesorter.css';
+			$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/jquery.tablesorter.min.js';
+		?>
+		<script>
+		(function($)
+		{
+			$(document).ready(function(){
+			  $("#dewisTable").tablesorter({
+			  });
+			});
+		})(jQuery);
+		</script>
+
 		<div class="table_responsiv">
 			<table id="dewisTable" class="body tablesorter">
 				<thead>

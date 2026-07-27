@@ -59,6 +59,30 @@ class Karteikarte
 		$this->daten['Referent']     = '-';
 
 		/*********************************************************
+		 * Historie: Link zur alten EloBase-Karteikarte (altdwz),
+		 * wenn die Anzeige in den Einstellungen aktiviert ist.
+		 * Als zps wird VKZ-Mitgliedsnummer übergeben (aktive
+		 * Mitgliedschaft bevorzugt, sonst die erste)
+		*/
+
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_historie']) && !empty($body['memberships']))
+		{
+			$url = !empty($GLOBALS['TL_CONFIG']['wertungsportal_elobase_url']) ? $GLOBALS['TL_CONFIG']['wertungsportal_elobase_url'] : 'http://altdwz.schachbund.net/db/spieler.html?zps=';
+
+			$mitglied = $body['memberships'][0];
+			foreach($body['memberships'] as $m)
+			{
+				if($m['licenceState'] == 'ACTIVE')
+				{
+					$mitglied = $m;
+					break;
+				}
+			}
+
+			$this->daten['Historie'] = sprintf('<a href="%s%s-%04d" target="_blank">Alte Karteikarte</a> (Benutzer/Passwort: dwz)', $url, $mitglied['vkz'], $mitglied['memberNo']);
+		}
+
+		/*********************************************************
 		 * Vereinsdaten (sortiert nach Status und ZPS)
 		*/
 

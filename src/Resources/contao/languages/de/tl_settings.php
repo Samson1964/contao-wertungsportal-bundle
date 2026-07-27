@@ -13,6 +13,8 @@ $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_karteisperre_gaeste'] = array
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_passive_ausblenden'] = array('Passiv-Mitgliedschaften ausblenden','Passiv gemeldete Spieler ausblenden');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_geburtsjahr_ausblenden'] = array('Geburtsjahr ausblenden','Geburtsjahr der Spieler ausblenden');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_geschlecht_ausblenden'] = array('Geschlecht ausblenden','Geschlecht der Spieler ausblenden');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_historie'] = array('Historie EloBase anzeigen','In der Karteikarte einen Link zur alten EloBase-Karteikarte (altdwz) anzeigen');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_elobase_url'] = array('EloBase-URL','URL der alten Datenbank inklusive zps-Parameter; ohne Eintrag wird http://altdwz.schachbund.net/db/spieler.html?zps= verwendet');
 
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_seite_spieler'] = array('Spielerseite wählen','Seite, auf der das Spieler-Modul eingebunden ist');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_seite_turnier'] = array('Turnierseite wählen','Seite, auf der das Turnier-Modul eingebunden ist');

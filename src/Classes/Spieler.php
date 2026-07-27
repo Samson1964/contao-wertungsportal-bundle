@@ -97,16 +97,18 @@ class Spieler extends \Module
 			// Abfrageparameter einstellen
 			if($check_search['typ'] == 'name')
 			{
-				// Umlaute u.ä. erst jetzt auf den einzelnen Namensteilen konvertieren
-				$slug = \System::getContainer()->get('contao.slug');
-				$nachname = $check_search['nachname'] !== '' ? $slug->generate($check_search['nachname'], 1) : '';
-				$vorname  = $check_search['vorname']  !== '' ? $slug->generate($check_search['vorname'], 1)  : '';
+				// Umlaute u.ä. erst jetzt auf den einzelnen Namensteilen konvertieren.
+				// Helper::slugName sluggt jeden durch Leerzeichen getrennten Teil
+				// einzeln — "von Dissen" bleibt "von dissen" und wird nicht als
+				// "von-dissen" an die API übergeben (das fand nie einen Treffer)
+				$nachname = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::slugName($check_search['nachname']);
+				$vorname  = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::slugName($check_search['vorname']);
 
 				// Spielersuche
 				$param = array
 				(
 					'funktion'  => 'Spielerliste',
-					'cachekey'  => trim($nachname.'-'.$vorname, '-'),
+					'cachekey'  => str_replace(' ', '_', trim($nachname.'-'.$vorname, '-')),
 					'vorname'   => $vorname,
 					'nachname'  => $nachname,
 				);
@@ -125,6 +127,26 @@ class Spieler extends \Module
 				// Trefferliste für das Template aufbereiten
 				$suche = new \Schachbulle\ContaoWertungsportalBundle\Helper\Spielersuche($resultArr);
 				$daten = $suche->Spielerliste;
+
+				// Keine API-Treffer: lokale Teilstring-Suche als Fallback — die
+				// API vergleicht nur komplette Felder ("müll" findet dort kein
+				// "müller"). Gesucht wird mit dem Rohstring, nicht mit dem Slug;
+				// zweiter Versuch mit gedrehter Eingabe "Vorname Nachname"
+				if(empty($daten))
+				{
+					$lokal = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::lokaleSpielersuche($check_search['nachname'], $check_search['vorname']);
+					if(!$lokal && $check_search['nachname2'] !== '' && $check_search['nachname2'] != $check_search['nachname'])
+					{
+						$lokal = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::lokaleSpielersuche($check_search['nachname2'], $check_search['vorname2']);
+					}
+
+					if($lokal)
+					{
+						$suche = new \Schachbulle\ContaoWertungsportalBundle\Helper\Spielersuche($lokal);
+						$daten = $suche->Spielerliste;
+						$lokaleSuche = !empty($daten);
+					}
+				}
 			}
 		}
 
@@ -258,6 +280,7 @@ class Spieler extends \Module
 		$this->Subtemplate = new \FrontendTemplate($this->subTemplate);
 		$this->Subtemplate->daten = isset($daten) ? $daten : false;
 		$this->Subtemplate->anzahl = isset($daten) ? count($daten) : 0;
+		$this->Subtemplate->lokal = isset($lokaleSuche) ? $lokaleSuche : false;
 		$this->Template->searchresult = $this->Subtemplate->parse();
 		$this->Template->searchform = true;
 	}

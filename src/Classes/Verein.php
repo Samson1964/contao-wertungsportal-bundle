@@ -95,8 +95,9 @@ class Verein extends \Module
 			 * Vereinssuche
 			*/
 
-			// Suchstring modifizieren, Umlaute u.ä. konvertieren
-			$search = \System::getContainer()->get('contao.slug')->generate($search, 1);
+			// Suchbegriff NICHT sluggen: Die Suche läuft lokal per mb_stripos
+			// über die echten Vereinsnamen — ein Slug (königsspringer →
+			// koenigsspringer) machte Namen mit Umlauten unauffindbar
 
 			// Verbands- und Vereinsliste komplett holen und durchsuchen
 			$liste = \Schachbulle\ContaoWertungsportalBundle\Helper\API::Verbandsliste();

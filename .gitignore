@@ -1,7 +1,9 @@
 # Composer
 /composer.lock
-/OFFEN.md
+/MIGRATION.md
+/TODO.md
 /CLAUDE.md
+/wertungsportal_karteikarte.txt
 /vendor/
 /.DAV
 
