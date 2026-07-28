@@ -13,41 +13,50 @@
 	<div class="wp-stat-steuerung">
 		<div class="wp-stat-gruppe">
 			<span class="wp-stat-titel">Zeitraum</span>
-			<?php foreach(array(30 => '30 Tage', 90 => '3 Monate', 180 => '6 Monate', 365 => '1 Jahr') as $tage => $text): ?>
-				<a href="<?= $this->basisUrl ?>&amp;zeitraum=<?= $tage ?>&amp;raster=<?= $this->raster ?><?= $this->funktion ? '&amp;funktion='.rawurlencode($this->funktion) : '' ?>"
-				   class="wp-stat-knopf<?= ($this->zeitraum == $tage) ? ' aktiv' : '' ?>"><?= $text ?></a>
+			<?php foreach($this->zeitraumLinks as $l): ?>
+				<a href="<?= $l['url'] ?>" class="wp-stat-knopf<?= $l['aktiv'] ? ' aktiv' : '' ?>"><?= $l['text'] ?></a>
 			<?php endforeach; ?>
 		</div>
 
 		<div class="wp-stat-gruppe">
 			<span class="wp-stat-titel">Raster</span>
-			<?php foreach(array('woche' => 'nach Woche', 'monat' => 'nach Monat') as $wert => $text): ?>
-				<a href="<?= $this->basisUrl ?>&amp;zeitraum=<?= $this->zeitraum ?>&amp;raster=<?= $wert ?><?= $this->funktion ? '&amp;funktion='.rawurlencode($this->funktion) : '' ?>"
-				   class="wp-stat-knopf<?= ($this->raster == $wert) ? ' aktiv' : '' ?>"><?= $text ?></a>
+			<?php foreach($this->rasterLinks as $l): ?>
+				<a href="<?= $l['url'] ?>" class="wp-stat-knopf<?= $l['aktiv'] ? ' aktiv' : '' ?>"><?= $l['text'] ?></a>
 			<?php endforeach; ?>
 		</div>
 
 		<div class="wp-stat-gruppe">
 			<span class="wp-stat-titel">Auswahl</span>
-			<a href="<?= $this->basisUrl ?>&amp;zeitraum=<?= $this->zeitraum ?>&amp;raster=<?= $this->raster ?>"
-			   class="wp-stat-knopf<?= $this->funktion ? '' : ' aktiv' ?>">Alle Funktionen</a>
+			<a href="<?= $this->urlAlle ?>" class="wp-stat-knopf<?= $this->funktion ? '' : ' aktiv' ?>">Alle Funktionen</a>
 			<?php if($this->funktion): ?>
 				<span class="wp-stat-knopf aktiv"><?= $this->funktion ?></span>
 			<?php endif; ?>
 		</div>
 	</div>
 
-	<p class="wp-stat-zeitraum">
-		Zeitraum <strong><?= $this->von ?></strong> bis <strong><?= $this->bis ?></strong><?php if($this->funktion): ?>,
-		Funktion <strong><?= $this->funktion ?></strong> <span class="wp-stat-pfad"><?= $this->endpunkt ?></span><?php endif; ?>
-	</p>
+	<div class="wp-stat-navigation">
+		<a href="<?= $this->urlZurueck ?>" class="wp-stat-knopf" title="Um einen Zeitraum zurück">&#9664;&nbsp;zurück</a>
+
+		<span class="wp-stat-zeitraum">
+			<strong><?= $this->von ?></strong> bis <strong><?= $this->bis ?></strong><?php if($this->funktion): ?>,
+			<strong><?= $this->funktion ?></strong> <span class="wp-stat-pfad"><?= $this->endpunkt ?></span><?php endif; ?>
+		</span>
+
+		<?php if($this->kannVor): ?>
+			<a href="<?= $this->urlVor ?>" class="wp-stat-knopf" title="Um einen Zeitraum vor">vor&nbsp;&#9654;</a>
+			<a href="<?= $this->urlHeute ?>" class="wp-stat-knopf">bis heute</a>
+		<?php else: ?>
+			<span class="wp-stat-knopf gesperrt" aria-disabled="true">vor&nbsp;&#9654;</span>
+		<?php endif; ?>
+	</div>
 
 	<?php if(!$this->hatDaten): ?>
 
 		<p class="tl_info">
-			Für diesen Zeitraum sind noch keine Abrufe gezählt.
+			Für diesen Zeitraum sind keine Abrufe gezählt.
 			<?php if($this->erster): ?>
-				Die Aufzeichnung beginnt am <?= $this->erster ?> — bitte einen längeren Zeitraum wählen.
+				Die Aufzeichnung beginnt am <?= $this->erster ?> — bitte einen längeren Zeitraum wählen
+				oder mit „zurück“ bzw. „bis heute“ einen anderen Ausschnitt ansteuern.
 			<?php else: ?>
 				Die Zählung startet mit dem ersten Aufruf einer Wertungsportal-Seite im Frontend.
 			<?php endif; ?>
@@ -80,8 +89,7 @@
 				<?php foreach($this->zeilen as $z): ?>
 					<tr class="<?= $z['aktiv'] ? 'wp-stat-aktiv' : '' ?>">
 						<td>
-							<a href="<?= $this->basisUrl ?>&amp;zeitraum=<?= $this->zeitraum ?>&amp;raster=<?= $this->raster ?>&amp;funktion=<?= rawurlencode($z['funktion']) ?>"
-							   title="Nur diese Funktion anzeigen"><?= $z['funktion'] ?></a>
+							<a href="<?= $z['url'] ?>" title="Nur diese Funktion anzeigen"><?= $z['funktion'] ?></a>
 						</td>
 						<td class="wp-stat-pfad"><?= $z['endpunkt'] ?></td>
 						<td class="rechts"><?= number_format($z['api'], 0, ',', '.') ?></td>

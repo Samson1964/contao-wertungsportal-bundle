@@ -42,17 +42,45 @@ class Statistik extends \BackendModule
 	/**
 	 * Generate the module
 	 */
+	/**
+	 * Wählbare Zeiträume (Tage => Beschriftung)
+	 */
+	public static function zeitraeume()
+	{
+		return array
+		(
+			1   => '1 Tag',
+			7   => '1 Woche',
+			30  => '30 Tage',
+			90  => '3 Monate',
+			180 => '6 Monate',
+			365 => '1 Jahr',
+		);
+	}
+
 	protected function compile()
 	{
-		$raster = \Input::get('raster');
-		if(!in_array($raster, array('woche', 'monat'), true)) $raster = 'woche';
-
 		$funktion = (string) \Input::get('funktion');
-		$zeitraum = (int) \Input::get('zeitraum');
-		if(!in_array($zeitraum, array(30, 90, 180, 365), true)) $zeitraum = 90;
 
-		$bis = date('Y-m-d');
-		$von = date('Y-m-d', strtotime('-'.($zeitraum - 1).' days'));
+		$zeitraum = (int) \Input::get('zeitraum');
+		if(!array_key_exists($zeitraum, self::zeitraeume())) $zeitraum = 90;
+
+		// Ende des Zeitraums: frei verschiebbar, aber nie in der Zukunft
+		$heute = date('Y-m-d');
+		$ende = (string) \Input::get('ende');
+
+		if(!preg_match('/^\d{4}-\d{2}-\d{2}$/', $ende) || $ende > $heute) $ende = $heute;
+
+		$bis = $ende;
+		$von = date('Y-m-d', strtotime($bis.' -'.($zeitraum - 1).' days'));
+
+		// Raster: ohne ausdrückliche Wahl passend zur Länge des Zeitraums
+		$raster = \Input::get('raster');
+
+		if(!in_array($raster, array('tag', 'woche', 'monat'), true))
+		{
+			$raster = ($zeitraum <= 31) ? 'tag' : (($zeitraum <= 180) ? 'woche' : 'monat');
+		}
 
 		// Gültige Funktionen aus der API-Zuordnung
 		$endpunkte = \Schachbulle\ContaoWertungsportalBundle\Helper\API::endpunkte();
@@ -93,38 +121,130 @@ class Statistik extends \BackendModule
 		$gesamt['quote'] = $gesamt['gesamt'] ? round($gesamt['cache'] * 100 / $gesamt['gesamt']) : 0;
 
 		/*********************************************************
-		 * Verlauf nach Woche/Monat für das Diagramm
+		 * Verlauf für das Diagramm (Tag, Woche oder Monat)
 		*/
 
-		$raster_daten = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::summenNachRaster($von, $bis, $raster, $funktion);
 		$balken = array();
 
-		foreach($raster_daten as $gruppe => $werte)
+		if($raster == 'tag')
 		{
-			$balken[] = array
-			(
-				'titel' => self::rasterTitel((string) $gruppe, $raster, isset($werte['erster']) ? $werte['erster'] : ''),
-				'cache' => (int) $werte['cache'],
-				'api'   => (int) $werte['api'],
-			);
+			// Tagesverlauf mit durchgehender Achse: Tage ohne Abrufe
+			// erscheinen als Lücke statt zu fehlen
+			$tage = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::verlauf($von, $bis, $funktion);
+			$zeiger = strtotime($von);
+			$endzeit = strtotime($bis);
+
+			while($zeiger <= $endzeit)
+			{
+				$tag = date('Y-m-d', $zeiger);
+
+				$balken[] = array
+				(
+					'titel' => date('d.m.', $zeiger),
+					'cache' => isset($tage[$tag]) ? (int) $tage[$tag]['cache'] : 0,
+					'api'   => isset($tage[$tag]) ? (int) $tage[$tag]['api'] : 0,
+				);
+
+				$zeiger = strtotime('+1 day', $zeiger);
+			}
+		}
+		else
+		{
+			$raster_daten = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::summenNachRaster($von, $bis, $raster, $funktion);
+
+			foreach($raster_daten as $gruppe => $werte)
+			{
+				$balken[] = array
+				(
+					'titel' => self::rasterTitel((string) $gruppe, $raster, isset($werte['erster']) ? $werte['erster'] : ''),
+					'cache' => (int) $werte['cache'],
+					'api'   => (int) $werte['api'],
+				);
+			}
 		}
 
 		/*********************************************************
-		 * Template füllen
+		 * Navigation und Links (fertig aufbereitet, damit das Template
+		 * keine URLs zusammensetzen muss)
 		*/
+
+		$basisUrl = \Backend::addToUrl('', true, array('raster', 'zeitraum', 'funktion', 'ende'));
+
+		// Ein Schritt entspricht der Länge des gewählten Zeitraums
+		$zurueck = date('Y-m-d', strtotime($bis.' -'.$zeitraum.' days'));
+		$vor = date('Y-m-d', strtotime($bis.' +'.$zeitraum.' days'));
+		if($vor > $heute) $vor = $heute;
+
+		$link = static function($basisUrl, $parameter)
+		{
+			$query = '';
+
+			foreach($parameter as $name => $wert)
+			{
+				if($wert === '' || $wert === null) continue;
+				$query .= '&amp;'.$name.'='.rawurlencode((string) $wert);
+			}
+
+			return $basisUrl.$query;
+		};
+
+		$standard = array('zeitraum' => $zeitraum, 'raster' => $raster, 'ende' => $bis, 'funktion' => $funktion);
+
+		// Zeitraum-Knöpfe: das Ende bleibt stehen, damit man den Ausschnitt an
+		// Ort und Stelle vergrößert statt zurück auf heute zu springen.
+		// Das Raster wird dabei zurückgesetzt, damit es zur neuen Länge passt
+		$zeitraumLinks = array();
+
+		foreach(self::zeitraeume() as $tage => $text)
+		{
+			$zeitraumLinks[] = array
+			(
+				'text'  => $text,
+				'url'   => $link($basisUrl, array_merge($standard, array('zeitraum' => $tage, 'raster' => ''))),
+				'aktiv' => ($zeitraum == $tage),
+			);
+		}
+
+		$rasterLinks = array();
+
+		foreach(array('tag' => 'nach Tag', 'woche' => 'nach Woche', 'monat' => 'nach Monat') as $wert => $text)
+		{
+			$rasterLinks[] = array
+			(
+				'text'  => $text,
+				'url'   => $link($basisUrl, array_merge($standard, array('raster' => $wert))),
+				'aktiv' => ($raster == $wert),
+			);
+		}
+
+		// Funktionslink je Tabellenzeile
+		foreach($zeilen as $i => $z)
+		{
+			$zeilen[$i]['url'] = $link($basisUrl, array_merge($standard, array('funktion' => $z['funktion'])));
+		}
+
+		$this->Template->zeitraumLinks = $zeitraumLinks;
+		$this->Template->rasterLinks = $rasterLinks;
+		$this->Template->urlAlle = $link($basisUrl, array_merge($standard, array('funktion' => '')));
+		$this->Template->urlZurueck = $link($basisUrl, array_merge($standard, array('ende' => $zurueck)));
+		$this->Template->urlVor = $link($basisUrl, array_merge($standard, array('ende' => $vor)));
+		$this->Template->urlHeute = $link($basisUrl, array_merge($standard, array('ende' => $heute)));
+		$this->Template->kannVor = ($bis < $heute);
+		$this->Template->istHeute = ($bis === $heute);
 
 		$this->Template->zeilen = $zeilen;
 		$this->Template->gesamt = $gesamt;
 		$this->Template->diagramm = self::diagramm($balken, $raster);
 		$this->Template->raster = $raster;
 		$this->Template->zeitraum = $zeitraum;
+		$this->Template->zeitraeume = self::zeitraeume();
 		$this->Template->funktion = $funktion;
 		$this->Template->endpunkt = $funktion !== '' ? $endpunkte[$funktion] : '';
 		$this->Template->von = \Date::parse(\Config::get('dateFormat'), strtotime($von));
 		$this->Template->bis = \Date::parse(\Config::get('dateFormat'), strtotime($bis));
+		$this->Template->ende = $bis;
 		$this->Template->erster = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::ersterTag();
 		$this->Template->hatDaten = ($gesamt['gesamt'] > 0);
-		$this->Template->basisUrl = \Backend::addToUrl('', true, array('raster', 'zeitraum', 'funktion'));
 		$this->Template->farbeCache = self::FARBE_CACHE;
 		$this->Template->farbeApi = self::FARBE_API;
 	}

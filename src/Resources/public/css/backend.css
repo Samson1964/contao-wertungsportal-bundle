@@ -128,9 +128,22 @@ a.wp-stat-knopf:hover {
 	font-weight				: bold;
 }
 
-.wp-stat-zeitraum {
+/* Navigationszeile: einen Zeitraum vor/zurück springen */
+.wp-stat-navigation {
+	display					: flex;
+	flex-wrap				: wrap;
+	align-items				: center;
+	gap						: 10px;
 	margin					: 0 0 14px;
+}
+
+.wp-stat-zeitraum {
 	color					: #5c5c5c;
+}
+
+.wp-stat-knopf.gesperrt {
+	opacity					: 0.45;
+	cursor					: default;
 }
 
 .wp-stat-pfad {

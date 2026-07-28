@@ -1,5 +1,14 @@
 # Wertungsportal-Anbindung
 
+## Version 1.4.0 (2026-07-28)
+
+* **Add: Statistik mit verschiebbarem Zeitraum.** Neben 30 Tagen bis 1 Jahr gibt es jetzt auch **1 Tag** und **1 Woche**, und der Zeitraum lässt sich mit „◀ zurück" und „vor ▶" um jeweils seine eigene Länge verschieben (bei 1 Tag also tageweise, bei 1 Woche wochenweise, bei 30 Tagen um 30 Tage). „bis heute" springt zurück auf den aktuellen Rand; über das heutige Datum hinaus geht es nicht — dort ist die Schaltfläche gesperrt statt ins Leere zu führen
+* Add: Drittes Diagrammraster **nach Tag** (neben Woche und Monat) mit durchgehender Achse — Tage ohne Abrufe erscheinen als Lücke statt zu fehlen. Ohne ausdrückliche Wahl passt sich das Raster der Länge des Zeitraums an (bis 31 Tage: Tag, bis 180: Woche, darüber: Monat)
+* Fix: Die Sortierpfeile rutschten bei schmalen Spalten mit zweizeiliger Überschrift („Mgl-/Nr.", „Letzte/Ausw.") nach unten bis in die erste Datenzeile. Ursache: Das Zeichen war zwar absolut positioniert, aber ohne senkrechte Verankerung — es saß dadurch auf der Grundlinie der letzten Kopfzeile. Jetzt ist es mittig in der Kopfzelle verankert; das gilt für die Pfeile beim Überfahren wie für den dauerhaften Pfeil der aktiven Spalte
+* Fix: Der Fokusrahmen der Suchfelder erschien als hellblauer Schein um das Feld herum (nach außen versetzter Fokusring). Er ist durch einen sauber anliegenden Rahmen in der Akzentfarbe ersetzt — gleich gut erkennbar, ohne Leuchtrand. Kontrollkästchen und Radios behalten ihren nativen Ring, weil ein Rahmen an so kleinen Bedienelementen kaum sichtbar wäre
+* Change: Hilfetext der Spielersuche nennt „mann" statt „müll" als Beispiel für den Namensanfang
+* Verifiziert: Navigation mit 20 Tests (Zeitraumgrenzen, Sprünge vorwärts/rückwärts, Sperre gegen Zukunftsdaten, automatische Rasterwahl, ungültige Eingaben); Pfeilposition und Fokusrahmen im Browser an schmalen, zweizeiligen Spaltenköpfen bzw. am echten Eingabefeld geprüft
+
 ## Version 1.3.0 (2026-07-28)
 
 * **Add: Abrufstatistik der Schnittstelle.** Jeder Zugriff auf eine Wertungsportal-Funktion wird gezählt — getrennt danach, ob die Antwort aus dem lokalen Cache kam oder tatsächlich bei der Schnittstelle geholt wurde. Gespeichert wird tagesweise in der neuen Tabelle tl_wertungsportal_stats: je Tag, Funktion und Quelle genau ein Datensatz mit Zähler (INSERT … ON DUPLICATE KEY UPDATE). Die Zählung kostet damit eine Abfrage je Seitenaufruf und geht auch bei gleichzeitigen Zugriffen nicht verloren

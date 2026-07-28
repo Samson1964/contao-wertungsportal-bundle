@@ -26,7 +26,7 @@
 						<div class="wp-feld wp-feld--breit">
 							<label class="wp-label" for="ctrl_search">Spielername</label>
 							<input id="ctrl_search" type="text" class="tl_input_text wp-input" autofocus name="search" maxlength="30" placeholder="Name, Vorname oder nur Name" value="<?= $this->search ?>">
-							<p class="wp-hilfe">Auch ein Namensanfang genügt, z.&nbsp;B. „Müll".</p>
+							<p class="wp-hilfe">Auch ein Namensanfang genügt, z.&nbsp;B. „mann".</p>
 						</div>
 					</div>
 					<?php if($this->fehler): ?>

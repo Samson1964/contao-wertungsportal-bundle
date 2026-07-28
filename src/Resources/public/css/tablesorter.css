@@ -37,6 +37,8 @@ table.tablesorter tbody tr.odd td {
 table.tablesorter thead tr th.header,
 table.tablesorter thead tr th.tablesorter-header {
 	cursor					: pointer;
+	/* Bezugspunkt für das Pfeilzeichen — ohne relative Positionierung
+	   würde es sich an der Tabelle statt an der Zelle ausrichten */
 	position				: relative;
 	padding-right			: 18px;
 	white-space				: nowrap;
@@ -50,9 +52,15 @@ table.tablesorter thead tr th.tablesorter-header::after {
 	content					: "\21C5"; /* ⇅ */
 	position				: absolute;
 	right					: 5px;
+	/* Senkrecht in der Kopfzelle verankern. Ohne top/transform steht das
+	   Zeichen an seiner statischen Position — bei mehrzeiligen Überschriften
+	   ("Mgl-<br>Nr.", "Letzte<br>Ausw.") rutschte es dadurch nach unten bis
+	   in die erste Datenzeile */
+	top						: 50%;
+	transform				: translateY(-50%);
 	font-size				: 0.85em;
 	font-weight				: normal;
-	line-height				: inherit;
+	line-height				: 1;
 	opacity					: 0;
 }
 

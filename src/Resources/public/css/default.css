@@ -665,12 +665,32 @@
 	color					: var(--wp-akzent);
 }
 
-/* Sichtbarer Fokus auf allen Bedienelementen */
+/* Sichtbarer Fokus auf allen Bedienelementen.
+   Statt des nach außen versetzten Fokusrings (der als hellblauer Schein um
+   das Feld herum erschien) ein sauber anliegender Rahmen: gleich gut
+   erkennbar, aber ohne Leuchtrand. :focus und :focus-visible zusammen,
+   damit auch Browser ohne :focus-visible-Unterstützung greifen. */
+.dewis .wp-suche input:focus,
+.dewis .wp-suche select:focus,
+.dewis .wp-suche button:focus,
 .dewis .wp-suche input:focus-visible,
 .dewis .wp-suche select:focus-visible,
 .dewis .wp-suche button:focus-visible {
+	outline					: none;
+	outline-offset			: 0;
+	border-color			: var(--wp-akzent);
+	box-shadow				: 0 0 0 1px var(--wp-akzent);
+}
+
+/* Kontrollkästchen und Radios behalten ihren nativen Fokusring —
+   ein Rahmen um das kleine Bedienelement wäre kaum erkennbar */
+.dewis .wp-suche input[type="checkbox"]:focus,
+.dewis .wp-suche input[type="radio"]:focus,
+.dewis .wp-suche input[type="checkbox"]:focus-visible,
+.dewis .wp-suche input[type="radio"]:focus-visible {
 	outline					: 2px solid var(--wp-akzent);
 	outline-offset			: 1px;
+	box-shadow				: none;
 }
 
 .dewis .wp-suche-aktionen {
