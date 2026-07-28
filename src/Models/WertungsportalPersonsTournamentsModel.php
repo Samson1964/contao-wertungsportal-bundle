@@ -256,31 +256,97 @@ class WertungsportalPersonsTournamentsModel extends Model
      */
     public static function syncForPerson(int $pid, array $entries): void
     {
-        $arrUuids = [];
+        if (!$entries) {
+            return;
+        }
+
+        // Turniere gesammelt ablegen statt je Eintrag einzeln (Bulk-Sync
+        // mit Batch-INSERT); Einträge nach Turnier-UUID einsammeln
+        $arrTournaments = [];
+        $arrPlayers = [];
 
         foreach ($entries as $entry) {
             if (empty($entry['tournament']['uuid'])) {
                 continue;
             }
 
-            // Turnier zentral ablegen bzw. aktualisieren
-            WertungsportalTournamentsModel::upsertByUuid($entry['tournament']);
-
-            $uuid = (string) $entry['tournament']['uuid'];
-            $arrUuids[] = $uuid;
-
-            static::upsertEntry($pid, $uuid, \is_array($entry['player'] ?? null) ? $entry['player'] : []);
+            $strUuid = (string) $entry['tournament']['uuid'];
+            $arrTournaments[$strUuid] = $entry['tournament'];
+            $arrPlayers[$strUuid] = \is_array($entry['player'] ?? null) ? $entry['player'] : [];
         }
 
-        // Nicht mehr gemeldete Turniereinträge entfernen
-        $collection = static::findBy('pid', $pid);
+        if (!$arrPlayers) {
+            return;
+        }
 
-        if (null !== $collection) {
-            foreach ($collection as $item) {
-                if (!\in_array($item->tournamentUuid, $arrUuids, true)) {
-                    $item->delete();
+        WertungsportalTournamentsModel::syncList(array_values($arrTournaments));
+
+        $objDatabase = Database::getInstance();
+        $intTime = time();
+        $strFields = implode(', ', array_merge(self::DTO_STRING_FIELDS, self::DTO_INT_FIELDS, self::DTO_FLOAT_FIELDS));
+
+        // Bestand der Person in einer Abfrage laden (tournamentUuid => Zeile)
+        $arrExisting = [];
+        $objRows = $objDatabase->prepare('SELECT id, tournamentUuid, eloPlayer, ' . $strFields . ' FROM ' . static::$strTable . ' WHERE pid=?')
+                               ->execute($pid);
+
+        while ($objRows->next()) {
+            $arrExisting[(string) $objRows->tournamentUuid] = $objRows->row();
+        }
+
+        $arrInsert = [];
+
+        foreach ($arrPlayers as $strUuid => $arrPlayer) {
+            $arrSet = static::buildDtoSet($arrPlayer);
+
+            if (!isset($arrExisting[$strUuid])) {
+                $arrRow = [$pid, $intTime, $strUuid, '1'];
+
+                // Fehlende Felder mit dem Standardwert ihres Typs belegen
+                foreach (self::DTO_STRING_FIELDS as $strField) {
+                    $arrRow[] = (string) ($arrSet[$strField] ?? '');
                 }
+
+                foreach (self::DTO_INT_FIELDS as $strField) {
+                    $arrRow[] = (int) ($arrSet[$strField] ?? 0);
+                }
+
+                foreach (self::DTO_FLOAT_FIELDS as $strField) {
+                    $arrRow[] = (float) ($arrSet[$strField] ?? 0);
+                }
+
+                $arrRow[] = (string) ($arrSet['eloPlayer'] ?? '');
+                $arrInsert[] = $arrRow;
+                continue;
+            }
+
+            $arrDiff = static::diffApiFields($arrExisting[$strUuid], $arrSet);
+
+            if ($arrDiff) {
+                $arrDiff['tstamp'] = $intTime;
+                $objDatabase->prepare('UPDATE ' . static::$strTable . ' %s WHERE id=?')
+                            ->set($arrDiff)
+                            ->execute($arrExisting[$strUuid]['id']);
             }
         }
+
+        // Neue Einträge blockweise anlegen
+        if ($arrInsert) {
+            $strColumns = 'pid, tstamp, tournamentUuid, published, ' . $strFields . ', eloPlayer';
+            $strTuple = '(' . implode(', ', array_fill(0, \count($arrInsert[0]), '?')) . ')';
+
+            foreach (array_chunk($arrInsert, 100) as $arrChunk) {
+                $strValues = implode(', ', array_fill(0, \count($arrChunk), $strTuple));
+
+                $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (' . $strColumns . ') VALUES ' . $strValues)
+                            ->execute(array_merge(...$arrChunk));
+            }
+        }
+
+        // KEINE Löschung: Die Turnierhistorie wird auch aus anderen Quellen
+        // gefüllt (Turnierauswertung, Partien, Scoresheet über
+        // EvaluationModel::upsertPlayer) — eine Löschung "nicht gemeldeter"
+        // Einträge würde diese wieder abräumen. Das Frontend zeigt ohnehin
+        // die API-Antwort, die lokale Tabelle ist Spiegel und Archiv.
     }
 }

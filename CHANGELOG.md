@@ -1,5 +1,15 @@
 # Wertungsportal-Anbindung
 
+## Version 1.1.0 (2026-07-27)
+
+* Add: Die Cachezeiten sind in den System-Einstellungen je Funktionsgruppe einstellbar (Spieler, Vereine, Verbände, Turniersuche, Turnierdaten) — Auswahl von „Kein Cache" bis 30 Tage, ohne Auswahl gilt wie bisher 1 Tag. Empfehlung für die Verbändeliste: 1 Woche, weil sich Verbands- und Vereinsstammdaten kaum ändern; „Kein Cache" schaltet den Cache gezielt für einzelne Bereiche ab
+* Change: Jeder Cache-Eintrag liegt jetzt in einer eigenen Datei innerhalb eines Verzeichnisses je Funktion. Bisher sammelten sich ALLE Einträge einer Funktion in einer einzigen Datei, die bei jedem Zugriff komplett gelesen, dekodiert und neu geschrieben wurde — bei Vereinslisten mit hunderten Spielern wuchs sie auf viele Megabyte und der Cache wurde langsamer als die Abfrage, die er einsparen sollte
+* Change: Die Systemwartung zeigt je Cache-Speicher zusätzlich die eingestellte Cachezeit an; „Wertungsportal-Cache leeren" räumt das neue Verzeichnis-Layout und den Altbestand auf
+* Change: Der Sync der Karteikarten-Historie läuft als Bulk (eine Bestandsabfrage plus Batch-INSERT statt je Turnier eine Einzelabfrage) — bei einem Spieler mit 72 Turnieren waren das bisher rund 150 zusätzliche Abfragen pro Karteikartenaufruf; die Turniere selbst werden gesammelt über syncList abgeglichen
+* Change: Auch der Sync der DWZ-Hochstufungen läuft als Bulk statt mit einer Abfrage je Hochstufung
+* Fix: Die Syncs von Turnierhistorie und Hochstufungen löschen keine Einträge mehr, die die Schnittstelle gerade nicht meldet. Die Turnierhistorie wird auch aus Turnierauswertung, Partien und Spielberichtsbogen gefüllt — die Löschung räumte diese Einträge beim nächsten Karteikartenaufruf wieder ab (gleiche Fehlerklasse wie der Mitgliedschafts-Bugfix in 1.0.9). Das Frontend zeigt ohnehin die API-Antwort, die lokale Tabelle ist Spiegel und Archiv
+* Setzt contao-helper-bundle 1.8.8 voraus (Cache-Korrekturen: Ablaufprüfung, Zwischenspeicher, Locking)
+
 ## Version 1.0.9 (2026-07-27)
 
 * **Fix (Datenverlust): Der API-Abgleich löscht keine Mitgliedschaften mehr.** `syncForPersons()` entfernte bisher alle Mitgliedschaften, die die nu-Schnittstelle nicht meldet. Die Schnittstelle liefert aber ausschließlich die AKTUELLEN Mitgliedschaften einer Person, keine Historie — dadurch hat jeder Frontend-Seitenaufruf (Spielersuche, Karteikarte, Vereins- und Verbandsliste) die per CSV importierten früheren Mitgliedschaften nach und nach abgeräumt. Es wird jetzt nur noch angelegt und aktualisiert, nie gelöscht

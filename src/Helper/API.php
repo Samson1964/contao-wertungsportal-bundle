@@ -54,12 +54,17 @@ class API
 		// ======================================================================
 		// Wenn Cache aktiviert, dann Daten laden, wenn vorhanden
 		// ======================================================================
-		if($GLOBALS['TL_CONFIG']['wertungsportal_cache'])
+		$cachetime = self::cachezeit($params['funktion']);
+
+		if($GLOBALS['TL_CONFIG']['wertungsportal_cache'] && $cachetime > 0)
 		{
-			// Cache initialisieren
-			$cache = new \Schachbulle\ContaoHelperBundle\Classes\Cache(array('name' => 'wp_'.$params['funktion'], 'extension' => '.cache'));
+			// Cache initialisieren: eine Datei je Eintrag in einem eigenen
+			// Verzeichnis der Funktion. Früher lagen alle Einträge einer
+			// Funktion in EINER Datei — die wuchs mit jeder gecachten Liste
+			// (Vereinslisten mit hunderten Spielern!) und musste bei jedem
+			// Zugriff komplett gelesen, dekodiert und neu geschrieben werden
+			$cache = new \Schachbulle\ContaoHelperBundle\Classes\Cache(array('name' => $params['cachekey'], 'path' => 'wp_'.$params['funktion'], 'extension' => '.cache'));
 			$cache->eraseExpired(); // Cache aufräumen, abgelaufene Schlüssel löschen
-			$cachetime = 3600 * 24; // 24 Stunden
 
 			// Cache laden
 			if($cache->isCached($params['cachekey']) && !isset($params['nocache']))
@@ -77,8 +82,9 @@ class API
 			{
 				// FIDE-Daten hinzuladen
 				$result = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::setFIDEDaten($result, $params);
-				// im Cache speichern
-				if($GLOBALS['TL_CONFIG']['wertungsportal_cache'])
+				// im Cache speichern (nur wenn für diese Funktion eine
+				// Cachezeit eingestellt ist — 0 bedeutet "nicht cachen")
+				if($GLOBALS['TL_CONFIG']['wertungsportal_cache'] && $cachetime > 0)
 				{
 					$cache->store($params['cachekey'], $result, $cachetime);
 				}
@@ -626,6 +632,70 @@ class API
 	}
 
 	/**
+	 * Ordnet jeder API-Funktion ihre Einstellungsgruppe zu. Die Cachezeiten
+	 * werden in den System-Einstellungen je Gruppe gepflegt — Verbands- und
+	 * Vereinsstammdaten ändern sich selten, Turnierauswertungen sind nach
+	 * der Berechnung stabil, Suchen sollen dagegen aktuell bleiben.
+	 *
+	 * @return array   Funktion => Einstellungsfeld
+	 */
+	public static function cacheGruppen()
+	{
+		return array
+		(
+			'Spielerliste'         => 'wertungsportal_cachezeit_spieler',
+			'Karteikarte'          => 'wertungsportal_cachezeit_spieler',
+			'Karteikarte_Turniere' => 'wertungsportal_cachezeit_spieler',
+			'Vereinsliste'         => 'wertungsportal_cachezeit_vereine',
+			'Vereinsname'          => 'wertungsportal_cachezeit_vereine',
+			'Verbandsliste'        => 'wertungsportal_cachezeit_vereine',
+			'Verbaende'            => 'wertungsportal_cachezeit_verbaende',
+			'Turnierliste'         => 'wertungsportal_cachezeit_turniersuche',
+			'Turnierinfo'          => 'wertungsportal_cachezeit_turniersuche',
+			'Turnierauswertung'    => 'wertungsportal_cachezeit_turnierdaten',
+			'Turnierergebnisse'    => 'wertungsportal_cachezeit_turnierdaten',
+			'Spielberichtsbogen'   => 'wertungsportal_cachezeit_turnierdaten',
+		);
+	}
+
+	/**
+	 * Liefert die Cachezeit einer API-Funktion in Sekunden.
+	 * Ohne Einstellung gelten 24 Stunden (bisheriges Verhalten);
+	 * der Wert 0 schaltet den Cache für diese Funktion ab.
+	 *
+	 * @param       String $funktion
+	 * @return      Integer Sekunden
+	 */
+	public static function cachezeit($funktion)
+	{
+		$gruppen = self::cacheGruppen();
+		$feld = isset($gruppen[$funktion]) ? $gruppen[$funktion] : '';
+
+		// Nicht zugeordnete Funktionen behalten die bisherigen 24 Stunden
+		if($feld == '' || !isset($GLOBALS['TL_CONFIG'][$feld])) return 3600 * 24;
+
+		// Leere Einstellung = Standard, sonst die eingestellten Stunden
+		$stunden = $GLOBALS['TL_CONFIG'][$feld];
+		if($stunden === '' || $stunden === null) return 3600 * 24;
+
+		return (int) $stunden * 3600;
+	}
+
+	/**
+	 * Liefert den Verzeichnispfad eines Cache-Speichers (ein Verzeichnis je
+	 * API-Funktion, darin eine Datei je Cache-Eintrag)
+	 *
+	 * @param       String $funktion
+	 * @return      String Pfad mit abschließendem Trennzeichen
+	 */
+	protected static function cachePfad($funktion)
+	{
+		$cache = new \Schachbulle\ContaoHelperBundle\Classes\Cache(array('name' => 'x', 'path' => 'wp_'.$funktion, 'extension' => '.cache'));
+
+		return $cache->getCachePath();
+	}
+
+	/**
 	 * PurgeJob-Funktion:
 	 * Berechnet die Cache-Größe für die Anzeige in der Systemwartung
 	 */
@@ -634,10 +704,12 @@ class API
 		$string = '</label>';
 		foreach(self::cacheSpeicher() as $item)
 		{
-			$cache = new \Schachbulle\ContaoHelperBundle\Classes\Cache(array('name' => 'wp_'.$item, 'extension' => '.cache'));
-			$anzahl = count($cache->retrieveAll()); // Anzahl der Cache-Einträge
+			// Je Eintrag eine Datei — die Dateien des Verzeichnisses zählen
+			$dateien = glob(self::cachePfad($item).'*.cache');
+			$anzahl = is_array($dateien) ? count($dateien) : 0;
 			$text = ($anzahl == 1) ? 'Eintrag' : 'Einträge';
-			$string .= '<br><span style="font-weight:normal"><span style="color:black">'.$item.':</span> '.$anzahl.' '.$text.'</span>';
+			$stunden = (int) (self::cachezeit($item) / 3600);
+			$string .= '<br><span style="font-weight:normal"><span style="color:black">'.$item.':</span> '.$anzahl.' '.$text.' ('.($stunden > 0 ? $stunden.' h' : 'kein Cache').')</span>';
 		}
 		$string .= '<label>';
 
@@ -654,8 +726,20 @@ class API
 	{
 		foreach(self::cacheSpeicher() as $item)
 		{
+			// Alle Einträge des Funktionsverzeichnisses entfernen
+			$dateien = glob(self::cachePfad($item).'*.cache');
+
+			if(is_array($dateien))
+			{
+				foreach($dateien as $datei)
+				{
+					@unlink($datei);
+				}
+			}
+
+			// Altbestand aus der Zeit der Sammeldateien mit aufräumen
 			$cache = new \Schachbulle\ContaoHelperBundle\Classes\Cache(array('name' => 'wp_'.$item, 'extension' => '.cache'));
-			$cache->eraseAll(); // Cache löschen
+			$cache->eraseAll();
 		}
 
 		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message('Wertungsportal-Cache geleert', 'wertungsportal.log');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Schachbulle\ContaoWertungsportalBundle\Models;
 
+use Contao\Database;
 use Contao\Model;
 use Contao\Model\Collection;
 
@@ -57,13 +58,20 @@ class WertungsportalPersonsUpgradesModel extends Model
     /**
      * Gleicht die DWZ-Hochstufungen einer Person mit dem API-Array
      * "upgrades" der Abfrage /dwz/persons/{id}/history ab. Vorhandene
-     * Einträge (per Stichtag und Name) werden aktualisiert, neue angelegt
-     * und nicht mehr gemeldete gelöscht.
+     * Einträge (per Stichtag und Name) werden aktualisiert, neue angelegt.
+     * Es wird nichts gelöscht.
+     *
+     * Läuft als Bulk (eine Bestandsabfrage, Batch-INSERT) statt mit einer
+     * Einzelabfrage je Hochstufung.
      */
     public static function syncForPerson(int $pid, array $upgrades): void
     {
-        $arrKeys = [];
-        $t = static::$strTable;
+        if (!$upgrades) {
+            return;
+        }
+
+        $arrFields = ['ratingOld', 'indexOld', 'ratingNew', 'indexNew'];
+        $arrReported = [];
 
         foreach ($upgrades as $upgrade) {
             $referenceDate = (string) ($upgrade['referenceDate'] ?? '');
@@ -73,43 +81,67 @@ class WertungsportalPersonsUpgradesModel extends Model
                 continue;
             }
 
-            $arrKeys[] = $referenceDate . '|' . $name;
+            $arrSet = [];
 
-            $model = static::findOneBy(["$t.pid=?", "$t.referenceDate=?", "$t.name=?"], [$pid, $referenceDate, $name]);
-            $isNew = null === $model;
-
-            if ($isNew) {
-                $model = new static();
-                $model->pid = $pid;
-                $model->referenceDate = $referenceDate;
-                $model->name = $name;
-                // Nur beim Anlegen setzen, damit eine manuell deaktivierte
-                // Hochstufung beim Sync nicht wieder veröffentlicht wird
-                $model->published = '1';
-            }
-
-            $set = [];
-
-            foreach (['ratingOld', 'indexOld', 'ratingNew', 'indexNew'] as $field) {
+            foreach ($arrFields as $field) {
                 if (\array_key_exists($field, $upgrade)) {
-                    $set[$field] = (int) $upgrade[$field];
+                    $arrSet[$field] = (int) $upgrade[$field];
                 }
             }
 
-            if (static::applyApiFields($model, $set) || $isNew) {
-                $model->tstamp = time();
-                $model->save();
+            $arrReported[$referenceDate . '|' . $name] = ['referenceDate' => $referenceDate, 'name' => $name, 'set' => $arrSet];
+        }
+
+        if (!$arrReported) {
+            return;
+        }
+
+        $objDatabase = Database::getInstance();
+        $intTime = time();
+
+        // Bestand der Person in einer Abfrage laden
+        $arrExisting = [];
+        $objRows = $objDatabase->prepare('SELECT id, referenceDate, name, ' . implode(', ', $arrFields) . ' FROM ' . static::$strTable . ' WHERE pid=?')
+                               ->execute($pid);
+
+        while ($objRows->next()) {
+            $arrExisting[$objRows->referenceDate . '|' . $objRows->name] = $objRows->row();
+        }
+
+        $arrInsert = [];
+
+        foreach ($arrReported as $strKey => $arrItem) {
+            if (!isset($arrExisting[$strKey])) {
+                $arrRow = [$pid, $intTime, $arrItem['referenceDate'], $arrItem['name'], '1'];
+
+                foreach ($arrFields as $field) {
+                    $arrRow[] = (int) ($arrItem['set'][$field] ?? 0);
+                }
+
+                $arrInsert[] = $arrRow;
+                continue;
+            }
+
+            $arrDiff = static::diffApiFields($arrExisting[$strKey], $arrItem['set']);
+
+            if ($arrDiff) {
+                $arrDiff['tstamp'] = $intTime;
+                $objDatabase->prepare('UPDATE ' . static::$strTable . ' %s WHERE id=?')
+                            ->set($arrDiff)
+                            ->execute($arrExisting[$strKey]['id']);
             }
         }
 
-        // Nicht mehr gemeldete Hochstufungen entfernen
-        $collection = static::findBy('pid', $pid);
+        // Neue Hochstufungen blockweise anlegen
+        if ($arrInsert) {
+            $strColumns = 'pid, tstamp, referenceDate, name, published, ' . implode(', ', $arrFields);
+            $strTuple = '(' . implode(', ', array_fill(0, \count($arrInsert[0]), '?')) . ')';
 
-        if (null !== $collection) {
-            foreach ($collection as $item) {
-                if (!\in_array($item->referenceDate . '|' . $item->name, $arrKeys, true)) {
-                    $item->delete();
-                }
+            foreach (array_chunk($arrInsert, 100) as $arrChunk) {
+                $strValues = implode(', ', array_fill(0, \count($arrChunk), $strTuple));
+
+                $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (' . $strColumns . ') VALUES ' . $strValues)
+                            ->execute(array_merge(...$arrChunk));
             }
         }
     }

@@ -13,7 +13,7 @@
         "php": "^7.0 || ^8.0",
         "contao/core-bundle": "^4",
         "codefog/contao-haste": "*",
-        "schachbulle/contao-helper-bundle": "*",
+        "schachbulle/contao-helper-bundle": "^1.8.8",
         "schachbulle/contao-flaggen-bundle": "*",
         "menatwork/contao-multicolumnwizard-bundle": "^3.6"
     },

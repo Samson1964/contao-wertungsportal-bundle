@@ -30,6 +30,25 @@ $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_crontoken'] = array('Cron-Tok
 
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cache'] = array('Cache aktivieren','Cache für das Wertungsportal aktivieren');
 
+// Auswahlwerte der Cachezeiten (Schlüssel = Stunden)
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cachezeiten'] = array
+(
+	'0'   => 'Kein Cache',
+	'1'   => '1 Stunde',
+	'6'   => '6 Stunden',
+	'12'  => '12 Stunden',
+	'24'  => '1 Tag',
+	'48'  => '2 Tage',
+	'168' => '1 Woche',
+	'720' => '30 Tage',
+);
+
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cachezeit_spieler'] = array('Cachezeit Spieler', 'Spielersuche, Karteikarte und Turnierhistorie. Ohne Auswahl gilt 1 Tag.');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cachezeit_vereine'] = array('Cachezeit Vereine', 'Vereinsliste, Vereinsname und Verbandsrangliste. Ohne Auswahl gilt 1 Tag.');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cachezeit_verbaende'] = array('Cachezeit Verbände', 'Liste aller Verbände und Vereine (ändert sich selten, 1 Woche ist üblich). Ohne Auswahl gilt 1 Tag.');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cachezeit_turniersuche'] = array('Cachezeit Turniersuche', 'Turniersuche und Turnier-Kopfdaten. Ohne Auswahl gilt 1 Tag.');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cachezeit_turnierdaten'] = array('Cachezeit Turnierdaten', 'Auswertung, Ergebnisse und Spielberichtsbögen (nach der Berechnung stabil). Ohne Auswahl gilt 1 Tag.');
+
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_playerDefaultImage'] = array('Spielerbild', 'Standardbild für Spieler');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_playerImageSize'] = array('Bildgröße', 'Größe der Spielerbilder');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_clubDefaultImage'] = array('Vereinsbild', 'Standardbild/-logo für Vereine');
