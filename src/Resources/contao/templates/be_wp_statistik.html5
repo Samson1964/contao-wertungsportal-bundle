@@ -74,6 +74,7 @@
 			</div>
 		</div>
 
+		<div class="wp-stat-scroll">
 		<table class="tl_listing wp-stat-tabelle">
 			<thead>
 				<tr>
@@ -109,6 +110,7 @@
 				</tr>
 			</tfoot>
 		</table>
+		</div>
 
 		<p class="tl_help">
 			Ein Klick auf eine Funktion zeigt deren Verlauf allein. „Aus dem Cache“ sind Aufrufe,

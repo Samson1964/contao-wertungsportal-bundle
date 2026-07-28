@@ -150,6 +150,7 @@ a.wp-stat-knopf:hover {
 	font-family				: monospace;
 	font-size				: 0.9em;
 	color					: #5c5c5c;
+	white-space				: nowrap;
 }
 
 .wp-stat-diagramm {
@@ -178,13 +179,22 @@ a.wp-stat-knopf:hover {
 	vertical-align			: -1px;
 }
 
-/* Breite Diagramme bleiben scrollbar statt die Seite zu sprengen */
+/* Breite Inhalte (Diagramm, Tabelle) scrollen in ihrem eigenen Bereich,
+   statt die Seite waagerecht zu sprengen oder sich unleserlich zu stauchen */
 .wp-stat-scroll {
 	overflow-x				: auto;
 }
 
+.wp-stat-diagramm svg {
+	min-width				: 640px;
+}
+
 .wp-stat-tabelle {
 	width					: 100%;
+	/* Ohne Mindestbreite quetscht sich die Tabelle im schmalen
+	   Backend-Fenster zusammen, statt den Scrollbereich zu nutzen —
+	   die langen Schnittstellenpfade brechen dann unleserlich um */
+	min-width				: 760px;
 	border-collapse			: collapse;
 }
 

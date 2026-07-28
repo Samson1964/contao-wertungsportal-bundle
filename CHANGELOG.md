@@ -1,5 +1,11 @@
 # Wertungsportal-Anbindung
 
+## Version 1.4.1 (2026-07-28)
+
+* Fix: Die Tabelle der Abrufstatistik ließ sich nicht waagerecht scrollen — sie stand als einzige außerhalb des Scrollbereichs, den das Diagramm schon hatte. Im schmalen Backend-Fenster quetschte sie sich stattdessen zusammen und die langen Schnittstellenpfade brachen unleserlich um. Sie liegt jetzt im selben Scrollbereich, hat eine Mindestbreite und lässt die Pfade nicht mehr umbrechen; die Seite selbst scrollt dabei nicht mit
+* Fix: Auch das Diagramm staucht sich nicht mehr auf schmalen Fenstern, sondern scrollt ab einer Mindestbreite in seinem Bereich
+* Verifiziert bei 753 px Fensterbreite: Tabelle scrollt in ihrem Bereich (Inhalt 760 px, Bereich 679 px), die Seite bleibt ohne waagerechte Scrollleiste
+
 ## Version 1.4.0 (2026-07-28)
 
 * **Add: Statistik mit verschiebbarem Zeitraum.** Neben 30 Tagen bis 1 Jahr gibt es jetzt auch **1 Tag** und **1 Woche**, und der Zeitraum lässt sich mit „◀ zurück" und „vor ▶" um jeweils seine eigene Länge verschieben (bei 1 Tag also tageweise, bei 1 Woche wochenweise, bei 30 Tagen um 30 Tage). „bis heute" springt zurück auf den aktuellen Rand; über das heutige Datum hinaus geht es nicht — dort ist die Schaltfläche gesperrt statt ins Leere zu führen
