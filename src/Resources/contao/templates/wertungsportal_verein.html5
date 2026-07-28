@@ -77,32 +77,25 @@
 
 		<?php
 			// Spaltensortierung per Klick auf die Spaltenköpfe (nochmaliger
-			// Klick dreht die Sortierrichtung um) — wie im DeWIS-Vorbild
+			// Klick dreht die Sortierrichtung um); Initialisierung und
+			// Zahlenparser in wertungsportal_sort.js
 			$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/tablesorter.css';
 			$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/jquery.tablesorter.min.js';
+			$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/wertungsportal_sort.js';
 		?>
-		<script>
-		(function($)
-		{
-			$(document).ready(function(){
-			  $("#dewisTable").tablesorter({
-			  });
-			});
-		})(jQuery);
-		</script>
 
 		<div class="table_responsiv">
-			<table id="dewisTable" class="body tablesorter">
+			<table class="body tablesorter">
 				<thead>
 					<tr class="row_0">
-						<?php if($this->rangliste): ?><th class="col_0 right-line">Pl.</th><?php endif; ?>
-						<th class="col_1 right-line">Mgl-<br>Nr.</th>
+						<?php if($this->rangliste): ?><th class="col_0 right-line" data-sort="zahl">Pl.</th><?php endif; ?>
+						<th class="col_1 right-line" data-sort="zahl">Mgl-<br>Nr.</th>
 						<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_passive_ausblenden']): ?><th class="col_2 right-line">Sta-<br>tus</th><?php endif; ?>
 						<th class="col_3 right-line">Spielername</th>
 						<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_geschlecht_ausblenden']): ?><th class="col_4 right-line">Geschl.</th><?php endif; ?>
 						<th class="col_5 right-line">Letzte<br>Ausw.</th>
-						<th class="col_6 right-line">DWZ</th>
-						<th class="col_7 right-line">Elo</th>
+						<th class="col_6 right-line" data-sort="zahl">DWZ</th>
+						<th class="col_7 right-line" data-sort="zahl">Elo</th>
 						<th class="col_8">FIDE-<br>Titel</th>
 					</tr>
 				</thead>

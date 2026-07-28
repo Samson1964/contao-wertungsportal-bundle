@@ -90,22 +90,28 @@
 			</table>
 		</div>
 
+		<?php
+			// Spaltensortierung (Initialisierung in wertungsportal_sort.js)
+			$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/tablesorter.css';
+			$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/jquery.tablesorter.min.js';
+			$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/wertungsportal_sort.js';
+		?>
 		<div class="table_responsiv">
-			<table class="body">
+			<table class="body tablesorter">
 				<thead>
 					<tr class="head">
-						<th class="">Nr.</th>
+						<th class="" data-sort="zahl">Nr.</th>
 						<th class="">Spielername</th>
-						<th class="right-line">&nbsp;</th>
+						<th class="right-line" data-sort="nein">&nbsp;</th>
 						<th class="right-line">ZPS</th>
-						<th class="right-line">DWZ alt</th>
-						<th class="right-line">Erg.</th>
-						<th class="right-line">We</th>
-						<th class="right-line">E</th>
-						<th class="right-line">Lstg.</th>
-						<th class="right-line">Niveau</th>
-						<th class="right-line">DWZ neu</th>
-						<th>DWZ ±</th>
+						<th class="right-line" data-sort="zahl">DWZ alt</th>
+						<th class="right-line" data-sort="zahl">Erg.</th>
+						<th class="right-line" data-sort="zahl">We</th>
+						<th class="right-line" data-sort="zahl">E</th>
+						<th class="right-line" data-sort="zahl">Lstg.</th>
+						<th class="right-line" data-sort="zahl">Niveau</th>
+						<th class="right-line" data-sort="zahl">DWZ neu</th>
+						<th data-sort="zahl">DWZ ±</th>
 					</tr>
 				</thead>
 				<tbody>

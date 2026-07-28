@@ -26,40 +26,20 @@
 	
 	<?php if($this->daten): ?>
 		<?php
-			$GLOBALS['TL_CSS'][] = 'bundles/contaodewis/css/tablesorter.css';
-			$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaodewis/js/jquery.tablesorter.min.js';
+			// Assets aus dem eigenen Bundle (früher contaodewis — den Pfad
+			// gibt es hier nicht, die Sortierung lief deshalb nie)
+			$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/tablesorter.css';
+			$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/jquery.tablesorter.min.js';
+			$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/wertungsportal_sort.js';
 		?>
-		<script>
-		(function($) 
-		{
-			$(document).ready(function(){
-				$.tablesorter.addParser({
-						id: 'germandate',
-						is: function(s) {
-							return false;
-						},
-						format: function(s) {
-							var a = s.split('.');
-							a[1] = a[1].replace(/^[0]+/g,"");
-							return new Date(a.reverse().join("/")).getTime();
-						},
-						type: 'numeric'
-					});
-			  $("#dewisTable").tablesorter({
-			  		headers: { 2: { sorter:'germandate' }}
-			  });
-			});
-		})(jQuery);
-
-		</script>
-		<table id="dewisTable" class="body tablesorter">
+		<table class="body tablesorter">
 			<thead>
 				<tr>
 					<th class="right-line">Code</th>
 					<th class="right-line">Turnier</th>
 					<th class="right-line">Region</th>
-					<th class="right-line">Turnier-<br>ende</th>
-					<th class="right-line">Spieler</th>
+					<th class="right-line" data-sort="datum">Turnier-<br>ende</th>
+					<th class="right-line" data-sort="zahl">Spieler</th>
 					<th>Auswerter</th>
 				</tr>
 			</thead>

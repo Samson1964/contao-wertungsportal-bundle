@@ -1,5 +1,16 @@
 # Wertungsportal-Anbindung
 
+## Version 1.1.2 (2026-07-27)
+
+* Change: Kreuztabelle — die Schwarz-Partien (kreuz-s) stehen jetzt auf hellgrauem Grund (#D9D9D9) mit schwarzer Schrift statt dunkelgrau mit heller Schrift; der Rahmen um die Ergebnisse ist bei beiden Farben entfernt
+* Add: Sortierbare Spalten zeigen ihre Sortierbarkeit an — neben dem Spaltentitel erscheint ein Doppelpfeil, sobald die Maus über der Kopfzeile steht (die Spalte unter dem Zeiger deutlicher, die übrigen dezent). Die aktive Sortierspalte zeigt dauerhaft ihre Richtung als ▲ bzw. ▼. Auf Touchgeräten, die kein Hover kennen, sind die Pfeile dauerhaft sichtbar
+* Fix: Die Sortierpfeile waren bisher überhaupt nicht zu sehen — die mitgelieferte tablesorter-CSS lud drei GIF-Dateien, die es in diesem Bundle nie gab. Sie sind jetzt durch reine CSS-Zeichen ersetzt (keine Bilddateien mehr nötig)
+* Add: Spaltensortierung auch in der Trefferliste der Turniersuche und in der Turnierauswertung
+* Fix: Die Turniersuche band tablesorter aus dem alten contao-dewis-bundle ein (Pfad existiert hier nicht) und wies den Datumsparser der Spalte „Region" statt „Turnierende" zu — die Sortierung lief dort nie
+* Change: Die Sortierung ist in eine gemeinsame Datei ausgelagert (public/js/wertungsportal_sort.js) und wird pro Spalte über `data-sort` im Spaltenkopf gesteuert. Neue Parser: „zahl" liest die erste Zahl aus dem Zellentext (DWZ „1234 - 45" → 1234, Ergebnis „3,5 / 7" → 3,5, Differenz „+12"/„−8") und „datum" für TT.MM.JJJJ. Bisher wurden DWZ-, Ergebnis- und Datumsspalten als Text sortiert und damit falsch geordnet
+* Fix: Mitgliedschaften mit der Platzhalter-Nummer 0000 werden ausgeblendet, wenn für denselben Verein die endgültige Mitgliedsnummer vorliegt (nu liefert die beim Anlegen vergebene 0000 weiterhin mit, der Spieler erschien dadurch doppelt beim selben Verein). Der Filter greift in der Karteikarte und beim Sync; ist die 0 die einzige Angabe, bleibt der Eintrag erhalten. Die Operation „Dubletten bereinigen" räumt solche Platzhalter zusätzlich aus dem vorhandenen Bestand
+* Verifiziert: Sortierung im Browser mit echten Assets (DWZ 986→2050 numerisch statt alphabetisch, Ergebnis 0,5→6 mit Dezimalkomma, Datum chronologisch, Namen mit Umlauten korrekt, Umkehrung beim zweiten Klick, Symbolspalte bleibt gesperrt); 0000-Filter mit 6 Tests gegen echtes MySQL
+
 ## Version 1.1.1 (2026-07-27)
 
 * **Fix (Performance): Die lokale Fallback-Spielersuche aus 1.0.7 brauchte am Livesystem 5,4 Sekunden je erfolgloser Suche.** Am Symfony-Profiler gemessen: Eine Suche ohne Treffer („Zaunbrecher") kostete 11,3 s Gesamtzeit, davon 7,1 s Datenbankzeit — praktisch vollständig in dieser einen Abfrage. Ursache waren zwei nicht indexierbare Konstruktionen: die Suche mit führendem Platzhalter (LIKE '%x%') und die Prüfung der laufenden Mitgliedschaft als EXISTS-Unterabfrage in derselben WHERE-Klausel, die für JEDE Zeile der Personentabelle ausgewertet wurde. Behoben durch: Suche am Namensanfang (LIKE 'x%'), Mitgliedschaftsprüfung nachgelagert nur für die Kandidaten, Laden nur der benötigten Spalten (statt aller ~40) und einen Mindestumfang von drei Zeichen im Nachnamen. Die Suche greift jetzt nur noch, wenn ein Nachname eingegeben wurde — eine Suche allein über den Vornamen könnte den Namensindex nicht nutzen

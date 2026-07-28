@@ -1,28 +1,73 @@
-/* tables */
-table.tablesorter thead tr th, table.tablesorter tfoot tr th {
-	padding: 4px;
+/* Sortierbare Tabellen (tablesorter)
+   Die Sortierpfeile sind reine CSS-Zeichen — die frühere Fassung lud dafür
+   drei GIF-Dateien, die es in diesem Bundle nicht gibt (die Pfeile blieben
+   dadurch unsichtbar). */
+
+table.tablesorter thead tr th,
+table.tablesorter tfoot tr th {
+	padding					: 4px;
 }
-table.tablesorter thead tr .header {
-	background-image: url(bg.gif);
-	background-repeat: no-repeat;
-	background-position: center right;
-	cursor: pointer;
-}
+
 table.tablesorter tbody td {
-	color: #3D3D3D;
-	padding: 4px;
-	background-color: #FFF;
-	vertical-align: top;
+	color					: #3D3D3D;
+	padding					: 4px;
+	background-color		: #FFF;
+	vertical-align			: top;
 }
+
 table.tablesorter tbody tr.odd td {
-	background-color:#F0F0F6;
+	background-color		: #F0F0F6;
 }
-table.tablesorter thead tr .headerSortUp {
-	background-image: url(asc.gif);
+
+/* Sortierbare Spaltenköpfe: Der Doppelpfeil zeigt, dass die Spalte sortiert
+   werden kann. Er erscheint erst, wenn die Maus über der Kopfzeile steht,
+   damit die Tabelle im Ruhezustand aufgeräumt bleibt. */
+table.tablesorter thead tr th.header {
+	cursor					: pointer;
+	position				: relative;
+	padding-right			: 18px;
+	white-space				: nowrap;
 }
-table.tablesorter thead tr .headerSortDown {
-	background-image: url(desc.gif);
+
+table.tablesorter thead tr th.header::after {
+	content					: "\21C5"; /* Pfeile hoch/runter */
+	position				: absolute;
+	right					: 5px;
+	font-size				: 0.85em;
+	font-weight				: normal;
+	line-height				: inherit;
+	opacity					: 0;
+	transition				: opacity 0.15s ease-in-out;
 }
-table.tablesorter thead tr .headerSortDown, table.tablesorter thead tr .headerSortUp {
-	background-color: #8dbdd8;
+
+/* Maus über der Kopfzeile: Pfeile aller sortierbaren Spalten einblenden */
+table.tablesorter thead:hover tr th.header::after {
+	opacity					: 0.45;
+}
+
+table.tablesorter thead tr th.header:hover::after {
+	opacity					: 1;
+}
+
+/* Aktive Sortierspalte: Richtung dauerhaft anzeigen */
+table.tablesorter thead tr th.headerSortUp::after {
+	content					: "\25B2"; /* Dreieck nach oben = aufsteigend */
+	opacity					: 1;
+}
+
+table.tablesorter thead tr th.headerSortDown::after {
+	content					: "\25BC"; /* Dreieck nach unten = absteigend */
+	opacity					: 1;
+}
+
+table.tablesorter thead tr th.headerSortUp,
+table.tablesorter thead tr th.headerSortDown {
+	background-color		: #8dbdd8;
+}
+
+/* Auf Touchgeräten gibt es kein Hover — dort dauerhaft anzeigen */
+@media (hover: none) {
+	table.tablesorter thead tr th.header::after {
+		opacity				: 0.45;
+	}
 }

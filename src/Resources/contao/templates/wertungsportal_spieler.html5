@@ -140,34 +140,27 @@
 		</div>
 
 		<?php
-			// tablesorter kommt seit 1.0.7 aus diesem Bundle (vorher contaodewis)
+			// tablesorter kommt seit 1.0.7 aus diesem Bundle (vorher contaodewis);
+			// Initialisierung und Zahlenparser in wertungsportal_sort.js
 			$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/tablesorter.css';
 			$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/jquery.tablesorter.min.js';
+			$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/wertungsportal_sort.js';
 		?>
-		<script>
-		(function($) 
-		{
-			$(document).ready(function(){
-			  $("#dewisTable").tablesorter({
-			  });
-			});
-		})(jQuery);
-		</script>
-		
+
 		<div class="table_responsiv">
-			<table id="dewisTable" class="body tablesorter">
+			<table class="body tablesorter">
 				<thead>
 					<tr class="row_0">
-						<th class="col_0 right-line">Nr.</th>
-						<th class="col_1 right-line">Jahr</th>
+						<th class="col_0 right-line" data-sort="zahl">Nr.</th>
+						<th class="col_1 right-line" data-sort="zahl">Jahr</th>
 						<th class="col_2 right-line">Turnier</th>
-						<th class="col_3 right-line">Pkt.</th>
-						<th class="col_4 right-line">Par.</th>
-						<th class="col_5 right-line">We</th>
-						<th class="col_6 right-line">E</th>
-						<th class="col_7 right-line">Gegn.</th>
-						<th class="col_8 right-line">Lstg.</th>
-						<th class="col_9">Akt. DWZ</th>
+						<th class="col_3 right-line" data-sort="zahl">Pkt.</th>
+						<th class="col_4 right-line" data-sort="zahl">Par.</th>
+						<th class="col_5 right-line" data-sort="zahl">We</th>
+						<th class="col_6 right-line" data-sort="zahl">E</th>
+						<th class="col_7 right-line" data-sort="zahl">Gegn.</th>
+						<th class="col_8 right-line" data-sort="zahl">Lstg.</th>
+						<th class="col_9" data-sort="zahl">Akt. DWZ</th>
 					</tr>
 				</thead>
 				<tbody>

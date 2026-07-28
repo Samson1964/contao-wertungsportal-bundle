@@ -314,7 +314,8 @@ class AltdatenImport extends \Backend
 		$zeilen = array
 		(
 			'Geprüfte Mitgliedschaften (nach Zusammenfassung): '.$ergebnis['geprueft'],
-			'Entfernte Dubletten: '.$ergebnis['entfernt'],
+			'Entfernte Datensätze insgesamt: '.$ergebnis['entfernt'],
+			'&mdash; davon Platzhalter mit Mitgliedsnummer 0: '.$ergebnis['nullnummern'],
 			'Behaltene Datensätze, die aus Dubletten ergänzt wurden: '.$ergebnis['ergaenzt'],
 		);
 

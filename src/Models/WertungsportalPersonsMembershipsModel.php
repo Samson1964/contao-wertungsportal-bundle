@@ -72,6 +72,47 @@ class WertungsportalPersonsMembershipsModel extends Model
     public const CSV_FIELDS = ['clubName', 'licenceState', 'regionName', 'federationName', 'spielgenehmigungVon', 'spielgenehmigungBis', 'antragstyp', 'antragszeitpunkt', 'antragsteller'];
 
     /**
+     * Entfernt Platzhalter-Mitgliedschaften mit der Mitgliedsnummer 0 aus
+     * einer API-Antwort: Beim Anlegen einer Person vergibt nu zunächst die
+     * Nummer 0000 und liefert diesen Eintrag auch dann noch mit, wenn die
+     * endgültige Mitgliedsnummer längst vergeben ist — die Person erscheint
+     * dadurch doppelt beim selben Verein.
+     *
+     * Entfernt wird nur, wenn für DENSELBEN Verein eine Mitgliedschaft mit
+     * einer Nummer größer 0 vorliegt. Ist die 0 die einzige Angabe, bleibt
+     * der Eintrag erhalten (sonst verschwände die Mitgliedschaft ganz).
+     *
+     * @param array $arrMemberships memberships-Array der API
+     */
+    public static function filtereNullnummern(array $arrMemberships): array
+    {
+        // Vereine mit echter Mitgliedsnummer vormerken
+        $arrEcht = [];
+
+        foreach ($arrMemberships as $arrMembership) {
+            if (\is_array($arrMembership) && !empty($arrMembership['vkz']) && (int) ($arrMembership['memberNo'] ?? 0) > 0) {
+                $arrEcht[(string) $arrMembership['vkz']] = true;
+            }
+        }
+
+        if (!$arrEcht) {
+            return $arrMemberships;
+        }
+
+        $arrReturn = [];
+
+        foreach ($arrMemberships as $arrMembership) {
+            if (\is_array($arrMembership) && (int) ($arrMembership['memberNo'] ?? 0) === 0 && isset($arrEcht[(string) ($arrMembership['vkz'] ?? '')])) {
+                continue;
+            }
+
+            $arrReturn[] = $arrMembership;
+        }
+
+        return $arrReturn;
+    }
+
+    /**
      * Identität einer Mitgliedschaft: VKZ + Mitgliedsnummer + Lizenzstatus +
      * Beginn der Spielgenehmigung. Eine Person kann im SELBEN Verein mehrere
      * Mitgliedschaften mit derselben Mitgliedsnummer haben (aufeinander
@@ -262,6 +303,10 @@ class WertungsportalPersonsMembershipsModel extends Model
                 continue;
             }
 
+            // Platzhalter mit der Mitgliedsnummer 0 gar nicht erst übernehmen,
+            // wenn für denselben Verein die endgültige Nummer vorliegt
+            $arrMemberships = static::filtereNullnummern($arrMemberships);
+
             foreach ($arrMemberships as $arrMembership) {
                 if (!\is_array($arrMembership) || empty($arrMembership['vkz'])) {
                     continue;
@@ -375,11 +420,15 @@ class WertungsportalPersonsMembershipsModel extends Model
      *
      * Nötig für Bestände, die vor dem Bugfix 1.0.9 aufgebaut wurden.
      *
-     * @return array ['geprueft' => x, 'entfernt' => y, 'ergaenzt' => z]
+     * Zusätzlich werden Platzhalter-Mitgliedschaften mit der Nummer 0
+     * entfernt, sofern dieselbe Person beim selben Verein eine echte
+     * Mitgliedsnummer hat (siehe filtereNullnummern()).
+     *
+     * @return array ['geprueft' => x, 'entfernt' => y, 'ergaenzt' => z, 'nullnummern' => n]
      */
     public static function entdopple(): array
     {
-        $arrErgebnis = ['geprueft' => 0, 'entfernt' => 0, 'ergaenzt' => 0];
+        $arrErgebnis = ['geprueft' => 0, 'entfernt' => 0, 'ergaenzt' => 0, 'nullnummern' => 0];
         $objDatabase = Database::getInstance();
         $strFields = implode(', ', self::CSV_FIELDS);
 
@@ -427,13 +476,24 @@ class WertungsportalPersonsMembershipsModel extends Model
             }
         }
 
-        foreach (array_chunk($arrDelete, 500) as $arrChunk) {
+        // Platzhalter mit Mitgliedsnummer 0 entfernen, wo dieselbe Person beim
+        // selben Verein eine echte Mitgliedsnummer hat
+        $objNull = $objDatabase->execute("SELECT n.id FROM " . static::$strTable . " n
+            WHERE (n.memberNo = '' OR n.memberNo + 0 = 0)
+              AND EXISTS (SELECT e.id FROM " . static::$strTable . " e WHERE e.pid = n.pid AND e.vkz = n.vkz AND e.memberNo + 0 > 0)");
+
+        while ($objNull->next()) {
+            $arrDelete[] = (int) $objNull->id;
+            $arrErgebnis['nullnummern']++;
+        }
+
+        foreach (array_chunk(array_unique($arrDelete), 500) as $arrChunk) {
             $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
             $objDatabase->prepare('DELETE FROM ' . static::$strTable . ' WHERE id IN (' . $strPlaceholders . ')')
                         ->execute($arrChunk);
         }
 
-        $arrErgebnis['entfernt'] = \count($arrDelete);
+        $arrErgebnis['entfernt'] = \count(array_unique($arrDelete));
 
         return $arrErgebnis;
     }

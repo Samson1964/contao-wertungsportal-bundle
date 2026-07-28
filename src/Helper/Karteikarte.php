@@ -89,7 +89,11 @@ class Karteikarte
 		$sortiert = array();
 		if(!empty($body['memberships']))
 		{
-			foreach($body['memberships'] as $mitglied)
+			// Platzhalter-Mitgliedschaften mit der Nummer 0000 ausblenden,
+			// wenn für denselben Verein die endgültige Nummer geliefert wird
+			$mitgliedschaften = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalPersonsMembershipsModel::filtereNullnummern($body['memberships']);
+
+			foreach($mitgliedschaften as $mitglied)
 			{
 				$status = substr($mitglied['licenceState'], 0, 1);
 				$zps_nr = sprintf("%s-%04d", $mitglied['vkz'], $mitglied['memberNo']);
