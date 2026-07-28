@@ -1,5 +1,17 @@
 # Wertungsportal-Anbindung
 
+## Version 1.1.3 (2026-07-27)
+
+* **Fix: Die Sortierung funktionierte im Livesystem auf keiner Seite** — auch dort nicht, wo sie eingebaut war. Ursache (am Livesystem nachgewiesen): Contao bringt unter assets/tablesorter eine eigene tablesorter-Fassung mit, die das Layout NACH den Bundle-Dateien lädt und dabei jQuery.tablesorter samt der beim Laden registrierten Parser überschreibt. Die Initialisierung lief dadurch ins Leere: keine Sortierung, keine Spaltenköpfe, keine Pfeile. Parser-Registrierung und Initialisierung laufen jetzt vollständig in $(document).ready() und sind damit unabhängig von der Ladereihenfolge; scheitert eine Tabelle trotzdem, bleibt die Seite dank Fehlerabfangung bedienbar
+* **Fix: Die Trefferliste der Turniersuche hatte keine Sortierung** — die Änderung aus 1.1.2 lag in wertungsportal_sub_turniersuche.html5, das gar nicht gerendert wird: Turnier.php baut die Trefferliste über das eigenständige Template wertungsportal_turniersuche.html5. Die Sortierung sitzt jetzt dort; die ungenutzte Datei ist als solche gekennzeichnet
+* Fix: Die aktive Sortierspalte zeigte ihren Richtungspfeil nicht an (die Deckkraft blieb auf 0, weil der gleichzeitige Wechsel des Pfeilzeichens die Einblendung störte) — die Regeln nennen jetzt beide Klassen und kommen ohne Überblendung aus
+* Add: Spaltensortierung zusätzlich in der Verbandsrangliste (beide Templates) und in den Turnier-Trefferlisten des Turnier-Templates. In der Verbandsrangliste lud die Tabelle die Sortierdateien nie, obwohl sie die Klasse dafür trug
+* Fix: Die Verbandsrangliste ordnete ihre Sortierparser über feste Spaltennummern zu (2, 3, 5). Die stimmten nur, solange Geschlecht und Status eingeblendet waren — sonst landeten sie auf den falschen Spalten. Die Zuordnung läuft jetzt über data-sort am Spaltenkopf und ist damit unabhängig von ein- oder ausgeblendeten Spalten
+* Fix: Das Turnier-Template lud die Sortierdateien aus dem alten contao-dewis-bundle (Pfad existiert hier nicht); jetzt aus dem eigenen Bundle
+* Add: Zwei weitere Sortierparser — „woche" für die letzte Auswertung als Kalenderwoche (WW/JJJJ, sortiert chronologisch statt alphabetisch) und „titel" für FIDE-Titel nach Wertigkeit (GM vor IM vor WGM …)
+* **Fix: Die Platzhalter-Mitgliedsnummer 0000 erschien weiterhin in Listen** (Vereinsliste, Spielersuche, Verbandsrangliste), weil der Filter aus 1.1.2 nur in der Karteikarte und beim Sync griff. Er läuft jetzt zentral in API::autoQuery und erfasst alle Antwortformen der Schnittstelle (Listen, Karteikarte, Turnierhistorie) — auch bei Cache-Treffern, also ohne Warten auf den Cachelauf. Damit zeigen auch Mitgliedsnummer und Status in den Listen die echte Mitgliedschaft
+* Verifiziert: Sortierung im Browser gegen eine nachgeladene fremde tablesorter-Fassung (Kalenderwoche 05/2024 → 16/2026 chronologisch, FIDE-Titel WIM → GM nach Wertigkeit, DWZ 986 → 2050 numerisch, Datum chronologisch, Ergebnis mit Dezimalkomma, Pfeile ⇅ im Ruhezustand unsichtbar und ▲/▼ auf der aktiven Spalte); Mitgliedsnummer-Filter mit 10 Tests über alle Antwortformen
+
 ## Version 1.1.2 (2026-07-27)
 
 * Change: Kreuztabelle — die Schwarz-Partien (kreuz-s) stehen jetzt auf hellgrauem Grund (#D9D9D9) mit schwarzer Schrift statt dunkelgrau mit heller Schrift; der Rahmen um die Ergebnisse ist bei beiden Farben entfernt

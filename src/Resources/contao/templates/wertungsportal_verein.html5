@@ -93,7 +93,7 @@
 						<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_passive_ausblenden']): ?><th class="col_2 right-line">Sta-<br>tus</th><?php endif; ?>
 						<th class="col_3 right-line">Spielername</th>
 						<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_geschlecht_ausblenden']): ?><th class="col_4 right-line">Geschl.</th><?php endif; ?>
-						<th class="col_5 right-line">Letzte<br>Ausw.</th>
+						<th class="col_5 right-line" data-sort="woche">Letzte<br>Ausw.</th>
 						<th class="col_6 right-line" data-sort="zahl">DWZ</th>
 						<th class="col_7 right-line" data-sort="zahl">Elo</th>
 						<th class="col_8">FIDE-<br>Titel</th>

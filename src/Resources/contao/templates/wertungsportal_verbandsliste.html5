@@ -20,6 +20,11 @@
 	$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/chosen.css';
 	$GLOBALS['TL_CSS'][] = 'bundles/flag-icon-css/css/flag-icon.min.css|static';
 	$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/chosen.jquery.min.js';
+	// Spaltensortierung der Rangliste (die Tabelle trug die Klasse tablesorter
+	// schon, die zugehörigen Dateien wurden hier aber nie geladen)
+	$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/tablesorter.css';
+	$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/jquery.tablesorter.min.js';
+	$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/wertungsportal_sort.js';
 ?>
 <script>
 (function($)
@@ -55,16 +60,16 @@
 		<?php endif; ?>
 
 		<div class="table_responsiv">
-			<table id="dewisTable" class="body tablesorter">
+			<table class="body tablesorter">
 				<thead>
 					<tr class="row_0">
-						<th class="col_1 right-line">Pl.</th>
+						<th class="col_1 right-line" data-sort="zahl">Pl.</th>
 						<th class="col_2 right-line">Spielername</th>
 						<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_geschlecht_ausblenden']): ?><th class="col_3 right-line">Geschl.</th><?php endif; ?>
-						<th class="col_4 right-line">Letzte<br>Ausw.</th>
-						<th class="col_5 right-line">DWZ</th>
-						<th class="col_6 right-line">Elo</th>
-						<th class="col_7 right-line">FIDE-<br>Titel</th>
+						<th class="col_4 right-line" data-sort="woche">Letzte<br>Ausw.</th>
+						<th class="col_5 right-line" data-sort="zahl">DWZ</th>
+						<th class="col_6 right-line" data-sort="zahl">Elo</th>
+						<th class="col_7 right-line" data-sort="titel">FIDE-<br>Titel</th>
 						<th class="col_10 right-line">FIDE-<br>Nation</th>
 						<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_passive_ausblenden']): ?><th class="col_8 right-line">Sta-<br>tus</th><?php endif; ?>
 						<th class="col_9">Verein</th>

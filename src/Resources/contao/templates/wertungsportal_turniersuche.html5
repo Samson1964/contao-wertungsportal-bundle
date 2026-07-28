@@ -19,6 +19,10 @@
 	$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/default.css';
 	$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/chosen.css';
 	$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/chosen.jquery.min.js';
+	// Spaltensortierung der Trefferliste
+	$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/tablesorter.css';
+	$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/jquery.tablesorter.min.js';
+	$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/wertungsportal_sort.js';
 ?>
 <script>
 (function($)
@@ -74,14 +78,14 @@
 		</tbody>
 	</table>
 	
-	<table id="dewisTable" class="body tablesorter">
+	<table class="body tablesorter">
 		<thead>
 			<tr>
 				<th class="right-line">Code</th>
 				<th class="right-line">Turnier</th>
 				<th class="right-line">Region</th>
-				<th class="right-line">Turnier-<br>ende</th>
-				<th class="right-line">Spieler</th>
+				<th class="right-line" data-sort="datum">Turnier-<br>ende</th>
+				<th class="right-line" data-sort="zahl">Spieler</th>
 				<th>Auswerter</th>
 			</tr>
 		</thead>

@@ -1,3 +1,14 @@
+<?php
+/**
+ * ACHTUNG: Dieses Template wird NICHT verwendet.
+ *
+ * Turnier.php deklariert zwar $subTemplate = 'wertungsportal_sub_turniersuche',
+ * rendert die Trefferliste der Turniersuche aber über das eigenständige
+ * Template wertungsportal_turniersuche.html5 (new FrontendTemplate(...)).
+ * Änderungen hier bleiben wirkungslos — die Datei ist nur noch aus
+ * Kompatibilitätsgründen vorhanden.
+ */
+?>
 <?php if(isset($this->daten)): ?>
 	<table class="header">
 		<tbody>

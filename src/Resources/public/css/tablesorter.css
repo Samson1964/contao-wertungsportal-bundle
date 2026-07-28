@@ -37,7 +37,6 @@ table.tablesorter thead tr th.header::after {
 	font-weight				: normal;
 	line-height				: inherit;
 	opacity					: 0;
-	transition				: opacity 0.15s ease-in-out;
 }
 
 /* Maus über der Kopfzeile: Pfeile aller sortierbaren Spalten einblenden */
@@ -49,13 +48,16 @@ table.tablesorter thead tr th.header:hover::after {
 	opacity					: 1;
 }
 
-/* Aktive Sortierspalte: Richtung dauerhaft anzeigen */
-table.tablesorter thead tr th.headerSortUp::after {
+/* Aktive Sortierspalte: Richtung dauerhaft anzeigen.
+   Die Selektoren nennen beide Klassen (header UND headerSortUp/Down), damit
+   sie die Ruhe- und Hover-Regeln unabhängig von der Reihenfolge im
+   Stylesheet schlagen */
+table.tablesorter thead tr th.header.headerSortUp::after {
 	content					: "\25B2"; /* Dreieck nach oben = aufsteigend */
 	opacity					: 1;
 }
 
-table.tablesorter thead tr th.headerSortDown::after {
+table.tablesorter thead tr th.header.headerSortDown::after {
 	content					: "\25BC"; /* Dreieck nach unten = absteigend */
 	opacity					: 1;
 }

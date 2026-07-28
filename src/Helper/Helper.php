@@ -1121,6 +1121,52 @@ class Helper extends \Frontend
 
 
 	/**
+	 * Entfernt Platzhalter-Mitgliedschaften mit der Nummer 0 aus einer
+	 * kompletten API-Antwort — unabhängig davon, in welcher Form sie die
+	 * Mitgliedschaften mitliefert:
+	 *   body.data[].memberships     (Spieler-, Vereins-, Verbandsliste)
+	 *   body.memberships            (Karteikarte)
+	 *   body.person.memberships     (Turnierhistorie)
+	 *
+	 * nu vergibt beim Anlegen einer Person zunächst die Mitgliedsnummer 0000
+	 * und liefert diesen Eintrag auch dann noch mit, wenn die endgültige
+	 * Nummer längst feststeht. Ohne diesen Filter erscheint der Spieler in
+	 * jeder Ausgabe doppelt beim selben Verein bzw. mit der Nummer 0000.
+	 *
+	 * Der Filter läuft zentral in API::autoQuery() und wirkt damit auf ALLE
+	 * Ausgaben — auch bei Cache-Treffern, also ohne Warten auf den Cachelauf.
+	 *
+	 * @param  array $result   API-Antwort
+	 * @return array           Antwort mit bereinigten Mitgliedschaften
+	 */
+	public static function filterMitgliedsnummern($result)
+	{
+		if(!is_array($result) || !isset($result['body']) || !is_array($result['body'])) return $result;
+
+		$filter = function($memberships)
+		{
+			return is_array($memberships) ? \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalPersonsMembershipsModel::filtereNullnummern($memberships) : $memberships;
+		};
+
+		// Listen (data-Array)
+		if(isset($result['body']['data']) && is_array($result['body']['data']))
+		{
+			foreach($result['body']['data'] as $i => $person)
+			{
+				if(isset($person['memberships'])) $result['body']['data'][$i]['memberships'] = $filter($person['memberships']);
+			}
+		}
+
+		// Einzelne Person (Karteikarte)
+		if(isset($result['body']['memberships'])) $result['body']['memberships'] = $filter($result['body']['memberships']);
+
+		// Turnierhistorie (person-Knoten)
+		if(isset($result['body']['person']['memberships'])) $result['body']['person']['memberships'] = $filter($result['body']['person']['memberships']);
+
+		return $result;
+	}
+
+	/**
 	 * Konvertiert einen Namen für die Wertungsportal-API:
 	 * Jeder durch Leerzeichen getrennte Namensteil wird einzeln geslugt
 	 * (Umlaute u.ä.), die Leerzeichen bleiben erhalten — "von Dissen" darf

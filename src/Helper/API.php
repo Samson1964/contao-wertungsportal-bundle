@@ -70,7 +70,10 @@ class API
 			if($cache->isCached($params['cachekey']) && !isset($params['nocache']))
 			{
 				$cache_result = $cache->retrieve($params['cachekey']);
-				return $cache_result; // Abfrageergebnis aus Cache zurückgeben
+
+				// Platzhalter-Mitgliedsnummern auch bei Cache-Treffern
+				// herausfiltern (wirkt sofort statt erst nach Cache-Ablauf)
+				return \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::filterMitgliedsnummern($cache_result);
 			}
 		}
 
@@ -89,6 +92,10 @@ class API
 					$cache->store($params['cachekey'], $result, $cachetime);
 				}
 			}
+
+			// Platzhalter-Mitgliedsnummern (0000) aus allen Ausgaben entfernen
+			$result = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::filterMitgliedsnummern($result);
+
 			return $result; // Abfrageergebnis von Schnittstelle zurückgeben
 		}
 

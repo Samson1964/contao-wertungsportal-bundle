@@ -88,101 +88,28 @@
 	<?php if($this->sichtbar): ?>
 
 		<?php
+			// Spaltensortierung: Parser und Initialisierung stehen in
+			// wertungsportal_sort.js, die Spaltenbehandlung steuert data-sort.
+			// Die frühere Fassung stand hier inline und ordnete die Parser über
+			// feste Spaltennummern zu (2, 3, 5) — die stimmten nur, solange
+			// Geschlecht und Status eingeblendet waren; sonst landeten sie auf
+			// den falschen Spalten
 			$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/tablesorter.css';
 			$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/jquery.tablesorter.min.js';
+			$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/wertungsportal_sort.js';
 		?>
-		<script>
-		(function($) 
-		{
-			$(document).ready(function(){
 
-				// Parser für letzte Auswertung 
-				$.tablesorter.addParser({ 
-					id: 'letzteAuswertung', 
-					is: function(s) { 
-						// return false so this parser is not auto detected 
-						return false; 
-					}, 
-					format: function(s) { 
-						// Wert zum Sortieren 
-						return s.substr(3) + s.substr(0,2);
-					}, 
-					// set type, either numeric or text 
-					type: 'numeric' 
-				}); 
-
-				// Parser für DWZ
-				$.tablesorter.addParser({ 
-					id: 'DWZ', 
-					is: function(s) { 
-						// return false so this parser is not auto detected 
-						return false; 
-					}, 
-					format: function(s) { 
-						// Wert zum Sortieren 
-						var dwz = s.split('-');
-						dwz[1] = '000' + dwz[1].trim();
-						var temp = dwz[0].trim() + dwz[1].substr(-3);
-						return temp;
-						//alert(temp);
-					}, 
-					// set type, either numeric or text 
-					type: 'numeric' 
-				}); 
-
-				// Parser für FIDE-Titel
-				$.tablesorter.addParser({ 
-					id: 'FIDE-Titel', 
-					is: function(s) { 
-						// return false so this parser is not auto detected 
-						return false; 
-					}, 
-					format: function(s) { 
-						// Wert zum Sortieren 
-						switch(s.trim()) {
-							case 'GM': return 9; break;
-							case 'IM': return 8; break;
-							case 'WGM': return 7; break;
-							case 'FM': return 6; break;
-							case 'WIM': return 5; break;
-							case 'CM': return 4; break;
-							case 'WFM': return 3; break;
-							case 'WCM': return 2; break;
-							default: return 0; break;
-						}
-					}, 
-					// set type, either numeric or text 
-					type: 'numeric' 
-				}); 
-
-				$("#dewisTable").tablesorter({
-					headers: { 
-						2: { 
-							sorter:'letzteAuswertung' 
-						},
-						3: { 
-							sorter:'DWZ' 
-						},
-						5: { 
-							sorter:'FIDE-Titel' 
-						} 
-					} 
-				});
-			});
-		})(jQuery);
-		</script>
-		
 		<div class="table_responsiv">
-			<table id="dewisTable" class="body tablesorter">
+			<table class="body tablesorter">
 				<thead>
 					<tr class="row_0">
-						<th class="col_1 right-line">Pl.</th>
+						<th class="col_1 right-line" data-sort="zahl">Pl.</th>
 						<th class="col_2 right-line">Spielername</th>
 						<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_geschlecht_ausblenden']): ?><th class="col_3 right-line">Geschl.</th><?php endif; ?>
-						<th class="col_4 right-line">Letzte<br>Ausw.</th>
-						<th class="col_5 right-line">DWZ</th>
-						<th class="col_6 right-line">Elo</th>
-						<th class="col_7 right-line">FIDE-<br>Titel</th>
+						<th class="col_4 right-line" data-sort="woche">Letzte<br>Ausw.</th>
+						<th class="col_5 right-line" data-sort="zahl">DWZ</th>
+						<th class="col_6 right-line" data-sort="zahl">Elo</th>
+						<th class="col_7 right-line" data-sort="titel">FIDE-<br>Titel</th>
 						<th class="col_10 right-line">FIDE-<br>Nation</th>
 						<?php if(!$GLOBALS['TL_CONFIG']['wertungsportal_passive_ausblenden']): ?><th class="col_8 right-line">Sta-<br>tus</th><?php endif; ?>
 						<th class="col_9">Verein</th>
