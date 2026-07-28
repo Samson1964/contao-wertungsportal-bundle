@@ -71,6 +71,7 @@ $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['FEMALE'] = 'Weiblich';
 // Buttons
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['importPersons'] = ['CSV-Import', 'Personen aus einer Vereinsmitglieder-CSV-Datei importieren'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['importPhotos']  = ['Bilder übernehmen', 'Spielerbilder aus den DWZ-Spielern (tl_dwz_spi) übernehmen (Match über die externe Nummer)'];
+$GLOBALS['TL_LANG']['tl_wertungsportal_persons']['entdoppeln']  = ['Dubletten bereinigen', 'Doppelte Mitgliedschaften zusammenführen (gleiche VKZ, Mitgliedsnummer, Lizenzstatus und gleicher Zeitraum)'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['new']        = ['Neue Person', 'Eine neue Person anlegen'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['edit']       = ['Mitgliedschaften bearbeiten', 'Mitgliedschaften der Person ID %s bearbeiten'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['editheader']  = ['Person bearbeiten', 'Person ID %s bearbeiten'];

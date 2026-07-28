@@ -50,6 +50,8 @@ $GLOBALS['BE_MOD']['wertungsportal'] = array
 		'importPersons'  => array('Schachbulle\ContaoWertungsportalBundle\Classes\PersonenImport', 'run'),
 		// Globale Operation: Spielerbild-Übernahme aus tl_dwz_spi (key=importPhotos)
 		'importPhotos'   => array('Schachbulle\ContaoWertungsportalBundle\Classes\AltdatenImport', 'runPersonen'),
+		// Globale Operation: doppelte Mitgliedschaften bereinigen (key=entdoppeln)
+		'entdoppeln'     => array('Schachbulle\ContaoWertungsportalBundle\Classes\AltdatenImport', 'runEntdoppeln'),
 	),
 	'wp-tournaments'    => array
 	(

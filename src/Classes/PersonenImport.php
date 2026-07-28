@@ -205,14 +205,19 @@ class PersonenImport extends \Backend
 				$arrPersonen[$person['nuLigaPersonId']] = $person['felder'];
 			}
 
-			// Mitgliedschaft der Zeile einsammeln (Schlüssel VKZ + Mitgliedsnummer).
-			// Vereinsmitglieder: erste Zeile gewinnt (Zeilen sind identisch);
-			// Spielgenehmigungen: LETZTE Zeile gewinnt — bei mehreren Anträgen
-			// zur selben Genehmigungsnummer ist die spätere Zeile der neuere Stand
+			// Mitgliedschaft der Zeile einsammeln. Der Schlüssel enthält neben
+			// VKZ und Mitgliedsnummer auch Lizenzstatus und Beginn der
+			// Spielgenehmigung: Eine Person kann im selben Verein unter
+			// derselben Mitgliedsnummer mehrere aufeinander folgende
+			// Mitgliedschaften haben (aktiv/passiv, verschiedene Zeiträume).
+			// Mit dem früheren Schlüssel VKZ|Mitgliedsnummer fielen diese
+			// Zeiträume auf einen einzigen Eintrag zusammen — die Historie
+			// ging beim Import der Spielgenehmigungen verloren.
+			// Bei echten Dubletten (alles gleich) gewinnt die letzte Zeile.
 			if($person['mitgliedschaft'] !== null)
 			{
 				$m = $person['mitgliedschaft'];
-				$key = $m['vkz'].'|'.$m['memberNo'];
+				$key = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalPersonsMembershipsModel::schluessel($m['vkz'], $m['memberNo'], isset($m['felder']['licenceState']) ? $m['felder']['licenceState'] : '', isset($m['felder']['spielgenehmigungVon']) ? $m['felder']['spielgenehmigungVon'] : '');
 
 				if($genehmigungen || !isset($arrMitgliedschaften[$key]))
 				{

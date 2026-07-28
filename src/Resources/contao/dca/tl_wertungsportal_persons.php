@@ -60,6 +60,11 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_persons'] = [
                 'class'      => 'header_theme_import',
                 'attributes' => 'onclick="Backend.getScrollOffset()"',
             ],
+            'entdoppeln' => [
+                'href'       => 'key=entdoppeln',
+                'class'      => 'header_theme_import',
+                'attributes' => 'onclick="Backend.getScrollOffset()"',
+            ],
             'all' => [
                 'href'       => 'act=select',
                 'class'      => 'header_edit_all',

@@ -54,7 +54,10 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_persons_memberships'] = [
                     $zeitraum = ', ' . ($row['spielgenehmigungVon'] ?: '?') . ' &ndash; ' . ($row['spielgenehmigungBis'] ?: 'laufend');
                 }
 
-                return '<div class="tl_content_left">' . $row['clubName'] . ' <span class="wp-meta">(' . $row['vkz'] . ($licence ? ', ' . $licence : '') . $zeitraum . ')</span></div>';
+                // VKZ mit Mitgliedsnummer ausgeben (z. B. 30052-1083)
+                $nummer = $row['vkz'] . ('' !== (string) $row['memberNo'] ? '-' . $row['memberNo'] : '');
+
+                return '<div class="tl_content_left">' . $row['clubName'] . ' <span class="wp-meta">(' . $nummer . ($licence ? ', ' . $licence : '') . $zeitraum . ')</span></div>';
             },
         ],
         'global_operations' => [

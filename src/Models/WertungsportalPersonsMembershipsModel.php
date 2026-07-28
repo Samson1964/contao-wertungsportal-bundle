@@ -58,8 +58,8 @@ class WertungsportalPersonsMembershipsModel extends Model
 
     /**
      * Gleicht die Mitgliedschaften einer Person mit dem API-Array
-     * "memberships" ab: Vorhandene Einträge (per VKZ) werden aktualisiert,
-     * neue angelegt und nicht mehr gemeldete gelöscht.
+     * "memberships" ab: Vorhandene Einträge werden aktualisiert und neue
+     * angelegt. Es wird NICHTS gelöscht (siehe syncForPersons()).
      */
     public static function syncForPerson(int $pid, array $memberships): void
     {
@@ -72,20 +72,48 @@ class WertungsportalPersonsMembershipsModel extends Model
     public const CSV_FIELDS = ['clubName', 'licenceState', 'regionName', 'federationName', 'spielgenehmigungVon', 'spielgenehmigungBis', 'antragstyp', 'antragszeitpunkt', 'antragsteller'];
 
     /**
-     * Importiert Mitgliedschaften aus dem Vereinsmitglieder-CSV in einem
-     * Rutsch. Schlüssel ist die Kombination VKZ + Mitgliedsnummer:
-     * Bestehende Datensätze mit gleicher VKZ und Mitgliedsnummer werden
-     * aktualisiert (inkl. pid-Verknüpfung zur Person), unbekannte per
-     * Batch-INSERT angelegt. Es wird nichts gelöscht.
+     * Identität einer Mitgliedschaft: VKZ + Mitgliedsnummer + Lizenzstatus +
+     * Beginn der Spielgenehmigung. Eine Person kann im SELBEN Verein mehrere
+     * Mitgliedschaften mit derselben Mitgliedsnummer haben (aufeinander
+     * folgende Zeiträume, Wechsel aktiv/passiv) — VKZ + Mitgliedsnummer
+     * allein identifiziert deshalb keinen Datensatz, sondern eine ganze
+     * Historie. Die Mitgliedsnummer wird normalisiert (führende Nullen und
+     * Leerzeichen), damit unterschiedlich formatierte Quellen (API-Sync
+     * liefert int, CSV liefert String) denselben Datensatz treffen.
+     */
+    public static function schluessel(string $strVkz, string $strMemberNo, string $strLicence = '', string $strVon = ''): string
+    {
+        return $strVkz . '|' . ltrim(trim($strMemberNo), '0') . '|' . $strLicence . '|' . $strVon;
+    }
+
+    /**
+     * Importiert Mitgliedschaften aus den CSV-Exporten in einem Rutsch.
+     * Schlüssel ist die volle Identität einer Mitgliedschaft (VKZ +
+     * Mitgliedsnummer + Lizenzstatus + Beginn, siehe schluessel()):
+     * Bestehende Datensätze werden aktualisiert (inkl. pid-Verknüpfung),
+     * unbekannte per Batch-INSERT angelegt. Es wird NICHTS gelöscht.
      *
-     * $arrMemberships: "vkz|memberNo" => ['pid' => Personen-ID,
-     *                                     'vkz' => ..., 'memberNo' => ...,
-     *                                     'felder' => [CSV_FIELDS]]
+     * WICHTIG (Bugfix 1.0.9): Früher war der Schlüssel nur VKZ +
+     * Mitgliedsnummer. Da eine Person im selben Verein unter derselben
+     * Mitgliedsnummer mehrere aufeinander folgende Mitgliedschaften haben
+     * kann (aktiv/passiv, verschiedene Zeiträume), fielen beim Import der
+     * Spielgenehmigungen alle Zeiträume auf EINEN Datensatz zusammen —
+     * die Historie ging verloren.
+     *
+     * Findet sich kein Datensatz mit exakt passendem Zeitraum, wird ein
+     * vorhandener Platzhalter OHNE Zeitraum (vom API-Sync angelegt, der
+     * keine Zeiträume liefert) mit gleicher VKZ/Mitgliedsnummer und
+     * gleichem Lizenzstatus vervollständigt statt eine Dublette anzulegen.
+     *
+     * $arrMemberships: Schlüssel => ['pid' => Personen-ID, 'vkz' => ...,
+     *                                'memberNo' => ..., 'felder' => [CSV_FIELDS]]
      *
      * Importregel: Die CSV-Daten haben höhere Priorität und überschreiben
      * abweichende Bestandsdaten unabhängig davon, ob der vorhandene tstamp
-     * jünger ist. Über $intTstamp (Datum/Uhrzeit aus dem Dateinamen) wird
-     * der tstamp der geschriebenen Datensätze gesetzt; 0 = aktuelle Zeit.
+     * jünger ist. LEERE Importwerte überschreiben allerdings keine gefüllten
+     * Bestandsfelder — ein Teilimport darf vorhandene Daten nicht leeren.
+     * Über $intTstamp (Datum/Uhrzeit aus dem Dateinamen) wird der tstamp der
+     * geschriebenen Datensätze gesetzt; 0 = aktuelle Zeit.
      *
      * @return array ['neu' => x, 'aktualisiert' => y, 'unveraendert' => z]
      */
@@ -101,8 +129,11 @@ class WertungsportalPersonsMembershipsModel extends Model
         $intTime = $intTstamp > 0 ? $intTstamp : time();
         $strFields = implode(', ', self::CSV_FIELDS);
 
-        // Bestand blockweise über (vkz, memberNo)-Paare laden
+        // Bestand blockweise über (vkz, memberNo)-Paare laden — das sind ALLE
+        // Zeiträume dieser Mitgliedsnummern, indiziert nach voller Identität.
+        // Datensätze ohne Zeitraum kommen zusätzlich in eine Platzhalterliste
         $arrExisting = [];
+        $arrPlatzhalter = [];
 
         foreach (array_chunk(array_values($arrMemberships), 250) as $arrChunk) {
             $arrParams = [];
@@ -117,40 +148,58 @@ class WertungsportalPersonsMembershipsModel extends Model
                                    ->execute($arrParams);
 
             while ($objRows->next()) {
-                $arrExisting[$objRows->vkz . '|' . $objRows->memberNo] = $objRows->row();
+                $arrRow = $objRows->row();
+                $arrExisting[static::schluessel((string) $arrRow['vkz'], (string) $arrRow['memberNo'], (string) $arrRow['licenceState'], (string) $arrRow['spielgenehmigungVon'])] = $arrRow;
+
+                if ('' === (string) $arrRow['spielgenehmigungVon']) {
+                    $arrPlatzhalter[static::schluessel((string) $arrRow['vkz'], (string) $arrRow['memberNo'], (string) $arrRow['licenceState'])] = $arrRow;
+                }
             }
         }
 
         $arrInsert = [];
 
         foreach ($arrMemberships as $strKey => $arrItem) {
-            if (!isset($arrExisting[$strKey])) {
-                $arrRow = [(int) $arrItem['pid'], $intTime, (string) $arrItem['vkz'], (string) $arrItem['memberNo']];
+            $arrRow = $arrExisting[$strKey] ?? null;
+
+            // Kein exakter Treffer: Platzhalter ohne Zeitraum vervollständigen
+            if (null === $arrRow) {
+                $strPlatzhalter = static::schluessel((string) $arrItem['vkz'], (string) $arrItem['memberNo'], (string) ($arrItem['felder']['licenceState'] ?? ''));
+
+                if (isset($arrPlatzhalter[$strPlatzhalter])) {
+                    $arrRow = $arrPlatzhalter[$strPlatzhalter];
+                    unset($arrPlatzhalter[$strPlatzhalter]);
+                }
+            }
+
+            if (null === $arrRow) {
+                $arrNeu = [(int) $arrItem['pid'], $intTime, (string) $arrItem['vkz'], (string) $arrItem['memberNo']];
 
                 foreach (self::CSV_FIELDS as $strField) {
-                    $arrRow[] = (string) ($arrItem['felder'][$strField] ?? '');
+                    $arrNeu[] = (string) ($arrItem['felder'][$strField] ?? '');
                 }
 
-                $arrRow[] = '1';
-                $arrInsert[] = $arrRow;
+                $arrNeu[] = '1';
+                $arrInsert[] = $arrNeu;
                 continue;
             }
 
             $arrSet = ['pid' => (int) $arrItem['pid']];
 
             foreach (self::CSV_FIELDS as $strField) {
-                if (\array_key_exists($strField, $arrItem['felder'])) {
+                // Leere Importwerte lassen gefüllte Bestandsfelder unberührt
+                if (\array_key_exists($strField, $arrItem['felder']) && ('' !== (string) $arrItem['felder'][$strField] || '' === (string) ($arrRow[$strField] ?? ''))) {
                     $arrSet[$strField] = (string) $arrItem['felder'][$strField];
                 }
             }
 
-            $arrSet = static::diffApiFields($arrExisting[$strKey], $arrSet);
+            $arrSet = static::diffApiFields($arrRow, $arrSet);
 
             if ($arrSet) {
                 $arrSet['tstamp'] = $intTime;
                 $objDatabase->prepare('UPDATE ' . static::$strTable . ' %s WHERE id=?')
                             ->set($arrSet)
-                            ->execute($arrExisting[$strKey]['id']);
+                            ->execute($arrRow['id']);
                 $arrErgebnis['aktualisiert']++;
             } else {
                 $arrErgebnis['unveraendert']++;
@@ -177,9 +226,22 @@ class WertungsportalPersonsMembershipsModel extends Model
      * Bulk-Variante: Gleicht die Mitgliedschaften mehrerer Personen in einem
      * Rutsch ab ($arrByPid = Personen-ID => memberships-Array der API).
      * Der Bestand wird blockweise geladen, neue Einträge werden per
-     * Batch-INSERT angelegt, bestehende nur bei Änderungen aktualisiert und
-     * nicht mehr gemeldete gelöscht. Die Vereine der Mitgliedschaften werden
-     * gesammelt über WertungsportalClubsModel::syncList() angelegt.
+     * Batch-INSERT angelegt, bestehende nur bei Änderungen aktualisiert.
+     * Die Vereine der Mitgliedschaften werden gesammelt über
+     * WertungsportalClubsModel::syncList() angelegt.
+     *
+     * WICHTIG (Bugfix 1.0.9): Der Sync LÖSCHT NICHTS mehr. Die nu-API liefert
+     * ausschließlich die aktuellen Mitgliedschaften einer Person, nicht deren
+     * Historie — die früher hier eingebaute Löschung "nicht mehr gemeldeter"
+     * Einträge hat deshalb bei jedem Frontend-Seitenaufruf (Spielersuche,
+     * Karteikarte, Vereins-/Verbandsliste) die per CSV importierten
+     * historischen Mitgliedschaften abgeräumt.
+     *
+     * Ebenfalls Bugfix: Der Abgleich trifft nur noch Datensätze mit LAUFENDER
+     * Genehmigung (Ende leer). Früher wurde per pid+VKZ gematcht, wodurch bei
+     * mehreren Mitgliedschaften im selben Verein willkürlich ein historischer
+     * Datensatz erwischt und mit den aktuellen Werten überschrieben wurde
+     * (verfälschte Zeiträume und Dubletten).
      */
     public static function syncForPersons(array $arrByPid): void
     {
@@ -230,16 +292,25 @@ class WertungsportalPersonsMembershipsModel extends Model
             WertungsportalClubsModel::syncList($arrClubs);
         }
 
-        // Bestand der betroffenen Personen blockweise laden
+        // Bestand der betroffenen Personen blockweise laden. Indiziert wird
+        // nur über pid+VKZ der LAUFENDEN Mitgliedschaften (Ende leer) — die
+        // API meldet ausschließlich aktuelle Mitgliedschaften, abgeschlossene
+        // Zeiträume dürfen von ihr nicht überschrieben werden
         $arrExisting = [];
 
         foreach (array_chunk(array_keys($arrByPid), 500) as $arrChunk) {
             $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
-            $objRows = $objDatabase->prepare('SELECT id, pid, vkz, memberNo, clubName, licenceState, regionName, federationName FROM ' . static::$strTable . ' WHERE pid IN (' . $strPlaceholders . ')')
+            $objRows = $objDatabase->prepare("SELECT id, pid, vkz, memberNo, clubName, licenceState, regionName, federationName FROM " . static::$strTable . " WHERE spielgenehmigungBis = '' AND pid IN (" . $strPlaceholders . ')')
                                    ->execute($arrChunk);
 
             while ($objRows->next()) {
-                $arrExisting[$objRows->pid . '|' . $objRows->vkz] = $objRows->row();
+                $strRowKey = $objRows->pid . '|' . $objRows->vkz;
+
+                // Bei mehreren laufenden Einträgen im selben Verein gewinnt
+                // der erste; die übrigen bleiben unangetastet
+                if (!isset($arrExisting[$strRowKey])) {
+                    $arrExisting[$strRowKey] = $objRows->row();
+                }
             }
         }
 
@@ -289,12 +360,70 @@ class WertungsportalPersonsMembershipsModel extends Model
                         ->execute(array_merge(...$arrChunk));
         }
 
-        // Nicht mehr gemeldete Mitgliedschaften entfernen
+        // KEINE Löschung: Was die API nicht meldet, ist nicht gelöscht,
+        // sondern nur nicht aktuell (die Schnittstelle liefert keine
+        // Historie). Beendete Mitgliedschaften kommen ausschließlich über
+        // die CSV-Importe des Mitgliederportals herein.
+    }
+
+    /**
+     * Räumt doppelte Mitgliedschaften auf: Datensätze derselben Person mit
+     * gleicher VKZ, Mitgliedsnummer, Lizenzstatus und gleichem Zeitraum sind
+     * ein und derselbe Eintrag. Behalten wird der Datensatz mit der
+     * niedrigsten ID; von den Dubletten werden zuvor Feldwerte übernommen,
+     * die im behaltenen Datensatz leer sind (kein Informationsverlust).
+     *
+     * Nötig für Bestände, die vor dem Bugfix 1.0.9 aufgebaut wurden.
+     *
+     * @return array ['geprueft' => x, 'entfernt' => y, 'ergaenzt' => z]
+     */
+    public static function entdopple(): array
+    {
+        $arrErgebnis = ['geprueft' => 0, 'entfernt' => 0, 'ergaenzt' => 0];
+        $objDatabase = Database::getInstance();
+        $strFields = implode(', ', self::CSV_FIELDS);
+
+        // Nur Gruppen mit mehr als einem Datensatz laden (die Normalisierung
+        // der Mitgliedsnummer erfolgt in PHP über schluessel())
+        $objRows = $objDatabase->execute('SELECT id, pid, vkz, memberNo, ' . $strFields . ' FROM ' . static::$strTable . ' ORDER BY pid, vkz, id');
+
+        $arrGruppen = [];
+
+        while ($objRows->next()) {
+            $arrRow = $objRows->row();
+            $strKey = $arrRow['pid'] . '|' . static::schluessel((string) $arrRow['vkz'], (string) $arrRow['memberNo'], (string) $arrRow['licenceState'], (string) $arrRow['spielgenehmigungVon']) . '|' . $arrRow['spielgenehmigungBis'];
+            $arrGruppen[$strKey][] = $arrRow;
+        }
+
         $arrDelete = [];
 
-        foreach ($arrExisting as $strKey => $arrRow) {
-            if (!isset($arrReported[$strKey])) {
-                $arrDelete[] = (int) $arrRow['id'];
+        foreach ($arrGruppen as $arrGruppe) {
+            $arrErgebnis['geprueft']++;
+
+            if (\count($arrGruppe) < 2) {
+                continue;
+            }
+
+            $arrBehalten = array_shift($arrGruppe);
+            $arrSet = [];
+
+            foreach ($arrGruppe as $arrDublette) {
+                $arrDelete[] = (int) $arrDublette['id'];
+
+                // Leere Felder des behaltenen Datensatzes aus der Dublette füllen
+                foreach (self::CSV_FIELDS as $strField) {
+                    if ('' === (string) ($arrSet[$strField] ?? $arrBehalten[$strField] ?? '') && '' !== (string) ($arrDublette[$strField] ?? '')) {
+                        $arrSet[$strField] = (string) $arrDublette[$strField];
+                    }
+                }
+            }
+
+            if ($arrSet) {
+                $arrSet['tstamp'] = time();
+                $objDatabase->prepare('UPDATE ' . static::$strTable . ' %s WHERE id=?')
+                            ->set($arrSet)
+                            ->execute($arrBehalten['id']);
+                $arrErgebnis['ergaenzt']++;
             }
         }
 
@@ -303,5 +432,9 @@ class WertungsportalPersonsMembershipsModel extends Model
             $objDatabase->prepare('DELETE FROM ' . static::$strTable . ' WHERE id IN (' . $strPlaceholders . ')')
                         ->execute($arrChunk);
         }
+
+        $arrErgebnis['entfernt'] = \count($arrDelete);
+
+        return $arrErgebnis;
     }
 }

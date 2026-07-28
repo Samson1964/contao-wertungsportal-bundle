@@ -499,12 +499,17 @@ class WertungsportalPersonsModel extends Model
             $arrSet = [];
 
             foreach (self::CSV_STRING_FIELDS as $strField) {
-                if (\array_key_exists($strField, $arrPerson)) {
+                // Leere Importwerte lassen gefüllte Bestandsfelder unberührt:
+                // Die Spielgenehmigungs-Exporte enthalten nur einen Teil der
+                // Personenfelder — ein solcher Teilimport darf vorhandene
+                // Daten (Adresse, Geburtsdatum, Datenschutzfelder …) nicht leeren
+                if (\array_key_exists($strField, $arrPerson) && ('' !== (string) $arrPerson[$strField] || '' === (string) ($arrExisting[$strId][$strField] ?? ''))) {
                     $arrSet[$strField] = (string) $arrPerson[$strField];
                 }
             }
 
-            if (\array_key_exists('fideId', $arrPerson)) {
+            // FIDE-ID: 0 (= keine Angabe) überschreibt keine vorhandene ID
+            if (\array_key_exists('fideId', $arrPerson) && ((int) $arrPerson['fideId'] > 0 || 0 === (int) ($arrExisting[$strId]['fideId'] ?? 0))) {
                 $arrSet['fideId'] = (int) $arrPerson['fideId'];
             }
 

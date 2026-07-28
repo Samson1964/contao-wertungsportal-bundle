@@ -126,7 +126,9 @@ class WertungsportalClubsModel extends Model
             $arrSet = [];
 
             foreach (self::CSV_STRING_FIELDS as $strField) {
-                if (\array_key_exists($strField, $arrClub)) {
+                // Leere Importwerte lassen gefüllte Bestandsfelder unberührt —
+                // ein Teilimport darf vorhandene Vereinsdaten nicht leeren
+                if (\array_key_exists($strField, $arrClub) && ('' !== (string) $arrClub[$strField] || '' === (string) ($arrExisting[$strVkz][$strField] ?? ''))) {
                     $arrSet[$strField] = (string) $arrClub[$strField];
                 }
             }

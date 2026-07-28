@@ -296,6 +296,43 @@ class AltdatenImport extends \Backend
 	}
 
 	/**
+	 * Globale Operation unter Personen (key=entdoppeln):
+	 * Entfernt doppelte Mitgliedschaften aus tl_wertungsportal_persons_memberships.
+	 * Datensätze derselben Person mit gleicher VKZ, Mitgliedsnummer,
+	 * Lizenzstatus und gleichem Zeitraum sind ein und derselbe Eintrag;
+	 * behalten wird der älteste (niedrigste ID), zuvor werden aus den
+	 * Dubletten alle Feldwerte übernommen, die im behaltenen Datensatz
+	 * fehlen. Nötig für Bestände, die vor dem Bugfix 1.0.9 entstanden sind.
+	 *
+	 * @param  object $dc DataContainer
+	 * @return string     HTML der Ergebnisseite
+	 */
+	public function runEntdoppeln($dc)
+	{
+		$ergebnis = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalPersonsMembershipsModel::entdopple();
+
+		$zeilen = array
+		(
+			'Geprüfte Mitgliedschaften (nach Zusammenfassung): '.$ergebnis['geprueft'],
+			'Entfernte Dubletten: '.$ergebnis['entfernt'],
+			'Behaltene Datensätze, die aus Dubletten ergänzt wurden: '.$ergebnis['ergaenzt'],
+		);
+
+		if($ergebnis['entfernt'] == 0)
+		{
+			$zeilen[] = '&mdash; Es wurden keine Dubletten gefunden.';
+		}
+
+		// Aufräumen im System-Log vermerken (Nachvollziehbarkeit)
+		if($ergebnis['entfernt'] > 0)
+		{
+			\System::log('Wertungsportal: '.$ergebnis['entfernt'].' doppelte Mitgliedschaften entfernt', __METHOD__, TL_GENERAL);
+		}
+
+		return $this->ergebnis('Doppelte Mitgliedschaften bereinigen', $zeilen, 'entdoppeln');
+	}
+
+	/**
 	 * Weist einer Zielperson das Spielerbild zu, sofern sie noch keins hat
 	 * (keine manuelle Pflege überschreiben), und zählt das Ergebnis.
 	 *

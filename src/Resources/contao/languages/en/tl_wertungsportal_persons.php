@@ -71,6 +71,7 @@ $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['FEMALE'] = 'Female';
 // Buttons
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['importPersons'] = ['CSV import', 'Import persons from a club members CSV file'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['importPhotos']  = ['Import photos', 'Import player photos from the DWZ players (tl_dwz_spi), matched via the external number'];
+$GLOBALS['TL_LANG']['tl_wertungsportal_persons']['entdoppeln']  = ['Remove duplicates', 'Merge duplicate memberships (same club number, member number, licence state and period)'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['new']        = ['New person', 'Create a new person'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['edit']       = ['Edit memberships', 'Edit the memberships of person ID %s'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['editheader']  = ['Edit person', 'Edit person ID %s'];
