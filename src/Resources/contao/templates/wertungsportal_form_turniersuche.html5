@@ -1,0 +1,88 @@
+<?php
+/**
+ * Suchformular der Turniersuche
+ *
+ * Wird von der Suchseite (wertungsportal_turnier) und von der Ergebnisseite
+ * (wertungsportal_turniersuche) eingebunden. Auf der Ergebnisseite sind die
+ * Felder mit den Werten der laufenden Suche vorbelegt und das Formular ist
+ * eingeklappt, damit die Trefferliste im Vordergrund bleibt.
+ *
+ * Erwartete Variablen:
+ *   action        Ziel-URL des Formulars
+ *   form_verbaende, form_vonmonat, form_bismonat, form_vonjahr, form_bisjahr,
+ *   form_letztemonate   fertige <option>-Listen
+ *   search        Suchbegriff zur Vorbelegung
+ *   fehler        optionale Fehlermeldung
+ *   eingeklappt   true = als aufklappbarer Block ausgeben (Ergebnisseite)
+ */
+?>
+<?php $offen = !$this->eingeklappt; ?>
+
+<div class="wp-suche noprint">
+	<form action="<?= $this->action ?>" method="get">
+		<input type="hidden" name="search" value="1">
+
+		<?php if($this->eingeklappt): ?><details class="wp-suche-block"><summary class="wp-suche-titel">Suche ändern</summary><?php else: ?><div class="wp-suche-block wp-suche-block--offen"><?php endif; ?>
+
+			<div class="wp-suche-felder">
+
+				<div class="wp-feld wp-feld--breit">
+					<label class="wp-label" for="ctrl_keyword">Turniername</label>
+					<input id="ctrl_keyword" type="text" class="tl_input_text wp-input" <?= $offen ? 'autofocus' : '' ?> name="keyword" maxlength="30" placeholder="Namensbestandteil oder leer lassen" value="<?= $this->search ?>">
+					<p class="wp-hilfe">Leer lassen sucht alle Turniere des Zeitraums.</p>
+				</div>
+
+				<div class="wp-feld wp-feld--breit">
+					<label class="wp-label" for="ctrl_verband">Landesverband</label>
+					<select size="1" id="ctrl_verband" data-placeholder="Verband wählen …" class="tl_select tl_chosen wp-input" name="zps">
+						<?= $this->form_verbaende ?>
+					</select>
+					<p class="wp-hilfe">Mit Suchfunktion in der Auswahlliste.</p>
+				</div>
+
+				<div class="wp-feld">
+					<span class="wp-label" id="ctrl_von_label">Zeitraum von</span>
+					<div class="wp-feld-paar" role="group" aria-labelledby="ctrl_von_label">
+						<select size="1" name="from_month" class="tl_select wp-input" aria-label="Von Monat">
+							<?= $this->form_vonmonat ?>
+						</select>
+						<select size="1" name="from_year" class="tl_select wp-input wp-input--schmal" aria-label="Von Jahr">
+							<?= $this->form_vonjahr ?>
+						</select>
+					</div>
+				</div>
+
+				<div class="wp-feld">
+					<span class="wp-label" id="ctrl_bis_label">Zeitraum bis</span>
+					<div class="wp-feld-paar" role="group" aria-labelledby="ctrl_bis_label">
+						<select size="1" name="to_month" class="tl_select wp-input" aria-label="Bis Monat">
+							<?= $this->form_bismonat ?>
+						</select>
+						<select size="1" name="to_year" class="tl_select wp-input wp-input--schmal" aria-label="Bis Jahr">
+							<?= $this->form_bisjahr ?>
+						</select>
+					</div>
+				</div>
+
+				<div class="wp-feld wp-feld--breit">
+					<label class="wp-label" for="ctrl_lastmonths">Oder gleitender Zeitraum</label>
+					<select size="1" id="ctrl_lastmonths" name="last_months" class="tl_select wp-input">
+						<?= $this->form_letztemonate ?>
+					</select>
+					<p class="wp-hilfe">Ist hier etwas gewählt, gilt diese Angabe statt „von/bis".</p>
+				</div>
+
+			</div>
+
+			<?php if($this->fehler): ?>
+				<p class="wp-fehler" role="alert"><?= $this->fehler ?></p>
+			<?php endif; ?>
+
+			<div class="wp-suche-aktionen">
+				<button type="submit" class="tl_submit wp-button">Turniere suchen</button>
+			</div>
+
+		<?php if($this->eingeklappt): ?></details><?php else: ?></div><?php endif; ?>
+
+	</form>
+</div>

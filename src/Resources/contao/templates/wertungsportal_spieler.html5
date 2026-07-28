@@ -19,25 +19,26 @@
 	</div>
 
 	<?php if($this->searchform): ?>
-		<div class="searchform clr noprint">
+		<div class="wp-suche noprint">
 			<form action="<?= \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseiteUrl() ?>.html" method="get">
-				<fieldset id="searchform" class="tl_box">
-					<legend>Suche</legend>
-					<div class="long">
-						<h3><label for "ctrl_search">Spielername</label></h3>
-						<input id="ctrl_search" type="text" class="tl_input_text" autofocus name="search" size="30" maxlength="30" value="<?= $this->search ?>">
-						<p class="tl_help">Name,Vorname oder nur Name</p>
+				<div class="wp-suche-block wp-suche-block--offen">
+					<div class="wp-suche-felder">
+						<div class="wp-feld wp-feld--breit">
+							<label class="wp-label" for="ctrl_search">Spielername</label>
+							<input id="ctrl_search" type="text" class="tl_input_text wp-input" autofocus name="search" maxlength="30" placeholder="Name, Vorname oder nur Name" value="<?= $this->search ?>">
+							<p class="wp-hilfe">Auch ein Namensanfang genügt, z.&nbsp;B. „Müll".</p>
+						</div>
 					</div>
 					<?php if($this->fehler): ?>
-						<div class="error"><?= $this->fehler ?></div>
-					<?php endif; ?> 
-				</fieldset>
-				<div class="tl_submit_container">
-					<input type="submit" class="tl_submit" value="Suche starten">
+						<p class="wp-fehler" role="alert"><?= $this->fehler ?></p>
+					<?php endif; ?>
+					<div class="wp-suche-aktionen">
+						<button type="submit" class="tl_submit wp-button">Spieler suchen</button>
+					</div>
 				</div>
 			</form>
 		</div>
-	<?php endif; ?> 
+	<?php endif; ?>
 	
 	<?php if($this->subHeadline): ?>
 		<<?= $this->shl ?>><?= $this->subHeadline ?></<?= $this->shl ?>>

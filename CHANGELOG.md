@@ -1,5 +1,17 @@
 # Wertungsportal-Anbindung
 
+## Version 1.2.0 (2026-07-27)
+
+* **Add: Die Suchformulare stehen jetzt auch auf den Ergebnisseiten** — bei der Turniersuche und der Verbandsrangliste. Sie sind dort mit den Werten der laufenden Suche vorbelegt und eingeklappt („Suche ändern" bzw. „Liste anpassen"), damit die Trefferliste im Vordergrund bleibt. Eine Suche lässt sich damit direkt nachjustieren, statt über den Zurück-Weg zur Suchseite
+* **Change: Turnier- und Verbandsformular neu aufgebaut.** Bisher waren es Contao-Backend-Bausteine im Frontend (`fieldset.tl_box` mit Legende, feste w50-Spalten, gestapelte Monat/Jahr-Felder, Layout per Tabelle). Jetzt: ein mitwachsendes Raster ohne Breakpoints, Monat und Jahr nebeneinander, sprechende Beschriftungen, Platzhaltertexte und Hilfetexte unter dem jeweiligen Feld. Die Eingabefelder behalten ihre tl_*-Klassen, damit die Grundstile des Themes weiter greifen
+* Change: Beide Formulare liegen als eigene Templates vor (wertungsportal_form_turniersuche, wertungsportal_form_verbandsliste) und werden von Such- und Ergebnisseite gemeinsam genutzt — eine Änderung wirkt an beiden Stellen
+* Change: Auch die Spieler- und Vereinssuche nutzen dieses Formularvokabular, damit alle vier Suchen gleich aussehen und sich gleich bedienen
+* Fix: Die Monatsauswahl lieferte für „von" und „bis" dieselbe Liste mit demselben ausgewählten Monat — beide sind jetzt getrennt und unabhängig vorbelegbar
+* Fix: Die Altersfelder der Verbandsrangliste sind Zahlenfelder (min/max 0–140) statt Textfelder; die Auswahl „Letzte x Monate" wird aus einer Liste erzeugt statt zwölf Optionen von Hand zu pflegen
+* Add: Sichtbarer Tastaturfokus auf allen Bedienelementen der Formulare, Radiogruppen und Kontrollkästchen mit klickbarer Beschriftung, Fehlermeldungen mit `role="alert"`, Beschriftung der zusammengesetzten Felder über `aria-labelledby`
+* Verifiziert: Beide Formulare in allen fünf Zuständen im Browser gerendert (offen mit Standardwerten, eingeklappt mit Vorbelegung, mit Fehlermeldung) — Vorbelegung stimmt in jedem Feld; kein waagerechtes Scrollen auf 375 px, Felder stapeln sich sauber, Monat und Jahr bleiben nebeneinander
+* Hinweis: Die Ergebnisseite der Turniersuche lädt für die Verbandsauswahl zusätzlich die Verbandsliste. Sie kommt aus dem Cache — wer die Cachezeit für Verbände (Einstellungen, seit 1.1.0) auf eine Woche stellt, hat dadurch praktisch keine Zusatzlast
+
 ## Version 1.1.3 (2026-07-27)
 
 * **Fix: Die Sortierung funktionierte im Livesystem auf keiner Seite** — auch dort nicht, wo sie eingebaut war. Ursache (am Livesystem nachgewiesen): Contao bringt unter assets/tablesorter eine eigene tablesorter-Fassung mit, die das Layout NACH den Bundle-Dateien lädt und dabei jQuery.tablesorter samt der beim Laden registrierten Parser überschreibt. Die Initialisierung lief dadurch ins Leere: keine Sortierung, keine Spaltenköpfe, keine Pfeile. Parser-Registrierung und Initialisierung laufen jetzt vollständig in $(document).ready() und sind damit unabhängig von der Ladereihenfolge; scheitert eine Tabelle trotzdem, bleibt die Seite dank Fehlerabfangung bedienbar

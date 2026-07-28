@@ -148,6 +148,31 @@ class Turnier extends \Module
 			$this->Template->search_verband = $zps;
 			$this->Template->search_from = $from_month.'/'.$from_year;
 			$this->Template->search_to = $to_month.'/'.$to_year;
+
+			// Suchformular auch auf der Ergebnisseite ausgeben — mit den
+			// Werten der laufenden Suche vorbelegt, damit sie sich direkt
+			// anpassen lässt statt über den Zurück-Weg zur Suchseite
+			$formular = new \Schachbulle\ContaoWertungsportalBundle\Helper\Turnierformular
+			(
+				\Schachbulle\ContaoWertungsportalBundle\Helper\API::Verbandsliste(),
+				array
+				(
+					'zps'          => $zps,
+					'keyword'      => \Input::get('keyword'),
+					'from_month'   => $from_month,
+					'from_year'    => $from_year,
+					'to_month'     => $to_month,
+					'to_year'      => $to_year,
+					'last_months'  => \Input::get('last_months'),
+				)
+			);
+
+			$this->Template->form_verbaende = $formular->FormVerbaende;
+			$this->Template->form_vonmonat = $formular->FormVonmonat;
+			$this->Template->form_bismonat = $formular->FormBismonat;
+			$this->Template->form_vonjahr = $formular->FormVonjahr;
+			$this->Template->form_bisjahr = $formular->FormBisjahr;
+			$this->Template->form_letztemonate = $formular->FormLetzteMonate;
 		}
 		elseif($turniercode && $id)
 		{
@@ -363,8 +388,11 @@ class Turnier extends \Module
 
 			$this->Template->form_verbaende = $formular->FormVerbaende;
 			$this->Template->form_monat = $formular->FormMonat;
+			$this->Template->form_vonmonat = $formular->FormVonmonat;
+			$this->Template->form_bismonat = $formular->FormBismonat;
 			$this->Template->form_vonjahr = $formular->FormVonjahr;
 			$this->Template->form_bisjahr = $formular->FormBisjahr;
+			$this->Template->form_letztemonate = $formular->FormLetzteMonate;
 		}
 	}
 

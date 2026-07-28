@@ -483,3 +483,224 @@
 .dwz-diagramm-scroll {
 	overflow-x				: auto;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Such- und Auswahlformulare (Turniersuche, Verbandsrangliste)
+
+   Ersetzt das frühere Contao-Backend-Vokabular (fieldset.tl_box mit
+   Legende und w50-Spalten). Die Eingabefelder behalten ihre
+   tl_*-Klassen, damit die Grundstile des Themes weiter greifen —
+   Layout, Beschriftung und Zustände kommen von hier.
+   ───────────────────────────────────────────────────────────── */
+
+.dewis .wp-suche {
+	--wp-rahmen				: #d4d4d4;
+	--wp-rahmen-stark		: #616161;
+	--wp-flaeche			: #f7f7f7;
+	--wp-text				: #1f1f1f;
+	--wp-text-leise			: #5c5c5c;
+	--wp-akzent				: #005e8a;
+	margin					: 0 0 24px;
+}
+
+.dewis .wp-suche-block {
+	border					: 1px solid var(--wp-rahmen);
+	border-radius			: 3px;
+	background-color		: var(--wp-flaeche);
+}
+
+.dewis .wp-suche-block--offen {
+	padding					: 18px 20px 16px;
+}
+
+/* Eingeklappte Fassung auf den Ergebnisseiten */
+.dewis details.wp-suche-block > .wp-suche-felder,
+.dewis details.wp-suche-block > .wp-suche-aktionen,
+.dewis details.wp-suche-block > .wp-fehler {
+	margin-left				: 20px;
+	margin-right			: 20px;
+}
+
+.dewis details.wp-suche-block > .wp-suche-felder {
+	margin-top				: 16px;
+}
+
+.dewis details.wp-suche-block > .wp-suche-aktionen {
+	margin-bottom			: 16px;
+}
+
+.dewis .wp-suche-titel {
+	padding					: 10px 20px;
+	font-weight				: bold;
+	color					: var(--wp-text);
+	cursor					: pointer;
+	list-style				: none;
+	display					: flex;
+	align-items				: center;
+	gap						: 8px;
+}
+
+.dewis .wp-suche-titel::-webkit-details-marker {
+	display					: none;
+}
+
+/* Aufklapp-Pfeil */
+.dewis .wp-suche-titel::before {
+	content					: "\25B8"; /* ▸ */
+	display					: inline-block;
+	font-size				: 0.9em;
+	line-height				: 1;
+	color					: var(--wp-text-leise);
+	transition				: transform 0.18s ease-out;
+}
+
+.dewis details[open] > .wp-suche-titel::before {
+	transform				: rotate(90deg);
+}
+
+.dewis .wp-suche-titel:hover {
+	color					: var(--wp-akzent);
+}
+
+.dewis .wp-suche-titel:focus-visible {
+	outline					: 2px solid var(--wp-akzent);
+	outline-offset			: -2px;
+}
+
+/* Felder: mitwachsendes Raster ohne Breakpoints */
+.dewis .wp-suche-felder {
+	display					: grid;
+	grid-template-columns	: repeat(auto-fit, minmax(240px, 1fr));
+	gap						: 14px 20px;
+}
+
+/* Ohne min-width:0 sprengt langer Inhalt (z. B. Verbandsnamen in der
+   Auswahlliste) die Rasterspalte und die Seite scrollt waagerecht */
+.dewis .wp-feld {
+	min-width				: 0;
+}
+
+.dewis .wp-feld--breit {
+	grid-column				: span 1;
+}
+
+@media (min-width: 780px) {
+	.dewis .wp-feld--breit {
+		grid-column			: span 2;
+	}
+}
+
+.dewis .wp-label {
+	display					: block;
+	margin					: 0 0 5px;
+	font-weight				: bold;
+	font-size				: 0.95em;
+	color					: var(--wp-text);
+}
+
+.dewis .wp-hilfe {
+	margin					: 5px 0 0;
+	font-size				: 0.85em;
+	line-height				: 1.35;
+	color					: var(--wp-text-leise);
+}
+
+.dewis .wp-input {
+	width					: 100%;
+	box-sizing				: border-box;
+	max-width				: none;
+}
+
+.dewis .wp-feld-paar {
+	display					: flex;
+	flex-wrap				: wrap;
+	align-items				: center;
+	gap						: 8px;
+}
+
+.dewis .wp-feld-paar .wp-input {
+	flex					: 1 1 105px;
+	width					: auto;
+	min-width				: 0; /* sonst bricht das Jahr in die zweite Zeile */
+}
+
+/* Dieselbe Selektortiefe wie die Regel darüber, sonst gewinnt deren
+   flex-grow und die schmalen Felder wachsen auf volle Breite */
+.dewis .wp-feld-paar .wp-input--schmal {
+	flex					: 0 1 92px;
+}
+
+.dewis .wp-feld-paar .wp-input--zahl {
+	flex					: 0 0 76px;
+	text-align				: right;
+}
+
+.dewis .wp-bis,
+.dewis .wp-einheit {
+	color					: var(--wp-text-leise);
+	font-size				: 0.9em;
+}
+
+/* Radiogruppen und Kontrollkästchen */
+.dewis .wp-optionen {
+	display					: flex;
+	flex-wrap				: wrap;
+	gap						: 6px 18px;
+}
+
+.dewis .wp-option {
+	display					: inline-flex;
+	align-items				: center;
+	gap						: 6px;
+	cursor					: pointer;
+	color					: var(--wp-text);
+}
+
+.dewis .wp-option input {
+	margin					: 0;
+	cursor					: pointer;
+}
+
+.dewis .wp-option:hover {
+	color					: var(--wp-akzent);
+}
+
+/* Sichtbarer Fokus auf allen Bedienelementen */
+.dewis .wp-suche input:focus-visible,
+.dewis .wp-suche select:focus-visible,
+.dewis .wp-suche button:focus-visible {
+	outline					: 2px solid var(--wp-akzent);
+	outline-offset			: 1px;
+}
+
+.dewis .wp-suche-aktionen {
+	display					: flex;
+	flex-wrap				: wrap;
+	align-items				: center;
+	gap						: 12px;
+	margin-top				: 16px;
+}
+
+.dewis .wp-button {
+	cursor					: pointer;
+}
+
+.dewis .wp-button:disabled {
+	opacity					: 0.5;
+	cursor					: not-allowed;
+}
+
+.dewis .wp-fehler {
+	margin					: 14px 0 0;
+	padding					: 9px 12px;
+	border					: 1px solid #9D0000;
+	border-radius			: 3px;
+	background-color		: #fdf3f3;
+	color					: #7a0000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.dewis .wp-suche-titel::before {
+		transition			: none;
+	}
+}

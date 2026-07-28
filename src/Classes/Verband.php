@@ -86,6 +86,15 @@ class Verband extends \Module
 		$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
 		$this->Template->zps = $zps; // Aktuelle ZPS-Nummer
 
+		// Aktuelle Auswahl für die Vorbelegung des Formulars (auf der
+		// Auswahlseite leer = Standardwerte, auf der Ergebnisseite die
+		// tatsächlich angeforderten Werte)
+		$this->Template->sel_toplist = $toplist;
+		$this->Template->sel_sex = $sex;
+		$this->Template->sel_german = $german;
+		$this->Template->sel_age_from = $age_from;
+		$this->Template->sel_age_to = $age_to;
+
 		/*********************************************************
 		 * Ausgabe Verbandszugehörigkeiten (übergeordnete)
 		*/
@@ -159,6 +168,15 @@ class Verband extends \Module
 			$this->Template->daten = $rangliste->Rangliste;
 			$this->Template->fehler = $resultArr['error'] ? $resultArr['error_message'] : false;
 			$this->Template->verbaende = $verbaende;
+
+			// Das Ergebnis-Template ist eine neue Instanz — die Werte für das
+			// eingeklappte Formular hier erneut setzen (sonst steht es leer da)
+			$this->Template->zps = $zps;
+			$this->Template->sel_toplist = $toplist;
+			$this->Template->sel_sex = $sex;
+			$this->Template->sel_german = $german;
+			$this->Template->sel_age_from = $age_from;
+			$this->Template->sel_age_to = $age_to;
 		}
 	}
 

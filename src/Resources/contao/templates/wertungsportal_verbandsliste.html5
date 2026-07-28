@@ -55,6 +55,18 @@
 			<h2><?= $this->subHeadline ?></h2>
 		<?php endif; ?>
 
+		<?php $this->insert('wertungsportal_form_verbandsliste', array
+		(
+			'action'       => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl().'/'.$this->zps.'.html',
+			'sel_toplist'  => $this->sel_toplist,
+			'sel_sex'      => $this->sel_sex,
+			'sel_german'   => $this->sel_german,
+			'sel_age_from' => $this->sel_age_from,
+			'sel_age_to'   => $this->sel_age_to,
+			'fehler'       => false,
+			'eingeklappt'  => true,
+		)); ?>
+
 		<?php if($this->fehler): ?>
 			<div class="error"><?= $this->fehler ?></div>
 		<?php endif; ?>

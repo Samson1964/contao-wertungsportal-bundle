@@ -53,6 +53,22 @@
 			<h2><?= $this->subHeadline ?></h2>
 		<?php endif; ?>
 
+		<?php if($this->form_verbaende): ?>
+			<?php $this->insert('wertungsportal_form_turniersuche', array
+			(
+				'action'             => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'.html',
+				'form_verbaende'     => $this->form_verbaende,
+				'form_vonmonat'      => $this->form_vonmonat,
+				'form_bismonat'      => $this->form_bismonat,
+				'form_vonjahr'       => $this->form_vonjahr,
+				'form_bisjahr'       => $this->form_bisjahr,
+				'form_letztemonate'  => $this->form_letztemonate,
+				'search'             => $this->search_keyword,
+				'fehler'             => false,
+				'eingeklappt'        => true,
+			)); ?>
+		<?php endif; ?>
+
 	<table class="header">
 		<tbody>
 			<tr>

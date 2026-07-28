@@ -1,0 +1,82 @@
+<?php
+/**
+ * Auswahlformular der Verbandsrangliste
+ *
+ * Wird von der Auswahlseite (wertungsportal_verband) und von der Ergebnisseite
+ * (wertungsportal_verbandsliste) eingebunden. Auf der Ergebnisseite sind die
+ * Felder mit den Werten der laufenden Auswahl vorbelegt und das Formular ist
+ * eingeklappt.
+ *
+ * Erwartete Variablen:
+ *   action        Ziel-URL des Formulars
+ *   sel_toplist   gewählte Listenlänge (Standard 100)
+ *   sel_sex       '', 'm' oder 'f'
+ *   sel_german    true, wenn nur deutsche Spieler
+ *   sel_age_from  Alter von (Standard 0)
+ *   sel_age_to    Alter bis (Standard 140)
+ *   eingeklappt   true = als aufklappbarer Block ausgeben (Ergebnisseite)
+ */
+?>
+<?php
+	$toplist = $this->sel_toplist ?: 100;
+	$sex     = (string) $this->sel_sex;
+	$vonAlter = ($this->sel_age_from === null || $this->sel_age_from === '') ? 0 : (int) $this->sel_age_from;
+	$bisAlter = ($this->sel_age_to === null || $this->sel_age_to === '') ? 140 : (int) $this->sel_age_to;
+?>
+
+<div class="wp-suche noprint">
+	<form action="<?= $this->action ?>" method="get">
+
+		<?php if($this->eingeklappt): ?><details class="wp-suche-block"><summary class="wp-suche-titel">Liste anpassen</summary><?php else: ?><div class="wp-suche-block wp-suche-block--offen"><?php endif; ?>
+
+			<div class="wp-suche-felder">
+
+				<div class="wp-feld">
+					<label class="wp-label" for="ctrl_toplist">Listenlänge</label>
+					<select size="1" id="ctrl_toplist" class="tl_select wp-input" name="toplist">
+						<?php foreach(array(10, 25, 50, 100, 150, 200, 250, 500, 750, 1000) as $anzahl): ?>
+							<option value="<?= $anzahl ?>"<?= ($toplist == $anzahl) ? ' selected' : '' ?>>Top <?= $anzahl ?></option>
+						<?php endforeach; ?>
+					</select>
+					<p class="wp-hilfe">Anzahl der Spieler in der Rangliste.</p>
+				</div>
+
+				<div class="wp-feld">
+					<span class="wp-label" id="ctrl_sex_label">Geschlecht</span>
+					<div class="wp-optionen" role="radiogroup" aria-labelledby="ctrl_sex_label">
+						<label class="wp-option"><input type="radio" class="tl_radio" value="" name="sex"<?= ($sex === '') ? ' checked' : '' ?>> <span>Alle</span></label>
+						<label class="wp-option"><input type="radio" class="tl_radio" value="m" name="sex"<?= ($sex === 'm') ? ' checked' : '' ?>> <span>Männlich</span></label>
+						<label class="wp-option"><input type="radio" class="tl_radio" value="f" name="sex"<?= ($sex === 'f') ? ' checked' : '' ?>> <span>Weiblich</span></label>
+					</div>
+				</div>
+
+				<div class="wp-feld">
+					<span class="wp-label" id="ctrl_alter_label">Alter</span>
+					<div class="wp-feld-paar" role="group" aria-labelledby="ctrl_alter_label">
+						<input type="number" class="tl_input_text wp-input wp-input--zahl" min="0" max="140" step="1" value="<?= $vonAlter ?>" id="ctrl_age_from" name="age_from" aria-label="Alter von">
+						<span class="wp-bis">bis</span>
+						<input type="number" class="tl_input_text wp-input wp-input--zahl" min="0" max="140" step="1" value="<?= $bisAlter ?>" id="ctrl_age_to" name="age_to" aria-label="Alter bis">
+						<span class="wp-einheit">Jahre</span>
+					</div>
+					<p class="wp-hilfe">0 bis 140 Jahre.</p>
+				</div>
+
+				<div class="wp-feld">
+					<span class="wp-label">Nationalität</span>
+					<label class="wp-option"><input type="checkbox" class="tl_checkbox" value="1" name="german"<?= $this->sel_german ? ' checked' : '' ?>> <span>Nur deutsche Spieler</span></label>
+				</div>
+
+			</div>
+
+			<?php if($this->fehler): ?>
+				<p class="wp-fehler" role="alert"><?= $this->fehler ?></p>
+			<?php endif; ?>
+
+			<div class="wp-suche-aktionen">
+				<button type="submit" class="tl_submit wp-button">Liste anzeigen</button>
+			</div>
+
+		<?php if($this->eingeklappt): ?></details><?php else: ?></div><?php endif; ?>
+
+	</form>
+</div>

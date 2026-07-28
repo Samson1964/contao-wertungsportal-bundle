@@ -24,65 +24,18 @@
 	<?php endif; ?> 
 
 	<?php if($this->searchform): ?>
-		<div class="searchform clr noprint">
-			<form action="<?= \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl() ?>/<?= $this->zps ?>.html" method="get">
-				<fieldset id="searchform" class="tl_box">
-					<legend>Verbandslisten</legend>
-					<table>
-						<tr>
-							<td class="w50">
-								<h3><label for "ctrl_toplist">Rangliste</label></h3>
-								<select size="1" id="ctrl_toplist" class="tl_select" name="toplist">
-									<option value="10">Top 10</option>
-									<option value="25">Top 25</option>
-									<option value="50">Top 50</option>
-									<option value="100" selected>Top 100</option>
-									<option value="150">Top 150</option>
-									<option value="200">Top 200</option>
-									<option value="250">Top 250</option>
-									<option value="500">Top 500</option>
-									<option value="750">Top 750</option>
-									<option value="1000">Top 1000</option>
-								</select>
-								<p class="tl_help">Auswahl der Spieleranzahl für die Rangliste</p>
-							</td>
-							<td class="w50">
-								<h3><label>Geschlecht</label></h3>
-								<input type="radio" class="tl_radio" checked="" value="" name="sex"> Alle
-								<input type="radio" class="tl_radio" value="m" name="sex"> Männlich
-								<input type="radio" class="tl_radio" value="f" name="sex"> Weiblich
-								<p class="tl_help"></p>
-							</td>
-						</tr>
-						<tr>
-							<td class="w50">
-							</td>
-							<td class="w50">
-								<input type="checkbox" class="tl_checkbox" value="1" name="german"> nur deutsche Spieler
-								<p class="tl_help"></p>
-							</td>
-						</tr>
-						<tr>
-							<td class="w50">
-								<h3><label for "Alter_von">Alter von</label></h3>
-								<input type="text" class="tl_input_text" maxlength="3" size="3" value="0" id="Alter_von" name="age_from">
-								<p class="tl_help">Ganzzahliger Wert von 0 bis 140 Jahre</p>
-							</td>
-							<td class="w50">
-								<h3><label for "Alter_bis">Alter bis</label></h3>
-								<input type="text" class="tl_input_text" maxlength="3" size="3" value="140" id="Alter_bis" name="age_to">
-								<p class="tl_help">Ganzzahliger Wert von 0 bis 140 Jahre</p>
-							</td>
-						</tr>
-					</table>
-				</fieldset>
-				<div class="tl_submit_container">
-					<input type="submit" class="tl_submit" value="Liste anzeigen">
-				</div>
-			</form>
-		</div>
-
-	<?php endif; ?> 
+		<?php $this->insert('wertungsportal_form_verbandsliste', array
+		(
+			'action'       => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl().'/'.$this->zps.'.html',
+			'sel_toplist'  => $this->sel_toplist,
+			'sel_sex'      => $this->sel_sex,
+			'sel_german'   => $this->sel_german,
+			'sel_age_from' => $this->sel_age_from,
+			'sel_age_to'   => $this->sel_age_to,
+			'fehler'       => false,
+			'eingeklappt'  => false,
+		)); ?>
+	<?php endif; ?>
 
 
 	<?php if($this->sichtbar): ?>

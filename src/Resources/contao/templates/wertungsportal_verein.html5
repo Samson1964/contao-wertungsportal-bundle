@@ -17,21 +17,22 @@
 		</ul>
 	</div>
 
-	<div class="searchform clr noprint">
+	<div class="wp-suche noprint">
 		<form action="<?= \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl() ?>.html" method="get">
-			<fieldset id="searchform" class="tl_box">
-				<legend>Suche</legend>
-				<div class="long">
-					<h3><label for "ctrl_search">Vereinsname</label></h3>
-					<input id="ctrl_search" type="text" class="tl_input_text" autofocus name="search" size="30" maxlength="30" value="<?= $this->search ?>">
-					<p class="tl_help">Erlaubt ist auch ein Namensbestandteil</p>
+			<div class="wp-suche-block wp-suche-block--offen">
+				<div class="wp-suche-felder">
+					<div class="wp-feld wp-feld--breit">
+						<label class="wp-label" for="ctrl_search">Vereinsname</label>
+						<input id="ctrl_search" type="text" class="tl_input_text wp-input" autofocus name="search" maxlength="30" placeholder="Namensbestandteil genügt" value="<?= $this->search ?>">
+						<p class="wp-hilfe">Sucht auch mitten im Namen, z.&nbsp;B. „springer".</p>
+					</div>
 				</div>
 				<?php if($this->fehler): ?>
-					<div class="error"><?= $this->fehler ?></div>
+					<p class="wp-fehler" role="alert"><?= $this->fehler ?></p>
 				<?php endif; ?>
-			</fieldset>
-			<div class="tl_submit_container">
-				<input type="submit" class="tl_submit" value="Suche starten">
+				<div class="wp-suche-aktionen">
+					<button type="submit" class="tl_submit wp-button">Verein suchen</button>
+				</div>
 			</div>
 		</form>
 	</div>

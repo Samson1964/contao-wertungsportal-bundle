@@ -14,16 +14,29 @@ class Turnierformular
 	//  Konfiguration (öffentliche Eigenschaften)
 	// ─────────────────────────────────────────────
 	public array $liste; // Enthält die Verbands- und Vereinsliste (API::Verbandsliste)
+	public array $auswahl; // Aktuelle Sucheinstellungen zur Vorbelegung
 	private array $daten = array(); // Enthält die Daten formatiert für das Template
 
 	// ─────────────────────────────────────────────
 	//  Konstruktor – initialisiert alle Konfigurationswerte
+	//  $Auswahl belegt die Felder mit den Werten einer laufenden Suche vor
+	//  (zps, from_month, from_year, to_month, to_year, last_months);
+	//  ohne Angabe gelten die Standardwerte wie auf der Suchseite
 	// ─────────────────────────────────────────────
-	public function __construct($Liste)
+	public function __construct($Liste, $Auswahl = array())
 	{
 		$this->liste = is_array($Liste) ? $Liste : array('verbaende' => array());
+		$this->auswahl = is_array($Auswahl) ? array_filter($Auswahl, function($wert) { return $wert !== null && $wert !== ''; }) : array();
 
 		$this->compile(); // Weiter mit dieser Funktion
+	}
+
+	// ─────────────────────────────────────────────
+	//  Liefert den vorbelegten Wert eines Feldes (oder false)
+	// ─────────────────────────────────────────────
+	protected function gewaehlt($feld)
+	{
+		return isset($this->auswahl[$feld]) ? (string) $this->auswahl[$feld] : false;
 	}
 
 	// ─────────────────────────────────────────────
@@ -36,8 +49,9 @@ class Turnierformular
 		 * Auswahl Verbände (Vorauswahl über Cookie)
 		*/
 
-		// ZPS der Verbände in Cookie gespeichert?
-		$zpscookie = \Input::cookie('dewis-verband-zps');
+		// Vorbelegung: Wert der laufenden Suche schlägt das Cookie
+		$zpswahl = $this->gewaehlt('zps');
+		$zpscookie = $zpswahl !== false ? $zpswahl : \Input::cookie('dewis-verband-zps');
 
 		// DSB eintragen
 		$opArray = array('<option value="" class="level_0"'.($zpscookie ? '' : ' selected').'><b>0 - Alle Verbände</b></option>');
@@ -49,8 +63,9 @@ class Turnierformular
 			$kurzlaenge = strlen($kurz);
 			if($zpscookie)
 			{
-				// Verband vorselektieren, wenn Cookie gesetzt ist
-				$selected = ($zpscookie == $kurz) ? ' selected' : '';
+				// Verband vorselektieren (Suchwert oder Cookie); die Suche
+				// übergibt die volle VKZ (z. B. "300"), das Cookie die gekürzte
+				$selected = ($zpscookie == $kurz || rtrim((string) $zpscookie, '0') == $kurz) ? ' selected' : '';
 			}
 			else
 			{
@@ -97,29 +112,68 @@ class Turnierformular
 			12 => "Dezember"
 		);
 
-		// Auswahl Von-Monat/Bis-Monat
-		$opArray = array();
+		// Auswahl Monat: getrennt für Von und Bis, damit beide unabhängig
+		// vorbelegt werden können (früher lieferte eine gemeinsame Liste
+		// zweimal denselben ausgewählten Monat)
+		$this->daten['FormVonmonat'] = $this->monatsliste($monate, $this->gewaehlt('from_month') !== false ? (int) $this->gewaehlt('from_month') : $aktmonat);
+		$this->daten['FormBismonat'] = $this->monatsliste($monate, $this->gewaehlt('to_month') !== false ? (int) $this->gewaehlt('to_month') : $aktmonat);
+
+		// Bestandsname beibehalten (ältere Templates lesen FormMonat)
+		$this->daten['FormMonat'] = $this->daten['FormVonmonat'];
+
+		// Auswahl Von-Jahr (Standard: Vorjahr)
+		$this->daten['FormVonjahr'] = $this->jahresliste(2011, (int) $aktjahr, $this->gewaehlt('from_year') !== false ? (int) $this->gewaehlt('from_year') : (int) $aktjahr - 1);
+
+		// Auswahl Bis-Jahr (Standard: aktuelles Jahr)
+		$this->daten['FormBisjahr'] = $this->jahresliste(2011, (int) $aktjahr, $this->gewaehlt('to_year') !== false ? (int) $this->gewaehlt('to_year') : (int) $aktjahr);
+
+		/*********************************************************
+		 * Auswahl "Letzte x Monate"
+		*/
+
+		$gewaehlteMonate = $this->gewaehlt('last_months');
+		$opArray = array('<option value=""'.($gewaehlteMonate ? '' : ' selected').'>Alternativen Zeitraum wählen …</option>');
+
 		for($x = 1; $x <= 12; $x++)
 		{
-			$opArray[] = ($x == $aktmonat) ? '<option value="'.sprintf("%02d",$x).'" selected>'.$monate[$x].'</option>' : '<option value="'.sprintf("%02d",$x).'">'.$monate[$x].'</option>';
+			$text = ($x == 1) ? 'Aktueller Monat' : 'Letzte '.$x.' Monate';
+			$opArray[] = '<option value="'.$x.'"'.(($gewaehlteMonate !== false && (int) $gewaehlteMonate === $x) ? ' selected' : '').'>'.$text.'</option>';
 		}
-		$this->daten['FormMonat'] = implode("\n", $opArray);
 
-		// Auswahl Von-Jahr
-		$opArray = array();
-		for($x = 2011; $x <= $aktjahr; $x++)
-		{
-			$opArray[] = ($x == $aktjahr - 1) ? '<option value="'.$x.'" selected>'.$x.'</option>' : '<option value="'.$x.'">'.$x.'</option>';
-		}
-		$this->daten['FormVonjahr'] = implode("\n", $opArray);
+		$this->daten['FormLetzteMonate'] = implode("\n", $opArray);
 
-		// Auswahl Bis-Jahr
+		// Suchbegriff für die Vorbelegung des Textfelds
+		$this->daten['FormSuchbegriff'] = $this->gewaehlt('keyword') !== false ? $this->gewaehlt('keyword') : '';
+	}
+
+	// ─────────────────────────────────────────────
+	//  Baut die Monatsliste mit dem gewünschten Monat als Vorauswahl
+	// ─────────────────────────────────────────────
+	protected function monatsliste($monate, $auswahl)
+	{
 		$opArray = array();
-		for($x = 2011; $x <= $aktjahr; $x++)
+
+		for($x = 1; $x <= 12; $x++)
 		{
-			$opArray[] = ($x == $aktjahr) ? '<option value="'.$x.'" selected>'.$x.'</option>' : '<option value="'.$x.'">'.$x.'</option>';
+			$opArray[] = '<option value="'.sprintf('%02d', $x).'"'.(($x == $auswahl) ? ' selected' : '').'>'.$monate[$x].'</option>';
 		}
-		$this->daten['FormBisjahr'] = implode("\n", $opArray);
+
+		return implode("\n", $opArray);
+	}
+
+	// ─────────────────────────────────────────────
+	//  Baut die Jahresliste mit dem gewünschten Jahr als Vorauswahl
+	// ─────────────────────────────────────────────
+	protected function jahresliste($von, $bis, $auswahl)
+	{
+		$opArray = array();
+
+		for($x = $von; $x <= $bis; $x++)
+		{
+			$opArray[] = '<option value="'.$x.'"'.(($x == $auswahl) ? ' selected' : '').'>'.$x.'</option>';
+		}
+
+		return implode("\n", $opArray);
 	}
 
 	// ─────────────────────────────────────────────
