@@ -33,6 +33,16 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_persons'] = [
                 'externeNr'      => 'index',
                 'blocked'        => 'index',
                 'published'      => 'index',
+                // Namensindizes: Ohne sie läuft jede Namenssuche (Frontend-
+                // Fallback wie Backend-Liste inkl. Sortierung) als
+                // vollständiger Tabellendurchlauf über alle Personen.
+                // Der zusammengesetzte Index deckt die Namenssuche komplett
+                // ab (Filter published + Bereich lastname + Sortierung nach
+                // lastname/firstname) — mit einem Index allein auf lastname
+                // wählt MySQL stattdessen den unselektiven published-Index
+                // und sortiert das Ergebnis nach (gemessen: 126 ms statt 3 ms)
+                'published,lastname,firstname' => 'index',
+                'lastname'       => 'index',
             ],
         ],
     ],

@@ -9,7 +9,7 @@
 	</table>
 
 	<?php if($this->lokal): ?>
-		<p class="lokalhinweis">Das Wertungsportal lieferte keine Treffer — angezeigt wird das Ergebnis der erweiterten Namenssuche: gemeldete Spieler, deren Name den Suchbegriff enthält (maximal 300 Treffer). DWZ und letzte Auswertung stammen aus dem zuletzt übernommenen Datenbestand und können vom Wertungsportal abweichen.</p>
+		<p class="lokalhinweis">Das Wertungsportal lieferte keine Treffer — angezeigt wird das Ergebnis der erweiterten Namenssuche: gemeldete Spieler, deren Name mit dem Suchbegriff beginnt (maximal 300 Treffer). DWZ und letzte Auswertung stammen aus dem zuletzt übernommenen Datenbestand und können vom Wertungsportal abweichen.</p>
 	<?php endif; ?>
 
 	<table class="body">

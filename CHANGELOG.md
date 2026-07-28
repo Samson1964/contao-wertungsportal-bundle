@@ -1,5 +1,12 @@
 # Wertungsportal-Anbindung
 
+## Version 1.1.1 (2026-07-27)
+
+* **Fix (Performance): Die lokale Fallback-Spielersuche aus 1.0.7 brauchte am Livesystem 5,4 Sekunden je erfolgloser Suche.** Am Symfony-Profiler gemessen: Eine Suche ohne Treffer („Zaunbrecher") kostete 11,3 s Gesamtzeit, davon 7,1 s Datenbankzeit — praktisch vollständig in dieser einen Abfrage. Ursache waren zwei nicht indexierbare Konstruktionen: die Suche mit führendem Platzhalter (LIKE '%x%') und die Prüfung der laufenden Mitgliedschaft als EXISTS-Unterabfrage in derselben WHERE-Klausel, die für JEDE Zeile der Personentabelle ausgewertet wurde. Behoben durch: Suche am Namensanfang (LIKE 'x%'), Mitgliedschaftsprüfung nachgelagert nur für die Kandidaten, Laden nur der benötigten Spalten (statt aller ~40) und einen Mindestumfang von drei Zeichen im Nachnamen. Die Suche greift jetzt nur noch, wenn ein Nachname eingegeben wurde — eine Suche allein über den Vornamen könnte den Namensindex nicht nutzen
+* **Add: Namensindizes für tl_wertungsportal_persons** — zusammengesetzt über published, lastname, firstname sowie einzeln über lastname. Ohne sie wählt MySQL den unselektiven published-Index (zwei mögliche Werte) und sortiert das Ergebnis nach; mit ihnen entfällt die Sortierung komplett. ACHTUNG: contao:migrate bzw. Install-Tool nötig!
+* Messung mit 95.000 Testpersonen und 95.000 Mitgliedschaften: Suche „Sch" 298 ms → 6,3 ms, „Müll" 88 ms → 6,1 ms, erfolglose Suche 5405 ms (live) bzw. 190 ms (lokal) → 0,5 ms. Verifiziert mit 13 Tests (Namensanfang-Logik, Ausschluss von Verstorbenen/Abgemeldeten/Blacklist, Platzhalter-Behandlung, Mindestlänge, Laufzeit)
+* Change: Der Hinweis über der Trefferliste spricht jetzt von Namen, die mit dem Suchbegriff beginnen (statt „enthält")
+
 ## Version 1.1.0 (2026-07-27)
 
 * Add: Die Cachezeiten sind in den System-Einstellungen je Funktionsgruppe einstellbar (Spieler, Vereine, Verbände, Turniersuche, Turnierdaten) — Auswahl von „Kein Cache" bis 30 Tage, ohne Auswahl gilt wie bisher 1 Tag. Empfehlung für die Verbändeliste: 1 Woche, weil sich Verbands- und Vereinsstammdaten kaum ändern; „Kein Cache" schaltet den Cache gezielt für einzelne Bereiche ab

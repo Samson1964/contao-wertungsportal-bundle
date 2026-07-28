@@ -1146,14 +1146,24 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Lokale Spielersuche in tl_wertungsportal_persons als Teilstring-Suche.
+	 * Lokale Spielersuche in tl_wertungsportal_persons als Namensanfang-Suche.
 	 * Wird als Fallback genutzt, wenn die Wertungsportal-API keine Treffer
 	 * liefert (die API vergleicht nur komplette Felder — "müll" findet dort
 	 * kein "müller"). Die Rückgabe hat das Format einer API-Antwort der
 	 * Funktion Spielerliste, damit die Helper-Klasse Spielersuche sie
 	 * unverändert aufbereiten kann.
-	 * @param $nachname    Nachname (Teilstring, Rohstring ohne Slug)
-	 * @param $vorname     Vorname (Teilstring, optional)
+	 *
+	 * PERFORMANCE (gemessen am Livesystem 27.07.2026): Die erste Fassung
+	 * suchte mit führendem Platzhalter (LIKE '%x%') und prüfte die laufende
+	 * Mitgliedschaft per EXISTS-Unterabfrage in derselben WHERE-Klausel.
+	 * Beides ist nicht indexierbar — die Abfrage lief als vollständiger
+	 * Tabellendurchlauf über alle Personen und wertete je Zeile die
+	 * Unterabfrage aus: 5,4 Sekunden je erfolgloser Suche.
+	 * Jetzt: Suche am Namensanfang (nutzt den Index auf lastname/firstname)
+	 * und Mitgliedschaftsprüfung nachgelagert nur für die Kandidaten.
+	 *
+	 * @param $nachname    Nachname (Namensanfang, Rohstring ohne Slug)
+	 * @param $vorname     Vorname (Namensanfang, optional)
 	 * @param $limit       Maximale Trefferzahl
 	 * @return array|false API-förmiges Ergebnis oder false ohne Treffer
 	 */
@@ -1161,37 +1171,39 @@ class Helper extends \Frontend
 	{
 		$nachname = trim((string) $nachname);
 		$vorname = trim((string) $vorname);
-		if($nachname === '' && $vorname === '') return false;
+
+		// Ein Nachname von mindestens drei Zeichen ist Pflicht: Kürzere
+		// Eingaben liefern zehntausende Zeilen, und eine Suche nur über den
+		// Vornamen könnte den Namensindex nicht nutzen (Tabellendurchlauf).
+		// Der Vorname verfeinert lediglich das Ergebnis
+		if(mb_strlen($nachname) < 3) return false;
 
 		// Suchbedingungen aufbauen (LIKE-Platzhalter im Suchbegriff entschärfen).
-		// Abgemeldete Spieler dürfen nicht erscheinen: Es muss mindestens eine
-		// laufende Mitgliedschaft existieren (spielgenehmigungBis leer oder in
-		// der Zukunft; Datum liegt als TT.MM.JJJJ vor und wird wie in der
-		// Mitgliedschafts-Sortierung per SQL nach JJJJMMTT umgestellt).
-		// Verstorbene und Blacklist-Personen sind wie in der Bestenliste
-		// bereits im SQL ausgeschlossen
-		$laufend = "(m.spielgenehmigungBis = '' OR CONCAT(SUBSTRING(m.spielgenehmigungBis, 7, 4), SUBSTRING(m.spielgenehmigungBis, 4, 2), SUBSTRING(m.spielgenehmigungBis, 1, 2)) >= ?)";
+		// Verstorbene und Blacklist-Personen bleiben wie in der Bestenliste außen vor
 		$bedingungen = array
 		(
 			"p.published = '1'",
 			"p.verstorben != '1'",
 			"p.blocked != '1'",
-			"EXISTS (SELECT m.id FROM tl_wertungsportal_persons_memberships m WHERE m.pid = p.id AND m.published = '1' AND ".$laufend.")",
 		);
-		$werte = array(date('Ymd'));
+		$werte = array();
 
 		if($nachname !== '')
 		{
 			$bedingungen[] = 'p.lastname LIKE ?';
-			$werte[] = '%'.addcslashes($nachname, '%_\\').'%';
+			$werte[] = addcslashes($nachname, '%_\\').'%';
 		}
 		if($vorname !== '')
 		{
 			$bedingungen[] = 'p.firstname LIKE ?';
-			$werte[] = '%'.addcslashes($vorname, '%_\\').'%';
+			$werte[] = addcslashes($vorname, '%_\\').'%';
 		}
 
-		$objPersonen = \Database::getInstance()->prepare("SELECT p.* FROM tl_wertungsportal_persons p WHERE ".implode(' AND ', $bedingungen)." ORDER BY p.lastname, p.firstname LIMIT ".(int) $limit)
+		// Mehr Kandidaten laden als am Ende angezeigt werden, weil gleich noch
+		// die Abgemeldeten herausfallen. Nur die benötigten Spalten holen —
+		// die Personentabelle führt rund 40 Felder (Adresse, Datenschutz,
+		// Import-Zusatzdaten), die für die Trefferliste keine Rolle spielen
+		$objPersonen = \Database::getInstance()->prepare("SELECT p.id, p.nuLigaPersonId, p.firstname, p.lastname, p.rating, p.`index`, p.fideId, p.weekOfLastTournamentEvaluation FROM tl_wertungsportal_persons p WHERE ".implode(' AND ', $bedingungen)." ORDER BY p.lastname, p.firstname LIMIT ".((int) $limit * 2))
 		                                       ->execute(...$werte);
 
 		if(!$objPersonen->numRows) return false;
@@ -1215,10 +1227,16 @@ class Helper extends \Frontend
 			$personen[$row['id']] = $dto;
 		}
 
-		// Mitgliedschaften aller Treffer in einem Rutsch laden (ACTIVE zuerst,
-		// die Spielersuche-Aufbereitung bricht beim ersten Aktiv-Status ab);
-		// beendete Mitgliedschaften bleiben außen vor, damit bei einem
-		// Vereinswechsel nicht der alte Verein angezeigt wird
+		// Laufende Mitgliedschaften der Kandidaten in einem Rutsch laden
+		// (ACTIVE zuerst, die Spielersuche-Aufbereitung bricht beim ersten
+		// Aktiv-Status ab). Der Filter läuft hier statt als Unterabfrage in
+		// der Personensuche: Er greift nur auf die wenigen Kandidaten statt
+		// auf jede Zeile der Personentabelle. Beendete Mitgliedschaften
+		// bleiben außen vor, damit bei einem Vereinswechsel nicht der alte
+		// Verein erscheint; das Datum liegt als TT.MM.JJJJ vor und wird wie
+		// in der Mitgliedschafts-Sortierung nach JJJJMMTT umgestellt
+		$laufend = "(m.spielgenehmigungBis = '' OR CONCAT(SUBSTRING(m.spielgenehmigungBis, 7, 4), SUBSTRING(m.spielgenehmigungBis, 4, 2), SUBSTRING(m.spielgenehmigungBis, 1, 2)) >= ?)";
+
 		$objMitgliedschaften = \Database::getInstance()->prepare("SELECT m.pid, m.vkz, m.clubName, m.licenceState FROM tl_wertungsportal_persons_memberships m WHERE m.pid IN (".implode(',', array_map('intval', array_keys($personen))).") AND m.published = 1 AND ".$laufend." ORDER BY m.licenceState")
 		                                               ->execute(date('Ymd'));
 		while($objMitgliedschaften->next())
@@ -1232,12 +1250,24 @@ class Helper extends \Frontend
 			);
 		}
 
+		// Abgemeldete Spieler (keine laufende Mitgliedschaft) entfernen und
+		// auf die gewünschte Trefferzahl kürzen
+		$gefiltert = array();
+		foreach($personen as $person)
+		{
+			if(empty($person['memberships'])) continue;
+			$gefiltert[] = $person;
+			if(count($gefiltert) >= $limit) break;
+		}
+
+		if(!count($gefiltert)) return false;
+
 		// API-förmige Antwort bauen und FIDE-Daten (Elo/Titel) anreichern
 		$result = array
 		(
 			'error'     => false,
 			'http_code' => 200,
-			'body'      => array('data' => array_values($personen)),
+			'body'      => array('data' => $gefiltert),
 		);
 
 		return self::setFIDEDaten($result, array('funktion' => 'Spielerliste'));
