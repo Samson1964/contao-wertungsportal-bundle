@@ -14,6 +14,7 @@ $GLOBALS['TL_LANG']['MOD']['wp-clubs'] = array('Vereine', 'Vereine Wertungsporta
 $GLOBALS['TL_LANG']['MOD']['wp-persons'] = array('Personen', 'Personen und Mitgliedschaften Wertungsportal verwalten');
 $GLOBALS['TL_LANG']['MOD']['wp-tournaments'] = array('Turniere', 'Turniere Wertungsportal verwalten');
 $GLOBALS['TL_LANG']['MOD']['wp-elo'] = array('FIDE-Elo', 'FIDE-Elo-Daten für die Anreicherung verwalten');
+$GLOBALS['TL_LANG']['MOD']['wp-stats'] = array('Statistik', 'Abrufe der Schnittstellenfunktionen auswerten');
 
 /**
  * Frontendmodule

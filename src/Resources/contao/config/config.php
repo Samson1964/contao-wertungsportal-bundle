@@ -62,6 +62,15 @@ $GLOBALS['BE_MOD']['wertungsportal'] = array
 			'tl_wertungsportal_tournaments_matches',
 		),
 	),
+	'wp-stats'    => array
+	(
+		// Auswertung der gezählten Schnittstellenabrufe
+		'callback'       => 'Schachbulle\ContaoWertungsportalBundle\Classes\Statistik',
+		'tables'         => array
+		(
+			'tl_wertungsportal_stats',
+		),
+	),
 	'wp-elo'    => array
 	(
 		'tables'         => array
@@ -143,3 +152,4 @@ $GLOBALS['TL_MODELS']['tl_wertungsportal_persons_upgrades'] = WertungsportalPers
 $GLOBALS['TL_MODELS']['tl_wertungsportal_tournaments'] = WertungsportalTournamentsModel::class;
 $GLOBALS['TL_MODELS']['tl_wertungsportal_tournaments_evaluation'] = WertungsportalTournamentsEvaluationModel::class;
 $GLOBALS['TL_MODELS']['tl_wertungsportal_tournaments_matches'] = WertungsportalTournamentsMatchesModel::class;
+$GLOBALS['TL_MODELS']['tl_wertungsportal_stats'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::class;

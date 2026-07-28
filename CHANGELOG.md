@@ -1,5 +1,21 @@
 # Wertungsportal-Anbindung
 
+## Version 1.3.0 (2026-07-28)
+
+* **Add: Abrufstatistik der Schnittstelle.** Jeder Zugriff auf eine Wertungsportal-Funktion wird gezählt — getrennt danach, ob die Antwort aus dem lokalen Cache kam oder tatsächlich bei der Schnittstelle geholt wurde. Gespeichert wird tagesweise in der neuen Tabelle tl_wertungsportal_stats: je Tag, Funktion und Quelle genau ein Datensatz mit Zähler (INSERT … ON DUPLICATE KEY UPDATE). Die Zählung kostet damit eine Abfrage je Seitenaufruf und geht auch bei gleichzeitigen Zugriffen nicht verloren
+* Add: Alle zwölf internen Funktionen sind den Pfaden der Schnittstelle zugeordnet (API::endpunkte) — /dwz/tournaments mit seinen fünf Funktionen, /dwz/persons/{id}/history sowie /dwz/dwzliste/persons, /persons/{id} und /clubs
+* **Add: Backend-Modul „Statistik"** (Wertungsportal → Statistik): Übersichtstabelle aller Funktionen mit Abrufen von der API, aus dem Cache, Gesamtzahl und Cache-Anteil je Funktion sowie Gesamtsumme. Der Verlauf wird als gestapeltes Balkendiagramm dargestellt (unten Cache, oben API), umschaltbar **nach Woche oder nach Monat**, Zeitraum wählbar von 30 Tagen bis einem Jahr. Ein Klick auf eine Funktion zeigt deren Verlauf allein
+* Die Diagramme sind serverseitig erzeugtes SVG (wie das DWZ-Diagramm der Karteikarte) — ohne zusätzliche Javascript-Bibliothek, mit Werten in den Tooltips und mitwachsender Balkenbreite
+* Die Zählung ist gegen Fehler abgeschottet: Fehlt die Tabelle (vor contao:migrate), läuft das Frontend unverändert weiter, statt mit einem Fehler abzubrechen
+* ACHTUNG: contao:migrate bzw. Install-Tool nötig (neue Tabelle tl_wertungsportal_stats) sowie contao:assets:install (Backend-CSS)
+* Verifiziert mit echtem MySQL (19 Tests): Hochzählen statt Neuanlage, getrennte Zählung von Cache und API, Auswertung je Funktion und Zeitraum, Bündelung nach ISO-Kalenderwoche und Monat, Filter je Funktion, Verhalten bei fehlender Tabelle. Backend-Ansicht mit dem echten Template gerendert und geprüft (Diagramm, Tabelle mit Summenzeile, Funktionsauswahl, Hinweis bei noch leerer Statistik)
+
+## Version 1.2.1 (2026-07-28)
+
+* **Fix: Die Sortierpfeile blieben unsichtbar — jetzt behoben.** Ursache: Es sind zwei tablesorter-Fassungen im Spiel. Die im Bundle mitgelieferte schreibt die Klassen `header` / `headerSortUp` / `headerSortDown` an die Spaltenköpfe, Contaos eigene Fassung unter assets/tablesorter (2.31) dagegen `tablesorter-header` / `tablesorter-headerAsc` / `tablesorter-headerDesc`. Im Livesystem gewinnt Contaos Fassung, weil das Layout sie zuletzt lädt — das CSS sprach aber nur den Namenssatz der mitgelieferten Fassung an und fasste damit ins Leere. Alle Regeln nennen jetzt BEIDE Namenssätze
+* Fix: Hintergrundbilder der Fremdfassung werden unterdrückt, damit deren (im Bundle nicht vorhandene) Pfeilgrafiken nicht neben den Zeichen stehen; als nicht sortierbar markierte Spalten (sorter-false) bekommen keinen Pfeil
+* Verifiziert mit Contaos echter tablesorter-Fassung 2.31 (vom Livesystem geladen, in der Live-Reihenfolge eingebunden): Ruhezustand ⇅ unsichtbar, nach dem ersten Klick ▲, nach dem zweiten ▼, Symbolspalte ohne Pfeil, Sortierung numerisch korrekt
+
 ## Version 1.2.0 (2026-07-27)
 
 * **Add: Die Suchformulare stehen jetzt auch auf den Ergebnisseiten** — bei der Turniersuche und der Verbandsrangliste. Sie sind dort mit den Werten der laufenden Suche vorbelegt und eingeklappt („Suche ändern" bzw. „Liste anpassen"), damit die Trefferliste im Vordergrund bleibt. Eine Suche lässt sich damit direkt nachjustieren, statt über den Zurück-Weg zur Suchseite

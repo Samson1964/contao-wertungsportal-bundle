@@ -71,6 +71,9 @@ class API
 			{
 				$cache_result = $cache->retrieve($params['cachekey']);
 
+				// Abruf aus dem lokalen Cache für die Statistik zählen
+				self::zaehleAbruf($params['funktion'], \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::QUELLE_CACHE);
+
 				// Platzhalter-Mitgliedsnummern auch bei Cache-Treffern
 				// herausfiltern (wirkt sofort statt erst nach Cache-Ablauf)
 				return \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::filterMitgliedsnummern($cache_result);
@@ -80,6 +83,9 @@ class API
 		// Wertungsportal-Abfrage, wenn Cache leer ist
 		if(!isset($cache_result))
 		{
+			// Echten Abruf bei der Schnittstelle für die Statistik zählen
+			self::zaehleAbruf($params['funktion'], \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::QUELLE_API);
+
 			$result = self::getAPI($params);
 			if($result['http_code'] == '200')
 			{
@@ -635,6 +641,53 @@ class API
 			'Turnierauswertung',
 			'Turnierergebnisse',
 			'Spielberichtsbogen',
+		);
+	}
+
+	/**
+	 * Ordnet jeder internen Funktion den Pfad der Schnittstellenfunktion zu
+	 * (siehe API-Dokumentation des Wertungsportals). Grundlage für die
+	 * Abrufstatistik; {…} steht für den jeweiligen Parameter.
+	 *
+	 * @return array   Funktion => Endpunkt
+	 */
+	public static function endpunkte()
+	{
+		return array
+		(
+			// /dwz/dwzliste
+			'Spielerliste'         => '/dwz/dwzliste/persons',
+			'Vereinsliste'         => '/dwz/dwzliste/persons',
+			'Verbandsliste'        => '/dwz/dwzliste/persons',
+			'Karteikarte'          => '/dwz/dwzliste/persons/{id}',
+			'Vereinsname'          => '/dwz/dwzliste/clubs',
+			'Verbaende'            => '/dwz/dwzliste/clubs',
+			// /dwz/persons
+			'Karteikarte_Turniere' => '/dwz/persons/{id}/history',
+			// /dwz/tournaments
+			'Turnierliste'         => '/dwz/tournaments',
+			'Turnierinfo'          => '/dwz/tournaments/{uuid}',
+			'Turnierauswertung'    => '/dwz/tournaments/{uuid}/evaluation',
+			'Turnierergebnisse'    => '/dwz/tournaments/{uuid}/matches',
+			'Spielberichtsbogen'   => '/dwz/tournaments/{uuid}/players/{id}/scoresheet',
+		);
+	}
+
+	/**
+	 * Zählt einen Abruf für die Statistik
+	 *
+	 * @param       String $funktion   interne Funktion
+	 * @param       String $quelle     'api' oder 'cache'
+	 */
+	protected static function zaehleAbruf($funktion, $quelle)
+	{
+		$endpunkte = self::endpunkte();
+
+		\Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::zaehle
+		(
+			(string) $funktion,
+			$quelle,
+			isset($endpunkte[$funktion]) ? $endpunkte[$funktion] : ''
 		);
 	}
 

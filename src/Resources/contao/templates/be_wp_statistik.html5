@@ -1,0 +1,113 @@
+<?php
+/**
+ * Backend-Template des Moduls „Statistik"
+ * Zeigt die Abrufe der Schnittstellenfunktionen (Cache und API).
+ */
+?>
+<div id="tl_buttons"></div>
+
+<h2 class="sub_headline">Abrufstatistik Wertungsportal</h2>
+
+<div class="tl_listing_container wp-stat">
+
+	<div class="wp-stat-steuerung">
+		<div class="wp-stat-gruppe">
+			<span class="wp-stat-titel">Zeitraum</span>
+			<?php foreach(array(30 => '30 Tage', 90 => '3 Monate', 180 => '6 Monate', 365 => '1 Jahr') as $tage => $text): ?>
+				<a href="<?= $this->basisUrl ?>&amp;zeitraum=<?= $tage ?>&amp;raster=<?= $this->raster ?><?= $this->funktion ? '&amp;funktion='.rawurlencode($this->funktion) : '' ?>"
+				   class="wp-stat-knopf<?= ($this->zeitraum == $tage) ? ' aktiv' : '' ?>"><?= $text ?></a>
+			<?php endforeach; ?>
+		</div>
+
+		<div class="wp-stat-gruppe">
+			<span class="wp-stat-titel">Raster</span>
+			<?php foreach(array('woche' => 'nach Woche', 'monat' => 'nach Monat') as $wert => $text): ?>
+				<a href="<?= $this->basisUrl ?>&amp;zeitraum=<?= $this->zeitraum ?>&amp;raster=<?= $wert ?><?= $this->funktion ? '&amp;funktion='.rawurlencode($this->funktion) : '' ?>"
+				   class="wp-stat-knopf<?= ($this->raster == $wert) ? ' aktiv' : '' ?>"><?= $text ?></a>
+			<?php endforeach; ?>
+		</div>
+
+		<div class="wp-stat-gruppe">
+			<span class="wp-stat-titel">Auswahl</span>
+			<a href="<?= $this->basisUrl ?>&amp;zeitraum=<?= $this->zeitraum ?>&amp;raster=<?= $this->raster ?>"
+			   class="wp-stat-knopf<?= $this->funktion ? '' : ' aktiv' ?>">Alle Funktionen</a>
+			<?php if($this->funktion): ?>
+				<span class="wp-stat-knopf aktiv"><?= $this->funktion ?></span>
+			<?php endif; ?>
+		</div>
+	</div>
+
+	<p class="wp-stat-zeitraum">
+		Zeitraum <strong><?= $this->von ?></strong> bis <strong><?= $this->bis ?></strong><?php if($this->funktion): ?>,
+		Funktion <strong><?= $this->funktion ?></strong> <span class="wp-stat-pfad"><?= $this->endpunkt ?></span><?php endif; ?>
+	</p>
+
+	<?php if(!$this->hatDaten): ?>
+
+		<p class="tl_info">
+			Für diesen Zeitraum sind noch keine Abrufe gezählt.
+			<?php if($this->erster): ?>
+				Die Aufzeichnung beginnt am <?= $this->erster ?> — bitte einen längeren Zeitraum wählen.
+			<?php else: ?>
+				Die Zählung startet mit dem ersten Aufruf einer Wertungsportal-Seite im Frontend.
+			<?php endif; ?>
+		</p>
+
+	<?php else: ?>
+
+		<div class="wp-stat-diagramm">
+			<div class="wp-stat-legende">
+				<span><i style="background:<?= $this->farbeApi ?>"></i> von der API</span>
+				<span><i style="background:<?= $this->farbeCache ?>"></i> aus dem lokalen Cache</span>
+			</div>
+			<div class="wp-stat-scroll">
+				<?= $this->diagramm ?>
+			</div>
+		</div>
+
+		<table class="tl_listing wp-stat-tabelle">
+			<thead>
+				<tr>
+					<th>Funktion</th>
+					<th>Schnittstelle</th>
+					<th class="rechts">von der API</th>
+					<th class="rechts">aus dem Cache</th>
+					<th class="rechts">gesamt</th>
+					<th class="rechts">Cache-Anteil</th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach($this->zeilen as $z): ?>
+					<tr class="<?= $z['aktiv'] ? 'wp-stat-aktiv' : '' ?>">
+						<td>
+							<a href="<?= $this->basisUrl ?>&amp;zeitraum=<?= $this->zeitraum ?>&amp;raster=<?= $this->raster ?>&amp;funktion=<?= rawurlencode($z['funktion']) ?>"
+							   title="Nur diese Funktion anzeigen"><?= $z['funktion'] ?></a>
+						</td>
+						<td class="wp-stat-pfad"><?= $z['endpunkt'] ?></td>
+						<td class="rechts"><?= number_format($z['api'], 0, ',', '.') ?></td>
+						<td class="rechts"><?= number_format($z['cache'], 0, ',', '.') ?></td>
+						<td class="rechts"><strong><?= number_format($z['gesamt'], 0, ',', '.') ?></strong></td>
+						<td class="rechts"><?= $z['gesamt'] ? $z['quote'].' %' : '&ndash;' ?></td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+			<tfoot>
+				<tr>
+					<td colspan="2"><strong>Summe</strong></td>
+					<td class="rechts"><strong><?= number_format($this->gesamt['api'], 0, ',', '.') ?></strong></td>
+					<td class="rechts"><strong><?= number_format($this->gesamt['cache'], 0, ',', '.') ?></strong></td>
+					<td class="rechts"><strong><?= number_format($this->gesamt['gesamt'], 0, ',', '.') ?></strong></td>
+					<td class="rechts"><strong><?= $this->gesamt['quote'] ?> %</strong></td>
+				</tr>
+			</tfoot>
+		</table>
+
+		<p class="tl_help">
+			Ein Klick auf eine Funktion zeigt deren Verlauf allein. „Aus dem Cache“ sind Aufrufe,
+			die ohne Anfrage an das Wertungsportal beantwortet wurden — je höher dieser Anteil,
+			desto weniger Last entsteht bei der Schnittstelle.
+		</p>
+
+	<?php endif; ?>
+
+</div>

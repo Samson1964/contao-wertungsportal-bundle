@@ -77,3 +77,126 @@ table.api_statistik td {
 	padding            : 5px;
 }
 */
+/* ─────────────────────────────────────────────────────────────
+   Backend-Modul „Statistik" (Abrufe der Schnittstellenfunktionen)
+   ───────────────────────────────────────────────────────────── */
+
+.wp-stat-steuerung {
+	display					: flex;
+	flex-wrap				: wrap;
+	gap						: 10px 26px;
+	margin					: 0 0 14px;
+	padding					: 12px 14px;
+	background				: #f7f7f7;
+	border					: 1px solid #ddd;
+	border-radius			: 3px;
+}
+
+.wp-stat-gruppe {
+	display					: flex;
+	flex-wrap				: wrap;
+	align-items				: center;
+	gap						: 6px;
+}
+
+.wp-stat-titel {
+	margin-right			: 4px;
+	font-weight				: bold;
+	color					: #5c5c5c;
+}
+
+.wp-stat-knopf {
+	display					: inline-block;
+	padding					: 4px 10px;
+	border					: 1px solid #c8c8c8;
+	border-radius			: 3px;
+	background				: #fff;
+	color					: #1f1f1f;
+	text-decoration			: none;
+	font-size				: 0.92em;
+}
+
+a.wp-stat-knopf:hover {
+	border-color			: #1F618D;
+	color					: #1F618D;
+}
+
+.wp-stat-knopf.aktiv {
+	border-color			: #1F618D;
+	background				: #1F618D;
+	color					: #fff;
+	font-weight				: bold;
+}
+
+.wp-stat-zeitraum {
+	margin					: 0 0 14px;
+	color					: #5c5c5c;
+}
+
+.wp-stat-pfad {
+	font-family				: monospace;
+	font-size				: 0.9em;
+	color					: #5c5c5c;
+}
+
+.wp-stat-diagramm {
+	margin					: 0 0 22px;
+	padding					: 12px 14px 6px;
+	border					: 1px solid #ddd;
+	border-radius			: 3px;
+	background				: #fff;
+}
+
+.wp-stat-legende {
+	display					: flex;
+	flex-wrap				: wrap;
+	gap						: 18px;
+	margin-bottom			: 8px;
+	font-size				: 0.92em;
+	color					: #5c5c5c;
+}
+
+.wp-stat-legende i {
+	display					: inline-block;
+	width					: 12px;
+	height					: 12px;
+	margin-right			: 5px;
+	border-radius			: 2px;
+	vertical-align			: -1px;
+}
+
+/* Breite Diagramme bleiben scrollbar statt die Seite zu sprengen */
+.wp-stat-scroll {
+	overflow-x				: auto;
+}
+
+.wp-stat-tabelle {
+	width					: 100%;
+	border-collapse			: collapse;
+}
+
+.wp-stat-tabelle th,
+.wp-stat-tabelle td {
+	padding					: 6px 10px;
+	border-bottom			: 1px solid #e2e2e2;
+	text-align				: left;
+}
+
+.wp-stat-tabelle th {
+	background				: #f2f2f2;
+	font-weight				: bold;
+}
+
+.wp-stat-tabelle .rechts {
+	text-align				: right;
+	white-space				: nowrap;
+}
+
+.wp-stat-tabelle tfoot td {
+	border-top				: 2px solid #999;
+	background				: #fafafa;
+}
+
+.wp-stat-tabelle tr.wp-stat-aktiv td {
+	background				: #eaf2f8;
+}

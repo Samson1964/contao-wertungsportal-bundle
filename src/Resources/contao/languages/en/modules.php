@@ -12,6 +12,7 @@ $GLOBALS['TL_LANG']['MOD']['wp-clubs'] = array('Clubs', 'Manage rating portal cl
 $GLOBALS['TL_LANG']['MOD']['wp-persons'] = array('Persons', 'Manage rating portal persons and memberships');
 $GLOBALS['TL_LANG']['MOD']['wp-tournaments'] = array('Tournaments', 'Manage rating portal tournaments');
 $GLOBALS['TL_LANG']['MOD']['wp-elo'] = array('FIDE Elo', 'Manage FIDE Elo data for the enrichment');
+$GLOBALS['TL_LANG']['MOD']['wp-stats'] = array('Statistics', 'Evaluate the requests of the API functions');
 
 /**
  * Front end modules
