@@ -1,5 +1,9 @@
 # Wertungsportal Changelog
 
+## Version 1.4.2 (2026-07-29)
+
+* Change: Beschreibung, Keywords und Homepage in der composer.json ergänzt, damit Packagist das Paket verständlich darstellt und über die Suche auffindbar macht
+
 ## Version 1.4.1 (2026-07-28)
 
 * Fix: Die Tabelle der Abrufstatistik ließ sich nicht waagerecht scrollen — sie stand als einzige außerhalb des Scrollbereichs, den das Diagramm schon hatte. Im schmalen Backend-Fenster quetschte sie sich stattdessen zusammen und die langen Schnittstellenpfade brachen unleserlich um. Sie liegt jetzt im selben Scrollbereich, hat eine Mindestbreite und lässt die Pfade nicht mehr umbrechen; die Seite selbst scrollt dabei nicht mit

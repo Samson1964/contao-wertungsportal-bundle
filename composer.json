@@ -1,7 +1,16 @@
 {
     "name": "schachbulle/contao-wertungsportal-bundle",
     "type": "contao-bundle",
-    "description": "Wertungsportal-Bundle für Contao 4",
+    "description": "Bindet das Wertungsportal des Deutschen Schachbundes über dessen REST-Schnittstelle in Contao ein und löst die ältere DeWIS-SOAP-Schnittstelle ab.",
+    "keywords": [
+        "contao",
+        "schach",
+        "dwz",
+        "wertungszahl",
+        "wertungsportal",
+        "schachbund"
+    ],
+    "homepage": "https://github.com/Samson1964/contao-wertungsportal-bundle",
     "license": "LGPL-3.0-or-later",
     "authors": [
         {
