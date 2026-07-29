@@ -7,6 +7,7 @@ namespace Schachbulle\ContaoWertungsportalBundle\Models;
 use Contao\Database;
 use Contao\Model;
 use Contao\Model\Collection;
+use Schachbulle\ContaoWertungsportalBundle\Helper\Helper;
 
 /**
  * Model für die Tabelle tl_wertungsportal_clubs.
@@ -43,6 +44,13 @@ class WertungsportalClubsModel extends Model
     use ApiSyncTrait;
 
     protected static $strTable = 'tl_wertungsportal_clubs';
+
+    /**
+     * Quellfeld => Aliasfeld. Der Alias wird auf allen Schreibwegen
+     * mitgeführt (ApiSyncTrait::aliasFelder) und trägt die umlautunabhängige
+     * Vereinssuche.
+     */
+    public const ALIAS_FELDER = ['clubName' => 'clubNameAlias'];
 
     /**
      * Felder des Vereins-Stammdaten-CSV-Imports (DB-Namen, alle als String
@@ -100,7 +108,9 @@ class WertungsportalClubsModel extends Model
 
         foreach (array_chunk(array_keys($arrClubs), 500) as $arrChunk) {
             $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
-            $objRows = $objDatabase->prepare('SELECT id, clubVkz, ' . $strFields . ' FROM ' . static::$strTable . ' WHERE clubVkz IN (' . $strPlaceholders . ')')
+            // clubNameAlias mitlesen: Ohne den Bestandswert hielte der
+            // Vergleich den Alias bei jedem Lauf für geändert
+            $objRows = $objDatabase->prepare('SELECT id, clubVkz, clubNameAlias, ' . $strFields . ' FROM ' . static::$strTable . ' WHERE clubVkz IN (' . $strPlaceholders . ')')
                                    ->execute($arrChunk);
 
             while ($objRows->next()) {
@@ -118,6 +128,7 @@ class WertungsportalClubsModel extends Model
                     $arrRow[] = (string) ($arrClub[$strField] ?? '');
                 }
 
+                $arrRow[] = Helper::alias((string) ($arrClub['clubName'] ?? ''));
                 $arrRow[] = '1';
                 $arrInsert[] = $arrRow;
                 continue;
@@ -133,7 +144,8 @@ class WertungsportalClubsModel extends Model
                 }
             }
 
-            $arrSet = static::diffApiFields($arrExisting[$strVkz], $arrSet);
+            $arrSet = static::aliasFelder(static::diffApiFields($arrExisting[$strVkz], $arrSet));
+            $arrSet = static::fehlendeAliase($arrExisting[$strVkz], $arrSet);
 
             if ($arrSet) {
                 $arrSet['tstamp'] = $intTime;
@@ -147,8 +159,8 @@ class WertungsportalClubsModel extends Model
         }
 
         // Neue Vereine blockweise anlegen
-        $strColumns = 'tstamp, clubVkz, ' . $strFields . ', published';
-        $strTuple = '(' . implode(', ', array_fill(0, \count(self::CSV_STRING_FIELDS) + 3, '?')) . ')';
+        $strColumns = 'tstamp, clubVkz, ' . $strFields . ', clubNameAlias, published';
+        $strTuple = '(' . implode(', ', array_fill(0, \count(self::CSV_STRING_FIELDS) + 4, '?')) . ')';
 
         foreach (array_chunk($arrInsert, 100) as $arrChunk) {
             $strValues = implode(', ', array_fill(0, \count($arrChunk), $strTuple));
@@ -223,16 +235,24 @@ class WertungsportalClubsModel extends Model
     }
 
     /**
-     * Sucht Vereine per LIKE im Vereinsnamen.
+     * Sucht Vereine per LIKE im Vereinsnamen — über das Aliasfeld, damit die
+     * Umlautschreibweise keine Rolle spielt ("Königsspringer" findet auch
+     * "Koenigsspringer"). Ein Suchbegriff ohne verwertbare Zeichen liefert
+     * nichts statt aller Vereine.
      *
      * @return Collection|WertungsportalClubsModel[]|null
      */
     public static function searchByName(string $term, bool $onlyPublished = true, array $arrOptions = []): ?Collection
     {
         $t = static::$strTable;
+        $strAlias = Helper::alias($term);
 
-        $arrColumns = ["$t.clubName LIKE ?"];
-        $arrValues  = ['%' . str_replace(['%', '_'], ['\\%', '\\_'], $term) . '%'];
+        if ('' === $strAlias || '-' === $strAlias) {
+            return null;
+        }
+
+        $arrColumns = ["$t.clubNameAlias LIKE ?"];
+        $arrValues  = ['%' . str_replace(['%', '_'], ['\\%', '\\_'], $strAlias) . '%'];
 
         if ($onlyPublished) {
             $arrColumns[] = "$t.published='1'";
@@ -295,7 +315,7 @@ class WertungsportalClubsModel extends Model
 
         // Bestand einmalig laden (VKZ => Datensatz)
         $arrExisting = [];
-        $objRows = $objDatabase->execute('SELECT id, clubVkz, clubName, federation, parentFederation, state FROM ' . static::$strTable);
+        $objRows = $objDatabase->execute('SELECT id, clubVkz, clubName, clubNameAlias, federation, parentFederation, state FROM ' . static::$strTable);
 
         while ($objRows->next()) {
             $arrExisting[(string) $objRows->clubVkz] = $objRows->row();
@@ -323,6 +343,7 @@ class WertungsportalClubsModel extends Model
                     $intTime,
                     $strVkz,
                     (string) ($arrClub['clubName'] ?? ''),
+                    Helper::alias((string) ($arrClub['clubName'] ?? '')),
                     (string) ($arrClub['federation'] ?? ''),
                     (string) ($arrClub['parentFederation'] ?? ''),
                     (string) ($arrClub['state'] ?? ''),
@@ -340,6 +361,10 @@ class WertungsportalClubsModel extends Model
                 }
             }
 
+            // Alias auch dann nachziehen, wenn der Name unverändert ist, aber
+            // der Alias noch fehlt (Bestand vor der Umstellung)
+            $arrSet = static::fehlendeAliase($arrRow, static::aliasFelder($arrSet));
+
             if ($arrSet) {
                 $arrSet['tstamp'] = $intTime;
                 $objDatabase->prepare('UPDATE ' . static::$strTable . ' %s WHERE id=?')
@@ -350,9 +375,9 @@ class WertungsportalClubsModel extends Model
 
         // Neue Vereine blockweise anlegen
         foreach (array_chunk($arrInsert, 100) as $arrChunk) {
-            $strValues = implode(', ', array_fill(0, \count($arrChunk), '(?, ?, ?, ?, ?, ?, ?)'));
+            $strValues = implode(', ', array_fill(0, \count($arrChunk), '(?, ?, ?, ?, ?, ?, ?, ?)'));
 
-            $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (tstamp, clubVkz, clubName, federation, parentFederation, state, published) VALUES ' . $strValues)
+            $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (tstamp, clubVkz, clubName, clubNameAlias, federation, parentFederation, state, published) VALUES ' . $strValues)
                         ->execute(array_merge(...$arrChunk));
         }
     }

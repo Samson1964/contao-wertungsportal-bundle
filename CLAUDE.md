@@ -131,6 +131,31 @@ Jeder API-Case in `Helper/API.php::getAPI()` ruft nach `callApiWithRefresh()` ei
 WICHTIG: `autoQuery()` cached (24 h, `wertungsportal_cache`). Bei Cache-Treffer läuft KEIN Sync.
 Fehlgeschlagene Abfragen (HTTP != 200) werden nicht gecached.
 
+## Suchaliase (ab 1.6.0)
+
+Vier Aliasfelder tragen die umlautunabhängige Suche: `persons.firstnameAlias`/
+`lastnameAlias`, `clubs.clubNameAlias`, `tournaments.labelAlias`. Erzeugt werden
+sie von `Helper::alias()` über den Slug-Generator mit deutschem Sprachraum
+(`contao.slug.generator`, NICHT `contao.slug` — der stellt rein numerischen
+Werten ein „id-" voran und zöge ohne Optionen die Einstellungen einer Seite
+heran). Regeln:
+
+- **Symmetrie ist Pflicht:** Suchbegriff UND gespeicherter Wert laufen durch
+  dieselbe Funktion. Wer nur eine Seite umwandelt, bekommt keine Treffer.
+- Ein Text ohne verwertbare Zeichen (der nu-Turniername „-") ergibt den
+  Platzhalter `'-'`, ein leerer Text `''`. Suchen brechen bei beiden ab, statt
+  den ganzen Bestand auszugeben.
+- **Pflege:** Zuordnung Quellfeld → Aliasfeld steht als Konstante
+  `ALIAS_FELDER` im jeweiligen Model; `ApiSyncTrait::aliasFelder()` (Bulk-Wege,
+  IMMER nach `diffApiFields`, nie davor) und `applyApiFields()` (Einzel-Upserts)
+  führen sie mit. `fehlendeAliase()` zieht fehlende Aliase des Altbestands beim
+  nächsten Abgleich nach. Neu erzeugt wird ein Alias nur bei geändertem Namen —
+  sonst liefe die Erzeugung (~0,08 ms) bei jedem Abgleich für jeden Datensatz.
+- **Bestand:** `Migration/AliasMigration.php` füllt beim `contao:migrate`
+  blockweise nach (20 s Zeitbudget, resümierbar; 95.000 Personen ≈ 15 s).
+  Wer INSERT-Spaltenlisten in den Models anfasst, muss die Aliasspalten
+  mitführen — sie stehen dort als zusätzliche Positionen im Werte-Tupel.
+
 ## Fallstricke / Besonderheiten
 
 - **Identifier**: `nuLigaPersonId` identifiziert eine Person systemweit. Die `playerUuid` in

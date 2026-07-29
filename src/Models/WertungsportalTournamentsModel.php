@@ -7,6 +7,7 @@ namespace Schachbulle\ContaoWertungsportalBundle\Models;
 use Contao\Database;
 use Contao\Model;
 use Contao\Model\Collection;
+use Schachbulle\ContaoWertungsportalBundle\Helper\Helper;
 
 /**
  * Model für die Tabelle tl_wertungsportal_tournaments.
@@ -60,6 +61,13 @@ class WertungsportalTournamentsModel extends Model
     ];
 
     private const API_INT_FIELDS = ['rounds', 'playerCount', 'matchCount'];
+
+    /**
+     * Quellfeld => Aliasfeld. Der Alias wird auf allen Schreibwegen
+     * mitgeführt (ApiSyncTrait::aliasFelder) und trägt die umlautunabhängige
+     * lokale Turniersuche.
+     */
+    public const ALIAS_FELDER = ['label' => 'labelAlias'];
 
     /**
      * Findet ein Turnier anhand seiner UUID.
@@ -156,7 +164,9 @@ class WertungsportalTournamentsModel extends Model
 
         foreach (array_chunk(array_unique($arrUuids), 500) as $arrChunk) {
             $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
-            $objRows = $objDatabase->prepare('SELECT id, uuid, ' . implode(', ', self::API_STRING_FIELDS) . ', ' . implode(', ', self::API_INT_FIELDS) . ' FROM ' . static::$strTable . ' WHERE uuid IN (' . $strPlaceholders . ')')
+            // labelAlias mitlesen: Ohne den Bestandswert hielte der Vergleich
+            // den Alias bei jedem Sync für geändert
+            $objRows = $objDatabase->prepare('SELECT id, uuid, labelAlias, ' . implode(', ', self::API_STRING_FIELDS) . ', ' . implode(', ', self::API_INT_FIELDS) . ' FROM ' . static::$strTable . ' WHERE uuid IN (' . $strPlaceholders . ')')
                                    ->execute($arrChunk);
 
             while ($objRows->next()) {
@@ -192,6 +202,7 @@ class WertungsportalTournamentsModel extends Model
                     $arrRow[] = (int) ($arrTournament[$strField] ?? 0);
                 }
 
+                $arrRow[] = Helper::alias((string) ($arrTournament['label'] ?? ''));
                 $arrRow[] = '1';
                 $arrInsert[] = $arrRow;
                 continue;
@@ -212,6 +223,10 @@ class WertungsportalTournamentsModel extends Model
                 }
             }
 
+            // Alias auch dann nachziehen, wenn die Bezeichnung unverändert
+            // ist, aber der Alias noch fehlt (Bestand vor der Umstellung)
+            $arrSet = static::fehlendeAliase($arrRow, static::aliasFelder($arrSet));
+
             if ($arrSet) {
                 $arrSet['tstamp'] = $intTime;
                 $objDatabase->prepare('UPDATE ' . static::$strTable . ' %s WHERE id=?')
@@ -221,8 +236,8 @@ class WertungsportalTournamentsModel extends Model
         }
 
         // Neue Turniere blockweise anlegen
-        $strColumns = 'tstamp, uuid, ' . implode(', ', self::API_STRING_FIELDS) . ', ' . implode(', ', self::API_INT_FIELDS) . ', published';
-        $strTuple = '(' . implode(', ', array_fill(0, \count(self::API_STRING_FIELDS) + \count(self::API_INT_FIELDS) + 3, '?')) . ')';
+        $strColumns = 'tstamp, uuid, ' . implode(', ', self::API_STRING_FIELDS) . ', ' . implode(', ', self::API_INT_FIELDS) . ', labelAlias, published';
+        $strTuple = '(' . implode(', ', array_fill(0, \count(self::API_STRING_FIELDS) + \count(self::API_INT_FIELDS) + 4, '?')) . ')';
 
         foreach (array_chunk($arrInsert, 100) as $arrChunk) {
             $strValues = implode(', ', array_fill(0, \count($arrChunk), $strTuple));

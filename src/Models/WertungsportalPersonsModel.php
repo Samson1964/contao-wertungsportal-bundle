@@ -7,6 +7,7 @@ namespace Schachbulle\ContaoWertungsportalBundle\Models;
 use Contao\Database;
 use Contao\Model;
 use Contao\Model\Collection;
+use Schachbulle\ContaoWertungsportalBundle\Helper\Helper;
 
 /**
  * Model für die Tabelle tl_wertungsportal_persons.
@@ -47,6 +48,16 @@ class WertungsportalPersonsModel extends Model
     protected static $strTable = 'tl_wertungsportal_persons';
 
     /**
+     * Quellfeld => Aliasfeld. Die Aliase werden auf allen Schreibwegen
+     * mitgeführt (ApiSyncTrait::aliasFelder) und tragen die umlautunabhängige
+     * lokale Spielersuche.
+     */
+    public const ALIAS_FELDER = [
+        'firstname' => 'firstnameAlias',
+        'lastname'  => 'lastnameAlias',
+    ];
+
+    /**
      * String-Felder des Vereinsmitglieder-CSV-Imports (DB-Namen).
      * fideId (int) wird separat behandelt.
      */
@@ -84,16 +95,24 @@ class WertungsportalPersonsModel extends Model
     }
 
     /**
-     * Sucht Personen per LIKE in Vor- und Nachname.
+     * Sucht Personen per LIKE in Vor- und Nachname — über die Aliasfelder,
+     * damit die Umlautschreibweise keine Rolle spielt ("müller" findet auch
+     * "Mueller"). Ein Suchbegriff ohne verwertbare Zeichen liefert nichts
+     * statt aller Personen.
      *
      * @return Collection|WertungsportalPersonsModel[]|null
      */
     public static function searchByName(string $term, bool $onlyPublished = true, array $arrOptions = []): ?Collection
     {
         $t = static::$strTable;
+        $strAlias = Helper::alias($term);
 
-        $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $term) . '%';
-        $arrColumns = ["($t.lastname LIKE ? OR $t.firstname LIKE ?)"];
+        if ('' === $strAlias || '-' === $strAlias) {
+            return null;
+        }
+
+        $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $strAlias) . '%';
+        $arrColumns = ["($t.lastnameAlias LIKE ? OR $t.firstnameAlias LIKE ?)"];
         $arrValues  = [$like, $like];
 
         if ($onlyPublished) {
@@ -198,7 +217,7 @@ class WertungsportalPersonsModel extends Model
 
         foreach (array_chunk(array_keys($arrByUuid), 500) as $arrChunk) {
             $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
-            $objRows = $objDatabase->prepare('SELECT id, uuid, nuLigaPersonId, firstname, lastname, gender, weekOfLastTournamentEvaluation, fideId, rating, `index`, birthyear FROM ' . static::$strTable . ' WHERE uuid IN (' . $strPlaceholders . ')')
+            $objRows = $objDatabase->prepare('SELECT id, uuid, nuLigaPersonId, firstname, lastname, firstnameAlias, lastnameAlias, gender, weekOfLastTournamentEvaluation, fideId, rating, `index`, birthyear FROM ' . static::$strTable . ' WHERE uuid IN (' . $strPlaceholders . ')')
                                    ->execute($arrChunk);
 
             while ($objRows->next()) {
@@ -218,7 +237,7 @@ class WertungsportalPersonsModel extends Model
 
         foreach (array_chunk(array_keys($arrFallback), 500) as $arrChunk) {
             $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
-            $objRows = $objDatabase->prepare('SELECT id, uuid, nuLigaPersonId, firstname, lastname, gender, weekOfLastTournamentEvaluation, fideId, rating, `index`, birthyear FROM ' . static::$strTable . ' WHERE nuLigaPersonId IN (' . $strPlaceholders . ')')
+            $objRows = $objDatabase->prepare('SELECT id, uuid, nuLigaPersonId, firstname, lastname, firstnameAlias, lastnameAlias, gender, weekOfLastTournamentEvaluation, fideId, rating, `index`, birthyear FROM ' . static::$strTable . ' WHERE nuLigaPersonId IN (' . $strPlaceholders . ')')
                                    ->execute($arrChunk);
 
             while ($objRows->next()) {
@@ -241,6 +260,8 @@ class WertungsportalPersonsModel extends Model
                     (string) ($arrPerson['nuLigaPersonId'] ?? ''),
                     (string) ($arrPerson['firstname'] ?? ''),
                     (string) ($arrPerson['lastname'] ?? ''),
+                    Helper::alias((string) ($arrPerson['firstname'] ?? '')),
+                    Helper::alias((string) ($arrPerson['lastname'] ?? '')),
                     (string) ($arrPerson['gender'] ?? ''),
                     (string) ($arrPerson['weekOfLastTournamentEvaluation'] ?? ''),
                     (int) ($arrPerson['fideId'] ?? 0),
@@ -269,7 +290,11 @@ class WertungsportalPersonsModel extends Model
                 }
             }
 
-            $arrSet = static::diffApiFields($arrRow, $arrSet);
+            $arrSet = static::aliasFelder(static::diffApiFields($arrRow, $arrSet));
+
+            // Fehlende Aliase des Bestands nachziehen (Datensätze aus der
+            // Zeit vor der Umstellung, an denen sich der Name nicht ändert)
+            $arrSet = static::fehlendeAliase($arrRow, $arrSet);
 
             // Geburtsjahr-Regel: manuell gepflegtes Datum nicht überschreiben,
             // solange es das gelieferte Jahr enthält
@@ -292,9 +317,9 @@ class WertungsportalPersonsModel extends Model
 
         // Neue Personen blockweise anlegen
         foreach (array_chunk($arrInsert, 100) as $arrChunk) {
-            $strValues = implode(', ', array_fill(0, \count($arrChunk), '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'));
+            $strValues = implode(', ', array_fill(0, \count($arrChunk), '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'));
 
-            $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (tstamp, uuid, nuLigaPersonId, firstname, lastname, gender, weekOfLastTournamentEvaluation, fideId, rating, `index`, birthyear, published) VALUES ' . $strValues)
+            $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (tstamp, uuid, nuLigaPersonId, firstname, lastname, firstnameAlias, lastnameAlias, gender, weekOfLastTournamentEvaluation, fideId, rating, `index`, birthyear, published) VALUES ' . $strValues)
                         ->execute(array_merge(...$arrChunk));
         }
 
@@ -351,7 +376,7 @@ class WertungsportalPersonsModel extends Model
 
         foreach (array_chunk(array_keys($arrById), 500) as $arrChunk) {
             $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
-            $objRows = $objDatabase->prepare('SELECT id, nuLigaPersonId, firstname, lastname, fideId, birthyear FROM ' . static::$strTable . ' WHERE nuLigaPersonId IN (' . $strPlaceholders . ')')
+            $objRows = $objDatabase->prepare('SELECT id, nuLigaPersonId, firstname, lastname, firstnameAlias, lastnameAlias, fideId, birthyear FROM ' . static::$strTable . ' WHERE nuLigaPersonId IN (' . $strPlaceholders . ')')
                                    ->execute($arrChunk);
 
             while ($objRows->next()) {
@@ -369,6 +394,8 @@ class WertungsportalPersonsModel extends Model
                     $strId,
                     (string) ($arrPlayer['firstname'] ?? ''),
                     (string) ($arrPlayer['lastname'] ?? ''),
+                    Helper::alias((string) ($arrPlayer['firstname'] ?? '')),
+                    Helper::alias((string) ($arrPlayer['lastname'] ?? '')),
                     (int) ($arrPlayer['fideId'] ?? 0),
                     (string) ($arrPlayer['birthyear'] ?? ''),
                     '1',
@@ -391,7 +418,8 @@ class WertungsportalPersonsModel extends Model
                 $arrSet['fideId'] = (int) $arrPlayer['fideId'];
             }
 
-            $arrSet = static::diffApiFields($arrRow, $arrSet);
+            $arrSet = static::aliasFelder(static::diffApiFields($arrRow, $arrSet));
+            $arrSet = static::fehlendeAliase($arrRow, $arrSet);
 
             // Geburtsjahr-Regel wie in applyBirthyear()
             if (\array_key_exists('birthyear', $arrPlayer)) {
@@ -413,9 +441,9 @@ class WertungsportalPersonsModel extends Model
 
         // Neue Personen blockweise anlegen
         foreach (array_chunk($arrInsert, 100) as $arrChunk) {
-            $strValues = implode(', ', array_fill(0, \count($arrChunk), '(?, ?, ?, ?, ?, ?, ?)'));
+            $strValues = implode(', ', array_fill(0, \count($arrChunk), '(?, ?, ?, ?, ?, ?, ?, ?, ?)'));
 
-            $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (tstamp, nuLigaPersonId, firstname, lastname, fideId, birthyear, published) VALUES ' . $strValues)
+            $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (tstamp, nuLigaPersonId, firstname, lastname, firstnameAlias, lastnameAlias, fideId, birthyear, published) VALUES ' . $strValues)
                         ->execute(array_merge(...$arrChunk));
         }
 
@@ -470,7 +498,9 @@ class WertungsportalPersonsModel extends Model
 
         foreach (array_chunk(array_keys($arrPersons), 500) as $arrChunk) {
             $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
-            $objRows = $objDatabase->prepare('SELECT id, nuLigaPersonId, fideId, ' . $strFields . ' FROM ' . static::$strTable . ' WHERE nuLigaPersonId IN (' . $strPlaceholders . ')')
+            // Aliase mitlesen: Ohne die Bestandswerte hielte der Vergleich sie
+            // bei jedem Import für geändert
+            $objRows = $objDatabase->prepare('SELECT id, nuLigaPersonId, fideId, firstnameAlias, lastnameAlias, ' . $strFields . ' FROM ' . static::$strTable . ' WHERE nuLigaPersonId IN (' . $strPlaceholders . ')')
                                    ->execute($arrChunk);
 
             while ($objRows->next()) {
@@ -489,6 +519,8 @@ class WertungsportalPersonsModel extends Model
                 }
 
                 $arrRow[] = (int) ($arrPerson['fideId'] ?? 0);
+                $arrRow[] = Helper::alias((string) ($arrPerson['firstname'] ?? ''));
+                $arrRow[] = Helper::alias((string) ($arrPerson['lastname'] ?? ''));
                 $arrRow[] = '1';
                 $arrInsert[] = $arrRow;
                 continue;
@@ -513,7 +545,8 @@ class WertungsportalPersonsModel extends Model
                 $arrSet['fideId'] = (int) $arrPerson['fideId'];
             }
 
-            $arrSet = static::diffApiFields($arrExisting[$strId], $arrSet);
+            $arrSet = static::aliasFelder(static::diffApiFields($arrExisting[$strId], $arrSet));
+            $arrSet = static::fehlendeAliase($arrExisting[$strId], $arrSet);
 
             if ($arrSet) {
                 $arrSet['tstamp'] = $intTime;
@@ -527,8 +560,8 @@ class WertungsportalPersonsModel extends Model
         }
 
         // Neue Personen blockweise anlegen
-        $strColumns = 'tstamp, nuLigaPersonId, ' . $strFields . ', fideId, published';
-        $strTuple = '(' . implode(', ', array_fill(0, \count(self::CSV_STRING_FIELDS) + 4, '?')) . ')';
+        $strColumns = 'tstamp, nuLigaPersonId, ' . $strFields . ', fideId, firstnameAlias, lastnameAlias, published';
+        $strTuple = '(' . implode(', ', array_fill(0, \count(self::CSV_STRING_FIELDS) + 6, '?')) . ')';
 
         foreach (array_chunk($arrInsert, 100) as $arrChunk) {
             $strValues = implode(', ', array_fill(0, \count($arrChunk), $strTuple));

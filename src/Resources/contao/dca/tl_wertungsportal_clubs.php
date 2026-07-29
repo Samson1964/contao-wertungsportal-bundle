@@ -18,9 +18,10 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
         'enableVersioning'  => true,
         'sql'               => [
             'keys' => [
-                'id'        => 'primary',
-                'clubVkz'   => 'index',
-                'published' => 'index',
+                'id'            => 'primary',
+                'clubVkz'       => 'index',
+                'published'     => 'index',
+                'clubNameAlias' => 'index',
             ],
         ],
     ],
@@ -119,6 +120,15 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
             'flag'      => DataContainer::SORT_ASC,
             'inputType' => 'text',
             'eval'      => ['mandatory' => true, 'maxlength' => 255, 'tl_class' => 'w50'],
+            'sql'       => "varchar(255) NOT NULL default ''",
+        ],
+
+        // Suchalias des Vereinsnamens (kleingeschrieben, ohne Umlaute).
+        // Wird beim Speichern automatisch aus clubName erzeugt und macht die
+        // Vereinssuche unabhängig von der Umlautschreibweise
+        // ("Königsspringer" findet auch "Koenigsspringer").
+        // Kein Eingabefeld: abgeleiteter Wert, gehört in keine Palette
+        'clubNameAlias' => [
             'sql'       => "varchar(255) NOT NULL default ''",
         ],
 

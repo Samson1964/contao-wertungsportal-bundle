@@ -500,6 +500,22 @@
 	opacity					: 0.7;
 }
 
+/* Hinweis auf eine Ersatzsuche im lokalen Datenbestand (Spieler- und
+   Turniersuche). Er steht direkt über der Trefferliste und erklärt, warum
+   dort etwas anderes steht als vom Wertungsportal erwartet — deshalb
+   deutlicher als der Cache-Hinweis, aber ohne Warnfarbe: Das Ergebnis ist
+   brauchbar, nur eben nicht von der Schnittstelle. Die Klasse gab es seit
+   der Einführung der lokalen Spielersuche, war aber nie gestaltet. */
+.dewis .lokalhinweis {
+	margin					: 0 0 12px;
+	padding					: 8px 10px;
+	border-left				: 3px solid #b0b0b0;
+	background				: #f4f4f4;
+	font-size				: 0.9em;
+	line-height				: 1.45;
+	color					: #3f3f3f;
+}
+
 /* ─────────────────────────────────────────────────────────────
    Such- und Auswahlformulare (Turniersuche, Verbandsrangliste)
 

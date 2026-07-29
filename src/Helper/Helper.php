@@ -1222,6 +1222,54 @@ class Helper extends \Frontend
 	}
 
 	/**
+	 * Erzeugt den Suchalias eines Textes: kleingeschrieben, ohne Umlaute und
+	 * Sonderzeichen, Wörter durch Bindestrich getrennt ("Büchenbach Open" →
+	 * "buechenbach-open"). Grundlage ist der Slug-Generator mit deutschem
+	 * Sprachraum — nur der schreibt Umlaute so um, wie sie auch von Hand
+	 * geschrieben werden (ü → ue, ß → ss). Genau das löst das Suchproblem:
+	 * "Büchenbach" und "Buechenbach" ergeben denselben Alias, ebenso
+	 * "Königsspringer"/"Koenigsspringer" oder "Groß-Gerau"/"Gross-Gerau".
+	 *
+	 * Verwendet wird der reine Slug-Generator (contao.slug.generator), NICHT
+	 * der Contao-Dienst contao.slug: Letzterer stellt rein numerischen Werten
+	 * ein "id-" voran (aus "2025" würde "id-2025", das fände sich dann nicht
+	 * mehr in "open-2025") und zieht ohne ausdrückliche Optionen die
+	 * Einstellungen einer Seite heran. Sollte der Dienst einmal nicht
+	 * öffentlich sein, greift der Umweg über contao.slug samt Rücknahme des
+	 * Präfixes.
+	 *
+	 * Ein Text ohne verwertbare Zeichen (z. B. der nu-Turniername "-") ergäbe
+	 * einen leeren Alias und wäre damit von "noch nicht erzeugt" nicht zu
+	 * unterscheiden. Solche Werte bekommen deshalb den Platzhalter "-", den
+	 * der Slug-Generator selbst nie liefert (er schneidet Trennzeichen an den
+	 * Rändern ab).
+	 *
+	 * @param $text        Ausgangstext (Vereins-, Turnier- oder Personenname)
+	 * @return string      Alias, '' bei leerer Eingabe, '-' ohne verwertbare Zeichen
+	 */
+	public static function alias($text)
+	{
+		$text = trim((string) $text);
+		if($text === '') return '';
+
+		$optionen = array('validChars' => 'a-z0-9', 'locale' => 'de', 'delimiter' => '-');
+		$container = \System::getContainer();
+
+		if($container->has('contao.slug.generator'))
+		{
+			$alias = $container->get('contao.slug.generator')->generate($text, $optionen);
+		}
+		else
+		{
+			$alias = $container->get('contao.slug')->generate($text, $optionen);
+			// "id-"-Präfix des Contao-Dienstes zurücknehmen (siehe oben)
+			if(preg_match('/^id-[1-9][0-9]*$/', $alias)) $alias = substr($alias, 3);
+		}
+
+		return $alias !== '' ? $alias : '-';
+	}
+
+	/**
 	 * Lokale Spielersuche in tl_wertungsportal_persons als Namensanfang-Suche.
 	 * Wird als Fallback genutzt, wenn die Wertungsportal-API keine Treffer
 	 * liefert (die API vergleicht nur komplette Felder — "müll" findet dort
@@ -1235,8 +1283,14 @@ class Helper extends \Frontend
 	 * Beides ist nicht indexierbar — die Abfrage lief als vollständiger
 	 * Tabellendurchlauf über alle Personen und wertete je Zeile die
 	 * Unterabfrage aus: 5,4 Sekunden je erfolgloser Suche.
-	 * Jetzt: Suche am Namensanfang (nutzt den Index auf lastname/firstname)
+	 * Jetzt: Suche am Namensanfang (nutzt den Index auf den Aliasfeldern)
 	 * und Mitgliedschaftsprüfung nachgelagert nur für die Kandidaten.
+	 *
+	 * UMLAUTE: Gesucht wird über die Aliasfelder (lastnameAlias/
+	 * firstnameAlias) statt über die Klarnamen — Suchbegriff und gespeicherter
+	 * Name laufen beide durch Helper::alias(). Damit findet "müller" auch ein
+	 * als "Mueller" gemeldetes Konto und umgekehrt. Voraussetzung ist die
+	 * Migration, die den Bestand mit Aliasen versieht.
 	 *
 	 * @param $nachname    Nachname (Namensanfang, Rohstring ohne Slug)
 	 * @param $vorname     Vorname (Namensanfang, optional)
@@ -1254,6 +1308,14 @@ class Helper extends \Frontend
 		// Der Vorname verfeinert lediglich das Ergebnis
 		if(mb_strlen($nachname) < 3) return false;
 
+		// Suchbegriffe in Aliase umwandeln (Umlaute, Groß-/Kleinschreibung).
+		// "-" bedeutet: keine verwertbaren Zeichen — damit ist nicht zu suchen
+		$nachnameAlias = self::alias($nachname);
+		$vornameAlias = self::alias($vorname);
+
+		if($nachnameAlias === '' || $nachnameAlias === '-') return false;
+		if($vornameAlias === '-') $vornameAlias = '';
+
 		// Suchbedingungen aufbauen (LIKE-Platzhalter im Suchbegriff entschärfen).
 		// Verstorbene und Blacklist-Personen bleiben wie in der Bestenliste außen vor
 		$bedingungen = array
@@ -1264,22 +1326,23 @@ class Helper extends \Frontend
 		);
 		$werte = array();
 
-		if($nachname !== '')
+		$bedingungen[] = 'p.lastnameAlias LIKE ?';
+		$werte[] = addcslashes($nachnameAlias, '%_\\').'%';
+
+		if($vornameAlias !== '')
 		{
-			$bedingungen[] = 'p.lastname LIKE ?';
-			$werte[] = addcslashes($nachname, '%_\\').'%';
-		}
-		if($vorname !== '')
-		{
-			$bedingungen[] = 'p.firstname LIKE ?';
-			$werte[] = addcslashes($vorname, '%_\\').'%';
+			$bedingungen[] = 'p.firstnameAlias LIKE ?';
+			$werte[] = addcslashes($vornameAlias, '%_\\').'%';
 		}
 
 		// Mehr Kandidaten laden als am Ende angezeigt werden, weil gleich noch
 		// die Abgemeldeten herausfallen. Nur die benötigten Spalten holen —
 		// die Personentabelle führt rund 40 Felder (Adresse, Datenschutz,
 		// Import-Zusatzdaten), die für die Trefferliste keine Rolle spielen
-		$objPersonen = \Database::getInstance()->prepare("SELECT p.id, p.nuLigaPersonId, p.firstname, p.lastname, p.rating, p.`index`, p.fideId, p.weekOfLastTournamentEvaluation FROM tl_wertungsportal_persons p WHERE ".implode(' AND ', $bedingungen)." ORDER BY p.lastname, p.firstname LIMIT ".((int) $limit * 2))
+		// Sortiert wird nach den Aliasfeldern, damit der zusammengesetzte Index
+		// (published, lastnameAlias, firstnameAlias) auch die Sortierung
+		// abdeckt und MySQL das Ergebnis nicht nachträglich sortieren muss
+		$objPersonen = \Database::getInstance()->prepare("SELECT p.id, p.nuLigaPersonId, p.firstname, p.lastname, p.rating, p.`index`, p.fideId, p.weekOfLastTournamentEvaluation FROM tl_wertungsportal_persons p WHERE ".implode(' AND ', $bedingungen)." ORDER BY p.lastnameAlias, p.firstnameAlias LIMIT ".((int) $limit * 2))
 		                                       ->execute(...$werte);
 
 		if(!$objPersonen->numRows) return false;
@@ -1347,6 +1410,95 @@ class Helper extends \Frontend
 		);
 
 		return self::setFIDEDaten($result, array('funktion' => 'Spielerliste'));
+	}
+
+	/**
+	 * Lokale Turniersuche in tl_wertungsportal_tournaments über das Aliasfeld.
+	 * Wird als Fallback genutzt, wenn die Wertungsportal-API keine Treffer
+	 * liefert. Sie hilft in zwei Fällen:
+	 *
+	 * 1. UMLAUTE — eine Suche nach "büchenbach" findet an der Schnittstelle
+	 *    nichts, wenn das Turnier dort als "Buechenbach" hinterlegt ist.
+	 *    Hier laufen Suchbegriff und gespeicherte Bezeichnung beide durch
+	 *    Helper::alias(), die Schreibweise spielt also keine Rolle mehr.
+	 * 2. TEILWORTE — die label-Abfrage von nu vergleicht nur den Anfang der
+	 *    Bezeichnung; lokal wird an beliebiger Stelle gesucht.
+	 *
+	 * WICHTIG: Die lokale Turniertabelle ist ein Spiegel dessen, was über
+	 * frühere Abfragen schon einmal durchgelaufen ist — sie ist NICHT
+	 * vollständig. Die Trefferliste kann deshalb weniger Turniere enthalten,
+	 * als die Schnittstelle kennen würde. Deswegen läuft die lokale Suche
+	 * ausschließlich als Fallback und weist die Anzeige darauf hin.
+	 *
+	 * @param $suche       Suchbegriff (Rohstring)
+	 * @param $von         Beginn des Zeitraums (JJJJ-MM-TT), optional
+	 * @param $bis         Ende des Zeitraums (JJJJ-MM-TT), optional
+	 * @param $zps         VKZ-Präfix des Verbands, optional
+	 * @param $limit       Maximale Trefferzahl
+	 * @return array|false API-förmiges Ergebnis oder false ohne Treffer
+	 */
+	public static function lokaleTurniersuche($suche, $von = '', $bis = '', $zps = '', $limit = 500)
+	{
+		$alias = self::alias($suche);
+
+		// Ohne verwertbaren Suchbegriff hat die lokale Suche keinen Sinn:
+		// Sie würde den ganzen Spiegelbestand ausgeben und damit vortäuschen,
+		// es handle sich um ein vollständiges Suchergebnis
+		if($alias === '' || $alias === '-') return false;
+
+		$bedingungen = array("t.published = '1'", 't.labelAlias LIKE ?');
+		$werte = array('%'.addcslashes($alias, '%_\\').'%');
+
+		// Zeitraum wie an der Schnittstelle über das Turnierende eingrenzen.
+		// enddate steht als JJJJ-MM-TT in der Tabelle und ist damit direkt
+		// vergleichbar; leere Werte bleiben außen vor
+		if($von !== '')
+		{
+			$bedingungen[] = "t.enddate != '' AND t.enddate >= ?";
+			$werte[] = $von;
+		}
+		if($bis !== '')
+		{
+			$bedingungen[] = "t.enddate != '' AND t.enddate <= ?";
+			$werte[] = $bis;
+		}
+
+		// Verbandsfilter: nu sucht über das Präfix der VKZ, hier genauso
+		$zps = rtrim((string) $zps, '0');
+		if($zps !== '')
+		{
+			$bedingungen[] = 't.vkz LIKE ?';
+			$werte[] = addcslashes($zps, '%_\\').'%';
+		}
+
+		$objTurniere = \Database::getInstance()->prepare("SELECT t.uuid, t.label, t.vkz, t.enddate, t.playerCount, t.referentFirstname, t.referentLastname FROM tl_wertungsportal_tournaments t WHERE ".implode(' AND ', $bedingungen)." ORDER BY t.enddate DESC LIMIT ".(int) $limit)
+		                                       ->execute(...$werte);
+
+		if(!$objTurniere->numRows) return false;
+
+		// Antwort im Format der API-Funktion Turnierliste aufbauen, damit die
+		// Helper-Klasse Turniersuche sie unverändert aufbereiten kann
+		$daten = array();
+		while($objTurniere->next())
+		{
+			$daten[] = array
+			(
+				'uuid'              => $objTurniere->uuid,
+				'label'             => $objTurniere->label,
+				'vkz'               => $objTurniere->vkz,
+				'enddate'           => $objTurniere->enddate,
+				'playerCount'       => $objTurniere->playerCount,
+				'referentFirstname' => $objTurniere->referentFirstname,
+				'referentLastname'  => $objTurniere->referentLastname,
+			);
+		}
+
+		return array
+		(
+			'error'     => false,
+			'http_code' => 200,
+			'body'      => array('data' => $daten),
+		);
 	}
 
 	/**

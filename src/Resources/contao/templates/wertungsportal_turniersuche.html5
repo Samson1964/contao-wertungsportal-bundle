@@ -98,7 +98,11 @@
 			</tr>
 		</tbody>
 	</table>
-	
+
+	<?php if($this->lokal): ?>
+		<p class="lokalhinweis">Das Wertungsportal lieferte keine Treffer — angezeigt wird das Ergebnis der erweiterten Suche im örtlichen Datenbestand: Turniere, deren Bezeichnung den Suchbegriff an beliebiger Stelle enthält, unabhängig von der Umlautschreibweise. Dieser Bestand umfasst nur Turniere, die über frühere Abfragen bereits erfasst wurden, und kann daher unvollständig sein.</p>
+	<?php endif; ?>
+
 	<table class="body tablesorter">
 		<thead>
 			<tr>

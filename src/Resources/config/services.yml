@@ -1,4 +1,12 @@
 services:
+    # Füllt die Suchalias-Felder des Bestands beim contao:migrate.
+    # Ausdrücklich registriert, weil dieses Bundle ohne Autoconfigure arbeitet
+    Schachbulle\ContaoWertungsportalBundle\Migration\AliasMigration:
+        arguments:
+            - '@database_connection'
+        tags:
+            - { name: contao.migration }
+
     _instanceof:
         Contao\CoreBundle\Framework\FrameworkAwareInterface:
             calls:

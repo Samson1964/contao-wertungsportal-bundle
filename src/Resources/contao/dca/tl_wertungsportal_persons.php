@@ -43,6 +43,11 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_persons'] = [
                 // und sortiert das Ergebnis nach (gemessen: 126 ms statt 3 ms)
                 'published,lastname,firstname' => 'index',
                 'lastname'       => 'index',
+                // Derselbe Index noch einmal für die Aliasfelder: Über sie
+                // läuft die Frontend-Suche seit der Umstellung auf die
+                // umlautunabhängige Suche. Der Index auf lastname/firstname
+                // bleibt für Backend-Liste und -Sortierung nötig
+                'published,lastnameAlias,firstnameAlias' => 'index',
             ],
         ],
     ],
@@ -177,6 +182,19 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_persons'] = [
             'flag'      => DataContainer::SORT_ASC,
             'inputType' => 'text',
             'eval'      => ['mandatory' => true, 'maxlength' => 255, 'tl_class' => 'w50'],
+            'sql'       => "varchar(255) NOT NULL default ''",
+        ],
+
+        // Suchaliase von Vor- und Nachname (kleingeschrieben, ohne Umlaute).
+        // Werden beim Speichern automatisch erzeugt und machen die lokale
+        // Spielersuche unabhängig von der Umlautschreibweise
+        // ("müller" findet auch "Mueller").
+        // Keine Eingabefelder: abgeleitete Werte, gehören in keine Palette
+        'firstnameAlias' => [
+            'sql'       => "varchar(255) NOT NULL default ''",
+        ],
+
+        'lastnameAlias' => [
             'sql'       => "varchar(255) NOT NULL default ''",
         ],
 

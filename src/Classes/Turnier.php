@@ -133,6 +133,23 @@ class Turnier extends \Module
 
 			// Ergebnis der Turniersuche auswerten
 			$trefferliste = new \Schachbulle\ContaoWertungsportalBundle\Helper\Turniersuche($resultArr);
+			$lokaleSuche = false;
+
+			// Keine Treffer an der Schnittstelle: lokale Suche als Fallback.
+			// Sie greift bei abweichender Umlautschreibweise ("büchenbach"
+			// gegen ein gespeichertes "Buechenbach") und bei Suchbegriffen
+			// mitten in der Bezeichnung — nu vergleicht nur den Anfang.
+			// Ohne Suchbegriff bleibt es beim Ergebnis der Schnittstelle
+			if(!count($trefferliste->Turnierliste) && $param['suche'])
+			{
+				$lokal = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::lokaleTurniersuche($param['suche'], $periode['von'], $periode['bis'], $zps);
+
+				if($lokal)
+				{
+					$trefferliste = new \Schachbulle\ContaoWertungsportalBundle\Helper\Turniersuche($lokal);
+					$lokaleSuche = (bool) count($trefferliste->Turnierliste);
+				}
+			}
 
 			$title = 'Ergebnis für den Zeitraum '.$from_month.'/'.$from_year.' bis '.$to_month.'/'.$to_year;
 			$objPage->pageTitle = $title;
@@ -144,6 +161,7 @@ class Turnier extends \Module
 			$this->Template->subHeadline = $title; // Unterüberschrift Turnier setzen
 			$this->Template->daten = $trefferliste->Turnierliste;
 			$this->Template->anzahl = count($trefferliste->Turnierliste);
+			$this->Template->lokal = $lokaleSuche;
 			$this->Template->search_keyword = $param['suche'];
 			$this->Template->search_verband = $zps;
 			$this->Template->search_from = $from_month.'/'.$from_year;

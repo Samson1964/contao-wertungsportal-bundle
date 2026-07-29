@@ -30,9 +30,10 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_tournaments'] = [
         'enableVersioning'  => true,
         'sql'               => [
             'keys' => [
-                'id'        => 'primary',
-                'uuid'      => 'index',
-                'published' => 'index',
+                'id'         => 'primary',
+                'uuid'       => 'index',
+                'published'  => 'index',
+                'labelAlias' => 'index',
             ],
         ],
     ],
@@ -121,6 +122,15 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_tournaments'] = [
             'flag'      => DataContainer::SORT_ASC,
             'inputType' => 'text',
             'eval'      => ['mandatory' => true, 'maxlength' => 255, 'tl_class' => 'w50'],
+            'sql'       => "varchar(255) NOT NULL default ''",
+        ],
+
+        // Suchalias der Turnierbezeichnung (kleingeschrieben, ohne Umlaute).
+        // Wird beim Speichern automatisch aus label erzeugt und macht die
+        // lokale Turniersuche unabhängig von der Umlautschreibweise
+        // ("büchenbach" findet auch "Buechenbach").
+        // Kein Eingabefeld: abgeleiteter Wert, gehört in keine Palette
+        'labelAlias' => [
             'sql'       => "varchar(255) NOT NULL default ''",
         ],
 
