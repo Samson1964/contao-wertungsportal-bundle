@@ -166,12 +166,7 @@ class Spieler extends \Module
 			// API-Fehler im Template ausgeben statt mit ungültigen Daten abzustürzen
 			if(!is_array($resultArr) || $resultArr['error'] || $resultArr['http_code'] != 200 || !is_array($resultArr['body']))
 			{
-				$meldung = '';
-				if(isset($resultArr['body']) && is_string($resultArr['body']) && $resultArr['body'] != '') $meldung = $resultArr['body'];
-				elseif(!empty($resultArr['error_message'])) $meldung = $resultArr['error_message'];
-				$http = (is_array($resultArr) && isset($resultArr['http_code'])) ? $resultArr['http_code'] : 0;
-
-				$this->Template->fehler = 'Die Wertungsportal-API meldet einen Fehler (HTTP-Code '.$http.')'.($meldung ? ': '.$meldung : '');
+				$this->Template->fehler = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::apiFehler(is_array($resultArr) ? $resultArr : array());
 			}
 			elseif(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::istGeblockt($id))
 			{

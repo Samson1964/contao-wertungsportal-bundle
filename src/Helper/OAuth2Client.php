@@ -18,6 +18,7 @@ class OAuth2Client
 	public string $tokenEndpoint;
 	public string $scope;
 	public string $cacheFile;
+	public int $timeout; // Wartezeit je Aufruf in Sekunden
 
 	// ─────────────────────────────────────────────
 	//  Konstruktor – initialisiert alle Konfigurationswerte
@@ -30,6 +31,7 @@ class OAuth2Client
 		$this->tokenEndpoint = $GLOBALS['TL_CONFIG']['wertungsportal_tokenURL'];
 		$this->scope         = $GLOBALS['TL_CONFIG']['wertungsportal_scopeListe'];
 		$this->cacheFile     = sys_get_temp_dir() . '/oauth2_token_cache.json';
+		$this->timeout       = \Schachbulle\ContaoWertungsportalBundle\Helper\API::timeout();
 
 		$log = 'OAuth2Client initialisiert mit folgenden Werten:'."\n";
 		$log .= 'apiBaseUrl = '.$this->apiBaseUrl."\n";
@@ -83,7 +85,10 @@ class OAuth2Client
 				'Content-Type: application/x-www-form-urlencoded',
 				'Accept: application/json',
 			],
-			CURLOPT_TIMEOUT        => 15,
+			// Wartezeit aus den Einstellungen; CONNECTTIMEOUT zusätzlich, damit
+			// ein nicht erreichbarer Server nicht erst die volle Zeit ausschöpft
+			CURLOPT_TIMEOUT        => $this->timeout,
+			CURLOPT_CONNECTTIMEOUT => min($this->timeout, 10),
 			CURLOPT_SSL_VERIFYPEER => true,
 			CURLOPT_FOLLOWLOCATION => true,
 			CURLOPT_MAXREDIRS      => 5,
@@ -269,7 +274,11 @@ class OAuth2Client
 		$options = [
 			CURLOPT_RETURNTRANSFER => true,
 			CURLOPT_HTTPHEADER     => $headers,
-			CURLOPT_TIMEOUT        => 30,
+			// Wartezeit aus den Einstellungen (Voreinstellung 30 Sekunden).
+			// CONNECTTIMEOUT zusätzlich: Antwortet der Server gar nicht mehr,
+			// steht der Seitenaufbau sonst die volle Zeit still
+			CURLOPT_TIMEOUT        => $this->timeout,
+			CURLOPT_CONNECTTIMEOUT => min($this->timeout, 10),
 			CURLOPT_SSL_VERIFYPEER => true,
 		];
 

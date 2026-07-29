@@ -166,7 +166,7 @@ class Verband extends \Module
 			$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
 			$this->Template->subHeadline = $titel;
 			$this->Template->daten = $rangliste->Rangliste;
-			$this->Template->fehler = $resultArr['error'] ? $resultArr['error_message'] : false;
+			$this->Template->fehler = $resultArr['error'] ? \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::apiFehler($resultArr) : false;
 			$this->Template->verbaende = $verbaende;
 
 			// Das Ergebnis-Template ist eine neue Instanz — die Werte für das

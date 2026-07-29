@@ -131,6 +131,34 @@ Jeder API-Case in `Helper/API.php::getAPI()` ruft nach `callApiWithRefresh()` ei
 WICHTIG: `autoQuery()` cached (24 h, `wertungsportal_cache`). Bei Cache-Treffer läuft KEIN Sync.
 Fehlgeschlagene Abfragen (HTTP != 200) werden nicht gecached.
 
+## Notbetrieb ohne Schnittstelle (ab 1.7.0)
+
+Zwei Einstellungen steuern das Verhalten bei nicht verfügbarer Schnittstelle:
+`wertungsportal_api_aus` (Schalter) und `wertungsportal_api_timeout` (Sekunden,
+Standard `API::TIMEOUT_STANDARD` = 30, gelesen über `API::timeout()`).
+
+`autoQuery()` greift in beiden Fällen über `notdaten()` auf den Zwischenspeicher
+zurück — **ohne Ablaufprüfung** (`Cache::isCached($key, true)` /
+`retrieve($key, false, true)`, Helper-Bundle ab 1.8.10). Regeln:
+
+- **Nur HTTP-Code 0** (keine Antwort) löst den Notbetrieb aus. Inhaltliche
+  Fehler der Schnittstelle (404, 500 …) bleiben Fehler.
+- Nach einem gescheiterten Abruf bekommt der Eintrag eine **Notfrist**
+  (`API::NOTFRIST` = 300 s), sonst wartet jeder Seitenaufruf erneut die volle
+  Zeit. Der ursprüngliche Speicherzeitpunkt wandert als `notstand` im Payload
+  mit, damit der Hinweis das echte Alter nennt — auch wenn der Eintrag durch
+  die Notfrist wieder „gültig" aussieht und über den normalen Weg (`ausCache`)
+  gelesen wird.
+- Bei abgeschalteter Schnittstelle wird **nicht** umdatiert (es gibt keine
+  Wartezeit abzufedern).
+- Ohne Notreserve kommt eine Fehlerantwort mit `keine_livedaten => true`;
+  dann wird bewusst NICHTS in `$notdaten` vermerkt, sonst stünde die Meldung
+  doppelt auf der Seite (Hinweis + Fehler-Slot).
+- `eraseExpired()` darf in `autoQuery()` nicht wieder eingebaut werden — es
+  löscht genau die Notreserve.
+- Ausgabe: `Helper::cacheHinweis()` (Notbetrieb hat Vorrang vor dem
+  Cache-Hinweis) und `Helper::apiFehler()` für den Fehler-Slot der Module.
+
 ## Suchaliase (ab 1.6.0)
 
 Vier Aliasfelder tragen die umlautunabhängige Suche: `persons.firstnameAlias`/

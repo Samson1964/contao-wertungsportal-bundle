@@ -1126,11 +1126,41 @@ class Helper extends \Frontend
 	 * frühesten Ablaufzeitpunkt aller Cache-Treffer); mit einer API-Antwort
 	 * als Argument gilt nur diese eine Abfrage.
 	 *
+	 * Steht die Schnittstelle nicht zur Verfügung (abgeschaltet oder ohne
+	 * Antwort) und wurden deshalb abgelaufene Daten ausgeliefert, hat dieser
+	 * Fall Vorrang: Dann nennt der Hinweis den Grund und das Alter der Daten,
+	 * nicht einen Erneuerungszeitpunkt — der wäre in dieser Lage eine leere
+	 * Zusage.
+	 *
 	 * @param  array|null $result  optionale API-Antwort
 	 * @return string              Hinweistext oder '' (frisch von der Schnittstelle)
 	 */
 	public static function cacheHinweis($result = null)
 	{
+		$format = !empty($GLOBALS['TL_CONFIG']['datimFormat']) ? $GLOBALS['TL_CONFIG']['datimFormat'] : 'd.m.Y H:i';
+
+		// Notbetrieb zuerst prüfen
+		if(is_array($result))
+		{
+			$notstand = array_key_exists('notstand', $result) ? $result['notstand'] : false;
+		}
+		else
+		{
+			$notstand = \Schachbulle\ContaoWertungsportalBundle\Helper\API::notstand();
+		}
+
+		if($notstand !== false)
+		{
+			$meldung = \Schachbulle\ContaoWertungsportalBundle\Helper\API::MELDUNG_KEINE_LIVEDATEN;
+
+			if($notstand > 0)
+			{
+				return $meldung.' Angezeigt werden zwischengespeicherte Daten vom '.\Date::parse($format, (int) $notstand).' Uhr.';
+			}
+
+			return $meldung.' Angezeigt werden zwischengespeicherte Daten.';
+		}
+
 		if(is_array($result))
 		{
 			if(empty($result['cachequelle'])) return '';
@@ -1145,9 +1175,28 @@ class Helper extends \Frontend
 
 		if($ablauf <= 0) return 'Diese Daten stammen aus dem Zwischenspeicher.';
 
-		$format = !empty($GLOBALS['TL_CONFIG']['datimFormat']) ? $GLOBALS['TL_CONFIG']['datimFormat'] : 'd.m.Y H:i';
-
 		return 'Diese Daten stammen aus dem Zwischenspeicher und werden am '.\Date::parse($format, $ablauf).' Uhr erneuert.';
+	}
+
+	/**
+	 * Baut die Fehlermeldung, die ein Modul über seinen Fehler-Slot ausgibt.
+	 * Steht die Schnittstelle nicht zur Verfügung, ist das kein Fehler der
+	 * Schnittstelle, sondern ein Betriebszustand — dann erscheint die schlichte
+	 * Meldung ohne HTTP-Code und ohne technische Begleittexte.
+	 *
+	 * @param  array $result  Antwort von API::autoQuery
+	 * @return string         Fehlertext für die Ausgabe
+	 */
+	public static function apiFehler($result)
+	{
+		if(!empty($result['keine_livedaten'])) return \Schachbulle\ContaoWertungsportalBundle\Helper\API::MELDUNG_KEINE_LIVEDATEN;
+
+		// Fehlermeldung der API ermitteln (body ist im Fehlerfall meist ein String)
+		$meldung = '';
+		if(isset($result['body']) && is_string($result['body']) && $result['body'] != '') $meldung = $result['body'];
+		elseif(!empty($result['error_message'])) $meldung = $result['error_message'];
+
+		return 'Die Wertungsportal-API meldet einen Fehler (HTTP-Code '.($result['http_code'] ?? '?').')'.($meldung ? ': '.$meldung : '');
 	}
 
 	/**

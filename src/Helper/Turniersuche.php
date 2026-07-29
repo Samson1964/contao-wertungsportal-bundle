@@ -37,7 +37,10 @@ class Turniersuche
 
 		$this->daten['Turnierliste'] = array(); // Wird nachfolgend befüllt
 
-		if($this->apiErgebnisse['body']['data'])
+		// isset/is_array statt eines blanken Zugriffs: Bei einer Fehlerantwort
+		// (abgeschaltete Schnittstelle, Timeout) gibt es gar kein body-Element,
+		// der alte Zugriff meldete dann „Undefined array key"
+		if(isset($this->apiErgebnisse['body']['data']) && is_array($this->apiErgebnisse['body']['data']))
 		{
 			foreach($this->apiErgebnisse['body']['data'] as $t)
 			{

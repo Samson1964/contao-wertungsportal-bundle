@@ -427,11 +427,6 @@ class Turnier extends \Module
 	{
 		global $objPage;
 
-		// Fehlermeldung der API ermitteln (body ist im Fehlerfall meist ein String)
-		$meldung = '';
-		if(isset($arrResult['body']) && is_string($arrResult['body']) && $arrResult['body'] != '') $meldung = $arrResult['body'];
-		elseif(!empty($arrResult['error_message'])) $meldung = $arrResult['error_message'];
-
 		$objPage->pageTitle = $strSubHeadline;
 
 		$this->Template = new \FrontendTemplate($strTemplate);
@@ -439,7 +434,7 @@ class Turnier extends \Module
 		$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
 		$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
 		$this->Template->subHeadline = $strSubHeadline; // Unterüberschrift setzen
-		$this->Template->fehler = 'Die Wertungsportal-API meldet einen Fehler (HTTP-Code '.$arrResult['http_code'].')'.($meldung ? ': '.$meldung : '');
+		$this->Template->fehler = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::apiFehler($arrResult);
 	}
 
 }

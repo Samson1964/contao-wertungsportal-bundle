@@ -3,7 +3,7 @@
 /**
  * palettes
  */
-$GLOBALS['TL_DCA']['tl_settings']['palettes']['default'] .= ';{wertungsportal_legend:hide},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url,wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband,wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe,wertungsportal_crontoken,wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_debuglog,wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize';
+$GLOBALS['TL_DCA']['tl_settings']['palettes']['default'] .= ';{wertungsportal_legend:hide},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url,wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband,wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe,wertungsportal_crontoken,wertungsportal_api_aus,wertungsportal_api_timeout,wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_debuglog,wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize';
 
 /**
  * fields
@@ -228,6 +228,36 @@ $GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_crontoken'] = array
 );
 
 // Cache ein- oder ausschalten
+// Notschalter: Schaltet jeden Zugriff auf die REST-Schnittstelle ab. Es
+// werden nur noch Daten aus dem Zwischenspeicher ausgeliefert, und zwar
+// ohne Rücksicht auf deren Ablaufzeit — sonst stünde nach kurzer Zeit
+// überhaupt nichts mehr zur Verfügung. Gedacht für angekündigte Wartungen
+// von nu und für Störungen, die sich sonst als Wartezeit bemerkbar machen
+$GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_api_aus'] = array
+(
+	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_api_aus'],
+	'inputType'               => 'checkbox',
+	'eval'                    => array
+	(
+		'tl_class'            => 'w50 clr',
+	)
+);
+
+// Wartezeit, nach der ein Abruf abgebrochen wird. Ohne Begrenzung hängt
+// der Seitenaufbau an einer nicht antwortenden Schnittstelle fest
+$GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_api_timeout'] = array
+(
+	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_api_timeout'],
+	'inputType'               => 'select',
+	'options'                 => array('5', '10', '15', '20', '30', '45', '60'),
+	'reference'               => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_timeouts'],
+	'eval'                    => array
+	(
+		'includeBlankOption'  => true,
+		'tl_class'            => 'w50',
+	)
+);
+
 $GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_cache'] = array
 (
 	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cache'],

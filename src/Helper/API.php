@@ -20,6 +20,35 @@ class API
 	 */
 	protected static $cacheTreffer = array();
 
+	/**
+	 * Speicherzeitpunkte der Notdaten dieses Seitenaufrufs, also der
+	 * abgelaufenen Cache-Einträge, die mangels erreichbarer Schnittstelle
+	 * trotzdem ausgeliefert wurden. Ist das Array nicht leer, weist
+	 * Helper::cacheHinweis() darauf hin.
+	 */
+	protected static $notdaten = array();
+
+	/**
+	 * Meldung, die angezeigt wird, wenn die Schnittstelle nicht zur
+	 * Verfügung steht — abgeschaltet oder ohne Antwort.
+	 */
+	const MELDUNG_KEINE_LIVEDATEN = 'Der Abruf von Live-Daten ist z.Z. nicht möglich.';
+
+	/**
+	 * Voreingestellte Wartezeit eines Abrufs in Sekunden, falls in den
+	 * Einstellungen nichts gewählt ist.
+	 */
+	const TIMEOUT_STANDARD = 30;
+
+	/**
+	 * Frist in Sekunden, für die ein Notdatensatz nach einem gescheiterten
+	 * Abruf wieder als gültig gilt. Ohne sie liefe JEDER Seitenaufruf erneut
+	 * in die volle Wartezeit — bei 30 Sekunden Timeout wäre die Website
+	 * praktisch unbenutzbar, solange die Schnittstelle klemmt. Nach Ablauf
+	 * der Frist wird die Schnittstelle wieder versucht.
+	 */
+	const NOTFRIST = 300;
+
 	// ─────────────────────────────────────────────
 	//  Konstruktor – initialisiert alle Konfigurationswerte
 	// ─────────────────────────────────────────────
@@ -62,6 +91,7 @@ class API
 		// Wenn Cache aktiviert, dann Daten laden, wenn vorhanden
 		// ======================================================================
 		$cachetime = self::cachezeit($params['funktion']);
+		$cache = null;
 
 		if($GLOBALS['TL_CONFIG']['wertungsportal_cache'] && $cachetime > 0)
 		{
@@ -71,60 +101,187 @@ class API
 			// (Vereinslisten mit hunderten Spielern!) und musste bei jedem
 			// Zugriff komplett gelesen, dekodiert und neu geschrieben werden
 			$cache = new \Schachbulle\ContaoHelperBundle\Classes\Cache(array('name' => $params['cachekey'], 'path' => 'wp_'.$params['funktion'], 'extension' => '.cache'));
-			$cache->eraseExpired(); // Cache aufräumen, abgelaufene Schlüssel löschen
 
-			// Cache laden
+			// KEIN eraseExpired() mehr an dieser Stelle: Abgelaufene Einträge
+			// sind die Notreserve, wenn die Schnittstelle nicht antwortet
+			// (siehe notdaten()). Nötig war der Aufruf ohnehin nicht mehr —
+			// isCached() und retrieve() prüfen den Ablauf seit Helper-Bundle
+			// 1.8.8 selbst. Je Schlüssel liegt genau ein Eintrag in genau
+			// einer Datei, der Cache wächst dadurch also nicht an; aufgeräumt
+			// wird über „Cache leeren" im Backend
 			if($cache->isCached($params['cachekey']) && !isset($params['nocache']))
 			{
-				$cache_result = $cache->retrieve($params['cachekey']);
-
-				// Abruf aus dem lokalen Cache für die Statistik zählen
-				self::zaehleAbruf($params['funktion'], \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::QUELLE_CACHE);
-
-				// Herkunft und Gültigkeit vermerken, damit die Ausgabe einen
-				// Hinweis anzeigen kann („aus dem Zwischenspeicher, gültig
-				// bis …") — sowohl in der Antwort selbst als auch gesammelt
-				// für den ganzen Seitenaufruf
-				$ablauf = $cache->getExpiration($params['cachekey']);
-				self::$cacheTreffer[] = $ablauf;
-
-				if(is_array($cache_result))
-				{
-					$cache_result['cachequelle'] = true;
-					$cache_result['cacheablauf'] = $ablauf;
-				}
-
-				// Platzhalter-Mitgliedsnummern auch bei Cache-Treffern
-				// herausfiltern (wirkt sofort statt erst nach Cache-Ablauf)
-				return \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::filterMitgliedsnummern($cache_result);
+				return self::ausCache($cache, $params);
 			}
 		}
 
-		// Wertungsportal-Abfrage, wenn Cache leer ist
-		if(!isset($cache_result))
+		// Live-Abruf in den Einstellungen abgeschaltet: gar nicht erst
+		// verbinden, sondern direkt auf die Notreserve zurückgreifen
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_api_aus']))
 		{
-			// Echten Abruf bei der Schnittstelle für die Statistik zählen
-			self::zaehleAbruf($params['funktion'], \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::QUELLE_API);
-
-			$result = self::getAPI($params);
-			if($result['http_code'] == '200')
-			{
-				// FIDE-Daten hinzuladen
-				$result = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::setFIDEDaten($result, $params);
-				// im Cache speichern (nur wenn für diese Funktion eine
-				// Cachezeit eingestellt ist — 0 bedeutet "nicht cachen")
-				if($GLOBALS['TL_CONFIG']['wertungsportal_cache'] && $cachetime > 0)
-				{
-					$cache->store($params['cachekey'], $result, $cachetime);
-				}
-			}
-
-			// Platzhalter-Mitgliedsnummern (0000) aus allen Ausgaben entfernen
-			$result = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::filterMitgliedsnummern($result);
-
-			return $result; // Abfrageergebnis von Schnittstelle zurückgeben
+			return self::notdaten($cache, $params, false);
 		}
 
+		// Echten Abruf bei der Schnittstelle für die Statistik zählen
+		self::zaehleAbruf($params['funktion'], \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::QUELLE_API);
+
+		// static:: statt self::, damit der Schnittstellenaufruf in einer
+		// abgeleiteten Klasse ersetzbar bleibt (Prüfstand); in Produktion
+		// gibt es keine Ableitung, das Verhalten ist identisch
+		$result = static::getAPI($params);
+
+		// Gar keine Antwort (Wartezeit abgelaufen, Verbindung gescheitert,
+		// Namensauflösung fehlgeschlagen — alles HTTP-Code 0): Notreserve.
+		// Fehlermeldungen MIT HTTP-Code bleiben unberührt, ein „Person not
+		// found" ist eine gültige Antwort und darf keine alten Daten wecken
+		if(!empty($result['error']) && 0 === (int) ($result['http_code'] ?? 0))
+		{
+			return self::notdaten($cache, $params, true);
+		}
+
+		if($result['http_code'] == '200')
+		{
+			// FIDE-Daten hinzuladen
+			$result = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::setFIDEDaten($result, $params);
+			// im Cache speichern (nur wenn für diese Funktion eine
+			// Cachezeit eingestellt ist — 0 bedeutet "nicht cachen")
+			if($cache !== null)
+			{
+				$cache->store($params['cachekey'], $result, $cachetime);
+			}
+		}
+
+		// Platzhalter-Mitgliedsnummern (0000) aus allen Ausgaben entfernen
+		$result = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::filterMitgliedsnummern($result);
+
+		return $result; // Abfrageergebnis von Schnittstelle zurückgeben
+	}
+
+	/**
+	 * Liefert einen Cache-Eintrag als Antwort und vermerkt Herkunft und
+	 * Gültigkeit, damit die Ausgabe darauf hinweisen kann.
+	 *
+	 * @param $cache       Cache-Instanz der Funktion
+	 * @param $params      Parameter der Abfrage (funktion, cachekey)
+	 * @param $abgelaufen  true = auch abgelaufene Einträge ausliefern (Notreserve)
+	 * @return array|null  Antwort im API-Format, null wenn nichts hinterlegt ist
+	 */
+	protected static function ausCache($cache, $params, $abgelaufen = false)
+	{
+		$cache_result = $cache->retrieve($params['cachekey'], false, $abgelaufen);
+
+		if(!is_array($cache_result)) return $cache_result;
+
+		// Abruf aus dem lokalen Cache für die Statistik zählen
+		self::zaehleAbruf($params['funktion'], \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::QUELLE_CACHE);
+
+		// Herkunft und Gültigkeit vermerken, damit die Ausgabe einen Hinweis
+		// anzeigen kann („aus dem Zwischenspeicher, gültig bis …") — sowohl in
+		// der Antwort selbst als auch gesammelt für den ganzen Seitenaufruf
+		$ablauf = $cache->getExpiration($params['cachekey']);
+		self::$cacheTreffer[] = $ablauf;
+
+		$cache_result['cachequelle'] = true;
+		$cache_result['cacheablauf'] = $ablauf;
+
+		// Notdaten bleiben als solche erkennbar, auch wenn sie zwischenzeitlich
+		// mit einer Notfrist neu datiert wurden und damit wieder als „gültig"
+		// gelten — sonst verschwiege die Ausgabe, wie alt sie in Wahrheit sind
+		if(!empty($cache_result['notstand'])) self::$notdaten[] = $cache_result['notstand'];
+
+		// Platzhalter-Mitgliedsnummern auch bei Cache-Treffern herausfiltern
+		// (wirkt sofort statt erst nach Cache-Ablauf)
+		return \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::filterMitgliedsnummern($cache_result);
+	}
+
+	/**
+	 * Notbetrieb: Die Schnittstelle steht nicht zur Verfügung (abgeschaltet
+	 * oder ohne Antwort). Ausgeliefert wird der Cache-Eintrag OHNE Rücksicht
+	 * auf seine Ablaufzeit — veraltete Daten sind besser als eine leere Seite.
+	 *
+	 * Nach einem gescheiterten Abruf bekommt der Eintrag zusätzlich eine
+	 * Notfrist (self::NOTFRIST): Ohne sie liefe jeder weitere Seitenaufruf
+	 * erneut in die volle Wartezeit der Schnittstelle. Der ursprüngliche
+	 * Speicherzeitpunkt wandert dabei als „notstand" mit, damit die Ausgabe
+	 * weiterhin das echte Alter der Daten nennen kann.
+	 *
+	 * @param $cache       Cache-Instanz der Funktion oder null (Cache aus)
+	 * @param $params      Parameter der Abfrage (funktion, cachekey)
+	 * @param $abgerufen   true = es gab einen gescheiterten Abrufversuch
+	 * @return array       Antwort im API-Format; ohne Notreserve eine Fehlerantwort
+	 */
+	protected static function notdaten($cache, $params, $abgerufen)
+	{
+		$roh = ($cache !== null && $cache->isCached($params['cachekey'], true))
+			? $cache->retrieve($params['cachekey'], false, true)
+			: null;
+
+		if(is_array($roh))
+		{
+			// Ursprünglicher Speicherzeitpunkt: aus einem früheren Notlauf
+			// übernommen, sonst der Zeitstempel des Eintrags
+			$stand = !empty($roh['notstand']) ? (int) $roh['notstand'] : $cache->getStoreTime($params['cachekey']);
+			$roh['notstand'] = $stand;
+
+			// Notfrist nur nach einem tatsächlich gescheiterten Abruf. Ist die
+			// Schnittstelle bewusst abgeschaltet, kostet ein Seitenaufruf keine
+			// Wartezeit — dann gibt es auch nichts abzufedern, und der Eintrag
+			// bleibt unangetastet
+			if($abgerufen) $cache->store($params['cachekey'], $roh, self::NOTFRIST);
+
+			// Zählt als Cache-Abruf: Bei der Schnittstelle kam nichts an
+			self::zaehleAbruf($params['funktion'], \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::QUELLE_CACHE);
+			self::$notdaten[] = $stand;
+
+			$roh['cachequelle'] = true;
+			// Ein Ablaufzeitpunkt hat hier keine Aussage (längst verstrichen
+			// oder die künstliche Notfrist), deshalb bewusst leer
+			$roh['cacheablauf'] = null;
+
+			return \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::filterMitgliedsnummern($roh);
+		}
+
+		// Keine Notreserve vorhanden: Fehlerantwort mit der Meldung, die die
+		// Module über ihren Fehler-Slot ausgeben. Hier wird BEWUSST nichts in
+		// $notdaten vermerkt — sonst behauptete der Hinweis über der Ausgabe,
+		// es würden zwischengespeicherte Daten angezeigt, und stünde zusätzlich
+		// zur Fehlermeldung doppelt auf der Seite
+		return array
+		(
+			'error'           => true,
+			'error_message'   => self::MELDUNG_KEINE_LIVEDATEN,
+			'http_code'       => 0,
+			'keine_livedaten' => true,
+		);
+	}
+
+	/**
+	 * Liefert die eingestellte Wartezeit eines Abrufs in Sekunden.
+	 * Ohne Auswahl gilt self::TIMEOUT_STANDARD.
+	 *
+	 * @return int Wartezeit in Sekunden (mindestens 1)
+	 */
+	public static function timeout()
+	{
+		$wert = (int) ($GLOBALS['TL_CONFIG']['wertungsportal_api_timeout'] ?? 0);
+
+		return $wert > 0 ? $wert : self::TIMEOUT_STANDARD;
+	}
+
+	/**
+	 * Meldet, ob in diesem Seitenaufruf Notdaten ausgeliefert wurden, also
+	 * abgelaufene Cache-Einträge mangels erreichbarer Schnittstelle.
+	 *
+	 * @return false|int|null false = keine Notdaten, sonst der älteste
+	 *                        Speicherzeitpunkt (null, wenn unbekannt)
+	 */
+	public static function notstand()
+	{
+		if(!count(self::$notdaten)) return false;
+
+		$zeiten = array_filter(self::$notdaten, function($wert) { return $wert > 0; });
+
+		return count($zeiten) ? min($zeiten) : null;
 	}
 
 	/*********************************************************
@@ -605,7 +762,11 @@ class API
 
 		$resultArr = self::autoQuery($param); // Abfrage ausführen
 
-		// Nach Verbänden und Vereinen ordnen
+		// Nach Verbänden und Vereinen ordnen. Der Guard ist nötig, seit die
+		// Schnittstelle abgeschaltet werden kann und ohne Notreserve eine
+		// Fehlerantwort ohne body zurückkommt — sonst liefe der foreach auf null
+		if(!is_array($resultArr['body']['data'] ?? null)) return array('verbaende' => array(), 'vereine' => array());
+
 		$verbaende = array(); $vereine = array();
 		foreach($resultArr['body']['data'] as $item)
 		{
