@@ -49,6 +49,11 @@
 			<h2><?= $this->subHeadline ?></h2>
 		<?php endif; ?>
 
+		<?php $wpCacheHinweis = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::cacheHinweis(); ?>
+		<?php if($wpCacheHinweis): ?>
+			<p class="wp-cachehinweis" title="Zwischengespeicherte Antwort der Wertungsportal-Schnittstelle"><?= $wpCacheHinweis ?></p>
+		<?php endif; ?>
+
 		<?php if($this->fehler): ?>
 
 			<p class="error"><?= $this->fehler ?></p>

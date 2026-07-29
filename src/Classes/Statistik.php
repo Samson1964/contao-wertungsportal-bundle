@@ -320,8 +320,18 @@ class Statistik extends \BackendModule
 
 		$nutzHoehe = $hoehe - $randOben - $randUnten;
 
+		$bezeichnung = ($raster == 'tag') ? 'Tag' : (($raster == 'woche') ? 'Kalenderwoche' : 'Monat');
+
+		// display:block ist wichtig — ein SVG ist von Haus aus ein
+		// Inline-Element und setzt sich dadurch wie Text neben vorhergehenden
+		// schwebenden Inhalt (im Backend rutschte es so neben die Legende).
+		// Die Mindestbreite hängt an der tatsächlichen Diagrammbreite: wenige
+		// Balken werden nicht künstlich aufgebläht, viele Balken schrumpfen
+		// nicht unter die Lesbarkeitsgrenze, sondern lassen den Bereich scrollen
+		$minBreite = min($breite, 640);
+
 		$svg = array();
-		$svg[] = '<svg viewBox="0 0 '.$breite.' '.$hoehe.'" width="100%" height="'.$hoehe.'" role="img" aria-label="Abrufe je '.($raster == 'woche' ? 'Kalenderwoche' : 'Monat').'" xmlns="http://www.w3.org/2000/svg" style="max-width:'.$breite.'px">';
+		$svg[] = '<svg viewBox="0 0 '.$breite.' '.$hoehe.'" width="100%" height="'.$hoehe.'" role="img" aria-label="Abrufe je '.$bezeichnung.'" xmlns="http://www.w3.org/2000/svg" style="display:block;max-width:'.$breite.'px;min-width:'.$minBreite.'px">';
 		$svg[] = '<style>.wpst-achse{font:11px sans-serif;fill:#666}.wpst-wert{font:10px sans-serif;fill:#333}</style>';
 
 		// Waagerechte Hilfslinien mit Beschriftung

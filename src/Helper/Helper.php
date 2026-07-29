@@ -1121,6 +1121,36 @@ class Helper extends \Frontend
 
 
 	/**
+	 * Baut den Hinweis, dass eine Ausgabe aus dem Zwischenspeicher stammt.
+	 * Ohne Argument gilt der ganze Seitenaufruf (API::cacheStatus liefert den
+	 * frühesten Ablaufzeitpunkt aller Cache-Treffer); mit einer API-Antwort
+	 * als Argument gilt nur diese eine Abfrage.
+	 *
+	 * @param  array|null $result  optionale API-Antwort
+	 * @return string              Hinweistext oder '' (frisch von der Schnittstelle)
+	 */
+	public static function cacheHinweis($result = null)
+	{
+		if(is_array($result))
+		{
+			if(empty($result['cachequelle'])) return '';
+			$ablauf = isset($result['cacheablauf']) ? (int) $result['cacheablauf'] : 0;
+		}
+		else
+		{
+			$status = \Schachbulle\ContaoWertungsportalBundle\Helper\API::cacheStatus();
+			if($status === false) return ''; // nichts kam aus dem Zwischenspeicher
+			$ablauf = (int) $status;
+		}
+
+		if($ablauf <= 0) return 'Diese Daten stammen aus dem Zwischenspeicher.';
+
+		$format = !empty($GLOBALS['TL_CONFIG']['datimFormat']) ? $GLOBALS['TL_CONFIG']['datimFormat'] : 'd.m.Y H:i';
+
+		return 'Diese Daten stammen aus dem Zwischenspeicher und werden am '.\Date::parse($format, $ablauf).' Uhr erneuert.';
+	}
+
+	/**
 	 * Entfernt Platzhalter-Mitgliedschaften mit der Nummer 0 aus einer
 	 * kompletten API-Antwort — unabhängig davon, in welcher Form sie die
 	 * Mitgliedschaften mitliefert:

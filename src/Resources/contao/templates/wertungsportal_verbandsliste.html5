@@ -55,6 +55,11 @@
 			<h2><?= $this->subHeadline ?></h2>
 		<?php endif; ?>
 
+		<?php $wpCacheHinweis = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::cacheHinweis(); ?>
+		<?php if($wpCacheHinweis): ?>
+			<p class="wp-cachehinweis" title="Zwischengespeicherte Antwort der Wertungsportal-Schnittstelle"><?= $wpCacheHinweis ?></p>
+		<?php endif; ?>
+
 		<?php $this->insert('wertungsportal_form_verbandsliste', array
 		(
 			'action'       => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl().'/'.$this->zps.'.html',

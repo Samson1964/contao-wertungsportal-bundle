@@ -1,5 +1,13 @@
 # Wertungsportal Changelog
 
+## Version 1.5.0 (2026-07-29)
+
+* **Add: Hinweis auf zwischengespeicherte Daten.** Wurde eine Ausgabe ganz oder teilweise aus dem Cache bedient, steht über der Seite eine dezente Zeile: „Diese Daten stammen aus dem Zwischenspeicher und werden am TT.MM.JJJJ HH:MM Uhr erneuert." Kamen mehrere Antworten aus dem Cache, nennt der Hinweis den frühesten Ablauf — also den Zeitpunkt, ab dem die Seite wieder frische Daten zeigt. Bei frisch geholten Daten erscheint nichts. Eingebaut in alle acht Frontend-Ausgaben (Spieler, Karteikarte, Verein, Verband, Verbandsliste, Turniersuche, Turnierauswertung, Turnierergebnisse, Spielberichtsbogen)
+* Dafür nötig: Das Helper-Bundle liefert als **1.8.9** die neue Methode Cache::getExpiration() — bisher ließ sich der Ablaufzeitpunkt eines Cache-Eintrags gar nicht auslesen (retrieve($key, true) gibt den Speicherzeitpunkt durch unserialize() zurück, obwohl er als blanke Zahl abgelegt ist, und liefert deshalb immer false). Die composer.json fordert jetzt ^1.8.9
+* **Fix: Die fehlenden Verbände werden jetzt sofort ergänzt**, direkt nach der Antwort von /dwz/dwzliste/clubs und noch VOR dem Abgleich mit der Datenbank. Bisher lief die Ergänzung erst danach in der Aufbereitung für die Anzeige — die 14 Verbände, die nu auf oberster Ebene nicht mitliefert, fehlten deshalb im lokalen Datenbestand und im Cache; sie standen nur in der gerade gerenderten Seite. Damit sind sie ab sofort überall verfügbar: im Cache, in tl_wertungsportal_clubs und im Frontend. Bei der Abfrage eines einzelnen Verbands wird nur dieser eine ergänzt statt aller 14
+* Fix: Das Diagramm der Abrufstatistik konnte sich neben die Legende schieben statt darunter zu bleiben. Ursache: Ein SVG ist von Haus aus ein Zeilenelement (display:inline) und ordnet sich damit wie Text neben umflossenen Inhalt ein. Das Diagramm ist jetzt ein Blockelement, Legende und Scrollbereich beginnen ausdrücklich unterhalb des Vorherigen, und die Mindestbreite des Diagramms richtet sich nach seiner tatsächlichen Breite statt pauschal 640 px zu fordern
+* Verifiziert mit 14 Tests (Hinweistext mit und ohne Ablaufzeit, frühester Ablauf bei mehreren Cache-Treffern, kein Hinweis bei frischen Daten; Verbandsergänzung vollständig, gefiltert, ohne Dubletten und bei Fehlerantworten)
+
 ## Version 1.4.2 (2026-07-29)
 
 * Change: Beschreibung, Keywords und Homepage in der composer.json ergänzt, damit Packagist das Paket verständlich darstellt und über die Suche auffindbar macht

@@ -13,6 +13,13 @@ class API
 	protected static $instance = null;
 	var $Fragmente;
 
+	/**
+	 * Ablaufzeitpunkte der Abfragen, die in diesem Seitenaufruf aus dem
+	 * Zwischenspeicher beantwortet wurden. Daraus baut Helper::cacheHinweis()
+	 * den Hinweis in der Ausgabe — die Module müssen dafür nichts durchreichen.
+	 */
+	protected static $cacheTreffer = array();
+
 	// ─────────────────────────────────────────────
 	//  Konstruktor – initialisiert alle Konfigurationswerte
 	// ─────────────────────────────────────────────
@@ -73,6 +80,19 @@ class API
 
 				// Abruf aus dem lokalen Cache für die Statistik zählen
 				self::zaehleAbruf($params['funktion'], \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::QUELLE_CACHE);
+
+				// Herkunft und Gültigkeit vermerken, damit die Ausgabe einen
+				// Hinweis anzeigen kann („aus dem Zwischenspeicher, gültig
+				// bis …") — sowohl in der Antwort selbst als auch gesammelt
+				// für den ganzen Seitenaufruf
+				$ablauf = $cache->getExpiration($params['cachekey']);
+				self::$cacheTreffer[] = $ablauf;
+
+				if(is_array($cache_result))
+				{
+					$cache_result['cachequelle'] = true;
+					$cache_result['cacheablauf'] = $ablauf;
+				}
 
 				// Platzhalter-Mitgliedsnummern auch bei Cache-Treffern
 				// herausfiltern (wirkt sofort statt erst nach Cache-Ablauf)
@@ -201,14 +221,21 @@ class API
 				// zps = fünfstellig
 				$get =  $params['zps'] ? 'vkz='.rawurlencode($params['zps']) : '';
 				$result = $client->callApiWithRefresh($client->apiBaseUrl . '/dwz/dwzliste/clubs?'.$get);
+				// Fehlende Verbände direkt nach dem Abruf ergänzen — hier nur
+				// den angefragten, damit eine Einzelabfrage nicht plötzlich
+				// alle Landesverbände zurückliefert
+				$result = self::BugfixVerbaende($result, $params['zps']);
 				self::syncClubs($result); // Abgleich mit tl_wertungsportal_clubs
 				break;
 
 			case 'Verbaende': // Verbände einer ZPS-Struktur laden
 				// zps = fünfstellig
 				$result = $client->callApiWithRefresh($client->apiBaseUrl . '/dwz/dwzliste/clubs');
+				// Ergänzung VOR dem Abgleich: Sonst kennt die lokale Tabelle
+				// die fehlenden Verbände nie (der Sync bekam bisher die
+				// unvollständige Antwort und erst danach wurde ergänzt)
+				$result = self::BugfixVerbaende($result);
 				self::syncClubs($result); // Abgleich mit tl_wertungsportal_clubs
-				$result = self::BugfixVerbaende($result); // Fehlende Verbände ergänzen
 				break;
 
 			default:
@@ -645,6 +672,23 @@ class API
 	}
 
 	/**
+	 * Liefert den frühesten Ablaufzeitpunkt der Abfragen, die in diesem
+	 * Seitenaufruf aus dem Zwischenspeicher kamen — also den Zeitpunkt, ab
+	 * dem die Seite wieder frische Daten zeigt.
+	 *
+	 * @return      false|int|null  false = nichts aus dem Cache,
+	 *                              null = ohne Ablauf, sonst Zeitstempel
+	 */
+	public static function cacheStatus()
+	{
+		if(!count(self::$cacheTreffer)) return false;
+
+		$zeiten = array_filter(self::$cacheTreffer, function($wert) { return $wert > 0; });
+
+		return count($zeiten) ? min($zeiten) : null;
+	}
+
+	/**
 	 * Ordnet jeder internen Funktion den Pfad der Schnittstellenfunktion zu
 	 * (siehe API-Dokumentation des Wertungsportals). Grundlage für die
 	 * Abrufstatistik; {…} steht für den jeweiligen Parameter.
@@ -805,7 +849,19 @@ class API
 		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message('Wertungsportal-Cache geleert', 'wertungsportal.log');
 	}
 
-	public static function BugfixVerbaende($resultArr)
+	/**
+	 * Ergänzt die Verbände, die die Schnittstelle nicht liefert (laut
+	 * Andreas Filmann sind Verbände in nu nicht vorgesehen, alles muss als
+	 * Verein angelegt werden). Der Aufruf erfolgt DIREKT nach dem Abruf von
+	 * /dwz/dwzliste/clubs und damit vor Abgleich und Zwischenspeicherung —
+	 * so kennen lokale Tabelle, Cache und Frontend dieselben Verbände.
+	 *
+	 * @param       Array  $resultArr  API-Antwort
+	 * @param       String $nurVkz     nur diesen Verband ergänzen (bei
+	 *                                 gefilterter Abfrage); leer = alle
+	 * @return      Array              ergänzte Antwort
+	 */
+	public static function BugfixVerbaende($resultArr, $nurVkz = '')
 	{
 		$missingFederations = array
 		(
@@ -922,6 +978,22 @@ class API
 				'state'            => 'DELETE_STATE_FALSE',
 			),
 		);
+
+		// Fehlerhafte oder leere Antworten unverändert zurückgeben
+		if(!is_array($resultArr) || !isset($resultArr['body']['data']) || !is_array($resultArr['body']['data'])) return $resultArr;
+
+		// Bei gefilterter Abfrage (eine bestimmte VKZ) nur den passenden
+		// Verband ergänzen — sonst lieferte eine Vereinsabfrage plötzlich
+		// sämtliche Landesverbände mit
+		if($nurVkz !== '' && $nurVkz !== null)
+		{
+			$missingFederations = array_values(array_filter($missingFederations, function($federation) use ($nurVkz)
+			{
+				return $federation['clubVkz'] == $nurVkz;
+			}));
+
+			if(!count($missingFederations)) return $resultArr;
+		}
 
 		// Vereine umbauen mit der VKZ als Index für eine schnellere Suche
 		$vkzArr = array(); // Array[vkz] = Index

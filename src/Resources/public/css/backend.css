@@ -161,10 +161,13 @@ a.wp-stat-knopf:hover {
 	background				: #fff;
 }
 
+/* Die Legende steht immer über dem Diagramm, nie daneben */
 .wp-stat-legende {
 	display					: flex;
 	flex-wrap				: wrap;
 	gap						: 18px;
+	width					: 100%;
+	clear					: both;
 	margin-bottom			: 8px;
 	font-size				: 0.92em;
 	color					: #5c5c5c;
@@ -183,10 +186,10 @@ a.wp-stat-knopf:hover {
    statt die Seite waagerecht zu sprengen oder sich unleserlich zu stauchen */
 .wp-stat-scroll {
 	overflow-x				: auto;
-}
-
-.wp-stat-diagramm svg {
-	min-width				: 640px;
+	/* Eigene Zeile erzwingen: Im Backend können umgebende Stile Elemente
+	   schweben lassen — ohne clear rutschte das Diagramm neben die Legende */
+	clear					: both;
+	width					: 100%;
 }
 
 .wp-stat-tabelle {

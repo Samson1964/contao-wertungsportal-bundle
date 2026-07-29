@@ -6,6 +6,7 @@
 /wertungsportal_karteikarte.txt
 /vendor/
 /.DAV
+.impeccable/
 
 # PhpUnit
 /phpunit.xml
