@@ -1,4 +1,4 @@
-# Wertungsportal-Anbindung
+# Wertungsportal Changelog
 
 ## Version 1.4.1 (2026-07-28)
 
