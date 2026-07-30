@@ -3,7 +3,7 @@
 /**
  * palettes
  */
-$GLOBALS['TL_DCA']['tl_settings']['palettes']['default'] .= ';{wertungsportal_legend:hide},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url,wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband,wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe,wertungsportal_crontoken,wertungsportal_api_aus,wertungsportal_api_timeout,wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_debuglog,wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize';
+$GLOBALS['TL_DCA']['tl_settings']['palettes']['default'] .= ';{wertungsportal_legend:hide},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url,wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband,wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe,wertungsportal_crontoken,wertungsportal_api_aus,wertungsportal_api_timeout,wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_zugriffslog,wertungsportal_debuglog,wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize';
 
 /**
  * fields
@@ -348,6 +348,18 @@ $GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_clubImageSize'] = ar
 		return System::getContainer()->get('contao.image.image_sizes')->getOptionsForUser(BackendUser::getInstance());
 	},
 ); 
+
+// Zugriffs-Log: schreibt je Abfrage eine Zeile nach var/logs (eine Datei je
+// Tag). ACHTUNG Datenschutz: Die Zeile enthält die IP-Adresse des Besuchers
+$GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_zugriffslog'] = array
+(
+	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_zugriffslog'],
+	'inputType'               => 'checkbox',
+	'eval'                    => array
+	(
+		'tl_class'            => 'w50 clr'
+	)
+);
 
 // Anzeige passive Mitglieder ausblenden
 $GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_debuglog'] = array

@@ -16,7 +16,8 @@
  *
  * Ansichten:
  *   - Übersicht aller Funktionen im gewählten Zeitraum
- *   - Verlauf nach Woche oder Monat (gestapelte Balken: Cache und API)
+ *   - Verlauf nach Tag, Woche oder Monat (gestapelte Balken: örtlicher
+ *     Datenbestand, Cache und API)
  *   - je Funktion eine eigene Ansicht mit eigenem Diagramm
  *
  * Die Diagramme sind serverseitig erzeugtes SVG — wie beim DWZ-Diagramm der
@@ -34,8 +35,10 @@ class Statistik extends \BackendModule
 	protected $strTemplate = 'be_wp_statistik';
 
 	/**
-	 * Farben der beiden Quellen
+	 * Farben der drei Quellen, von hell nach dunkel: örtlicher Datenbestand,
+	 * Zwischenspeicher, Schnittstelle
 	 */
+	const FARBE_LOKAL = '#B9CFE3';
 	const FARBE_CACHE = '#7FB3D5';
 	const FARBE_API   = '#1F618D';
 
@@ -93,11 +96,11 @@ class Statistik extends \BackendModule
 		$summen = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::summenNachFunktion($von, $bis);
 
 		$zeilen = array();
-		$gesamt = array('api' => 0, 'cache' => 0, 'gesamt' => 0);
+		$gesamt = array('api' => 0, 'cache' => 0, 'lokal' => 0, 'gesamt' => 0);
 
 		foreach($endpunkte as $name => $pfad)
 		{
-			$werte = isset($summen[$name]) ? $summen[$name] : array('api' => 0, 'cache' => 0, 'gesamt' => 0);
+			$werte = isset($summen[$name]) ? $summen[$name] : array('api' => 0, 'cache' => 0, 'lokal' => 0, 'gesamt' => 0);
 
 			$zeilen[] = array
 			(
@@ -105,20 +108,23 @@ class Statistik extends \BackendModule
 				'endpunkt' => $pfad,
 				'api'      => $werte['api'],
 				'cache'    => $werte['cache'],
+				'lokal'    => $werte['lokal'],
 				'gesamt'   => $werte['gesamt'],
-				'quote'    => $werte['gesamt'] ? round($werte['cache'] * 100 / $werte['gesamt']) : 0,
+				// Anteil der Abrufe, die die Schnittstelle nicht belastet haben
+				'quote'    => $werte['gesamt'] ? round(($werte['cache'] + $werte['lokal']) * 100 / $werte['gesamt']) : 0,
 				'aktiv'    => ($funktion === $name),
 			);
 
 			$gesamt['api'] += $werte['api'];
 			$gesamt['cache'] += $werte['cache'];
+			$gesamt['lokal'] += $werte['lokal'];
 			$gesamt['gesamt'] += $werte['gesamt'];
 		}
 
 		// Nach Gesamtabrufen sortieren, damit die stärksten oben stehen
 		usort($zeilen, function($a, $b) { return $b['gesamt'] <=> $a['gesamt']; });
 
-		$gesamt['quote'] = $gesamt['gesamt'] ? round($gesamt['cache'] * 100 / $gesamt['gesamt']) : 0;
+		$gesamt['quote'] = $gesamt['gesamt'] ? round(($gesamt['cache'] + $gesamt['lokal']) * 100 / $gesamt['gesamt']) : 0;
 
 		/*********************************************************
 		 * Verlauf für das Diagramm (Tag, Woche oder Monat)
@@ -142,6 +148,7 @@ class Statistik extends \BackendModule
 				(
 					'titel' => date('d.m.', $zeiger),
 					'cache' => isset($tage[$tag]) ? (int) $tage[$tag]['cache'] : 0,
+					'lokal' => isset($tage[$tag]) ? (int) $tage[$tag]['lokal'] : 0,
 					'api'   => isset($tage[$tag]) ? (int) $tage[$tag]['api'] : 0,
 				);
 
@@ -158,6 +165,7 @@ class Statistik extends \BackendModule
 				(
 					'titel' => self::rasterTitel((string) $gruppe, $raster, isset($werte['erster']) ? $werte['erster'] : ''),
 					'cache' => (int) $werte['cache'],
+					'lokal' => (int) $werte['lokal'],
 					'api'   => (int) $werte['api'],
 				);
 			}
@@ -245,6 +253,7 @@ class Statistik extends \BackendModule
 		$this->Template->ende = $bis;
 		$this->Template->erster = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::ersterTag();
 		$this->Template->hatDaten = ($gesamt['gesamt'] > 0);
+		$this->Template->farbeLokal = self::FARBE_LOKAL;
 		$this->Template->farbeCache = self::FARBE_CACHE;
 		$this->Template->farbeApi = self::FARBE_API;
 	}
@@ -281,7 +290,7 @@ class Statistik extends \BackendModule
 	 * Ohne Werte wird ein leerer String geliefert — das Template zeigt dann
 	 * einen Hinweis statt eines leeren Rahmens.
 	 *
-	 * @param  array  $balken  Liste aus titel, cache, api
+	 * @param  array  $balken  Liste aus titel, lokal, cache, api
 	 * @param  string $raster  woche|monat (nur für die Beschriftung)
 	 * @return string          SVG oder ''
 	 */
@@ -310,7 +319,7 @@ class Statistik extends \BackendModule
 
 		// Maximalwert und runde Skala bestimmen
 		$max = 0;
-		foreach($balken as $b) $max = max($max, $b['cache'] + $b['api']);
+		foreach($balken as $b) $max = max($max, $b['lokal'] + $b['cache'] + $b['api']);
 		if($max < 1) $max = 1;
 
 		$schritt = pow(10, max(0, strlen((string) (int) $max) - 2));
@@ -348,12 +357,21 @@ class Statistik extends \BackendModule
 
 		foreach($balken as $b)
 		{
-			$summe = $b['cache'] + $b['api'];
+			// Gestapelt von unten nach oben: örtlicher Bestand, Cache, API —
+			// von der günstigsten zur teuersten Quelle
+			$summe = $b['lokal'] + $b['cache'] + $b['api'];
+			$hLokal = $summe ? round($nutzHoehe * $b['lokal'] / $maxSkala, 1) : 0;
 			$hCache = $summe ? round($nutzHoehe * $b['cache'] / $maxSkala, 1) : 0;
 			$hApi = $summe ? round($nutzHoehe * $b['api'] / $maxSkala, 1) : 0;
 
-			$yCache = $randOben + $nutzHoehe - $hCache;
+			$yLokal = $randOben + $nutzHoehe - $hLokal;
+			$yCache = $yLokal - $hCache;
 			$yApi = $yCache - $hApi;
+
+			if($hLokal > 0)
+			{
+				$svg[] = '<rect x="'.$x.'" y="'.$yLokal.'" width="'.$balkenBreite.'" height="'.$hLokal.'" fill="'.self::FARBE_LOKAL.'"><title>'.$b['titel'].': '.$b['lokal'].' aus dem örtlichen Bestand</title></rect>';
+			}
 
 			if($hCache > 0)
 			{

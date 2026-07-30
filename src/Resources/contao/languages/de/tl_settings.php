@@ -69,4 +69,6 @@ $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_playerImageSize'] = array('Bi
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_clubDefaultImage'] = array('Vereinsbild', 'Standardbild/-logo für Vereine');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_clubImageSize'] = array('Bildgröße', 'Größe der Vereinsbilder/Logos');
 
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_zugriffslog'] = array('Zugriffs-Log', 'Schreibt je Abfrage eine Zeile nach var/logs (eine Datei je Tag, Semikolon-getrennt): Dauer, Quelle, Funktion, Trefferzahl, IP-Adresse, Browser und Seite. Zum Beobachten der Laufzeiten. ACHTUNG: Die IP-Adresse ist ein personenbezogenes Datum — dauerhafter Betrieb gehört in die Datenschutzerklärung, und die Dateien sollten regelmäßig gelöscht werden.');
+
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_debuglog'] = array('Debug-Log', 'Debug-Log aktivieren');

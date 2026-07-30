@@ -131,6 +131,37 @@ Jeder API-Case in `Helper/API.php::getAPI()` ruft nach `callApiWithRefresh()` ei
 WICHTIG: `autoQuery()` cached (24 h, `wertungsportal_cache`). Bei Cache-Treffer läuft KEIN Sync.
 Fehlgeschlagene Abfragen (HTTP != 200) werden nicht gecached.
 
+## Örtlicher Datenbestand und Zugriffs-Log (ab 1.8.0)
+
+`Helper/Lokal.php` beantwortet alle zwölf API-Funktionen aus den Spiegeltabellen
+— dritte Stufe nach dem Zwischenspeicher (Aufruf in `API::notdaten()`).
+Reihenfolge: gültiger Cache → abgelaufener Cache → `Lokal::abfrage()` → Meldung.
+
+- Jede Methode baut die Antwort **in der Feldform der Schnittstelle** (die
+  Spaltennamen der Spiegeltabellen entsprechen ihr 1:1). Die Formatter im
+  Frontend bleiben dadurch unberührt.
+- Partien liegen redundanzfrei (nur Spieler-UUIDs); `partien()` führt sie mit
+  der Auswertungstabelle zusammen. Fehlt ein Spieler dort, greift der in der
+  Partie gespeicherte Name; eine Partie ohne Gegner bleibt `null`.
+- **Laufzeitfalle Rangliste:** Mitgliedschaft per `EXISTS` (kein JOIN mit
+  DISTINCT) und `ORDER BY p.rating DESC` OHNE zweiten Sortierschlüssel, sonst
+  ist der Index (published, rating) für die Ordnung nutzlos und MySQL sortiert
+  95.000 Zeilen nach (972 ms statt 72 ms). Gleichstand wird in PHP
+  nachsortiert. Die Spalte `index` darf NICHT in einen DCA-Index — reserviertes
+  MySQL-Wort.
+- Reihenfolge der Platzhalter beachten: Personen-Bedingungen stehen vor dem
+  EXISTS-Teil, das Vergleichsdatum der Mitgliedschaftsprüfung wird deshalb
+  ANGEHÄNGT, nicht vorangestellt.
+- Kein eigener Zwischenspeicher für örtliche Antworten (gemessen 0,2–72 ms;
+  Begründung in TODO.md).
+
+`Helper/Zugriffslog.php` schreibt bei eingeschalteter Einstellung
+`wertungsportal_zugriffslog` je Abfrage eine CSV-Zeile nach `var/logs`
+(eine Datei je Tag). Die Zeitnahme sitzt in `API::autoQuery` (Gesamtdauer) und
+`OAuth2Client::callApiWithRefresh` (reiner Aufruf, statischer Zähler
+`aufrufe()` unterscheidet „war bei der Schnittstelle" von „kam aus dem
+Cache"). Enthält die IP — datenschutzrelevant.
+
 ## Notbetrieb ohne Schnittstelle (ab 1.7.0)
 
 Zwei Einstellungen steuern das Verhalten bei nicht verfügbarer Schnittstelle:

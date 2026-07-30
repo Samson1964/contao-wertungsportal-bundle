@@ -1,7 +1,7 @@
 <?php
 /**
  * Backend-Template des Moduls „Statistik"
- * Zeigt die Abrufe der Schnittstellenfunktionen (Cache und API).
+ * Zeigt die Abrufe der Schnittstellenfunktionen (API, Cache, örtlicher Bestand).
  */
 ?>
 <div id="tl_buttons"></div>
@@ -68,6 +68,7 @@
 			<div class="wp-stat-legende">
 				<span><i style="background:<?= $this->farbeApi ?>"></i> von der API</span>
 				<span><i style="background:<?= $this->farbeCache ?>"></i> aus dem lokalen Cache</span>
+				<span><i style="background:<?= $this->farbeLokal ?>"></i> aus dem örtlichen Datenbestand</span>
 			</div>
 			<div class="wp-stat-scroll">
 				<?= $this->diagramm ?>
@@ -82,8 +83,9 @@
 					<th>Schnittstelle</th>
 					<th class="rechts">von der API</th>
 					<th class="rechts">aus dem Cache</th>
+					<th class="rechts">örtlich</th>
 					<th class="rechts">gesamt</th>
-					<th class="rechts">Cache-Anteil</th>
+					<th class="rechts">ohne API</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -95,6 +97,7 @@
 						<td class="wp-stat-pfad"><?= $z['endpunkt'] ?></td>
 						<td class="rechts"><?= number_format($z['api'], 0, ',', '.') ?></td>
 						<td class="rechts"><?= number_format($z['cache'], 0, ',', '.') ?></td>
+						<td class="rechts"><?= number_format($z['lokal'], 0, ',', '.') ?></td>
 						<td class="rechts"><strong><?= number_format($z['gesamt'], 0, ',', '.') ?></strong></td>
 						<td class="rechts"><?= $z['gesamt'] ? $z['quote'].' %' : '&ndash;' ?></td>
 					</tr>
@@ -105,6 +108,7 @@
 					<td colspan="2"><strong>Summe</strong></td>
 					<td class="rechts"><strong><?= number_format($this->gesamt['api'], 0, ',', '.') ?></strong></td>
 					<td class="rechts"><strong><?= number_format($this->gesamt['cache'], 0, ',', '.') ?></strong></td>
+					<td class="rechts"><strong><?= number_format($this->gesamt['lokal'], 0, ',', '.') ?></strong></td>
 					<td class="rechts"><strong><?= number_format($this->gesamt['gesamt'], 0, ',', '.') ?></strong></td>
 					<td class="rechts"><strong><?= $this->gesamt['quote'] ?> %</strong></td>
 				</tr>
@@ -114,8 +118,10 @@
 
 		<p class="tl_help">
 			Ein Klick auf eine Funktion zeigt deren Verlauf allein. „Aus dem Cache“ sind Aufrufe,
-			die ohne Anfrage an das Wertungsportal beantwortet wurden — je höher dieser Anteil,
-			desto weniger Last entsteht bei der Schnittstelle.
+			die ohne Anfrage an das Wertungsportal beantwortet wurden; „örtlich“ solche, die aus
+			den eigenen Tabellen kamen, weil die Schnittstelle abgeschaltet war oder nicht
+			antwortete und auch der Cache nichts hergab. Die Spalte „ohne API“ nennt den Anteil
+			beider zusammen — je höher er ist, desto weniger Last entsteht bei der Schnittstelle.
 		</p>
 
 	<?php endif; ?>

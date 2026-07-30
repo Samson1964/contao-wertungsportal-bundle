@@ -48,6 +48,17 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_persons'] = [
                 // umlautunabhängige Suche. Der Index auf lastname/firstname
                 // bleibt für Backend-Liste und -Sortierung nötig
                 'published,lastnameAlias,firstnameAlias' => 'index',
+                // Rangliste aus dem örtlichen Bestand (Notbetrieb): Über
+                // diesen Index liest MySQL die Personen bereits in der
+                // richtigen Reihenfolge und kann nach dem LIMIT aufhören.
+                // Ohne ihn sortiert es 95.000 Zeilen nach (gemessen:
+                // 972 ms statt 40 ms für die DSB-Topliste).
+                // ACHTUNG: Die Spalte `index` darf hier NICHT mitgeführt
+                // werden — sie ist ein reserviertes MySQL-Wort und würde die
+                // Indexanweisung ungültig machen. Deshalb sortiert die
+                // Abfrage nur nach rating; bei gleicher DWZ entscheidet die
+                // Nachsortierung in PHP (Lokal::verbandsliste)
+                'published,rating' => 'index',
             ],
         ],
     ],

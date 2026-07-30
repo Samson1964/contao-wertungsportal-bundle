@@ -1139,26 +1139,39 @@ class Helper extends \Frontend
 	{
 		$format = !empty($GLOBALS['TL_CONFIG']['datimFormat']) ? $GLOBALS['TL_CONFIG']['datimFormat'] : 'd.m.Y H:i';
 
-		// Notbetrieb zuerst prüfen
+		// Notbetrieb zuerst prüfen. Beide Rückfallebenen können auf derselben
+		// Seite vorkommen (eine Abfrage aus dem Zwischenspeicher, eine aus der
+		// örtlichen Datenbank) — dann werden sie in einem Satz genannt
 		if(is_array($result))
 		{
 			$notstand = array_key_exists('notstand', $result) ? $result['notstand'] : false;
+			$lokalstand = !empty($result['lokalquelle']) ? (int) ($result['lokalstand'] ?? 0) : false;
 		}
 		else
 		{
 			$notstand = \Schachbulle\ContaoWertungsportalBundle\Helper\API::notstand();
+			$lokalstand = \Schachbulle\ContaoWertungsportalBundle\Helper\Lokal::stand();
 		}
 
-		if($notstand !== false)
+		if($notstand !== false || $lokalstand !== false)
 		{
-			$meldung = \Schachbulle\ContaoWertungsportalBundle\Helper\API::MELDUNG_KEINE_LIVEDATEN;
+			$quellen = array();
 
-			if($notstand > 0)
+			if($notstand !== false)
 			{
-				return $meldung.' Angezeigt werden zwischengespeicherte Daten vom '.\Date::parse($format, (int) $notstand).' Uhr.';
+				$quellen[] = ($notstand > 0)
+					? 'zwischengespeicherte Daten vom '.\Date::parse($format, (int) $notstand).' Uhr'
+					: 'zwischengespeicherte Daten';
 			}
 
-			return $meldung.' Angezeigt werden zwischengespeicherte Daten.';
+			if($lokalstand !== false)
+			{
+				$quellen[] = ($lokalstand > 0)
+					? 'Daten aus dem örtlichen Datenbestand (letzte Aktualisierung am '.\Date::parse($format, (int) $lokalstand).' Uhr)'
+					: 'Daten aus dem örtlichen Datenbestand';
+			}
+
+			return \Schachbulle\ContaoWertungsportalBundle\Helper\API::MELDUNG_KEINE_LIVEDATEN.' Angezeigt werden '.implode(' und ', $quellen).'.';
 		}
 
 		if(is_array($result))

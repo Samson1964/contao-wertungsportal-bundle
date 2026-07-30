@@ -20,6 +20,23 @@ class OAuth2Client
 	public string $cacheFile;
 	public int $timeout; // Wartezeit je Aufruf in Sekunden
 
+	/**
+	 * Dauer des letzten Schnittstellenaufrufs in Millisekunden und die dabei
+	 * gerufene Adresse — Grundlage des Zugriffs-Logs (Helper\Zugriffslog).
+	 * Statisch, weil das Log in API::autoQuery geschrieben wird und dort keine
+	 * Client-Instanz mehr vorliegt.
+	 */
+	protected static float $dauer = 0.0;
+	protected static string $letzteUrl = '';
+
+	/**
+	 * Zahl der Schnittstellenaufrufe dieses Seitenaufrufs. Daran erkennt das
+	 * Log, ob eine Abfrage überhaupt bei der Schnittstelle war — sonst wäre
+	 * bei einem Treffer im Zwischenspeicher die Dauer eines FRÜHEREN Aufrufs
+	 * im Protokoll gelandet.
+	 */
+	protected static int $aufrufe = 0;
+
 	// ─────────────────────────────────────────────
 	//  Konstruktor – initialisiert alle Konfigurationswerte
 	// ─────────────────────────────────────────────
@@ -317,6 +334,49 @@ class OAuth2Client
 	//  Erfolg:     ['error' => false, 'http_code' => ..., 'body' => ...]
 	// ─────────────────────────────────────────────
 	public function callApiWithRefresh(string $apiUrl, string $method = 'GET', ?array $body = null): array
+	{
+		// Nur Zeitnahme und Weitergabe: Die eigentliche Arbeit steckt in
+		// callApiIntern. Getrennt, weil die Methode mehrere Rückgabepunkte hat
+		// (Token-Fehler, 401-Wiederholung …) und die Messung sonst an jedem
+		// einzelnen davon stehen müsste
+		$start = microtime(true);
+		$result = $this->callApiIntern($apiUrl, $method, $body);
+
+		self::$dauer = (microtime(true) - $start) * 1000;
+		self::$letzteUrl = $apiUrl;
+		self::$aufrufe++;
+
+		return $result;
+	}
+
+	/**
+	 * Zahl der Schnittstellenaufrufe dieses Seitenaufrufs.
+	 */
+	public static function aufrufe(): int
+	{
+		return self::$aufrufe;
+	}
+
+	/**
+	 * Dauer des letzten Aufrufs in Millisekunden (0, wenn noch keiner lief).
+	 */
+	public static function dauer(): float
+	{
+		return self::$dauer;
+	}
+
+	/**
+	 * Zuletzt aufgerufene Adresse der Schnittstelle.
+	 */
+	public static function letzteUrl(): string
+	{
+		return self::$letzteUrl;
+	}
+
+	/**
+	 * Der eigentliche Aufruf samt Token-Behandlung (siehe callApiWithRefresh).
+	 */
+	protected function callApiIntern(string $apiUrl, string $method = 'GET', ?array $body = null): array
 	{
 		$log = 'API-Aufruf: '.$apiUrl."\n";
 		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');

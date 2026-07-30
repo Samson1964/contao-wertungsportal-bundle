@@ -87,6 +87,61 @@ class API
 	*/
 	public static function autoQuery($params)
 	{
+		// Ohne eingeschaltetes Zugriffs-Log ohne jeden Zusatzaufwand weiter
+		if(!\Schachbulle\ContaoWertungsportalBundle\Helper\Zugriffslog::aktiv())
+		{
+			return static::autoQueryIntern($params);
+		}
+
+		// Zeit über die GANZE Abfrage nehmen (Zwischenspeicher, Schnittstelle
+		// samt Abgleich mit der Datenbank oder örtliche Abfrage) und zusätzlich
+		// die reine Dauer des Schnittstellenaufrufs, sofern einer stattfand
+		$aufrufeVorher = \Schachbulle\ContaoWertungsportalBundle\Helper\OAuth2Client::aufrufe();
+		$start = microtime(true);
+
+		$result = static::autoQueryIntern($params);
+
+		$angaben = array
+		(
+			'quelle' => self::quelleVon($result),
+			'dauer'  => (microtime(true) - $start) * 1000,
+			'http'   => is_array($result) ? ($result['http_code'] ?? '') : '',
+			'anzahl' => \Schachbulle\ContaoWertungsportalBundle\Helper\Zugriffslog::anzahl($result),
+		);
+
+		if(\Schachbulle\ContaoWertungsportalBundle\Helper\OAuth2Client::aufrufe() > $aufrufeVorher)
+		{
+			$angaben['dauer_api'] = \Schachbulle\ContaoWertungsportalBundle\Helper\OAuth2Client::dauer();
+		}
+
+		\Schachbulle\ContaoWertungsportalBundle\Helper\Zugriffslog::schreibe($params, $angaben);
+
+		return $result;
+	}
+
+	/**
+	 * Benennt die Quelle einer Antwort für das Zugriffs-Log.
+	 *
+	 * @param  mixed $result Antwort von autoQueryIntern
+	 * @return string        api|cache|notdaten|lokal|gesperrt|fehler
+	 */
+	protected static function quelleVon($result)
+	{
+		if(!is_array($result)) return 'fehler';
+		if(!empty($result['lokalquelle'])) return 'lokal';
+		if(!empty($result['notstand'])) return 'notdaten';
+		if(!empty($result['cachequelle'])) return 'cache';
+		if(!empty($result['keine_livedaten'])) return 'gesperrt';
+		if(!empty($result['error'])) return 'fehler';
+
+		return 'api';
+	}
+
+	/**
+	 * Die eigentliche Abfrage (siehe autoQuery).
+	 */
+	protected static function autoQueryIntern($params)
+	{
 		// ======================================================================
 		// Wenn Cache aktiviert, dann Daten laden, wenn vorhanden
 		// ======================================================================
@@ -239,6 +294,20 @@ class API
 			$roh['cacheablauf'] = null;
 
 			return \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::filterMitgliedsnummern($roh);
+		}
+
+		// Zweite Rückfallebene: die lokalen Spiegeltabellen. Sie füllen sich
+		// über die Syncs jeder erfolgreichen Abfrage und über die CSV-Importe
+		// und sind damit oft aktueller als ein längst abgelaufener
+		// Cache-Eintrag — nur eben nicht vollständig, weshalb sie erst nach
+		// dem Zwischenspeicher zum Zug kommen
+		$lokal = \Schachbulle\ContaoWertungsportalBundle\Helper\Lokal::abfrage($params);
+
+		if(is_array($lokal))
+		{
+			self::zaehleAbruf($params['funktion'], \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::QUELLE_LOKAL);
+
+			return \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::filterMitgliedsnummern($lokal);
 		}
 
 		// Keine Notreserve vorhanden: Fehlerantwort mit der Meldung, die die
