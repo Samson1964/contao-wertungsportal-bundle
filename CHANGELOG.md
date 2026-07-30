@@ -1,5 +1,11 @@
 # Wertungsportal Changelog
 
+## Version 1.8.1 (2026-07-30)
+
+* **Fix: HTTP 500 auf den Turnierergebnissen (Kreuztabelle), sobald der Notbetrieb griff.** Die örtliche Partienabfrage aus 1.8.0 las die Felder whitePlayerName und blackPlayerName mit — die sind aber **keine Datenbankspalten**, sondern reine Anzeigefelder des DCA (input_field_callback, der den Namen zur Laufzeit aus der Auswertungstabelle holt). Bei der Messung auf schachbund.de am 30.07.2026 fiel das auf: Die Schnittstelle antwortete für ein Turnier nicht (der bekannte CANCEL-Fehler von nu), der Notbetrieb sprang ein und lief in „Unknown column 'whitePlayerName'". Die Spalten stehen nicht mehr im SELECT; fehlt ein Spieler in der Auswertungstabelle, bleibt ein Datensatz mit UUID und leeren Namen
+* **Fix (die eigentliche Lehre): Der Notbetrieb kann keinen Fehler mehr durchlassen.** Lokal::abfrage() fängt jetzt jeden Fehler der örtlichen Abfrage ab und behandelt ihn wie „örtlich nichts gefunden" — die Ausgabe zeigt dann die Meldung, dass keine Live-Daten verfügbar sind. Der Notbetrieb springt ein, wenn die Schnittstelle schon versagt hat; er darf die Lage nicht verschlimmern. Vorher wurde aus einer sauber behandelten Fehlermeldung ein HTTP 500. Dieselbe Absicherung hatte die Statistikzählung von Anfang an — bei der örtlichen Abfrage fehlte sie
+* Verifiziert mit 51 Tests (zwei neue): Ein Prüfer vergleicht die DCA-Felder ohne sql-Definition gegen den Code von Lokal.php und schlägt an, sobald ein Anzeigefeld als Spalte gelesen wird; ein zweiter benennt die Partientabelle um und erwartet die Meldung statt eines Absturzes. Das Testschema führte dieselben Phantomspalten wie der Code und konnte den Fehler deshalb nicht finden — es entspricht jetzt der echten Tabelle
+
 ## Version 1.8.0 (2026-07-29)
 
 * **Add: Örtlicher Datenbestand als dritte Auslieferungsstufe.** Steht die Schnittstelle nicht zur Verfügung (abgeschaltet oder ohne Antwort) und liegt auch im Zwischenspeicher nichts vor, werden die eigenen Tabellen abgefragt. Umgesetzt für ALLE zwölf Funktionen: Spielersuche, Karteikarte, Turnierhistorie samt DWZ-Umstufungen, Vereins- und Verbandsliste, Vereinsname, Verbändeliste, Turniersuche, Turnier-Kopfdaten, DWZ-Auswertung, Turnierergebnisse und Spielberichtsbogen. Jede Antwort wird in der Form der Schnittstelle gebaut, die Aufbereitung im Frontend bleibt dadurch unverändert

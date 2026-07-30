@@ -50,6 +50,38 @@ class Lokal
 	 */
 	public static function abfrage($params)
 	{
+		// Der Notbetrieb darf NIEMALS schlimmer ausgehen als gar kein
+		// Notbetrieb: Er springt ein, wenn die Schnittstelle schon versagt hat.
+		// Scheitert dann auch die örtliche Abfrage (fehlende Spalte, fehlende
+		// Tabelle, weil contao:migrate noch nicht gelaufen ist), muss das wie
+		// „örtlich nichts gefunden" behandelt werden — die Ausgabe zeigt dann
+		// die Meldung, dass keine Live-Daten verfügbar sind.
+		// Ohne diese Absicherung wurde aus einer behandelten Fehlermeldung ein
+		// HTTP 500; genau so ist es am 30.07.2026 auf schachbund.de passiert,
+		// weil in partien() zwei DCA-Anzeigefelder als Spalten gelesen wurden.
+		try
+		{
+			return self::abfrageIntern($params);
+		}
+		catch(\Throwable $e)
+		{
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']))
+			{
+				log_message('Örtliche Abfrage ('.($params['funktion'] ?? '?').') fehlgeschlagen: '.$e->getMessage(), 'wertungsportal_oauth2client.log');
+			}
+
+			return false;
+		}
+	}
+
+	/**
+	 * Der eigentliche Verteiler (siehe abfrage).
+	 *
+	 * @param  array $params
+	 * @return array|false
+	 */
+	protected static function abfrageIntern($params)
+	{
 		$funktion = (string) ($params['funktion'] ?? '');
 
 		switch($funktion)
@@ -636,7 +668,12 @@ class Lokal
 			$werte[] = $spielerUuid;
 		}
 
-		$objPartien = $db->prepare("SELECT tstamp, round, result, expected, restpartie, whitePlayerUuid, blackPlayerUuid, whitePlayerName, blackPlayerName FROM tl_wertungsportal_tournaments_matches WHERE ".implode(' AND ', $bedingungen)." ORDER BY round LIMIT ".self::MAX_ZEILEN)
+		// ACHTUNG: whitePlayerName/blackPlayerName sind KEINE Datenbankspalten,
+		// sondern reine Anzeigefelder des DCA (input_field_callback, der den
+		// Namen zur Laufzeit aus der Auswertungstabelle holt). Sie hier
+		// mitzulesen war ein Fehler und führte auf dem Livesystem zu einem
+		// 500er, sobald der Notbetrieb griff
+		$objPartien = $db->prepare("SELECT tstamp, round, result, expected, restpartie, whitePlayerUuid, blackPlayerUuid FROM tl_wertungsportal_tournaments_matches WHERE ".implode(' AND ', $bedingungen)." ORDER BY round LIMIT ".self::MAX_ZEILEN)
 		                 ->execute(...$werte);
 
 		if(!$objPartien->numRows) return null;
@@ -674,10 +711,8 @@ class Lokal
 				'restpartie' => $partie['restpartie'],
 			);
 
-			// Fehlt ein Spieler in der Auswertungstabelle (z. B. weil nur die
-			// Partien abgerufen wurden), bleibt zumindest der Name erhalten
-			$eintrag['whitePlayer'] = self::spielerZuUuid($spieler, (string) $partie['whitePlayerUuid'], (string) $partie['whitePlayerName']);
-			$eintrag['blackPlayer'] = self::spielerZuUuid($spieler, (string) $partie['blackPlayerUuid'], (string) $partie['blackPlayerName']);
+			$eintrag['whitePlayer'] = self::spielerZuUuid($spieler, (string) $partie['whitePlayerUuid']);
+			$eintrag['blackPlayer'] = self::spielerZuUuid($spieler, (string) $partie['blackPlayerUuid']);
 
 			$daten[] = $eintrag;
 		}
@@ -686,28 +721,29 @@ class Lokal
 	}
 
 	/**
-	 * Liefert das Spieler-DTO zu einer Turnier-Spieler-UUID. Ist der Spieler
-	 * nicht in der Auswertungstabelle hinterlegt, wird ein Notbehelf aus dem
-	 * in der Partie gespeicherten Namen gebaut ("Nachname, Vorname").
+	 * Liefert das Spieler-DTO zu einer Turnier-Spieler-UUID.
+	 *
+	 * Die Partien halten örtlich nur die UUID; die Spielerdaten stehen in der
+	 * Auswertungstabelle. Fehlt der Spieler dort (etwa weil zu dem Turnier nur
+	 * die Partien und nie die Auswertung abgerufen wurden), gibt es örtlich
+	 * keinen Namen — dann bleibt ein Datensatz mit UUID und leeren Namen, damit
+	 * die Aufbereitung dieselbe Struktur vorfindet wie bei der Schnittstelle.
 	 *
 	 * @param  array  $spieler  UUID => DTO
 	 * @param  string $uuid     gesuchte UUID
-	 * @param  string $name     Name aus der Partie als Rückfallebene
-	 * @return array|null       DTO oder null, wenn beides fehlt (spielfrei)
+	 * @return array|null       DTO oder null bei fehlender UUID (spielfrei/kampflos)
 	 */
-	protected static function spielerZuUuid($spieler, $uuid, $name)
+	protected static function spielerZuUuid($spieler, $uuid)
 	{
-		if($uuid !== '' && isset($spieler[$uuid])) return $spieler[$uuid];
-		if($uuid === '' && $name === '') return null; // spielfrei / kampflos
-
-		$teile = array_map('trim', explode(',', $name, 2));
+		if($uuid === '') return null; // spielfrei / kampflos
+		if(isset($spieler[$uuid])) return $spieler[$uuid];
 
 		return array
 		(
 			'playerUuid'     => $uuid,
 			'nuLigaPersonId' => '',
-			'lastname'       => $teile[0] ?? '',
-			'firstname'      => $teile[1] ?? '',
+			'lastname'       => '',
+			'firstname'      => '',
 			'playerNo'       => 0,
 		);
 	}
