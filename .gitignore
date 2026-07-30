@@ -8,5 +8,10 @@
 /.DAV
 .impeccable/
 
+# Zugriffs-Logs des Wertungsportals. Sie enthalten IP-Adressen und dürfen
+# NICHT in ein öffentliches Repository gelangen — zum Auswerten werden sie
+# gelegentlich in dieses Verzeichnis kopiert
+/wertungsportal-zugriffe-*.log
+
 # PhpUnit
 /phpunit.xml
