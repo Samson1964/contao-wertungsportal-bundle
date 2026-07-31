@@ -1,0 +1,34 @@
+# Quelle fuer die Metadaten im Contao Manager (contao/package-metadata).
+# Aenderungen hier werden von Claude in den Fork uebertragen.
+# Der englische Block wird beim Abgleich ergaenzt, falls er fehlt.
+
+de:
+    title: Wertungsportal - DWZ-Abfrage des Deutschen Schachbundes
+    description: >
+        Bindet das Wertungsportal des Deutschen Schachbundes (DSB) über dessen REST-Schnittstelle in die DSB-Website ein und löst damit die ältere DeWIS-SOAP-Schnittstelle ab.
+
+        Es stehen Frontend-Module für Spieler, Vereine, Verbände, Turniere und Bestenlisten bereit. Im Backend werden Vereine und Spieler verwaltet.
+    keywords:
+        - Schach
+        - DWZ
+        - Wertungszahl
+        - Wertungsportal
+        - Schachbund
+    support:
+        issues: https://github.com/Samson1964/contao-wertungsportal-bundle/issues
+        source: https://github.com/Samson1964/contao-wertungsportal-bundle
+
+en:
+    title: Wertungsportal - German chess rating lookup
+    description: >
+        Integrates the rating portal of the German Chess Federation (DSB) into the DSB website via its REST interface, replacing the older DeWIS SOAP interface.
+
+        Front end modules are available for players, clubs, federations, tournaments and top lists. Clubs and players are managed in the back end.
+    keywords:
+        - chess
+        - rating
+        - DWZ
+        - German Chess Federation
+    support:
+        issues: https://github.com/Samson1964/contao-wertungsportal-bundle/issues
+        source: https://github.com/Samson1964/contao-wertungsportal-bundle
