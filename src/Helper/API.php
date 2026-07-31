@@ -49,6 +49,14 @@ class API
 	 */
 	const NOTFRIST = 300;
 
+	/**
+	 * Kennzeichen für „läuft nie ab" in den Cachezeit-Einstellungen. 0 ist
+	 * dafür nicht verwendbar: In den Einstellungen bedeutet 0 „gar nicht
+	 * cachen". Beim Speichern wird daraus die 0, die die Cache-Klasse als
+	 * „ohne Ablauf" versteht.
+	 */
+	const CACHE_UNBEGRENZT = -1;
+
 	// ─────────────────────────────────────────────
 	//  Konstruktor – initialisiert alle Konfigurationswerte
 	// ─────────────────────────────────────────────
@@ -148,7 +156,7 @@ class API
 		$cachetime = self::cachezeit($params['funktion']);
 		$cache = null;
 
-		if($GLOBALS['TL_CONFIG']['wertungsportal_cache'] && $cachetime > 0)
+		if(self::cacheAktiv($params['funktion']))
 		{
 			// Cache initialisieren: eine Datei je Eintrag in einem eigenen
 			// Verzeichnis der Funktion. Früher lagen alle Einträge einer
@@ -198,11 +206,17 @@ class API
 		{
 			// FIDE-Daten hinzuladen
 			$result = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::setFIDEDaten($result, $params);
-			// im Cache speichern (nur wenn für diese Funktion eine
-			// Cachezeit eingestellt ist — 0 bedeutet "nicht cachen")
-			if($cache !== null)
+
+			// Im Cache speichern. Die Gültigkeit steht erst hier fest: Bei den
+			// Turnierfunktionen hängt sie am Alter des Turniers, das aus der
+			// Antwort hervorgeht (siehe cachezeitFuerAntwort). 0 bedeutet
+			// „nicht cachen", CACHE_UNBEGRENZT wird zur 0 der Cache-Klasse,
+			// die dort für „ohne Ablauf" steht
+			$speicherzeit = self::cachezeitFuerAntwort($params, $result, $cachetime);
+
+			if($cache !== null && $speicherzeit != 0)
 			{
-				$cache->store($params['cachekey'], $result, $cachetime);
+				$cache->store($params['cachekey'], $result, $speicherzeit > 0 ? $speicherzeit : 0);
 			}
 		}
 
@@ -985,7 +999,10 @@ class API
 			'Verbandsliste'        => 'wertungsportal_cachezeit_vereine',
 			'Verbaende'            => 'wertungsportal_cachezeit_verbaende',
 			'Turnierliste'         => 'wertungsportal_cachezeit_turniersuche',
-			'Turnierinfo'          => 'wertungsportal_cachezeit_turniersuche',
+			// Turnierinfo gehört zu den Turnierdaten, nicht zur Suche: Es sind
+			// die Kopfdaten EINES Turniers und damit genauso stabil wie
+			// Auswertung, Ergebnisse und Spielberichtsbogen
+			'Turnierinfo'          => 'wertungsportal_cachezeit_turnierdaten',
 			'Turnierauswertung'    => 'wertungsportal_cachezeit_turnierdaten',
 			'Turnierergebnisse'    => 'wertungsportal_cachezeit_turnierdaten',
 			'Spielberichtsbogen'   => 'wertungsportal_cachezeit_turnierdaten',
@@ -993,12 +1010,44 @@ class API
 	}
 
 	/**
-	 * Liefert die Cachezeit einer API-Funktion in Sekunden.
-	 * Ohne Einstellung gelten 24 Stunden (bisheriges Verhalten);
-	 * der Wert 0 schaltet den Cache für diese Funktion ab.
+	 * Meldet, ob für eine Funktion überhaupt zwischengespeichert wird.
+	 *
+	 * Eigene Methode, weil die Antwort bei den Turnierfunktionen an ZWEI
+	 * Einstellungen hängt: Auch wenn junge Turniere nicht gecacht werden
+	 * sollen, kann für alte trotzdem eine Cachezeit eingestellt sein — dann
+	 * muss der Cache-Speicher angelegt werden.
 	 *
 	 * @param       String $funktion
-	 * @return      Integer Sekunden
+	 * @return      Boolean
+	 */
+	protected static function cacheAktiv($funktion)
+	{
+		if(empty($GLOBALS['TL_CONFIG']['wertungsportal_cache'])) return false;
+		if(self::cachezeit($funktion) != 0) return true;
+
+		return in_array($funktion, self::turnierFunktionen(), true)
+			&& self::cachezeitAusFeld('wertungsportal_cachezeit_turnierdaten_alt', 0) != 0;
+	}
+
+	/**
+	 * Funktionen, deren Daten sich auf genau EIN Turnier beziehen. Für sie
+	 * hängt die Cachezeit zusätzlich am Alter des Turniers.
+	 *
+	 * @return array
+	 */
+	public static function turnierFunktionen()
+	{
+		return array('Turnierinfo', 'Turnierauswertung', 'Turnierergebnisse', 'Spielberichtsbogen');
+	}
+
+	/**
+	 * Liefert die Cachezeit einer API-Funktion in Sekunden.
+	 * Ohne Einstellung gelten 24 Stunden (bisheriges Verhalten);
+	 * der Wert 0 schaltet den Cache für diese Funktion ab,
+	 * self::CACHE_UNBEGRENZT steht für „läuft nie ab".
+	 *
+	 * @param       String $funktion
+	 * @return      Integer Sekunden, 0 oder CACHE_UNBEGRENZT
 	 */
 	public static function cachezeit($funktion)
 	{
@@ -1006,13 +1055,100 @@ class API
 		$feld = isset($gruppen[$funktion]) ? $gruppen[$funktion] : '';
 
 		// Nicht zugeordnete Funktionen behalten die bisherigen 24 Stunden
-		if($feld == '' || !isset($GLOBALS['TL_CONFIG'][$feld])) return 3600 * 24;
+		if($feld == '') return 3600 * 24;
 
-		// Leere Einstellung = Standard, sonst die eingestellten Stunden
+		return self::cachezeitAusFeld($feld, 3600 * 24);
+	}
+
+	/**
+	 * Liest eine Cachezeit-Einstellung aus und rechnet sie in Sekunden um.
+	 *
+	 * @param       String  $feld      Name der Einstellung
+	 * @param       Integer $standard  Wert bei leerer Einstellung (Sekunden)
+	 * @return      Integer Sekunden, 0 (kein Cache) oder CACHE_UNBEGRENZT
+	 */
+	protected static function cachezeitAusFeld($feld, $standard)
+	{
+		if(!isset($GLOBALS['TL_CONFIG'][$feld])) return $standard;
+
 		$stunden = $GLOBALS['TL_CONFIG'][$feld];
-		if($stunden === '' || $stunden === null) return 3600 * 24;
+		if($stunden === '' || $stunden === null) return $standard;
+
+		// -1 steht für „unbegrenzt" und darf nicht mit Stunden verrechnet
+		// werden — 0 bedeutet weiterhin „gar nicht cachen"
+		if((int) $stunden < 0) return self::CACHE_UNBEGRENZT;
 
 		return (int) $stunden * 3600;
+	}
+
+	/**
+	 * Entscheidet beim SPEICHERN, wie lange eine Antwort gültig bleibt.
+	 *
+	 * Bei den vier Turnierfunktionen hängt das am Alter des Turniers: Nach der
+	 * Erstauswertung sind Nachberechnungen im Wesentlichen nur im ersten Jahr
+	 * zu erwarten, danach ändert sich an den Daten nichts mehr. Deshalb gibt es
+	 * eine zweite Einstellung, die bis „unbegrenzt" reichen kann.
+	 *
+	 * Die Entscheidung fällt erst hier und nicht schon in cachezeit(), weil das
+	 * Turnierende erst aus der Antwort hervorgeht.
+	 *
+	 * @param       Array   $params    Parameter der Abfrage
+	 * @param       Array   $result    Antwort der Schnittstelle
+	 * @param       Integer $standard  Cachezeit der Funktion (Sekunden)
+	 * @return      Integer Sekunden, 0 oder CACHE_UNBEGRENZT
+	 */
+	public static function cachezeitFuerAntwort($params, $result, $standard)
+	{
+		if(!in_array($params['funktion'] ?? '', self::turnierFunktionen(), true)) return $standard;
+
+		$ende = self::turnierEnde($params, $result);
+
+		// Ohne bekanntes Turnierende bleibt es bei der normalen Cachezeit
+		if($ende === '') return $standard;
+
+		// Turnierende innerhalb des letzten Jahres: normale Cachezeit
+		if($ende > date('Y-m-d', strtotime('-1 year'))) return $standard;
+
+		// Ohne eigene Einstellung für alte Turniere gilt ebenfalls die normale
+		return self::cachezeitAusFeld('wertungsportal_cachezeit_turnierdaten_alt', $standard);
+	}
+
+	/**
+	 * Ermittelt das Turnierende (JJJJ-MM-TT) zu einer Antwort.
+	 *
+	 * Die Antworten legen es an unterschiedlichen Stellen ab; die Ergebnisliste
+	 * (Partien) enthält es überhaupt nicht — dort hilft der örtliche Spiegel
+	 * weiter, den der Abgleich kurz zuvor gefüllt hat.
+	 *
+	 * @param       Array $params
+	 * @param       Array $result
+	 * @return      String Datum oder '' wenn unbekannt
+	 */
+	protected static function turnierEnde($params, $result)
+	{
+		// Turnierinfo und Spielberichtsbogen: Turnierfelder flach unter body
+		if(!empty($result['body']['enddate'])) return (string) $result['body']['enddate'];
+
+		// Turnierauswertung: eigener tournament-Knoten
+		if(!empty($result['body']['tournament']['enddate'])) return (string) $result['body']['tournament']['enddate'];
+
+		// Turnierergebnisse: body.data enthält nur Partien — aus dem Spiegel lesen
+		if(!empty($params['turnier']))
+		{
+			try
+			{
+				$objTurnier = \Database::getInstance()->prepare("SELECT enddate FROM tl_wertungsportal_tournaments WHERE uuid = ?")
+				                                     ->execute($params['turnier']);
+
+				if($objTurnier->numRows && $objTurnier->next()) return (string) $objTurnier->enddate;
+			}
+			catch(\Throwable $e)
+			{
+				// Fehlende Tabelle o. ä. darf die Auslieferung nicht stören
+			}
+		}
+
+		return '';
 	}
 
 	/**

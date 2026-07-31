@@ -223,7 +223,12 @@ class Karteikarte
 						'typ'        => 'upgrade',
 						'nummer'     => $nummer,
 						'jahr'       => substr((string) ($up['referenceDate'] ?? ''), 0, 4),
-						'turnier'    => \StringUtil::specialchars((string) ($up['name'] ?? 'DWZ-Umstufung')),
+						// Datum der Umstufung hinter den Namen: Der Name nennt
+						// oft nur das Jahr ("Umstufung 2026"), das Stichdatum
+						// steht aber im referenceDate. Fehlt es, bleibt der
+						// Name für sich stehen (keine leere Klammer)
+						'turnier'    => \StringUtil::specialchars((string) ($up['name'] ?? 'DWZ-Umstufung'))
+						                .(($datum = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::ApiDatum($up['referenceDate'] ?? null, 'Y-m-d', 'd.m.Y', '')) ? ' ('.$datum.')' : ''),
 						'punkte'     => '',
 						'partien'    => '',
 						'we'         => '',

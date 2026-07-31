@@ -3,7 +3,7 @@
 /**
  * palettes
  */
-$GLOBALS['TL_DCA']['tl_settings']['palettes']['default'] .= ';{wertungsportal_legend:hide},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url,wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband,wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe,wertungsportal_crontoken,wertungsportal_api_aus,wertungsportal_api_timeout,wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_zugriffslog,wertungsportal_debuglog,wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize';
+$GLOBALS['TL_DCA']['tl_settings']['palettes']['default'] .= ';{wertungsportal_legend:hide},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url,wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband,wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe,wertungsportal_crontoken,wertungsportal_api_aus,wertungsportal_api_timeout,wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_cachezeit_turnierdaten_alt,wertungsportal_zugriffslog,wertungsportal_debuglog,wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize';
 
 /**
  * fields
@@ -269,15 +269,20 @@ $GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_cache'] = array
 );
 
 // Cachezeiten je Funktionsgruppe (Wert = Stunden; 0 = nicht cachen,
-// leer = Standard von 24 Stunden). Die Beschriftungen der Optionen
-// stehen in den Sprachdateien (wertungsportal_cachezeiten)
-foreach(array('spieler', 'vereine', 'verbaende', 'turniersuche', 'turnierdaten') as $bereich)
+// -1 = unbegrenzt, leer = Standard von 24 Stunden). Die Beschriftungen der
+// Optionen stehen in den Sprachdateien (wertungsportal_cachezeiten).
+//
+// turnierdaten gibt es ZWEIMAL: Daten zu einem einzelnen Turnier ändern sich
+// nach der Erstauswertung praktisch nur noch im ersten Jahr. Für ältere
+// Turniere gilt deshalb die zweite Einstellung, die bis „unbegrenzt" reichen
+// kann (siehe API::cachezeitFuerAntwort)
+foreach(array('spieler', 'vereine', 'verbaende', 'turniersuche', 'turnierdaten', 'turnierdaten_alt') as $bereich)
 {
 	$GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_cachezeit_'.$bereich] = array
 	(
 		'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cachezeit_'.$bereich],
 		'inputType'               => 'select',
-		'options'                 => array('0', '1', '6', '12', '24', '48', '168', '720'),
+		'options'                 => array('0', '1', '6', '12', '24', '48', '168', '720', '1440', '2160', '2880', '4320', '8760', '-1'),
 		'reference'               => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cachezeiten'],
 		'eval'                    => array
 		(

@@ -45,24 +45,31 @@ $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_timeouts'] = array
 
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cache'] = array('Cache aktivieren','Cache für das Wertungsportal aktivieren');
 
-// Auswahlwerte der Cachezeiten (Schlüssel = Stunden)
+// Auswahlwerte der Cachezeiten (Schlüssel = Stunden, -1 = unbegrenzt)
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cachezeiten'] = array
 (
-	'0'   => 'Kein Cache',
-	'1'   => '1 Stunde',
-	'6'   => '6 Stunden',
-	'12'  => '12 Stunden',
-	'24'  => '1 Tag',
-	'48'  => '2 Tage',
-	'168' => '1 Woche',
-	'720' => '30 Tage',
+	'0'    => 'Kein Cache',
+	'1'    => '1 Stunde',
+	'6'    => '6 Stunden',
+	'12'   => '12 Stunden',
+	'24'   => '1 Tag',
+	'48'   => '2 Tage',
+	'168'  => '1 Woche',
+	'720'  => '30 Tage',
+	'1440' => '2 Monate',
+	'2160' => '3 Monate',
+	'2880' => '4 Monate',
+	'4320' => '6 Monate',
+	'8760' => '1 Jahr',
+	'-1'   => 'Unbegrenzt',
 );
 
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cachezeit_spieler'] = array('Cachezeit Spieler', 'Spielersuche, Karteikarte und Turnierhistorie. Ohne Auswahl gilt 1 Tag.');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cachezeit_vereine'] = array('Cachezeit Vereine', 'Vereinsliste, Vereinsname und Verbandsrangliste. Ohne Auswahl gilt 1 Tag.');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cachezeit_verbaende'] = array('Cachezeit Verbände', 'Liste aller Verbände und Vereine (ändert sich selten, 1 Woche ist üblich). Ohne Auswahl gilt 1 Tag.');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cachezeit_turniersuche'] = array('Cachezeit Turniersuche', 'Turniersuche und Turnier-Kopfdaten. Ohne Auswahl gilt 1 Tag.');
-$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cachezeit_turnierdaten'] = array('Cachezeit Turnierdaten', 'Auswertung, Ergebnisse und Spielberichtsbögen (nach der Berechnung stabil). Ohne Auswahl gilt 1 Tag.');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cachezeit_turnierdaten'] = array('Cachezeit Turnierdaten (bis zu 1 Jahr alt)', 'Kopfdaten, Auswertung, Ergebnisse und Spielberichtsbögen von Turnieren, deren Turnierende weniger als ein Jahr zurückliegt. In dieser Zeit sind Nachberechnungen noch zu erwarten. Ohne Auswahl gilt 1 Tag.');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cachezeit_turnierdaten_alt'] = array('Cachezeit Turnierdaten (über 1 Jahr alt)', 'Dieselben Daten für Turniere, deren Turnierende länger als ein Jahr zurückliegt — daran ändert sich in aller Regel nichts mehr, „Unbegrenzt" ist hier vertretbar. Ohne Auswahl gilt dieselbe Zeit wie für jüngere Turniere. ACHTUNG: Sollte nu ein altes Turnier doch noch einmal nachberechnen, bleibt der alte Stand stehen, bis der Cache über die Systemwartung geleert wird.');
 
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_playerDefaultImage'] = array('Spielerbild', 'Standardbild für Spieler');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_playerImageSize'] = array('Bildgröße', 'Größe der Spielerbilder');
