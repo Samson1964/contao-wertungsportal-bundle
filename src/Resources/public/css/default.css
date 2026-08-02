@@ -500,6 +500,19 @@
 	opacity					: 0.7;
 }
 
+/* Quellenspalte der Spielersuche: Die Treffer der Schnittstelle sind der
+   Regelfall und bleiben unauffällig; Zeilen aus dem örtlichen Bestand werden
+   leicht hervorgehoben, damit erkennbar bleibt, welche Angaben vom letzten
+   Abgleich stammen. */
+.dewis .wp-quelle-api {
+	color					: #6b6b6b;
+}
+
+.dewis .wp-quelle-lokal {
+	color					: #3f3f3f;
+	font-weight				: 600;
+}
+
 /* Hinweis auf eine Ersatzsuche im lokalen Datenbestand (Spieler- und
    Turniersuche). Er steht direkt über der Trefferliste und erklärt, warum
    dort etwas anderes steht als vom Wertungsportal erwartet — deshalb

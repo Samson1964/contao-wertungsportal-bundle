@@ -1,5 +1,16 @@
 # Wertungsportal Changelog
 
+## Version 1.10.0 (2026-07-30)
+
+* **Fix: Die Spielersuche durchsucht jetzt IMMER auch den örtlichen Datenbestand**, nicht mehr nur dann, wenn die Schnittstelle gar nichts liefert. Der gemeldete Fall zeigt, warum: Eine Suche nach „Eschen" fand dort „Eschen, Alexander", aber nicht „Eschenauer, Frank" — und „Esch" fand wiederum drei ganz andere Spieler, ohne die beiden. Sobald die Schnittstelle irgendetwas zurückgab, unterblieb die örtliche Suche und die Trefferliste blieb unvollständig. Beide Ergebnisse werden nun zusammengeführt
+* Add: Neue Spalte **„Quelle"** hinter „Verein" mit dem Wert „API" oder „Lokal". Bei Dubletten gewinnt der Datensatz der Schnittstelle — er ist der aktuellere; erkannt werden sie über die nuLigaPersonId. Datensätze ohne diese Nummer werden nicht zusammengelegt, sonst fielen sie alle auf einen zusammen
+* Add: **Die Trefferliste der Spielersuche lässt sich über die Spaltenköpfe sortieren**, wie die übrigen Listen (Kalenderwoche, DWZ, Elo und FIDE-Titel mit den passenden Sortierregeln)
+* Der Hinweis über der Liste erklärt jetzt den Regelfall statt eines Ausnahmefalls: Er erscheint, sobald örtliche Treffer dabei sind, und weist darauf hin, dass deren DWZ und letzte Auswertung dem zuletzt übernommenen Stand entsprechen
+* Fix (Nebenbefund): Die Trefferliste sortierte Namen mit Umlauten ans Ende, wenn auf dem Server das Locale de_DE.UTF-8 fehlt. `setlocale` fällt in dem Fall stillschweigend auf „C" zurück, und `strcoll` vergleicht dann Bytes — „Ärmel" landete hinter „Zander". Sortiert wird jetzt über einen eigenen Schlüssel nach deutscher Namensregel (Ä wie A, Ö wie O, Ü wie U, ß wie ss), unabhängig von der Ausstattung des Servers
+* Zum Aufwand: Die örtliche Suche kostet eine indizierte Abfrage über die Aliasfelder plus das Nachladen der Mitgliedschaften — gemessen 8,5 ms bei 300 Treffern. Sie läuft jetzt bei jeder Namenssuche mit
+* Verifiziert mit 16 Tests: Quellenkennzeichnung, Zusammenführung samt Dubletten (Schnittstelle gewinnt, mit ihren Werten), Datensätze ohne nu-Nummer, Sortierung mit Umlauten, leere Fälle sowie der gemeldete Fall selbst — die örtliche Suche nach „Eschen" und nach „Esch" findet beide Spieler
+* ACHTUNG: contao:assets:install (geänderte CSS)
+
 ## Version 1.9.0 (2026-07-30)
 
 * **Add: Cachezeit der Turnierdaten nach Alter des Turniers gestaffelt.** Daten, die sich auf genau EIN Turnier beziehen, ändern sich nach der Erstauswertung im Wesentlichen nur im ersten Jahr. Es gibt deshalb zwei Einstellungen: „Cachezeit Turnierdaten (bis zu 1 Jahr alt)" — die bisherige, nur umbenannt — und neu „Cachezeit Turnierdaten (über 1 Jahr alt)", die bis „Unbegrenzt" reichen kann. Ohne eigene Auswahl gilt für alte Turniere dieselbe Zeit wie für junge, das bisherige Verhalten bleibt also unverändert

@@ -125,28 +125,29 @@ class Spieler extends \Module
 				$resultArr = \Schachbulle\ContaoWertungsportalBundle\Helper\API::autoQuery($param); // Abfrage ausführen
 
 				// Trefferliste für das Template aufbereiten
-				$suche = new \Schachbulle\ContaoWertungsportalBundle\Helper\Spielersuche($resultArr);
+				$suche = new \Schachbulle\ContaoWertungsportalBundle\Helper\Spielersuche($resultArr, 'API');
 				$daten = $suche->Spielerliste;
 
-				// Keine API-Treffer: lokale Teilstring-Suche als Fallback — die
-				// API vergleicht nur komplette Felder ("müll" findet dort kein
-				// "müller"). Gesucht wird mit dem Rohstring, nicht mit dem Slug;
-				// zweiter Versuch mit gedrehter Eingabe "Vorname Nachname"
-				if(empty($daten))
+				// Die örtliche Suche läuft IMMER mit, nicht mehr nur bei null
+				// Treffern der Schnittstelle. Deren Ergebnisse sind nachweislich
+				// unvollständig: "Eschen" fand dort "Eschen, Alexander", aber
+				// nicht "Eschenauer, Frank"; "Esch" fand drei ganz andere.
+				// Gesucht wird mit dem Rohstring, nicht mit dem Slug; ein
+				// zweiter Versuch deutet die Eingabe als "Vorname Nachname"
+				$lokal = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::lokaleSpielersuche($check_search['nachname'], $check_search['vorname']);
+				if(!$lokal && $check_search['nachname2'] !== '' && $check_search['nachname2'] != $check_search['nachname'])
 				{
-					$lokal = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::lokaleSpielersuche($check_search['nachname'], $check_search['vorname']);
-					if(!$lokal && $check_search['nachname2'] !== '' && $check_search['nachname2'] != $check_search['nachname'])
-					{
-						$lokal = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::lokaleSpielersuche($check_search['nachname2'], $check_search['vorname2']);
-					}
-
-					if($lokal)
-					{
-						$suche = new \Schachbulle\ContaoWertungsportalBundle\Helper\Spielersuche($lokal);
-						$daten = $suche->Spielerliste;
-						$lokaleSuche = !empty($daten);
-					}
+					$lokal = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::lokaleSpielersuche($check_search['nachname2'], $check_search['vorname2']);
 				}
+
+				if($lokal)
+				{
+					$lokaleTreffer = (new \Schachbulle\ContaoWertungsportalBundle\Helper\Spielersuche($lokal, 'Lokal'))->Spielerliste;
+					$daten = \Schachbulle\ContaoWertungsportalBundle\Helper\Spielersuche::zusammenfuehren($daten, $lokaleTreffer);
+				}
+
+				// Hinweis nur, wenn tatsächlich örtliche Treffer dabei sind
+				$lokaleSuche = count(array_filter($daten, function($eintrag) { return $eintrag['Quelle'] === 'Lokal'; })) > 0;
 			}
 		}
 

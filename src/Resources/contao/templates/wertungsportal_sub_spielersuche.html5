@@ -9,18 +9,26 @@
 	</table>
 
 	<?php if($this->lokal): ?>
-		<p class="lokalhinweis">Das Wertungsportal lieferte keine Treffer — angezeigt wird das Ergebnis der erweiterten Namenssuche: gemeldete Spieler, deren Name mit dem Suchbegriff beginnt (maximal 300 Treffer). DWZ und letzte Auswertung stammen aus dem zuletzt übernommenen Datenbestand und können vom Wertungsportal abweichen.</p>
+		<p class="lokalhinweis">Die Suche des Wertungsportals findet nur Namen, die genau am Anfang übereinstimmen, und liefert dadurch unvollständige Ergebnisse. Deshalb wird zusätzlich der örtliche Datenbestand durchsucht. Zeilen mit der Quelle „Lokal" stammen von dort: DWZ und letzte Auswertung entsprechen dem zuletzt übernommenen Stand und können vom Wertungsportal abweichen (maximal 300 Treffer).</p>
 	<?php endif; ?>
 
-	<table class="body">
+	<?php
+		// Spaltensortierung (Initialisierung in wertungsportal_sort.js)
+		$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/tablesorter.css';
+		$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/jquery.tablesorter.min.js';
+		$GLOBALS['TL_JAVASCRIPT'][] = 'bundles/contaowertungsportal/js/wertungsportal_sort.js';
+	?>
+
+	<table class="body tablesorter">
 		<thead>
 			<tr>
 				<th class="right-line">Spielername</th>
-				<?php if(!$this->Sperre): ?><th class="right-line">Letzte<br>Ausw.</th><?php endif; ?>
-				<th class="right-line">DWZ</th>
-				<th class="right-line">Elo</th>
-				<th class="">Titel</th>
+				<?php if(!$this->Sperre): ?><th class="right-line" data-sort="woche">Letzte<br>Ausw.</th><?php endif; ?>
+				<th class="right-line" data-sort="zahl">DWZ</th>
+				<th class="right-line" data-sort="zahl">Elo</th>
+				<th class="" data-sort="titel">Titel</th>
 				<th class="">Verein</th>
+				<th class="">Quelle</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -34,6 +42,7 @@
 				<td class="right-line<?= $class ?>"><?= $d['Elo'] ?></td>
 				<td class="<?= $class ?>"><?= $d['Titel'] ?></td>
 				<td class="<?= $class ?>"><?= $d['Verein'] ?></td>
+				<td class="<?= $class ?> wp-quelle-<?= strtolower($d['Quelle']) ?>"><?= $d['Quelle'] ?></td>
 			</tr>
 		<?php endforeach; ?>
 		</tbody>

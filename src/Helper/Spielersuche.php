@@ -14,14 +14,19 @@ class Spielersuche
 	//  Konfiguration (öffentliche Eigenschaften)
 	// ─────────────────────────────────────────────
 	public array $apiErgebnisse; // Enthält das Array von der API mit den Suchergebnissen
+	public string $quelle; // Herkunft der Trefferliste ('API' oder 'Lokal')
 	private array $daten = array(); // Enthält die Daten formatiert für das Template
 
 	// ─────────────────────────────────────────────
 	//  Konstruktor – initialisiert alle Konfigurationswerte
+	//  $Quelle steht später in der Spalte „Quelle" der Trefferliste. Die
+	//  Klasse kann das nicht selbst erkennen: Die örtliche Suche liefert
+	//  bewusst dieselbe Antwortform wie die Schnittstelle.
 	// ─────────────────────────────────────────────
-	public function __construct($Ergebnisse)
+	public function __construct($Ergebnisse, $Quelle = 'API')
 	{
 		$this->apiErgebnisse = is_array($Ergebnisse) ? $Ergebnisse : array();
+		$this->quelle = (string) $Quelle;
 
 		$this->compile(); // Weiter mit dieser Funktion
 	}
@@ -64,6 +69,8 @@ class Spielersuche
 				(
 					'PKZ'             => 'x',
 					'Verein'          => $verein,
+					'Quelle'          => $this->quelle,
+					'NuId'            => isset($person['nuLigaPersonId']) ? (string) $person['nuLigaPersonId'] : '',
 					'Spielername'     => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Spielername($person),
 					'Spielername_RAW' => $person['lastname'].' '.$person['firstname'],
 					'KW'              => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Kalenderwoche($person),
@@ -73,15 +80,93 @@ class Spielersuche
 				);
 			}
 
-			// Sortierung nach Spielername (A → Z), Umlaute-sicher
-			setlocale(LC_COLLATE, 'de_DE.UTF-8');
-			usort($this->daten['Spielerliste'], function($a, $b)
-			{
-				return strcoll($a['Spielername_RAW'], $b['Spielername_RAW']);
-			});
+			self::sortiere($this->daten['Spielerliste']);
 		}
 
 		$this->daten['Anzahl'] = count($this->daten['Spielerliste']);
+	}
+
+	// ─────────────────────────────────────────────
+	//  Funktion zusammenfuehren
+	//  Führt die Treffer der Schnittstelle und der örtlichen Suche zu einer
+	//  Liste zusammen.
+	//
+	//  Nötig, weil die Schnittstelle nachweislich unvollständig antwortet:
+	//  Eine Suche nach „Eschen" fand dort „Eschen, Alexander", aber nicht
+	//  „Eschenauer, Frank"; „Esch" fand wiederum drei ganz andere Spieler.
+	//  Die örtliche Suche läuft deshalb IMMER mit, nicht mehr nur als
+	//  Rückfallebene bei null Treffern.
+	//
+	//  Bei Dubletten gewinnt der Datensatz der Schnittstelle — er ist der
+	//  aktuellere. Erkannt werden sie über die nuLigaPersonId; Datensätze
+	//  ohne diese Nummer werden nicht zusammengelegt, sonst fielen sie alle
+	//  auf einen zusammen.
+	//
+	//  @param  array $api    Trefferliste der Schnittstelle
+	//  @param  array $lokal  Trefferliste der örtlichen Suche
+	//  @return array         Gemeinsame, nach Namen sortierte Liste
+	// ─────────────────────────────────────────────
+	public static function zusammenfuehren($api, $lokal)
+	{
+		$liste = is_array($api) ? $api : array();
+		$bekannt = array();
+
+		foreach($liste as $eintrag)
+		{
+			if($eintrag['NuId'] !== '') $bekannt[$eintrag['NuId']] = true;
+		}
+
+		foreach((is_array($lokal) ? $lokal : array()) as $eintrag)
+		{
+			if($eintrag['NuId'] !== '' && isset($bekannt[$eintrag['NuId']])) continue;
+
+			$liste[] = $eintrag;
+			if($eintrag['NuId'] !== '') $bekannt[$eintrag['NuId']] = true;
+		}
+
+		self::sortiere($liste);
+
+		return $liste;
+	}
+
+	// ─────────────────────────────────────────────
+	//  Funktion sortiere
+	//  Sortiert eine Trefferliste nach Spielername (A → Z), umlautsicher.
+	//  Die Liste wird an Ort und Stelle geändert.
+	//
+	//  Sortiert wird über einen eigenen Schlüssel statt über strcoll mit
+	//  gesetztem Locale: Ist de_DE.UTF-8 auf dem System nicht vorhanden,
+	//  fällt setlocale stillschweigend auf "C" zurück und strcoll vergleicht
+	//  dann Bytes — „Ärmel" landete so hinter „Zander". Der Schlüssel bildet
+	//  die deutsche Namenssortierung nach (Ä wie A, Ö wie O, Ü wie U, ß wie
+	//  ss) und ist von der Ausstattung des Servers unabhängig.
+	// ─────────────────────────────────────────────
+	protected static function sortiere(&$liste)
+	{
+		usort($liste, function($a, $b)
+		{
+			return strcmp(self::sortierschluessel($a['Spielername_RAW']), self::sortierschluessel($b['Spielername_RAW']));
+		});
+	}
+
+	// ─────────────────────────────────────────────
+	//  Funktion sortierschluessel
+	//  Wandelt einen Namen in einen vergleichbaren Schlüssel um.
+	// ─────────────────────────────────────────────
+	protected static function sortierschluessel($name)
+	{
+		$name = mb_strtolower((string) $name, 'UTF-8');
+
+		return strtr($name, array
+		(
+			'ä' => 'a', 'ö' => 'o', 'ü' => 'u', 'ß' => 'ss',
+			'á' => 'a', 'à' => 'a', 'â' => 'a', 'å' => 'a', 'ã' => 'a',
+			'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
+			'í' => 'i', 'ì' => 'i', 'î' => 'i', 'ï' => 'i',
+			'ó' => 'o', 'ò' => 'o', 'ô' => 'o', 'ø' => 'o', 'õ' => 'o',
+			'ú' => 'u', 'ù' => 'u', 'û' => 'u',
+			'ç' => 'c', 'ñ' => 'n', 'ý' => 'y',
+		));
 	}
 
 	// ─────────────────────────────────────────────

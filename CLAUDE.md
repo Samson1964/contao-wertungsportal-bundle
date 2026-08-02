@@ -5,6 +5,11 @@ des Deutschen Schachbunds (nu/liga.nu-API) in Contao integriert: Frontend-Suchen
 Verein, Verband, Turnier) und lokale Spiegel-Tabellen mit Backend-Verwaltung.
 Nachfolger des alten contao-dewis-bundles; Migrationsstatus siehe TODO.md, Historie siehe CHANGELOG.md.
 
+## REST-Schnittstelle
+
+Dokumentation unter https://schachde-apps.liga.nu/dsbwertungsportal/apidocs/resources.html
+(DSBPersonREST, DSBTournamentREST und DWZListeREST sind für das Wertungsportal relevant)
+
 ## Neue Funktionen 20.07.2026 (Upload + Livetest offen)
 
 - **Blacklist**: tl_wertungsportal_persons hat blocked/grund/melder (analog tl_dwz_spi).
