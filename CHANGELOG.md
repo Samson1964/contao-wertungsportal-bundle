@@ -1,5 +1,12 @@
 # Wertungsportal Changelog
 
+## Version 1.11.0 (2026-08-02)
+
+* **Add: „Gibt es nicht"-Antworten (HTTP 404) werden 10 Minuten gemerkt.** Bisher holte JEDER Besucher dieselbe Fehlanzeige einzeln bei der Schnittstelle ab — im Zugriffs-Log vom 30.07.2026 fragten sechs verschiedene Besucher binnen drei Minuten dasselbe Turnier ohne Auswertung ab (85 solcher Abrufe an dem Tag). Bewusst kurz, denn eine Auswertung kann jederzeit nachgereicht werden; nach Ablauf der Frist wird sofort wieder nachgefragt
+* Nur 404 wird gemerkt: Ein 401/403 ist ein Zugangsproblem und ein 5xx eine Störung — beides darf sich nicht festsetzen. Die gemerkte Fehlanzeige taugt außerdem NICHT als Notreserve: Fällt die Schnittstelle später aus, wird sie übersprungen und stattdessen im örtlichen Bestand gesucht, denn eine Fehlanzeige als „zwischengespeicherte Daten" auszugeben wäre irreführend. Über der Ausgabe erscheint deshalb auch kein Cache-Hinweis, sondern nur die Meldung der Schnittstelle
+* **Change: Die Trefferliste der Spielersuche sortiert jetzt nach derselben Regel wie die Aliasfelder der Datenbank** (ä → ae, ö → oe, ü → ue, ß → ss). Vorher folgte sie der anderen deutschen Sortiernorm (ä wie a), sodass die angezeigte Reihenfolge von der Reihenfolge abweichen konnte, in der die örtliche Suche ihre Treffer liefert (ORDER BY lastnameAlias, firstnameAlias). Beide stimmen jetzt überein. Das Aliasfeld selbst lässt sich dafür nicht verwenden: Es gibt es nur in den örtlichen Spiegeltabellen, die Treffer der Schnittstelle bringen keines mit, und beide stehen in derselben Liste
+* Verifiziert mit 22 Tests: Merken und Ablauf der Fehlanzeige, keine Anfrage solange sie gilt, nachgereichte Auswertung kommt an, 500 und 403 werden weiterhin bei jedem Aufruf versucht, abgelaufene Fehlanzeige wird nicht als Notreserve wiederbelebt, und der Sortierschlüssel erzeugt für zwölf Beispielnamen dieselbe Reihenfolge wie eine Sortierung über die Aliasfelder
+
 ## Version 1.10.0 (2026-07-30)
 
 * **Fix: Die Spielersuche durchsucht jetzt IMMER auch den örtlichen Datenbestand**, nicht mehr nur dann, wenn die Schnittstelle gar nichts liefert. Der gemeldete Fall zeigt, warum: Eine Suche nach „Eschen" fand dort „Eschen, Alexander", aber nicht „Eschenauer, Frank" — und „Esch" fand wiederum drei ganz andere Spieler, ohne die beiden. Sobald die Schnittstelle irgendetwas zurückgab, unterblieb die örtliche Suche und die Trefferliste blieb unvollständig. Beide Ergebnisse werden nun zusammengeführt

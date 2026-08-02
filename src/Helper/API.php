@@ -57,6 +57,17 @@ class API
 	 */
 	const CACHE_UNBEGRENZT = -1;
 
+	/**
+	 * Frist in Sekunden, für die eine 404-Antwort gemerkt wird („gibt es
+	 * nicht"). Ohne sie holt JEDER Besucher dieselbe Fehlanzeige einzeln bei
+	 * der Schnittstelle ab: Im Zugriffs-Log vom 30.07.2026 fragten sechs
+	 * verschiedene Besucher binnen drei Minuten dasselbe Turnier ohne
+	 * Auswertung ab. Bewusst kurz, denn eine Auswertung kann jederzeit
+	 * nachgereicht werden — anders als bei einer erfolgreichen Antwort soll
+	 * hier zügig wieder nachgefragt werden.
+	 */
+	const NEGATIVFRIST = 600;
+
 	// ─────────────────────────────────────────────
 	//  Konstruktor – initialisiert alle Konfigurationswerte
 	// ─────────────────────────────────────────────
@@ -219,6 +230,16 @@ class API
 				$cache->store($params['cachekey'], $result, $speicherzeit > 0 ? $speicherzeit : 0);
 			}
 		}
+		elseif($cache !== null && 404 === (int) $result['http_code'])
+		{
+			// „Gibt es nicht" kurz merken, damit nicht jeder Besucher dieselbe
+			// Fehlanzeige einzeln bei der Schnittstelle abholt. Nur 404: Ein
+			// 401/403 ist ein Zugangsproblem und ein 5xx eine Störung — beides
+			// darf sich nicht festsetzen. Der Vermerk „negativ" sorgt dafür,
+			// dass der Eintrag NICHT als Notreserve herhält (siehe notdaten)
+			$result['negativ'] = true;
+			$cache->store($params['cachekey'], $result, self::NEGATIVFRIST);
+		}
 
 		// Platzhalter-Mitgliedsnummern (0000) aus allen Ausgaben entfernen
 		$result = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::filterMitgliedsnummern($result);
@@ -243,6 +264,11 @@ class API
 
 		// Abruf aus dem lokalen Cache für die Statistik zählen
 		self::zaehleAbruf($params['funktion'], \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::QUELLE_CACHE);
+
+		// Gemerkte Fehlanzeige (404): unverändert durchreichen, aber OHNE
+		// Herkunftsvermerk. Sonst stünde über der Fehlermeldung „Diese Daten
+		// stammen aus dem Zwischenspeicher…" — und es gibt gar keine Daten
+		if(!empty($cache_result['negativ'])) return $cache_result;
 
 		// Herkunft und Gültigkeit vermerken, damit die Ausgabe einen Hinweis
 		// anzeigen kann („aus dem Zwischenspeicher, gültig bis …") — sowohl in
@@ -284,6 +310,12 @@ class API
 		$roh = ($cache !== null && $cache->isCached($params['cachekey'], true))
 			? $cache->retrieve($params['cachekey'], false, true)
 			: null;
+
+		// Eine gemerkte Fehlanzeige taugt NICHT als Notreserve: Sie enthält
+		// keine Daten, und als „zwischengespeicherte Daten" ausgegeben wäre
+		// sie irreführend. Stattdessen wird gleich im örtlichen Bestand
+		// weitergesucht — dort kann die Auswertung durchaus vorliegen
+		if(is_array($roh) && !empty($roh['negativ'])) $roh = null;
 
 		if(is_array($roh))
 		{

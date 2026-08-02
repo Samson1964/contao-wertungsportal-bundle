@@ -137,9 +137,16 @@ class Spielersuche
 	//  Sortiert wird über einen eigenen Schlüssel statt über strcoll mit
 	//  gesetztem Locale: Ist de_DE.UTF-8 auf dem System nicht vorhanden,
 	//  fällt setlocale stillschweigend auf "C" zurück und strcoll vergleicht
-	//  dann Bytes — „Ärmel" landete so hinter „Zander". Der Schlüssel bildet
-	//  die deutsche Namenssortierung nach (Ä wie A, Ö wie O, Ü wie U, ß wie
-	//  ss) und ist von der Ausstattung des Servers unabhängig.
+	//  dann Bytes — „Ärmel" landete so hinter „Zander".
+	//
+	//  Der Schlüssel folgt DERSELBEN Regel wie die Aliasfelder der Datenbank
+	//  (ä → ae, ö → oe, ü → ue, ß → ss). Damit stimmt die Reihenfolge der
+	//  angezeigten Liste mit der Reihenfolge überein, in der die örtliche
+	//  Suche ihre Treffer liefert (ORDER BY lastnameAlias, firstnameAlias).
+	//
+	//  Warum hier nicht einfach das Aliasfeld selbst? Weil es die Aliase nur
+	//  in den örtlichen Spiegeltabellen gibt. Die Treffer der Schnittstelle
+	//  bringen keines mit, und beide Quellen stehen in derselben Liste.
 	// ─────────────────────────────────────────────
 	protected static function sortiere(&$liste)
 	{
@@ -151,7 +158,8 @@ class Spielersuche
 
 	// ─────────────────────────────────────────────
 	//  Funktion sortierschluessel
-	//  Wandelt einen Namen in einen vergleichbaren Schlüssel um.
+	//  Wandelt einen Namen in einen vergleichbaren Schlüssel um — nach
+	//  denselben Regeln, die auch Helper::alias auf die Aliasfelder anwendet.
 	// ─────────────────────────────────────────────
 	protected static function sortierschluessel($name)
 	{
@@ -159,11 +167,12 @@ class Spielersuche
 
 		return strtr($name, array
 		(
-			'ä' => 'a', 'ö' => 'o', 'ü' => 'u', 'ß' => 'ss',
-			'á' => 'a', 'à' => 'a', 'â' => 'a', 'å' => 'a', 'ã' => 'a',
+			'ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss',
+			'æ' => 'ae', 'œ' => 'oe', 'å' => 'a', 'ø' => 'o',
+			'á' => 'a', 'à' => 'a', 'â' => 'a', 'ã' => 'a',
 			'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
 			'í' => 'i', 'ì' => 'i', 'î' => 'i', 'ï' => 'i',
-			'ó' => 'o', 'ò' => 'o', 'ô' => 'o', 'ø' => 'o', 'õ' => 'o',
+			'ó' => 'o', 'ò' => 'o', 'ô' => 'o', 'õ' => 'o',
 			'ú' => 'u', 'ù' => 'u', 'û' => 'u',
 			'ç' => 'c', 'ñ' => 'n', 'ý' => 'y',
 		));
