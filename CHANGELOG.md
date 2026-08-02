@@ -1,5 +1,12 @@
 # Wertungsportal Changelog
 
+## Version 1.11.1 (2026-08-02)
+
+* **Fix: Das Bundle ließ sich neben dem Helper-Bundle 2.0.0 nicht mehr installieren — mit der Folge, dass Composer stillschweigend auf Version 1.0.9 zurückfiel.** Die Anforderung lautete `^1.8.10` und schließt damit alles ab 2.0 aus. Weil 1.0.9 die letzte Fassung ist, die das Helper-Bundle noch als `*` fordert, war sie nach dem Erscheinen der 2.0.0 plötzlich die einzige installierbare — ein Update wurde so zum Downgrade über 30 Versionen hinweg, ohne Fehlermeldung
+* Erkennbar war das an `contao:migrate`: Es schlug vor, die Tabelle tl_wertungsportal_stats sowie die Felder clubNameAlias, firstnameAlias, lastnameAlias und labelAlias zu löschen — genau der Schemastand, der in 1.3.0 und 1.6.0 dazugekommen war. Im Backend fehlte entsprechend das Modul „Statistik". **Wer diese Vorschläge ausgeführt hat, verliert die gesamte Abrufhistorie und muss die Aliase anschließend über contao:migrate neu erzeugen lassen**
+* Die Anforderung lautet jetzt `^1.8.10 || ^2.0`. Aus dem Helper-Bundle nutzt das Wertungsportal ausschließlich die Cache-Klasse; deren Methoden sind in 2.0.0 unverändert vorhanden (isCached und retrieve mit dem Schalter für abgelaufene Einträge, store, getExpiration, getStoreTime). Der Cache-Pfad wird dort über kernel.project_dir statt über DOCUMENT_ROOT ermittelt und zeigt auf dasselbe Verzeichnis
+* Lehre für die übrigen Bundles: Eine Anforderung wie `^1.8.10` verhindert nicht, dass installiert wird — sie sorgt dafür, dass eine ALTE Version installiert wird, sobald die Abhängigkeit einen Hauptversionssprung macht. Sichtbar wird das nur an dem, was danach fehlt
+
 ## Version 1.11.0 (2026-08-02)
 
 * **Add: „Gibt es nicht"-Antworten (HTTP 404) werden 10 Minuten gemerkt.** Bisher holte JEDER Besucher dieselbe Fehlanzeige einzeln bei der Schnittstelle ab — im Zugriffs-Log vom 30.07.2026 fragten sechs verschiedene Besucher binnen drei Minuten dasselbe Turnier ohne Auswertung ab (85 solcher Abrufe an dem Tag). Bewusst kurz, denn eine Auswertung kann jederzeit nachgereicht werden; nach Ablauf der Frist wird sofort wieder nachgefragt
