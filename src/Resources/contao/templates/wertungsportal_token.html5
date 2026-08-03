@@ -10,8 +10,13 @@
  *   fehler        Liste der Fehlermeldungen
  *   bestaetigung  Text nach erfolgreicher Anforderung (dann kein Formular)
  */
+
+// Wie in den übrigen Ausgaben des Bundles: das eigene Stylesheet anmelden.
+// Ohne diese Zeile UND ohne die Klasse „dewis" am Rahmen unten greift keine
+// einzige Regel aus default.css — das Formular stand vorher ungestylt da
+$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/default.css';
 ?>
-<div class="<?= $this->class ?> wp-token block"<?= $this->cssID ?>>
+<div class="<?= $this->class ?> dewis wp-token block"<?= $this->cssID ?>>
 
 	<?php if($this->headline): ?>
 		<<?= $this->hl ?>><?= $this->headline ?></<?= $this->hl ?>>
@@ -20,7 +25,7 @@
 	<?php if($this->bestaetigung): ?>
 
 		<p class="wp-bestaetigung" role="status"><?= $this->bestaetigung ?></p>
-		<p class="wp-hilfe">In der E-Mail finden Sie neben dem Schlüssel ein PHP-Beispielskript,
+		<p class="tl_help tl_tip">In der E-Mail finden Sie neben dem Schlüssel ein PHP-Beispielskript,
 			das sich unverändert übernehmen lässt. Kommt die Nachricht nicht an, prüfen Sie bitte
 			auch den Spam-Ordner.</p>
 
@@ -37,34 +42,35 @@
 
 				<div class="wp-suche-block wp-suche-block--offen">
 
-					<div class="wp-suche-felder">
+					<?php
+						// Zwei Spalten: links die Beschriftungen, rechts die Felder.
+						// Jede Zeile besteht aus genau zwei Rasterkindern, damit
+						// Beschriftungen und Eingaben jeweils bündig untereinander
+						// stehen — deshalb sitzen Feld und Hilfetext zusammen in
+						// einem Behälter
+						$felder = array
+						(
+							array('name' => 'vkz',      'typ' => 'text',  'titel' => 'Vereinskennziffer (VKZ)', 'max' => 5,   'klasse' => 'wp-input--kurz',
+							      'hilfe' => 'Fünf Zeichen, zum Beispiel 30052. Sie finden die Kennziffer auf der Vereinsseite.'),
+							array('name' => 'vorname',  'typ' => 'text',  'titel' => 'Vorname',                 'max' => 128, 'klasse' => '', 'hilfe' => ''),
+							array('name' => 'nachname', 'typ' => 'text',  'titel' => 'Nachname',                'max' => 128, 'klasse' => '', 'hilfe' => ''),
+							array('name' => 'email',    'typ' => 'email', 'titel' => 'E-Mail-Adresse',          'max' => 255, 'klasse' => '',
+							      'hilfe' => 'An diese Adresse wird der Zugangsschlüssel geschickt.'),
+						);
+					?>
 
-						<div class="wp-feld">
-							<label class="wp-label" for="ctrl_vkz">Vereinskennziffer (VKZ)</label>
-							<input type="text" class="tl_input_text wp-input" id="ctrl_vkz" name="vkz" maxlength="5" size="5"
-								value="<?= \Contao\StringUtil::specialchars($this->eingaben['vkz']) ?>" required>
-							<p class="wp-hilfe">Fünf Zeichen, zum Beispiel 30052. Sie finden die Kennziffer auf der Vereinsseite.</p>
-						</div>
-
-						<div class="wp-feld">
-							<label class="wp-label" for="ctrl_vorname">Vorname</label>
-							<input type="text" class="tl_input_text wp-input" id="ctrl_vorname" name="vorname" maxlength="128"
-								value="<?= \Contao\StringUtil::specialchars($this->eingaben['vorname']) ?>" required>
-						</div>
-
-						<div class="wp-feld">
-							<label class="wp-label" for="ctrl_nachname">Nachname</label>
-							<input type="text" class="tl_input_text wp-input" id="ctrl_nachname" name="nachname" maxlength="128"
-								value="<?= \Contao\StringUtil::specialchars($this->eingaben['nachname']) ?>" required>
-						</div>
-
-						<div class="wp-feld">
-							<label class="wp-label" for="ctrl_email">E-Mail-Adresse</label>
-							<input type="email" class="tl_input_text wp-input" id="ctrl_email" name="email" maxlength="255"
-								value="<?= \Contao\StringUtil::specialchars($this->eingaben['email']) ?>" required>
-							<p class="wp-hilfe">An diese Adresse wird der Zugangsschlüssel geschickt.</p>
-						</div>
-
+					<div class="wp-token-felder">
+						<?php foreach($felder as $feld): ?>
+							<label class="wp-label" for="ctrl_<?= $feld['name'] ?>"><?= $feld['titel'] ?></label>
+							<div class="wp-eingabe">
+								<input type="<?= $feld['typ'] ?>" class="tl_input_text wp-input <?= $feld['klasse'] ?>"
+									id="ctrl_<?= $feld['name'] ?>" name="<?= $feld['name'] ?>" maxlength="<?= $feld['max'] ?>"
+									value="<?= \Contao\StringUtil::specialchars($this->eingaben[$feld['name']]) ?>" required>
+								<?php if($feld['hilfe']): ?>
+									<p class="tl_help tl_tip"><?= $feld['hilfe'] ?></p>
+								<?php endif; ?>
+							</div>
+						<?php endforeach; ?>
 					</div>
 
 					<?php // Honigtopf gegen selbsttätig ausfüllende Skripte — für Besucher unsichtbar ?>
@@ -91,8 +97,8 @@
 
 		<h3>Wie der Abruf funktioniert</h3>
 		<p>Die Schnittstelle liefert die Mitgliederliste als JSON:</p>
-		<p><code><?= \Contao\StringUtil::specialchars($this->adresse) ?>?token=<em>SCHLÜSSEL</em>&amp;vkz=<em>VKZ</em></code></p>
-		<p class="wp-hilfe">Bitte rufen Sie die Liste höchstens einmal am Tag ab — die Daten ändern
+		<p><code class="wp-adresse"><?= \Contao\StringUtil::specialchars($this->adresse) ?>?token=<em>SCHLÜSSEL</em>&amp;vkz=<em>VKZ</em></code></p>
+		<p class="tl_help tl_tip">Bitte rufen Sie die Liste höchstens einmal am Tag ab — die Daten ändern
 			sich seltener, und die Schnittstelle liefert ohnehin einen zwischengespeicherten Stand.
 			Behandeln Sie den Schlüssel wie ein Kennwort: Er gehört nicht in Javascript oder in
 			anderen öffentlich lesbaren Quelltext.</p>

@@ -777,3 +777,97 @@
 	height					: auto;
 	opacity					: 0.85;
 }
+
+/* ==========================================================================
+   Hilfetexte im Stil des Contao-Backends
+   ==========================================================================
+   Übernommen aus themes/flexible/main.css (.tl_help). Die dortige Regel für
+   .tl_tip (height:15px; overflow:hidden) bleibt bewusst AUSSEN VOR: Sie gilt
+   im Backend einem einzeiligen Hinweis und würde hier mehrzeilige Texte
+   abschneiden. Der Mauszeiger bleibt der gewohnte Fragezeichen-Zeiger. */
+.dewis .tl_help,
+.dewis .tl_help * {
+	font-size				: 0.75rem;
+}
+
+.dewis .tl_help {
+	margin					: 4px 0 0;
+	line-height				: 1.2;
+	color					: #808080;
+}
+
+.dewis .tl_tip {
+	cursor					: help;
+}
+
+/* Die eigenen Hilfetexte der Suchformulare sehen genauso aus, damit im
+   Bundle nicht zwei Stile nebeneinander stehen */
+.dewis .wp-hilfe {
+	margin					: 4px 0 0;
+	font-size				: 0.75rem;
+	line-height				: 1.2;
+	color					: #808080;
+}
+
+/* ==========================================================================
+   Registrierungsformular der Vereinslisten-Schnittstelle
+   ==========================================================================
+   Zwei Spalten: links die Beschriftungen, rechts die Felder. Beide Spalten
+   stehen dadurch jeweils bündig untereinander. Die linke Spalte wächst mit
+   der längsten Beschriftung mit (max-content), bekommt aber eine Mindest-
+   breite, damit die Felder nicht springen. */
+.dewis .wp-token .wp-suche-block {
+	max-width				: 640px;
+}
+
+.dewis .wp-token-felder {
+	display					: grid;
+	grid-template-columns	: minmax(150px, max-content) minmax(0, 1fr);
+	gap						: 14px 20px;
+	align-items				: start;
+}
+
+/* Die Beschriftung sitzt auf Höhe der ersten Zeile des Eingabefeldes, nicht
+   an dessen Oberkante — deshalb der kleine Versatz nach unten */
+.dewis .wp-token-felder .wp-label {
+	margin					: 0;
+	padding-top				: 7px;
+}
+
+.dewis .wp-token-felder .wp-eingabe {
+	min-width				: 0;
+}
+
+/* Kurze Eingaben (die fünfstellige Vereinskennziffer) sollen nicht über die
+   ganze Spalte laufen */
+.dewis .wp-input--kurz {
+	max-width				: 9em;
+}
+
+/* Die Schaltfläche steht unter der Feldspalte, nicht unter den Beschriftungen */
+@media (min-width: 620px) {
+	.dewis .wp-token .wp-suche-aktionen,
+	.dewis .wp-token .wp-fehler {
+		margin-left			: calc(150px + 20px);
+	}
+}
+
+/* Schmale Fenster: alles untereinander, die Beschriftung über ihrem Feld */
+@media (max-width: 619px) {
+	.dewis .wp-token-felder {
+		grid-template-columns: 1fr;
+		gap					: 12px;
+	}
+
+	.dewis .wp-token-felder .wp-label {
+		padding-top			: 0;
+		margin-bottom		: -8px;
+	}
+}
+
+/* Die Beispieladresse darf schmale Fenster nicht sprengen */
+.dewis .wp-adresse {
+	display					: inline-block;
+	max-width				: 100%;
+	overflow-wrap			: anywhere;
+}

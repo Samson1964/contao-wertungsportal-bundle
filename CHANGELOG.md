@@ -1,5 +1,28 @@
 # Wertungsportal Changelog
 
+## Version 1.12.5 (2026-08-03)
+
+**Beim Aktualisieren:** `contao:assets:install` (geändertes Stylesheet).
+
+* **Fix: Das Registrierungsformular war vollständig ungestylt.** Die Ursache war schlicht: Das
+  Template band weder `default.css` ein noch trug es die Klasse `dewis` am Rahmen — sämtliche
+  Formularregeln des Bundles hängen aber daran. Beides ist ergänzt, damit greift dieselbe
+  Gestaltung wie bei den Suchformularen
+* Change: Die Felder stehen jetzt in **zwei Spalten** — links die Beschriftungen, rechts die
+  Eingabefelder, beide jeweils bündig untereinander. Die linke Spalte wächst mit der längsten
+  Beschriftung mit, hat aber eine Mindestbreite, damit die Felder nicht springen. Unter 620 px
+  Fensterbreite klappt alles untereinander, die Beschriftung über ihr Feld
+* Change: Die Hilfetexte sind als `tl_help tl_tip` ausgezeichnet und übernehmen die Werte aus
+  dem Contao-Backend (0,75 rem, Zeilenhöhe 1,2, Farbe #808080). Die dortige Regel
+  `height:15px; overflow:hidden` von `.tl_tip` bleibt bewusst außen vor — sie gilt im Backend
+  einem einzeiligen Hinweis und würde die mehrzeiligen Texte hier abschneiden. Die eigenen
+  Hilfetexte der Suchformulare (`wp-hilfe`) sehen genauso aus, damit im Bundle nicht zwei
+  Stile nebeneinanderstehen
+* Kleinigkeiten: Das Feld für die Vereinskennziffer läuft nicht mehr über die volle Breite
+  (fünf Zeichen brauchen keine 600 px), Schaltfläche und Fehlermeldung stehen unter der
+  Feldspalte statt unter den Beschriftungen, und die Beispieladresse bricht in schmalen
+  Fenstern um, statt die Seite waagerecht scrollen zu lassen
+
 ## Version 1.12.4 (2026-08-03)
 
 **Beim Aktualisieren:** `contao:assets:install` — es kommen zwei neue Bilddateien dazu.
