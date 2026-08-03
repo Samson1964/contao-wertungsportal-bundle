@@ -114,7 +114,13 @@ class TokenRegistrierung extends \Module
 
 		if(!$this->verschicke($objToken))
 		{
-			$this->Template->fehler = array('Der Schlüssel konnte nicht verschickt werden. Bitte versuchen Sie es später noch einmal.');
+			// Der Schlüssel ist an dieser Stelle bereits angelegt — es hat nur
+			// der Versand nicht geklappt. Das ausdrücklich so zu sagen, erspart
+			// dem Antragsteller vergebliche Wiederholungen (bei einem
+			// klemmenden Mailversand ändert sich daran nichts) und dem
+			// Betreiber die Frage, warum ein Datensatz ohne Empfänger dasteht.
+			// Der Grund steht im Systemprotokoll
+			$this->Template->fehler = array('Der Zugangsschlüssel wurde angelegt, die E-Mail konnte aber nicht zugestellt werden. Bitte wenden Sie sich an den Betreiber dieser Website — eine erneute Anforderung ändert daran nichts.');
 
 			return;
 		}

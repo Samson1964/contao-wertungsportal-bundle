@@ -39,6 +39,18 @@ class AltdatenImport extends \Backend
 	 */
 	public function runVereine($dc)
 	{
+		// Die Quelltabelle gehört dem abgelösten DeWIS-Bundle. Fehlt sie, gibt
+		// es schlicht nichts zu übernehmen — dann eine Meldung ausgeben statt
+		// mit einem SQL-Fehler abzubrechen
+		if(!self::quelleVorhanden('tl_dwz_ver'))
+		{
+			return $this->ergebnis('Altdaten-Übernahme aus DWZ-Vereine (tl_dwz_ver)', array
+			(
+				'Die Tabelle tl_dwz_ver ist in dieser Installation nicht vorhanden.',
+				'Sie gehört zum abgelösten DeWIS-Bundle. Ohne sie gibt es keine Altdaten zu übernehmen.',
+			), 'importDwzVer');
+		}
+
 		$aktualisiert = 0;
 		$unveraendert = 0;
 		$angelegt = 0;
@@ -155,6 +167,16 @@ class AltdatenImport extends \Backend
 	 */
 	public function runPersonen($dc)
 	{
+		// Siehe runVereine: ohne die Quelltabelle gibt es nichts zu übernehmen
+		if(!self::quelleVorhanden('tl_dwz_spi'))
+		{
+			return $this->ergebnis('Spielerbild-Übernahme aus DWZ-Spieler (tl_dwz_spi)', array
+			(
+				'Die Tabelle tl_dwz_spi ist in dieser Installation nicht vorhanden.',
+				'Sie gehört zum abgelösten DeWIS-Bundle. Ohne sie gibt es keine Bilder zu übernehmen.',
+			), 'importPhotos');
+		}
+
 		$ueberExtern = 0;
 		$ueberFide = 0;
 		$ueberName = 0;
@@ -411,6 +433,29 @@ class AltdatenImport extends \Backend
 	 * @param  string $key      key-Parameter der globalen Operation (für den Zurück-Link)
 	 * @return string           HTML der Ergebnisseite
 	 */
+	/**
+	 * Prüft, ob eine Tabelle des alten DeWIS-Bundles in dieser Installation
+	 * überhaupt existiert.
+	 *
+	 * Das Wertungsportal-Bundle setzt diese Tabellen nicht voraus — es hat sie
+	 * abgelöst. Vorhanden sind sie nur dort, wo das alte Bundle für die
+	 * Übergangszeit noch mitläuft.
+	 *
+	 * @param  string $tabelle Tabellenname
+	 * @return bool            true, wenn die Tabelle vorhanden ist
+	 */
+	protected static function quelleVorhanden($tabelle)
+	{
+		try
+		{
+			return \Database::getInstance()->tableExists($tabelle);
+		}
+		catch(\Throwable $e)
+		{
+			return false;
+		}
+	}
+
 	protected function ergebnis($headline, $zeilen, $key)
 	{
 		$objTemplate = new \BackendTemplate('be_wp_altdaten');

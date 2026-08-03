@@ -1,5 +1,31 @@
 # Wertungsportal Changelog
 
+## Version 1.12.3 (2026-08-03)
+
+* **Fix: Die Vereinsseite brach mit einem SQL-Fehler ab, wenn das alte DeWIS-Bundle nicht
+  installiert ist** („Base table or view not found: tl_dwz_ver doesn't exist"). Das Modul las
+  Logo, Homepage, Info und Alternativname zuerst aus `tl_wertungsportal_clubs` und fiel dann
+  auf die Alttabelle zurück — und zwar bedingungslos, also auch dort, wo es sie gar nicht
+  gibt. Dieselbe Falle steckte in der Karteikarte (`tl_dwz_spi` für das Spielerbild)
+* Die Rückgriffe auf `tl_dwz_ver` und `tl_dwz_spi` sind aus dem Frontend **entfernt**. Das
+  Wertungsportal hat DeWIS abgelöst und setzt dessen Tabellen nicht mehr voraus; die Daten
+  stehen in den eigenen Tabellen, und wo sie fehlen, greift das Standardbild. Bestandsdaten
+  holt man weiterhin einmalig über „Altdaten übernehmen" (WP | Vereine) und „Bilder
+  übernehmen" (WP | Personen) herüber. **Wer diese beiden Übernahmen noch nicht ausgeführt
+  hat, sollte das vor dem Update tun** — sonst verschwinden Vereinslogos und Spielerbilder,
+  die bisher nur in den DeWIS-Tabellen lagen
+* Die beiden Übernahmen selbst melden jetzt sauber „Die Tabelle … ist in dieser Installation
+  nicht vorhanden", statt mit einem SQL-Fehler abzubrechen
+* Entfernt: `Helper::Karteizuweisung()` — las ebenfalls `tl_dwz_spi` und wurde von nirgendwo
+  aufgerufen
+* Change: Kann der Zugangsschlüssel nicht per E-Mail zugestellt werden, sagt das Formular
+  jetzt, dass der Schlüssel **angelegt wurde** und eine erneute Anforderung nichts ändert.
+  Bisher stand dort nur „konnte nicht verschickt werden … später noch einmal versuchen" —
+  das las sich, als sei gar nichts passiert, während im Backend sehr wohl ein Datensatz lag
+* Verifiziert mit 405 Tests sowie in der echten Contao-4.13-Installation gegen die
+  Live-Schnittstelle: Vereinsseite mit 112 Spielern, Karteikarte samt DWZ-Diagramm,
+  Verbands- und Turnierseite — alle ohne DeWIS-Tabellen im System
+
 ## Version 1.12.2 (2026-08-03)
 
 * Add: **Scheitert die Verbindung zur Schnittstelle, steht der Grund jetzt im Systemprotokoll**

@@ -730,18 +730,10 @@ class Helper extends \Frontend
 		throw new \CoreBundle\Exception\PageNotFoundException('Page not found: '.\Environment::get('uri'));
 	}
 
-	/**
-	 * Gibt die ID des Contao-Mitgliedes zurück, dem eine bestimmte DeWIS-ID zugewiesen ist
-	 * @param id	ID in DeWIS
-	 * @return		ID des Contao-Mitgliedes
-	 */
-	public static function Karteizuweisung($id)
-	{
-		$objSpieler = \Database::getInstance()->prepare('SELECT contaoMemberID FROM tl_dwz_spi WHERE dewisID = ?')
-		                                      ->limit(1)
-		                                      ->execute($id);
-		return $objSpieler->contaoMemberID;
-	}
+	// Karteizuweisung() ist am 03.08.2026 entfallen: Die Methode las
+	// tl_dwz_spi — eine Tabelle des abgelösten DeWIS-Bundles, die es in einer
+	// Installation ohne dieses gar nicht gibt — und wurde von nirgendwo im
+	// Bundle aufgerufen.
 
 	/**
 	 * Gibt den Status der Karteikartensperre für eine DeWIS-ID zurück

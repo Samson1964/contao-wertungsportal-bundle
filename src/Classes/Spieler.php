@@ -200,10 +200,11 @@ class Spieler extends \Module
 				 * Spielerfoto
 				*/
 
-				// Zuerst das eigene Bild der Person aus WP | Personen verwenden;
-				// Fallback: tl_dwz_spi über die externe Nummer der Person
-				// (dewisID = externeNr — die frühere Suche mit der nu-ID gegen
-				// die dewisID konnte praktisch nie treffen)
+				// Bild der Person aus WP | Personen. Der frühere Rückgriff auf
+				// tl_dwz_spi ist entfallen: Die Tabelle gehört dem abgelösten
+				// DeWIS-Bundle und fehlt in jeder Installation ohne dieses, was
+				// die Karteikarte mit einem SQL-Fehler abbrechen ließ. Bilder
+				// holt man einmalig über „Bilder übernehmen" unter WP | Personen
 				$objFile = null;
 				$objPerson = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalPersonsModel::findOneBy('nuLigaPersonId', $kartei->NuId);
 
@@ -211,16 +212,6 @@ class Spieler extends \Module
 				{
 					// Spielerbild aus WP | Personen
 					$objFile = \FilesModel::findByPk($objPerson->singleSRC);
-				}
-				elseif($objPerson && $objPerson->externeNr != '')
-				{
-					// Spieler in tl_dwz_spi über die externe Nummer suchen
-					$objSpieler = \Schachbulle\ContaoWertungsportalBundle\Models\DwzSpiModel::findOneBy('dewisID', $objPerson->externeNr);
-
-					if($objSpieler && $objSpieler->addImage)
-					{
-						$objFile = \FilesModel::findByPk($objSpieler->singleSRC);
-					}
 				}
 
 				if(!$objFile)

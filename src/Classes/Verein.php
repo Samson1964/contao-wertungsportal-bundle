@@ -140,16 +140,16 @@ class Verein extends \Module
 			// Sichtbarkeit der Vereinsliste festlegen
 			$this->Template->sichtbar = true;
 
-			// Vereinsdaten (Logo, Homepage, Info, Alternativname): zuerst aus
-			// tl_wertungsportal_clubs, Fallback auf die Alttabelle tl_dwz_ver
+			// Vereinsdaten (Logo, Homepage, Info, Alternativname) aus
+			// tl_wertungsportal_clubs. Der frühere Rückgriff auf die Alttabelle
+			// tl_dwz_ver ist entfallen: Sie gehört dem abgelösten DeWIS-Bundle,
+			// fehlt in jeder Installation ohne dieses und ließ die Vereinsseite
+			// dort mit einem SQL-Fehler abbrechen. Bestandsdaten holt man
+			// einmalig über „Altdaten übernehmen" unter WP | Vereine herüber
 			$objClub = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalClubsModel::findByVkz($zps);
-			$objVerein = \Schachbulle\ContaoWertungsportalBundle\Models\DwzVerModel::findOneBy('zpsver', $zps);
 
-			if($objClub && $objClub->homepage != '') $this->Template->homepage = $objClub->homepage;
-			else $this->Template->homepage = isset($objVerein->homepage) ? $objVerein->homepage : '';
-
-			if($objClub && $objClub->info != '') $this->Template->info = $objClub->info;
-			else $this->Template->info = isset($objVerein->info) ? $objVerein->info : '';
+			$this->Template->homepage = ($objClub && $objClub->homepage != '') ? $objClub->homepage : '';
+			$this->Template->info = ($objClub && $objClub->info != '') ? $objClub->info : '';
 
 			/*********************************************************
 			 * Logo des Vereins
@@ -159,11 +159,6 @@ class Verein extends \Module
 			{
 				// Vereinslogo aus WP | Vereine
 				$objFile = \FilesModel::findByPk($objClub->singleSRC);
-			}
-			elseif(isset($objVerein->addImage))
-			{
-				// Vereinslogo aus der Alttabelle vorhanden
-				$objFile = \FilesModel::findByPk($objVerein->singleSRC);
 			}
 			else
 			{
@@ -204,7 +199,6 @@ class Verein extends \Module
 			 * Ausgabe Kopfdaten und Mitgliederliste
 			*/
 			if($objClub && $objClub->altname != '') $vereinsname = $objClub->altname;
-			elseif(isset($objVerein->altname) && $objVerein->altname != '') $vereinsname = $objVerein->altname;
 			else $vereinsname = $resultVerein['body']['data'][0]['clubName'];
 			$this->Template->listenlink = ($order == 'alpha') ? sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s.html?order=rang\">Rangliste</a>", $zps) : sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s.html?order=alpha\">Alphaliste</a>", $zps);
 			$this->Template->vereinsname = $vereinsname;
