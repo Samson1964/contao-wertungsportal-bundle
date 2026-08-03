@@ -85,6 +85,23 @@ Personen, die im Backend gesperrt sind, fehlen in der Liste.
 
 Der Rumpf enthält dann `{"fehler": true, "meldung": "..."}`.
 
+### Wenn statt JSON etwas anderes kommt
+
+Kommt eine HTML-Seite zurück — häufig mit **HTTP 401 und der Überschrift „Bot
+check"** —, dann hat nicht die Schnittstelle geantwortet, sondern ein
+Schutzmechanismus des Webservers davor. Solche Sperren lassen einen Browser
+durch (er löst die JavaScript-Aufgabe und bekommt ein Cookie), einen Aufruf
+von Server zu Server aber nicht — und genau der ist hier der Normalfall.
+
+Erkennungsmerkmal: **Im Backend unter WP | Zugangsschlüssel → Zugriffe steht
+zu diesen Versuchen nichts.** Wäre die Anfrage bei Contao angekommen, hätte
+sie eine Zeile hinterlassen, und sei es eine abgewiesene.
+
+Abhilfe gibt es nur auf der Serverseite: Der Pfad `/wertungsportal-api/` muß
+von der Bot-Sperre ausgenommen werden. Am Bundle liegt es nicht, die Anfrage
+erreicht es gar nicht. Am 03.08.2026 war das auf schachbund.de der Fall;
+`/dwz-spieler.html` kam durch, `/wertungsportal-api/vereinsliste` nicht.
+
 ### Bitte beachten
 
 * **Ein Abruf am Tag genügt.** Die Daten ändern sich seltener, und die Antwort

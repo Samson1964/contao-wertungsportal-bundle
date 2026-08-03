@@ -1,5 +1,21 @@
 # Wertungsportal Changelog
 
+## Version 1.13.1 (2026-08-03)
+
+* Change: **Das Beispielskript sagt jetzt, wenn gar nicht die Schnittstelle geantwortet hat.**
+  Bisher gab es in diesem Fall nur „Fehler 401: unbekannt" — der Aufrufer stand damit im
+  Dunkeln. Kommt kein JSON zurück, nennt das Skript den HTTP-Status, erklärt den häufigsten
+  Grund (eine Bot-Sperre oder ein Zugriffsschutz des Webservers fängt den Aufruf ab, bevor er
+  die Schnittstelle erreicht) und gibt die ersten 400 Zeichen der Antwort aus — dort steht
+  dann zum Beispiel „Bot check"
+* Das Skript schickt außerdem eine erkennbare Kennung mit (`Vereinsliste/1.0 (VKZ 30052)`),
+  folgt Weiterleitungen und gibt bei einem Verbindungsfehler den cURL-Text aus statt nur
+  „nicht erreichbar"
+* Doc: Neuer Abschnitt „Wenn statt JSON etwas anderes kommt" in `docs/vereinslisten-api.md`.
+  Wichtigstes Erkennungsmerkmal: **Steht im Backend unter WP | Zugangsschlüssel → Zugriffe
+  nichts zu den Fehlversuchen, ist die Anfrage nie bei Contao angekommen** — dann liegt es am
+  Webserver davor, und der Pfad `/wertungsportal-api/` muss dort ausgenommen werden
+
 ## Version 1.13.0 (2026-08-03)
 
 **Beim Aktualisieren:** Die Schlüssel-E-Mail geht ab jetzt als HTML-Post mit Textteil hinaus.

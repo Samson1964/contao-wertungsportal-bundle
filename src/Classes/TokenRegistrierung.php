@@ -404,15 +404,34 @@ class TokenRegistrierung extends \Module
 \$ch = curl_init(\$adresse . '?token=' . urlencode(\$token) . '&vkz=' . urlencode(\$vkz));
 curl_setopt(\$ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt(\$ch, CURLOPT_TIMEOUT, 30);
+curl_setopt(\$ch, CURLOPT_FOLLOWLOCATION, true);
+// Erkennbare Kennung: In den Protokollen des Servers ist der Abruf damit
+// zuzuordnen, und manche Bot-Sperren lassen benannte Aufrufer eher durch
+curl_setopt(\$ch, CURLOPT_USERAGENT, 'Vereinsliste/1.0 (VKZ {$vkz})');
+curl_setopt(\$ch, CURLOPT_HTTPHEADER, array('Accept: application/json'));
 \$antwort = curl_exec(\$ch);
 \$status  = (int) curl_getinfo(\$ch, CURLINFO_HTTP_CODE);
+\$fehler  = curl_error(\$ch);
 curl_close(\$ch);
 
 if (\$antwort === false) {
-    die('Die Schnittstelle ist nicht erreichbar.');
+    die('Die Schnittstelle ist nicht erreichbar: ' . \$fehler);
 }
 
 \$daten = json_decode(\$antwort, true);
+
+// Kam etwas anderes als JSON zurueck, hat nicht die Schnittstelle geantwortet,
+// sondern etwas davor - zum Beispiel eine Bot-Sperre des Webservers oder eine
+// Fehlerseite. Der Anfang der Antwort sagt, was es war
+if (!is_array(\$daten)) {
+    echo '<h1>Unerwartete Antwort (HTTP ' . \$status . ')</h1>';
+    echo '<p>Die Adresse hat kein JSON geliefert. Meist steckt dahinter eine Bot-Sperre
+             oder ein Zugriffsschutz des Webservers, der den Aufruf abfaengt, bevor er
+             die Schnittstelle erreicht. Bitte den Betreiber der Website fragen, ob der
+             Pfad <code>/wertungsportal-api/</code> davon ausgenommen werden kann.</p>';
+    echo '<pre>' . htmlspecialchars(substr(strip_tags(\$antwort), 0, 400)) . '</pre>';
+    exit;
+}
 
 if (\$status !== 200) {
     die('Fehler ' . \$status . ': ' . (\$daten['meldung'] ?? 'unbekannt'));
