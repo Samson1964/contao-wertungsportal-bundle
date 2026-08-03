@@ -14,6 +14,7 @@ $GLOBALS['TL_LANG']['MOD']['wp-tournaments'] = array('Tournaments', 'Manage rati
 $GLOBALS['TL_LANG']['MOD']['wp-elo'] = array('FIDE Elo', 'Manage FIDE Elo data for the enrichment');
 $GLOBALS['TL_LANG']['MOD']['wp-stats'] = array('Statistics', 'Evaluate the requests of the API functions');
 $GLOBALS['TL_LANG']['MOD']['wp-tokens'] = array('Access keys', 'Manage the keys of the club list interface and their requests');
+$GLOBALS['TL_LANG']['MOD']['wp-cache'] = array('Cache', 'Delete individual entries of a tournament, player or club');
 
 /**
  * Front end modules

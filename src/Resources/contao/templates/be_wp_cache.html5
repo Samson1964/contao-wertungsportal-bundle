@@ -1,0 +1,110 @@
+<?php
+/**
+ * Backend-Template des Moduls „Zwischenspeicher"
+ * Sucht und löscht einzelne Cache-Einträge zu Turnier, Spieler oder Verein.
+ */
+?>
+<div id="tl_buttons"></div>
+
+<h2 class="sub_headline">Zwischenspeicher gezielt leeren</h2>
+
+<div class="tl_listing_container wp-stat">
+
+	<p class="tl_help" style="margin-bottom:16px">
+		Hier fliegen nur die Einträge zu einem einzelnen Datensatz weg. Den gesamten
+		Zwischenspeicher leert man dagegen unter System&nbsp;&rarr;&nbsp;Systemwartung —
+		danach ist allerdings jede Seite einmal langsam, weil alles neu geholt wird.
+	</p>
+
+	<form action="<?= \Contao\Environment::get('request') ?>" method="post">
+		<input type="hidden" name="FORM_SUBMIT" value="wp_cache">
+		<input type="hidden" name="REQUEST_TOKEN" value="<?= REQUEST_TOKEN ?>">
+
+		<div class="tl_formbody_edit">
+			<div class="tl_tbox">
+
+				<div class="w50">
+					<h3><label for="ctrl_art">Suchen nach</label></h3>
+					<select name="art" id="ctrl_art" class="tl_select" onchange="this.form.submit()">
+						<?php foreach($this->arten as $wert => $text): ?>
+							<option value="<?= $wert ?>"<?= ($this->art === $wert) ? ' selected' : '' ?>><?= $text ?></option>
+						<?php endforeach; ?>
+					</select>
+					<p class="tl_help tl_tip"><?= $this->hinweise[$this->art] ?? '' ?></p>
+				</div>
+
+				<div class="w50">
+					<h3><label for="ctrl_wert">Wert</label></h3>
+					<input type="text" name="wert" id="ctrl_wert" class="tl_text" value="<?= \Contao\StringUtil::specialchars($this->wert) ?>" autofocus>
+					<p class="tl_help tl_tip">UUID, nu-Nummer oder Vereinskennziffer — je nach Auswahl links.</p>
+				</div>
+
+			</div>
+		</div>
+
+		<?php if($this->fehler): ?>
+			<p class="tl_error"><?= $this->fehler ?></p>
+		<?php endif; ?>
+
+		<div class="tl_submit_container">
+			<button type="submit" name="aktion" value="suchen" class="tl_submit">Im Zwischenspeicher suchen</button>
+			<button type="submit" name="aktion" value="loeschen" class="tl_submit"
+				onclick="return confirm('Sollen die gefundenen Einträge wirklich gelöscht werden?')">Gefundene Einträge löschen</button>
+		</div>
+	</form>
+
+	<?php if($this->gesucht): ?>
+
+		<?php if(!count($this->eintraege)): ?>
+
+			<p class="tl_info" style="margin-top:18px">Zu diesem Wert liegt nichts im Zwischenspeicher.
+				Entweder wurde er noch nie abgerufen, oder die Einträge sind bereits weg.</p>
+
+		<?php else: ?>
+
+			<h3 class="wp-stat-ueberschrift"><?= $this->geloescht ? 'Gelöscht' : 'Gefunden' ?>:
+				<?= count($this->eintraege) ?> Eintrag/Einträge</h3>
+
+			<div class="wp-stat-scroll">
+			<table class="tl_listing wp-stat-tabelle">
+				<thead>
+					<tr>
+						<th>Funktion</th>
+						<th>Schlüssel</th>
+						<th>gespeichert</th>
+						<th>gültig bis</th>
+						<th class="rechts">Größe</th>
+						<?php if($this->geloescht): ?><th>Ergebnis</th><?php endif; ?>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach($this->eintraege as $e): ?>
+						<tr>
+							<td><?= $e['funktion'] ?></td>
+							<td class="wp-stat-pfad"><?= \Contao\StringUtil::specialchars($e['schluessel']) ?></td>
+							<td><?= $e['gespeichertText'] ?></td>
+							<td<?= $e['abgelaufen'] ? ' class="tl_gray"' : '' ?>><?= $e['ablaufText'] ?><?= $e['abgelaufen'] ? ' (abgelaufen)' : '' ?></td>
+							<td class="rechts"><?= $e['groesseText'] ?></td>
+							<?php if($this->geloescht): ?>
+								<td><?= $e['geloescht'] ? 'gelöscht' : '<span class="tl_red">nicht löschbar</span>' ?></td>
+							<?php endif; ?>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+			</div>
+
+			<?php if(!$this->geloescht): ?>
+				<p class="tl_help">Zum Löschen oben auf „Gefundene Einträge löschen“ klicken.
+					Beim nächsten Aufruf der jeweiligen Seite werden die Daten frisch vom
+					Wertungsportal geholt.</p>
+			<?php else: ?>
+				<p class="tl_help">Abgelaufene Einträge dienen als Notreserve, falls die Schnittstelle
+					einmal nicht antwortet — auch sie sind jetzt weg.</p>
+			<?php endif; ?>
+
+		<?php endif; ?>
+
+	<?php endif; ?>
+
+</div>

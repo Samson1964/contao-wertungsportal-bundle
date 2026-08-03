@@ -16,6 +16,7 @@ $GLOBALS['TL_LANG']['MOD']['wp-tournaments'] = array('Turniere', 'Turniere Wertu
 $GLOBALS['TL_LANG']['MOD']['wp-elo'] = array('FIDE-Elo', 'FIDE-Elo-Daten für die Anreicherung verwalten');
 $GLOBALS['TL_LANG']['MOD']['wp-stats'] = array('Statistik', 'Abrufe der Schnittstellenfunktionen auswerten');
 $GLOBALS['TL_LANG']['MOD']['wp-tokens'] = array('Zugangsschlüssel', 'Schlüssel für die Vereinslisten-Schnittstelle und deren Zugriffe verwalten');
+$GLOBALS['TL_LANG']['MOD']['wp-cache'] = array('Zwischenspeicher', 'Einzelne Einträge zu einem Turnier, Spieler oder Verein gezielt löschen');
 
 /**
  * Frontendmodule

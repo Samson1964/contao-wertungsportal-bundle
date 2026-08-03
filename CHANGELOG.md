@@ -1,5 +1,36 @@
 # Wertungsportal Changelog
 
+## Version 1.14.0 (2026-08-03)
+
+* Add: **Backend-Modul „WP | Zwischenspeicher"** — löscht die Cache-Einträge zu *einem*
+  Datensatz, wahlweise zu einem **Turnier (UUID)**, einem **Spieler (nu-Nummer)** oder einem
+  **Verein (VKZ)**. Bisher blieb nur das Leeren des gesamten Zwischenspeichers über die
+  Systemwartung; danach ist jede Seite einmal langsam, weil alles neu geholt wird. Gedacht ist
+  das Modul für den Fall, dass nu einen einzelnen Datensatz nachträglich korrigiert
+* Zwei getrennte Schaltflächen: **Suchen** zeigt, was vorhanden ist — mit Speicherzeitpunkt,
+  Gültigkeit (abgelaufene sind als solche gekennzeichnet) und Größe —, **Löschen** wirft es
+  weg. Wer nur nachsehen will, kann dabei nichts kaputtmachen. Jede Löschung landet im
+  Systemlog
+* Betroffen sind je Suchart: Turnier → Kopfdaten, Auswertung, Ergebnisse und **alle**
+  Spielberichtsbögen dieses Turniers; Spieler → Karteikarte, Turnierhistorie und seine
+  Spielberichtsbögen; Verein → Mitgliederliste (auch die der Vereinslisten-Schnittstelle) und
+  Vereinsname. Für einen Verband die dreistellige Nummer mit zwei Nullen eingeben (`40000`)
+* **Nicht betroffen sind die Suchen** (Spielerliste, Turnierliste, Verbandsrangliste): Deren
+  Schlüssel bestehen aus Suchbegriffen, Zeiträumen und Filtern, nicht aus der Kennung eines
+  Datensatzes
+* Der Dateiname eines Cache-Eintrags ist der SHA1-Wert des Schlüssels, der Schlüssel lässt
+  sich daraus also nicht zurückrechnen. Wo der gesuchte Wert der ganze Schlüssel ist, wird die
+  Datei unmittelbar angesteuert; nur bei den Spielberichtsbögen (Schlüssel
+  `<turnier>-<spieler>`) muss das Verzeichnis durchgesehen werden — beim Turnier über den
+  Präfix, beim Spieler über den Suffix
+* Doc: `docs/zwischenspeicher.md`, verlinkt in der README
+* Verifiziert mit 30 Tests gegen echte Cache-Dateien (Aufbau eines Zwischenspeichers wie im
+  Betrieb, Suchen, Löschen, Unberührtheit der Nachbareinträge, unbegrenzte Einträge) sowie in
+  der echten Contao-4.13-Installation: Modul gerendert, gesucht, gelöscht, Zwischenspeicher
+  danach leer. Dabei gefunden und behoben: `Cache::getExpiration()` liefert den **Zeitpunkt**
+  des Verfalls, nicht die Dauer — die Gültigkeitsspalte hätte sonst ein Datum weit in der
+  Zukunft angezeigt
+
 ## Version 1.13.4 (2026-08-03)
 
 * Change: **Das PHP-Beispielskript gibt jetzt eine Rangliste aus.** Sortiert wird absteigend
