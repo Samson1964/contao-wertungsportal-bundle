@@ -126,6 +126,25 @@ Hoster) läßt sie sich für `/wertungsportal-api/` abschalten. Kennzeichen
 dieser Bauart: Jede PHP-Adresse beantwortet zusätzlich `?create_challenge`
 mit einer JSON-Rechenaufgabe.
 
+**Bei Hetzner** ist es der Under-Attack-Modus; er steht als eigener Block in
+der `.htaccess`. Den Block nicht auskommentieren — das schaltet den
+DDoS-Schutz der ganzen Website ab —, sondern nur den Pfad ausnehmen:
+
+```apache
+### HETZNER START ###
+php_value auto_prepend_file "under-attack.phar"
+SetEnv UNDER_ATTACK_ENABLED "1"
+SetEnv UNDER_ATTACK_WHITELIST_GOOGLE "1"
+SetEnv UNDER_ATTACK_IGNORE_USER_AGENTS ""
+SetEnv UNDER_ATTACK_IGNORE_IPS ""
+SetEnv UNDER_ATTACK_IGNORE_URLS "/wertungsportal-api/"
+### HETZNER END ###
+```
+
+Der Weg über `UNDER_ATTACK_IGNORE_USER_AGENTS` ist die schlechtere Wahl: Eine
+Kennung läßt sich beliebig fälschen, und die Ausnahme gälte für die gesamte
+Website statt für diesen einen Pfad.
+
 ### Bitte beachten
 
 * **Ein Abruf am Tag genügt.** Die Daten ändern sich seltener, und die Antwort

@@ -1,5 +1,15 @@
 # Wertungsportal Changelog
 
+## Version 1.13.3 (2026-08-03)
+
+* Doc: Der Fall ist aufgeklärt — auf schachbund.de war es der **Under-Attack-Modus von
+  Hetzner** (`auto_prepend_file "under-attack.phar"` im HETZNER-Block der `.htaccess`).
+  Die Dokumentation nennt ihn jetzt beim Namen und zeigt die richtige Abhilfe: den Pfad in
+  `UNDER_ATTACK_IGNORE_URLS` eintragen, statt den Block auszukommentieren — Letzteres
+  schaltet den DDoS-Schutz der gesamten Website ab. Der Weg über
+  `UNDER_ATTACK_IGNORE_USER_AGENTS` ist die schlechtere Wahl: Eine Kennung läßt sich
+  beliebig fälschen, und die Ausnahme gälte für die ganze Website
+
 ## Version 1.13.2 (2026-08-03)
 
 * Doc: Der Abschnitt „Wenn statt JSON etwas anderes kommt" sagt jetzt auch, **wie man
