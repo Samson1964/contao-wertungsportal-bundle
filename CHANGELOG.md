@@ -1,5 +1,23 @@
 # Wertungsportal Changelog
 
+## Version 1.12.2 (2026-08-03)
+
+* Add: **Scheitert die Verbindung zur Schnittstelle, steht der Grund jetzt im Systemprotokoll**
+  (System → Systemlog). Im Frontend erscheint weiterhin nur „Der Abruf von Live-Daten ist
+  z.Z. nicht möglich" — richtig für Besucher, für den Betreiber aber wertlos: Ob die
+  Schnittstelle streikt, die eingestellte Wartezeit zu knapp ist oder dem Server schlicht die
+  Wurzelzertifikate fehlen, macht einen erheblichen Unterschied. Protokolliert wird der
+  cURL-Fehlertext, und zwar höchstens einmal je Seitenaufruf — eine Seite setzt mehrere
+  Abfragen ab, bei einer Störung scheitern sie alle, und das Protokoll soll den Grund nennen
+  statt zuzulaufen
+* Anlass war ein Fall aus der Praxis: Zugangsdaten korrekt eingetragen, Live-Abruf
+  eingeschaltet, trotzdem kamen keine Daten. Ursache war ein PHP ohne konfigurierte
+  Wurzelzertifikate (`curl.cainfo`), das jede HTTPS-Verbindung mit „self-signed certificate in
+  certificate chain" abwies. Das Bundle verhielt sich korrekt — es war nur nicht erkennbar,
+  woran es lag
+* Verifiziert mit 403 Tests (drei neue: der cURL-Text landet im Protokoll, genau eine Zeile
+  je Seitenaufruf, weitere Fehlschläge schreiben nicht noch einmal)
+
 ## Version 1.12.1 (2026-08-03)
 
 Beim Einrichten des Bundles in einer frischen Contao-4.13-Installation gefunden.

@@ -29,6 +29,13 @@ class API
 	protected static $notdaten = array();
 
 	/**
+	 * Merker, ob der Grund einer gescheiterten Verbindung in diesem
+	 * Seitenaufruf schon im Systemprotokoll steht. Verhindert, dass eine
+	 * Störung so viele Protokollzeilen erzeugt, wie die Seite Abfragen hat.
+	 */
+	protected static $stoerungGemeldet = false;
+
+	/**
 	 * Meldung, die angezeigt wird, wenn die Schnittstelle nicht zur
 	 * Verfügung steht — abgeschaltet oder ohne Antwort.
 	 */
@@ -214,6 +221,8 @@ class API
 		// found" ist eine gültige Antwort und darf keine alten Daten wecken
 		if(!empty($result['error']) && 0 === (int) ($result['http_code'] ?? 0))
 		{
+			self::meldeStoerung($result);
+
 			return self::notdaten($cache, $params, true);
 		}
 
@@ -401,6 +410,42 @@ class API
 		$zeiten = array_filter(self::$notdaten, function($wert) { return $wert > 0; });
 
 		return count($zeiten) ? min($zeiten) : null;
+	}
+
+	/**
+	 * Schreibt den Grund einer gescheiterten Verbindung ins Systemprotokoll.
+	 *
+	 * Das Frontend meldet nur „Der Abruf von Live-Daten ist zurzeit nicht
+	 * möglich" — richtig für Besucher, aber für den Betreiber wertlos: Ob die
+	 * Schnittstelle gerade streikt, die Wartezeit zu knapp ist oder gar keine
+	 * Wurzelzertifikate installiert sind, macht einen erheblichen Unterschied.
+	 * Der cURL-Fehlertext beantwortet das und steht damit unter
+	 * System → Systemlog.
+	 *
+	 * Höchstens ein Eintrag je Seitenaufruf (statischer Merker): Eine Seite
+	 * setzt mehrere Abfragen ab, und bei einer Störung scheitern sie alle —
+	 * das Protokoll soll den Grund nennen, nicht zulaufen.
+	 *
+	 * @param  array $result Fehlerhafte Antwort mit error_message
+	 * @return void
+	 */
+	protected static function meldeStoerung($result)
+	{
+		if(self::$stoerungGemeldet) return;
+
+		self::$stoerungGemeldet = true;
+
+		$meldung = trim((string) ($result['error_message'] ?? ''));
+		if($meldung === '') $meldung = 'Die Schnittstelle hat nicht geantwortet.';
+
+		try
+		{
+			\System::log('Wertungsportal: Kein Zugriff auf die Schnittstelle — '.$meldung, __METHOD__, defined('TL_ERROR') ? TL_ERROR : 'ERROR');
+		}
+		catch(\Throwable $e)
+		{
+			// Ein klemmendes Protokoll darf die Ausgabe nicht zusätzlich stören
+		}
 	}
 
 	/*********************************************************
