@@ -290,11 +290,21 @@ class Statistik extends \BackendModule
 			$gesamt['erfolge'] += $zeile['erfolge'];
 
 			$zeilen[$i]['letzterText'] = $zeile['letzter'] ? \Date::parse($format, $zeile['letzter']) : '';
-			// Zeigt die Zugriffe genau dieses Schlüssels (Kindtabelle)
-			$zeilen[$i]['url'] = $backend.'?do=wp-tokens&amp;table=tl_wertungsportal_tokens_access&amp;id='.$zeile['pid'];
+
 			// Der Schlüssel gehört nicht vollständig auf den Bildschirm —
-			// die ersten Zeichen genügen, um ihn wiederzuerkennen
-			$zeilen[$i]['kurz'] = substr($zeile['token'], 0, 8);
+			// die ersten Zeichen genügen, um ihn wiederzuerkennen. Zu einem
+			// gelöschten Schlüssel gibt es keinen Datensatz mehr, also auch
+			// keinen Verweis: Der Klick liefe ins Leere
+			if(!empty($zeile['geloescht']))
+			{
+				$zeilen[$i]['url'] = '';
+				$zeilen[$i]['kurz'] = '';
+			}
+			else
+			{
+				$zeilen[$i]['url'] = $backend.'?do=wp-tokens&amp;table=tl_wertungsportal_tokens_access&amp;id='.$zeile['pid'];
+				$zeilen[$i]['kurz'] = substr($zeile['token'], 0, 8);
+			}
 		}
 
 		$gruende = $GLOBALS['TL_LANG']['tl_wertungsportal_tokens_access']['quellen'] ?? array();

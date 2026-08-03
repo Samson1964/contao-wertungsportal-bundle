@@ -79,42 +79,6 @@ class TokenVerwaltung extends \Backend
 	}
 
 	/**
-	 * Löscht die Zugriffe eines Schlüssels mit, wenn der Schlüssel gelöscht wird.
-	 *
-	 * Das täte Contao von allein — es räumt Kindtabellen beim Löschen des
-	 * Elterndatensatzes auf. Hier ist es abgeschaltet, weil die Zugriffstabelle
-	 * `doNotDeleteRecords` trägt: Der Schalter schützt die Anfragen OHNE
-	 * gültigen Schlüssel (pid = 0) davor, beim Öffnen des Moduls als verwaist
-	 * weggeräumt zu werden. Dieselbe Angabe fragt Contao aber auch in
-	 * DC_Table::deleteChilds() ab — beides lässt sich über die Konfiguration
-	 * nicht trennen, deshalb hier von Hand.
-	 *
-	 * Ohne das blieben die Zugriffe als herrenlose Zeilen liegen: im Backend
-	 * unsichtbar, in der Auswertung ohne Inhaber und weiterhin mit
-	 * IP-Adressen. Ihr Zweck endet mit dem Schlüssel.
-	 *
-	 * @param  \DataContainer $dc     Datensatz, der gelöscht wird
-	 * @param  int            $undoId Kennung des Undo-Eintrags (ungenutzt)
-	 * @return void
-	 */
-	public function zugriffeLoeschen($dc = null, $undoId = null)
-	{
-		$id = (int) ($dc->id ?? 0);
-
-		if($id < 1) return;
-
-		try
-		{
-			\Database::getInstance()->prepare('DELETE FROM tl_wertungsportal_tokens_access WHERE pid = ?')
-			                        ->execute($id);
-		}
-		catch(\Throwable $e)
-		{
-			// Eine fehlende Tabelle darf das Löschen nicht verhindern
-		}
-	}
-
-	/**
 	 * Globale Operation „Alte Zugriffe löschen": entfernt Zugriffe, die älter
 	 * sind als die Aufbewahrungsfrist, und kehrt zur Liste zurück.
 	 *

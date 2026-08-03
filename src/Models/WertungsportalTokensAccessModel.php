@@ -108,7 +108,13 @@ class WertungsportalTokensAccessModel extends Model
      * Anfragen ohne gültigen Schlüssel (pid = 0) bleiben außen vor — sie
      * gehören zu keinem Datensatz und stehen in abweisungen().
      *
-     * @return array Liste aus pid, vkz, token, name, email, gesperrt, anzahl, erfolge, letzter
+     * Zeilen, deren Schlüssel inzwischen gelöscht wurde, bleiben dagegen
+     * enthalten: Die Nutzungszahlen der Schnittstelle sollen durch eine
+     * Löschung keine Lücke bekommen. Sie tragen 'geloescht' => true, damit die
+     * Auswertung sie als solche kennzeichnen kann.
+     *
+     * @return array Liste aus pid, vkz, token, name, email, gesperrt, geloescht,
+     *               anzahl, erfolge, letzter
      */
     public static function uebersicht(string $strVon, string $strBis): array
     {
@@ -116,7 +122,7 @@ class WertungsportalTokensAccessModel extends Model
 
         try {
             $objRows = Database::getInstance()
-                ->prepare('SELECT a.pid, a.vkz, COUNT(*) AS anzahl, SUM(CASE WHEN a.status = 200 THEN 1 ELSE 0 END) AS erfolge, MAX(a.zeitpunkt) AS letzter, t.token, t.vorname, t.nachname, t.email, t.gesperrt
+                ->prepare('SELECT a.pid, a.vkz, COUNT(*) AS anzahl, SUM(CASE WHEN a.status = 200 THEN 1 ELSE 0 END) AS erfolge, MAX(a.zeitpunkt) AS letzter, t.id AS schluesselId, t.token, t.vorname, t.nachname, t.email, t.gesperrt
                            FROM ' . static::$strTable . ' a
                            LEFT JOIN tl_wertungsportal_tokens t ON t.id = a.pid
                            WHERE a.datum >= ? AND a.datum <= ? AND a.pid > 0
@@ -132,6 +138,10 @@ class WertungsportalTokensAccessModel extends Model
                     'name'     => trim($objRows->vorname . ' ' . $objRows->nachname),
                     'email'    => (string) $objRows->email,
                     'gesperrt' => (string) $objRows->gesperrt === '1',
+                    // Der LEFT JOIN liefert für einen gelöschten Schlüssel
+                    // NULL — daran, und nicht am leeren Token, hängt der
+                    // Vermerk: Ein Token kann theoretisch auch leer sein
+                    'geloescht' => null === $objRows->schluesselId,
                     'anzahl'   => (int) $objRows->anzahl,
                     'erfolge'  => (int) $objRows->erfolge,
                     'letzter'  => (int) $objRows->letzter,

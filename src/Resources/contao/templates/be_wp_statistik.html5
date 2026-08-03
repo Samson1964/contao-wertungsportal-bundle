@@ -151,8 +151,20 @@
 				<tbody>
 					<?php foreach($this->tokenZeilen as $z): ?>
 						<tr>
-							<td><a href="<?= $z['url'] ?>" title="Zugriffe dieses Schlüssels anzeigen"><?= $z['kurz'] ?>…</a><?php if($z['gesperrt']): ?> <span class="wp-stat-sperre">gesperrt</span><?php endif; ?></td>
-							<td><?= \Contao\StringUtil::specialchars($z['name']) ?> <span class="wp-stat-pfad"><?= \Contao\StringUtil::specialchars($z['email']) ?></span></td>
+							<td>
+								<?php if($z['geloescht']): ?>
+									<span class="wp-stat-geloescht">gelöschter Schlüssel</span>
+								<?php else: ?>
+									<a href="<?= $z['url'] ?>" title="Zugriffe dieses Schlüssels anzeigen"><?= $z['kurz'] ?>…</a><?php if($z['gesperrt']): ?> <span class="wp-stat-sperre">gesperrt</span><?php endif; ?>
+								<?php endif; ?>
+							</td>
+							<td>
+								<?php if($z['geloescht']): ?>
+									<span class="tl_gray">Inhaber nicht mehr bekannt</span>
+								<?php else: ?>
+									<?= \Contao\StringUtil::specialchars($z['name']) ?> <span class="wp-stat-pfad"><?= \Contao\StringUtil::specialchars($z['email']) ?></span>
+								<?php endif; ?>
+							</td>
 							<td><?= \Contao\StringUtil::specialchars($z['vkz']) ?></td>
 							<td class="rechts"><strong><?= number_format($z['anzahl'], 0, ',', '.') ?></strong></td>
 							<td class="rechts"><?= number_format($z['erfolge'], 0, ',', '.') ?></td>

@@ -161,6 +161,19 @@ a.wp-stat-knopf:hover {
 	font-size				: 1.1em;
 }
 
+/* Zugriffe, deren Zugangsschlüssel inzwischen gelöscht wurde. Sie bleiben in
+   der Auswertung, damit die Nutzungszahlen keine Lücke bekommen */
+.wp-stat-geloescht {
+	display					: inline-block;
+	padding					: 1px 5px;
+	border					: 1px solid #ccc;
+	border-radius			: 2px;
+	background				: #f3f3f3;
+	color					: #777;
+	font-size				: 0.85em;
+	font-style				: italic;
+}
+
 /* Kennzeichnung eines gesperrten Zugangsschlüssels in der Auswertung */
 .wp-stat-sperre {
 	display					: inline-block;

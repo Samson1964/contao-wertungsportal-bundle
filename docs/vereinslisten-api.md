@@ -219,10 +219,14 @@ ist niederschwellig), sollte aber eine bewußte Entscheidung sein.
 * **Zugriffe** (Symbol „Bearbeiten") zeigt je Anfrage eine Zeile mit Zeitpunkt,
   Quelle, Trefferzahl, Dauer und IP-Adresse.
 * **Alte Zugriffe löschen** entfernt alles, was älter als 90 Tage ist.
-* **Wird ein Schlüssel gelöscht, verschwinden seine Zugriffe mit.** Sie enthalten
-  IP-Adressen, und ihr Zweck — die Zugriffe diesem Schlüssel zuzuordnen — endet
-  mit ihm. Die abgewiesenen Anfragen *ohne* gültigen Schlüssel bleiben davon
-  unberührt; sie hängen an keinem Datensatz.
+* **Wird ein Schlüssel gelöscht, bleiben seine Zugriffe erhalten** — damit die
+  Nutzungszahlen der Schnittstelle keine Lücke bekommen. In der Auswertung
+  erscheinen sie als **„gelöschter Schlüssel"** mit VKZ und Zugriffszahl, aber
+  ohne Inhaber und ohne Verweis auf den Datensatz. Endgültig weg sind sie mit
+  „Alte Zugriffe löschen" nach 90 Tagen.
+
+  Wer sie sofort loswerden will (sie enthalten IP-Adressen), löscht sie **vor**
+  dem Schlüssel: dessen Zugriffsliste öffnen, alle auswählen, löschen.
 
 ### Auswertung
 

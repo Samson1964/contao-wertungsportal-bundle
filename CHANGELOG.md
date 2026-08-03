@@ -1,5 +1,22 @@
 # Wertungsportal Changelog
 
+## Version 1.14.2 (2026-08-03)
+
+* Change: **Die Zugriffe eines gelöschten Zugangsschlüssels bleiben doch erhalten** und
+  erscheinen in der Auswertung als **„gelöschter Schlüssel"** — mit VKZ und Zugriffszahl, aber
+  ohne Inhaber und ohne Verweis auf den Datensatz (der Klick liefe ins Leere). So bekommen die
+  Nutzungszahlen der Schnittstelle durch eine Löschung keine Lücke. Damit ist das
+  `ondelete_callback` aus 1.14.1 wieder entfallen
+* Erkannt wird der Fall am LEFT JOIN, der für einen gelöschten Schlüssel `NULL` liefert — nicht
+  am leeren Token, denn ein Token könnte theoretisch auch leer sein
+* Endgültig weg sind die Zeilen mit „Alte Zugriffe löschen" nach 90 Tagen. Wer sie sofort
+  loswerden will (sie enthalten IP-Adressen), löscht sie **vor** dem Schlüssel über dessen
+  Zugriffsliste
+* Verifiziert mit 16 Tests gegen die echte Contao-4.13-Installation samt echtem
+  `DC_Table::delete()`: Zugriffe bleiben vollzählig, tragen den Vermerk, der vorhandene
+  Schlüssel trägt ihn nicht, und für den gelöschten baut das Statistik-Modul keinen Verweis.
+  Dazu vier Tests, die das gerenderte Template prüfen
+
 ## Version 1.14.1 (2026-08-03)
 
 * **Fix: Beim Löschen eines Zugangsschlüssels blieben dessen Zugriffe liegen.** Nicht
