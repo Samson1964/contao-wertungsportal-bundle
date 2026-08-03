@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Vereinslogo fehlt">
+	<title>Kein Vereinslogo hinterlegt</title>
+	<rect width="120" height="120" rx="8" fill="#eef2f6"/>
+	<rect x="0.5" y="0.5" width="119" height="119" rx="7.5" fill="none" stroke="#c8d4e0"/>
+	<!-- Turm als Sinnbild für den Verein, bewusst flächig gehalten, damit das
+	     Bild auch bei 40 px Kantenlänge noch erkennbar bleibt -->
+	<g fill="#8fa6bd">
+		<path d="M38 34h8v9h6v-9h8v9h6v-9h8v18l-5 6v22h5l4 12H34l4-12h5V58l-5-6z"/>
+		<rect x="30" y="88" width="60" height="8" rx="2"/>
+	</g>
+</svg>

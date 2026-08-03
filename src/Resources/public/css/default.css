@@ -769,3 +769,11 @@
 		transition			: none;
 	}
 }
+
+/* Mitgeliefertes Platzhalterbild, wenn kein Logo bzw. Foto hinterlegt ist.
+   Bewusst gedeckelt: Das SVG skaliert sonst auf die volle Spaltenbreite */
+.wp-platzhalter {
+	max-width				: 120px;
+	height					: auto;
+	opacity					: 0.85;
+}

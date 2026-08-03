@@ -730,6 +730,61 @@ class Helper extends \Frontend
 		throw new \CoreBundle\Exception\PageNotFoundException('Page not found: '.\Environment::get('uri'));
 	}
 
+	/**
+	 * Liefert die Adresse eines mitgelieferten Platzhalterbildes.
+	 *
+	 * Gebraucht wird das, solange in den Einstellungen kein Standardbild
+	 * ausgewählt ist — was in einer frischen Installation der Normalfall ist,
+	 * weil dafür erst eine Datei in die Dateiverwaltung hochgeladen werden
+	 * müsste. Die SVG-Dateien liegen im Bundle und damit AUSSERHALB der
+	 * Dateiverwaltung; sie laufen deshalb bewusst an der Bilderzeugung vorbei
+	 * und werden im Template unmittelbar als <img> eingebunden.
+	 *
+	 * @param  string $art 'verein' oder 'spieler'
+	 *
+	 * @return string Absolute Adresse ab dem Wurzelverzeichnis der Website
+	 *                (setzt contao:assets:install voraus)
+	 */
+	public static function platzhalterbild($art)
+	{
+		$dateien = array
+		(
+			'verein'  => 'standard-verein.svg',
+			'spieler' => 'standard-spieler.svg',
+		);
+
+		$datei = isset($dateien[$art]) ? $dateien[$art] : $dateien['verein'];
+
+		// Ausdrücklich absolut: Die Vereinsseite wird unter
+		// /vereine/30066.html ausgeliefert, ein relativer Pfad landete dort im
+		// Unterverzeichnis. Dass die Contao-Layouts ein <base> mitgeben, ist
+		// kein Verlass — es lässt sich abschalten
+		return rtrim((string) \Environment::get('path'), '/').'/bundles/contaowertungsportal/images/'.$datei;
+	}
+
+	/**
+	 * Liest eine Bildgrößen-Einstellung und gibt sie in der Form zurück, die
+	 * der Figure-Builder erwartet.
+	 *
+	 * Die Einstellungen sind serialisierte Arrays. Ist noch nichts gespeichert,
+	 * liefert TL_CONFIG null — und ein `unserialize(null)` erzeugt erst eine
+	 * Warnung und dann ein `false`, mit dem setSize() nichts anfangen kann.
+	 *
+	 * @param  string $einstellung Name der Einstellung in TL_CONFIG
+	 *
+	 * @return array|null Größenangabe, oder null für „keine Vorgabe"
+	 */
+	public static function bildgroesse($einstellung)
+	{
+		$wert = $GLOBALS['TL_CONFIG'][$einstellung] ?? null;
+
+		if(empty($wert)) return null;
+
+		$groesse = \StringUtil::deserialize($wert);
+
+		return is_array($groesse) ? $groesse : null;
+	}
+
 	// Karteizuweisung() ist am 03.08.2026 entfallen: Die Methode las
 	// tl_dwz_spi — eine Tabelle des abgelösten DeWIS-Bundles, die es in einer
 	// Installation ohne dieses gar nicht gibt — und wurde von nirgendwo im

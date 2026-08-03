@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Spielerbild fehlt">
+	<title>Kein Spielerbild hinterlegt</title>
+	<rect width="120" height="120" rx="8" fill="#eef2f6"/>
+	<rect x="0.5" y="0.5" width="119" height="119" rx="7.5" fill="none" stroke="#c8d4e0"/>
+	<!-- Angedeutete Person: Kopf und Schultern, ohne Gesichtszüge, damit die
+	     Platzhalterwirkung eindeutig bleibt -->
+	<g fill="#8fa6bd">
+		<circle cx="60" cy="46" r="19"/>
+		<path d="M60 70c17 0 31 11 34 26H26c3-15 17-26 34-26z"/>
+	</g>
+</svg>

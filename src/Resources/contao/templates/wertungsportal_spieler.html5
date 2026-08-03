@@ -69,7 +69,12 @@
 		<div class="karteikarte-kopf">
 			<?php if($this->addImage): ?>
 				<div class="karteikarte-bild">
-					<?php $this->insert('image', $this->arrData); ?>
+					<?php if($this->platzhalter): ?>
+						<?php // Mitgeliefertes SVG, siehe wertungsportal_verein.html5 ?>
+						<img src="<?= $this->platzhalter ?>" alt="Kein Spielerbild hinterlegt" class="wp-platzhalter" width="120" height="120" loading="lazy">
+					<?php else: ?>
+						<?php $this->insert('image', $this->arrData); ?>
+					<?php endif; ?>
 					<br><a href="mailto:webmaster@schachbund.com" style="font-size:10px;">Foto senden</a>
 				</div>
 			<?php endif; ?>

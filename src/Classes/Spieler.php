@@ -214,9 +214,9 @@ class Spieler extends \Module
 					$objFile = \FilesModel::findByPk($objPerson->singleSRC);
 				}
 
-				if(!$objFile)
+				if(!$objFile && !empty($GLOBALS['TL_CONFIG']['wertungsportal_playerDefaultImage']))
 				{
-					// Standardbild verwenden
+					// In den Einstellungen hinterlegtes Standardbild
 					$objFile = \FilesModel::findByUuid($GLOBALS['TL_CONFIG']['wertungsportal_playerDefaultImage']);
 				}
 
@@ -227,7 +227,7 @@ class Spieler extends \Module
 					// Bild für das Template erstellen (Methode ab Contao 4.10 möglich)
 					$figureBuilder = \System::getContainer()->get('contao.image.studio')->createFigureBuilder();
 					$figure = $figureBuilder->fromPath($objFile->path)
-					                        ->setSize(unserialize($GLOBALS['TL_CONFIG']['wertungsportal_playerImageSize']))
+					                        ->setSize(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::bildgroesse('wertungsportal_playerImageSize'))
 					                        ->enableLightbox(true)
 					                        ->disableMetadata(true)
 					                        ->build();
@@ -235,7 +235,10 @@ class Spieler extends \Module
 				}
 				else
 				{
-					$this->Template->addImage = false;
+					// Weder ein eigenes Bild noch ein Standardbild: das
+					// mitgelieferte SVG zeigen (siehe Verein.php)
+					$this->Template->addImage = true;
+					$this->Template->platzhalter = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::platzhalterbild('spieler');
 				}
 
 				/*********************************************************

@@ -1,5 +1,31 @@
 # Wertungsportal Changelog
 
+## Version 1.12.4 (2026-08-03)
+
+**Beim Aktualisieren:** `contao:assets:install` — es kommen zwei neue Bilddateien dazu.
+
+* Add: **Das Bundle bringt jetzt eigene Platzhalterbilder mit** (`standard-verein.svg` und
+  `standard-spieler.svg`). Ist in den Einstellungen kein Standardlogo bzw. Standardbild
+  ausgewählt, zeigt die Vereinsseite bzw. die Karteikarte diese SVG-Dateien statt gar
+  nichts. Damit sieht eine frische Installation auf Anhieb vernünftig aus — bisher musste
+  man erst eine Datei in die Dateiverwaltung hochladen und in den Einstellungen auswählen
+* Die Dateien liegen im Bundle und damit außerhalb der Dateiverwaltung. Sie laufen deshalb
+  bewusst an der Bilderzeugung vorbei und werden im Template unmittelbar als `<img>`
+  eingebunden. Die Adresse wird absolut gebildet (`Environment::get('path')`): Die
+  Vereinsseite wird unter `/vereine/30066.html` ausgeliefert, ein relativer Pfad landete
+  dort im Unterverzeichnis. Dass die Contao-Layouts ein `<base>` mitgeben, ist kein
+  Verlass — es lässt sich abschalten
+* **Fix: „Undefined array key wertungsportal_clubDefaultImage"** auf der Vereinsseite und
+  dieselbe Warnung für `wertungsportal_playerDefaultImage` auf der Karteikarte, solange die
+  Einstellung nie gespeichert wurde
+* Fix: Die Bildgrößen-Einstellungen wurden mit `unserialize()` ohne Prüfung gelesen. Ohne
+  gespeicherten Wert ergab das eine weitere Warnung und ein `false`, mit dem der
+  Bild-Erzeuger nichts anfangen kann. Neue `Helper::bildgroesse()` liefert entweder eine
+  gültige Größenangabe oder `null`
+* Verifiziert mit 420 Tests (15 neue) und in der echten Contao-4.13-Installation: Vereins-
+  und Karteikartenseite ohne Warnung, Platzhalter mit absoluter Adresse im Quelltext, beide
+  SVG-Dateien werden mit HTTP 200 als `image/svg+xml` ausgeliefert
+
 ## Version 1.12.3 (2026-08-03)
 
 * **Fix: Die Vereinsseite brach mit einem SQL-Fehler ab, wenn das alte DeWIS-Bundle nicht

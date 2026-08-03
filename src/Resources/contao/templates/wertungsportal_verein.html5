@@ -62,7 +62,13 @@
 					<tr class="row_0">
 						<td class="col_0" rowspan="2" style="text-align:center;" width="25%">
 							<?php if($this->addImage): ?>
-								<?php $this->insert('image', $this->arrData); ?>
+								<?php if($this->platzhalter): ?>
+									<?php // Mitgeliefertes SVG: liegt nicht in der Dateiverwaltung und
+									      // kann deshalb nicht über das image-Template laufen ?>
+									<img src="<?= $this->platzhalter ?>" alt="Kein Vereinslogo hinterlegt" class="wp-platzhalter" width="120" height="120" loading="lazy">
+								<?php else: ?>
+									<?php $this->insert('image', $this->arrData); ?>
+								<?php endif; ?>
 								<br><a href="mailto:webmaster@schachbund.com" style="font-size:10px;">Logo senden</a>
 							<?php endif; ?>
 						</td>

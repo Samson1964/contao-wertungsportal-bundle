@@ -155,14 +155,16 @@ class Verein extends \Module
 			 * Logo des Vereins
 			*/
 
+			$objFile = null;
+
 			if($objClub && $objClub->addImage && $objClub->singleSRC !== null)
 			{
 				// Vereinslogo aus WP | Vereine
 				$objFile = \FilesModel::findByPk($objClub->singleSRC);
 			}
-			else
+			elseif(!empty($GLOBALS['TL_CONFIG']['wertungsportal_clubDefaultImage']))
 			{
-				// Standardlogo verwenden
+				// In den Einstellungen hinterlegtes Standardlogo
 				$objFile = \FilesModel::findByUuid($GLOBALS['TL_CONFIG']['wertungsportal_clubDefaultImage']);
 			}
 
@@ -173,7 +175,7 @@ class Verein extends \Module
 				// Bild für das Template erstellen (Methode ab Contao 4.10 möglich)
 				$figureBuilder = \System::getContainer()->get('contao.image.studio')->createFigureBuilder();
 				$figure = $figureBuilder->fromPath($objFile->path)
-				                        ->setSize(unserialize($GLOBALS['TL_CONFIG']['wertungsportal_clubImageSize']))
+				                        ->setSize(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::bildgroesse('wertungsportal_clubImageSize'))
 				                        ->enableLightbox(true)
 				                        ->disableMetadata(true)
 				                        ->build();
@@ -181,7 +183,12 @@ class Verein extends \Module
 			}
 			else
 			{
-				$this->Template->addImage = false;
+				// Weder ein eigenes Logo noch ein Standardlogo: das mitgelieferte
+				// SVG zeigen. Es liegt im Bundle und nicht in der Dateiverwaltung,
+				// läuft deshalb an der Bilderzeugung vorbei und wird im Template
+				// unmittelbar eingebunden
+				$this->Template->addImage = true;
+				$this->Template->platzhalter = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::platzhalterbild('verein');
 			}
 
 			/*********************************************************
