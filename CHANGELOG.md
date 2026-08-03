@@ -1,5 +1,18 @@
 # Wertungsportal Changelog
 
+## Version 1.13.4 (2026-08-03)
+
+* Change: **Das PHP-Beispielskript gibt jetzt eine Rangliste aus.** Sortiert wird absteigend
+  nach DWZ, bei Gleichstand nach dem DWZ-Index (je höher, desto mehr ausgewertete Partien
+  stecken darin), zuletzt nach Namen. Spieler ohne DWZ stehen am Ende
+* Add: Spalte **„Pl."** ganz vorn — nur Spieler mit DWZ bekommen eine Nummer
+* Add: Spalte **„Index"** — der DWZ-Index war in der Tabelle bisher gar nicht enthalten,
+  obwohl die Schnittstelle ihn als `dwzIndex` mitliefert
+* Verifiziert mit 12 neuen Tests: Der cURL-Teil des erzeugten Skripts wird durch einen festen
+  Datensatz ersetzt, Sortierung und Ausgabe laufen unverändert. Geprüft werden Spaltenbestand
+  und -reihenfolge, die Sortierung samt Gleichstand über den Index, die Platznummern und dass
+  ein fehlender Index leer bleibt statt als 0 zu erscheinen
+
 ## Version 1.13.3 (2026-08-03)
 
 * Doc: Der Fall ist aufgeklärt — auf schachbund.de war es der **Under-Attack-Modus von

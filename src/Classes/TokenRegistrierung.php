@@ -437,18 +437,49 @@ if (\$status !== 200) {
     die('Fehler ' . \$status . ': ' . (\$daten['meldung'] ?? 'unbekannt'));
 }
 
+// Rangliste: absteigend nach DWZ, bei Gleichstand nach DWZ-Index (je hoeher,
+// desto mehr ausgewertete Partien stecken darin), zuletzt nach Namen.
+// Spieler ohne DWZ haben keinen Rang und stehen am Ende.
+usort(\$daten['spieler'], function (\$a, \$b) {
+    \$dwzA = (int) (\$a['dwz'] ?? 0);
+    \$dwzB = (int) (\$b['dwz'] ?? 0);
+
+    if (\$dwzA !== \$dwzB) {
+        return \$dwzB <=> \$dwzA;
+    }
+
+    \$idxA = (int) (\$a['dwzIndex'] ?? 0);
+    \$idxB = (int) (\$b['dwzIndex'] ?? 0);
+
+    if (\$idxA !== \$idxB) {
+        return \$idxB <=> \$idxA;
+    }
+
+    return strcmp(\$a['nachname'] . \$a['vorname'], \$b['nachname'] . \$b['vorname']);
+});
+
 echo '<h1>' . htmlspecialchars(\$daten['verein']) . ' (' . htmlspecialchars(\$daten['vkz']) . ')</h1>';
 echo '<p>' . (int) \$daten['anzahl'] . ' Spieler, Stand: ' . htmlspecialchars(\$daten['stand']) . '</p>';
 echo '<table border="1" cellpadding="4"><tr>'
-   . '<th>Name</th><th>Jg.</th><th>Mgl.-Nr.</th><th>Status</th><th>DWZ</th><th>Elo</th><th>Titel</th></tr>';
+   . '<th>Pl.</th><th>Name</th><th>Jg.</th><th>Mgl.-Nr.</th><th>Status</th>'
+   . '<th>DWZ</th><th>Index</th><th>Elo</th><th>Titel</th></tr>';
+
+\$platz = 0;
 
 foreach (\$daten['spieler'] as \$spieler) {
+    // Nur Spieler mit DWZ bekommen einen Platz
+    if (\$spieler['dwz']) {
+        \$platz++;
+    }
+
     echo '<tr>'
+       . '<td>' . (\$spieler['dwz'] ? \$platz . '.' : '') . '</td>'
        . '<td>' . htmlspecialchars(\$spieler['nachname'] . ', ' . \$spieler['vorname']) . '</td>'
        . '<td>' . htmlspecialchars(\$spieler['geburtsjahr']) . '</td>'
        . '<td>' . htmlspecialchars(\$spieler['mitgliedsnummer']) . '</td>'
        . '<td>' . htmlspecialchars(\$spieler['status']) . '</td>'
        . '<td>' . (\$spieler['dwz'] ? (int) \$spieler['dwz'] : '') . '</td>'
+       . '<td>' . (\$spieler['dwzIndex'] ? (int) \$spieler['dwzIndex'] : '') . '</td>'
        . '<td>' . (\$spieler['elo'] ? (int) \$spieler['elo'] : '') . '</td>'
        . '<td>' . htmlspecialchars(\$spieler['titel']) . '</td>'
        . '</tr>';
