@@ -1,5 +1,42 @@
 # Wertungsportal Changelog
 
+## Version 1.13.0 (2026-08-03)
+
+**Beim Aktualisieren:** Die Schlüssel-E-Mail geht ab jetzt als HTML-Post mit Textteil hinaus.
+Wer das nicht möchte, wählt in den Einstellungen bei „Vorlage der Schlüssel-E-Mail" die leere
+Option — dann bleibt es beim reinen Text. **Bitte außerdem die neue Einstellung „Erlaubte
+Abrufe je Tag" ansehen:** Ohne Eintrag gelten 24 Abrufe je Schlüssel und Tag; eine `0` hebt
+die Grenze auf.
+
+* Add: **Absenderadresse und Absendername** für die E-Mails des Bundles (Einstellungen,
+  Bereich Wertungsportal). Ohne Eintrag gilt wie bisher die Adresse des Administrators und
+  der Name der Website. Die Adresse sollte zur Domain der Website passen, sonst stufen viele
+  Postfächer die Nachricht als Fälschung ein
+* Add: **HTML-Vorlage für die Schlüssel-E-Mail**, auswählbar in den Einstellungen. Mitgeliefert
+  wird `wp_mail_token.html5`; eigene Fassungen legt man als Kopie unter `templates/` an, der
+  Dateiname muss mit `wp_mail_token` beginnen. Die Nachricht geht zweiteilig hinaus — HTML aus
+  der Vorlage plus Textteil als Rückfallebene. Der Textteil bleibt wichtig: Manche Postfächer
+  zeigen nur Text, und zum Herauskopieren des Beispielskripts ist er die verlässlichere Fassung
+* Platzhalter der Vorlage: `token`, `vkz`, `verein`, `adresse`, `aufruf`, `email`, `vorname`,
+  `nachname`, `name`, `abrufe`, `abrufetext`, `beispiel`, `freigabe`, `absender`. Sie sind
+  im Kopf der Vorlage und in `docs/vereinslisten-api.md` beschrieben. Alle Werte sind roh und
+  gehören im HTML durch `StringUtil::specialchars()` — sie stammen aus einem Formular, das im
+  offenen Internet steht
+* Add: Einstellung **„Erlaubte Abrufe je Tag"**. Sie ist nicht nur Text in der E-Mail, sondern
+  wird auch durchgesetzt: je Zugangsschlüssel und Tag, gezählt werden dabei nur erfolgreiche
+  Abrufe — wer eine Abfuhr bekommt, soll dafür nicht auch noch sein Kontingent verlieren.
+  Anders als die bestehende Stundenbremse hängt die Grenze am Schlüssel und nicht an der
+  IP-Adresse; sie greift also auch bei wechselnden Adressen. Ohne Eintrag 24, `0` = unbegrenzt
+* Text- und HTML-Fassung der E-Mail beziehen ihre Werte aus derselben Stelle
+  (`mailwerte()`), damit sie nicht auseinanderlaufen. Der Textteil nennt jetzt zusätzlich die
+  Empfängeradresse und die erlaubten Abrufe je Tag
+* Verifiziert mit 450 Tests (30 neue): Tagesgrenze samt Zählweise, Tageswechsel und
+  Protokollierung, Absender-Rückgriffe, die Werte in der verschickten Nachricht sowie die
+  HTML-Vorlage gegen das echte Contao gerendert — alle Platzhalter kommen an, der Vereinsname
+  wird maskiert, das Beispielskript steht maskiert in einem `<pre>`-Block und wird nicht
+  ausgeführt. Zusätzlich in der echten Installation geprüft, dass die vier neuen Felder in
+  der Palette stehen und die Vorlage in der Auswahlliste erscheint
+
 ## Version 1.12.5 (2026-08-03)
 
 **Beim Aktualisieren:** `contao:assets:install` (geändertes Stylesheet).

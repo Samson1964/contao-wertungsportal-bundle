@@ -1,0 +1,92 @@
+<?php
+/**
+ * Schlüssel-E-Mail der Vereinslisten-Schnittstelle (HTML-Teil)
+ *
+ * Auswählbar unter System → Einstellungen, Bereich Wertungsportal
+ * („Vorlage der Schlüssel-E-Mail"). Eine eigene Fassung legt man als Kopie
+ * unter templates/ an, zum Beispiel wp_mail_token_dsb.html5 — der Name muss
+ * mit wp_mail_token beginnen, sonst erscheint sie nicht in der Auswahl.
+ *
+ * VERFÜGBARE PLATZHALTER
+ * ----------------------
+ *   $this->token       Zugangsschlüssel
+ *   $this->vkz         Vereinskennziffer, fünfstellig
+ *   $this->verein      Name des Vereins (leer, wenn unbekannt)
+ *   $this->adresse     Adresse der Schnittstelle ohne Parameter
+ *   $this->aufruf      Fertiger Aufruf: Adresse + Schlüssel + VKZ
+ *   $this->email       E-Mail-Adresse des Antragstellers
+ *   $this->vorname     Vorname des Antragstellers
+ *   $this->nachname    Nachname des Antragstellers
+ *   $this->name        Vor- und Nachname zusammen (für die Anrede)
+ *   $this->abrufe      Erlaubte Abrufe je Tag, 0 = unbegrenzt
+ *   $this->abrufetext  Derselbe Wert als Satzbaustein („24 Abrufe" bzw.
+ *                      „beliebig viele Abrufe")
+ *   $this->beispiel    Vollständiges PHP-Beispielskript mit eingesetzten Werten
+ *   $this->freigabe    true, wenn der Schlüssel noch freigeschaltet werden muss
+ *   $this->absender    Name des Absenders (Einstellung bzw. Website-Name)
+ *
+ * Alle Werte sind ROH — im HTML also mit specialchars ausgeben, wie unten
+ * gezeigt. Die Werte kommen aus einem Formular des offenen Internets.
+ */
+
+use Contao\StringUtil;
+
+?>
+<div style="font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:15px; line-height:1.5; color:#222; max-width:680px;">
+
+	<p>Guten Tag <?= StringUtil::specialchars($this->name) ?>,</p>
+
+	<p>für den Verein <strong><?= StringUtil::specialchars($this->verein ?: $this->vkz) ?></strong>
+		(<?= StringUtil::specialchars($this->vkz) ?>) wurde ein Zugangsschlüssel für die
+		Vereinslisten-Schnittstelle erzeugt.</p>
+
+	<table cellpadding="0" cellspacing="0" style="border-collapse:collapse; margin:0 0 20px;">
+		<tr>
+			<td style="padding:4px 16px 4px 0; color:#666;">Schlüssel</td>
+			<td style="padding:4px 0;"><code style="font-family:Consolas,Menlo,monospace; background:#f3f5f7; padding:2px 5px; border-radius:2px;"><?= StringUtil::specialchars($this->token) ?></code></td>
+		</tr>
+		<tr>
+			<td style="padding:4px 16px 4px 0; color:#666;">Vereinskennziffer</td>
+			<td style="padding:4px 0;"><?= StringUtil::specialchars($this->vkz) ?></td>
+		</tr>
+		<tr>
+			<td style="padding:4px 16px 4px 0; color:#666;">Adresse</td>
+			<td style="padding:4px 0;"><?= StringUtil::specialchars($this->adresse) ?></td>
+		</tr>
+		<tr>
+			<td style="padding:4px 16px 4px 0; color:#666;">Empfänger</td>
+			<td style="padding:4px 0;"><?= StringUtil::specialchars($this->email) ?></td>
+		</tr>
+	</table>
+
+	<p>Aufruf im Browser (liefert JSON):<br>
+		<a href="<?= StringUtil::specialchars($this->aufruf) ?>" style="color:#1F618D; word-break:break-all;"><?= StringUtil::specialchars($this->aufruf) ?></a></p>
+
+	<?php if($this->freigabe): ?>
+		<p style="padding:10px 14px; background:#fff4d6; border-left:4px solid #e0a800;">
+			<strong>Hinweis:</strong> Der Schlüssel ist noch nicht freigeschaltet. Sobald das
+			geschehen ist, liefert der Aufruf die Mitgliederliste.</p>
+	<?php endif; ?>
+
+	<h3 style="font-size:16px; margin:24px 0 8px;">Bitte beachten Sie</h3>
+
+	<ul style="margin:0 0 20px; padding-left:20px;">
+		<li>Der Schlüssel gilt nur für den Verein <?= StringUtil::specialchars($this->vkz) ?>.</li>
+		<li>Geben Sie ihn nicht weiter und stellen Sie ihn nicht in öffentlich lesbaren
+			Quelltext (etwa in Javascript auf Ihrer Website).</li>
+		<li>Erlaubt sind <strong><?= StringUtil::specialchars($this->abrufetext) ?></strong> am Tag.
+			Die Daten stammen aus dem Wertungsportal des Deutschen Schachbunds und werden
+			zwischengespeichert — ein Abruf am Tag genügt völlig.</li>
+	</ul>
+
+	<h3 style="font-size:16px; margin:24px 0 8px;">PHP-Beispielskript</h3>
+
+	<p>Das folgende Skript können Sie unverändert übernehmen. Speichern Sie es als
+		<code>vereinsliste.php</code> auf Ihrem Webspace und rufen Sie es im Browser auf.</p>
+
+	<pre style="font-family:Consolas,Menlo,monospace; font-size:12px; line-height:1.45; background:#f5f6f8; border:1px solid #dde3e9; border-radius:3px; padding:12px 14px; overflow-x:auto; white-space:pre;"><?= StringUtil::specialchars($this->beispiel) ?></pre>
+
+	<p style="margin-top:24px;">Mit freundlichen Grüßen<br>
+		<?= StringUtil::specialchars($this->absender) ?></p>
+
+</div>

@@ -145,6 +145,33 @@ class WertungsportalTokensAccessModel extends Model
     }
 
     /**
+     * Zählt die Abrufe eines Schlüssels an einem Tag — Grundlage der
+     * Tagesgrenze, die in der Schlüssel-E-Mail zugesagt wird.
+     *
+     * Gezählt werden nur ausgelieferte Listen (HTTP 200): Wer eine Abfuhr
+     * bekommt, soll dafür nicht auch noch sein Tageskontingent verlieren.
+     *
+     * @param int    $intPid   Datensatz-ID des Schlüssels
+     * @param string $strDatum Tag als JJJJ-MM-TT
+     */
+    public static function zaehleFuerTag(int $intPid, string $strDatum): int
+    {
+        if ($intPid < 1) {
+            return 0;
+        }
+
+        try {
+            $objRow = Database::getInstance()
+                ->prepare('SELECT COUNT(*) AS anzahl FROM ' . static::$strTable . ' WHERE pid = ? AND datum = ? AND status = 200')
+                ->execute($intPid, $strDatum);
+
+            return $objRow->next() ? (int) $objRow->anzahl : 0;
+        } catch (\Throwable $e) {
+            return 0;
+        }
+    }
+
+    /**
      * Liefert die abgewiesenen Anfragen eines Zeitraums, gebündelt je
      * IP-Adresse.
      *

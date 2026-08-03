@@ -25,6 +25,32 @@ class VereinslisteApi
 	const ANFRAGEN_JE_STUNDE = 120;
 
 	/**
+	 * Voreinstellung für die erlaubten Abrufe je Schlüssel und Tag, solange in
+	 * den Einstellungen nichts anderes steht. Ein Abruf je Stunde ist reichlich
+	 * — die Daten ändern sich täglich, nicht stündlich.
+	 */
+	const ABRUFE_JE_TAG = 24;
+
+	/**
+	 * Liefert die erlaubten Abrufe je Schlüssel und Tag aus den Einstellungen.
+	 *
+	 * Dieselbe Zahl steht als Platzhalter in der Schlüssel-E-Mail — Text und
+	 * Verhalten bleiben dadurch zwangsläufig beieinander.
+	 *
+	 * @return int Höchstzahl je Tag, 0 für unbegrenzt
+	 */
+	public static function abrufeJeTag()
+	{
+		$wert = $GLOBALS['TL_CONFIG']['wertungsportal_api_abrufe_tag'] ?? null;
+
+		// Nicht gepflegt heißt Voreinstellung; eine ausdrückliche 0 heißt
+		// unbegrenzt und darf nicht als „nicht gepflegt" durchgehen
+		if($wert === null || trim((string) $wert) === '') return self::ABRUFE_JE_TAG;
+
+		return max(0, (int) $wert);
+	}
+
+	/**
 	 * Beantwortet eine Anfrage.
 	 *
 	 * Gibt IMMER ein Array zurück, nie eine Ausnahme — der Aufrufer macht
@@ -101,6 +127,20 @@ class VereinslisteApi
 			self::protokolliere((int) $objToken->id, $vkz, $ip, 'fremd', 403, 0, $start);
 
 			return self::fehler(403, 'Der Zugangsschlüssel gilt nicht für diesen Verein.');
+		}
+
+		// ── Tagesgrenze je Schlüssel ──────────────────────────────────
+		// Anders als die Stundenbremse hängt sie am Schlüssel, nicht an der
+		// IP: Sie ist die Zusage aus der Schlüssel-E-Mail („erlaubt sind x
+		// Abrufe am Tag") und muss deshalb auch dann greifen, wenn jemand von
+		// wechselnden Adressen aus abruft
+		$grenze = self::abrufeJeTag();
+
+		if($grenze > 0 && \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTokensAccessModel::zaehleFuerTag((int) $objToken->id, date('Y-m-d')) >= $grenze)
+		{
+			self::protokolliere((int) $objToken->id, $vkz, $ip, 'limit', 429, 0, $start);
+
+			return self::fehler(429, 'Die zulässige Zahl der Abrufe für heute ist erreicht ('.$grenze.' je Tag). Bitte morgen erneut versuchen.');
 		}
 
 		// ── Daten holen (Zwischenspeicher, nu, örtlicher Bestand) ──────

@@ -6,7 +6,7 @@ use Contao\Validator;
 /**
  * palettes
  */
-$GLOBALS['TL_DCA']['tl_settings']['palettes']['default'] .= ';{wertungsportal_legend:hide},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url,wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband,wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe,wertungsportal_crontoken,wertungsportal_api_aus,wertungsportal_api_timeout,wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_cachezeit_turnierdaten_alt,wertungsportal_api_freigabe,wertungsportal_api_sperren,wertungsportal_zugriffslog,wertungsportal_debuglog,wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize';
+$GLOBALS['TL_DCA']['tl_settings']['palettes']['default'] .= ';{wertungsportal_legend:hide},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url,wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband,wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe,wertungsportal_crontoken,wertungsportal_api_aus,wertungsportal_api_timeout,wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_cachezeit_turnierdaten_alt,wertungsportal_mail_absender,wertungsportal_mail_absendername,wertungsportal_mail_token,wertungsportal_api_abrufe_tag,wertungsportal_api_freigabe,wertungsportal_api_sperren,wertungsportal_zugriffslog,wertungsportal_debuglog,wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize';
 
 /**
  * fields
@@ -387,6 +387,69 @@ $GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_clubImageSize'] = ar
 		return System::getContainer()->get('contao.image.sizes')->getOptionsForUser(BackendUser::getInstance());
 	},
 ); 
+
+// Absenderadresse der Bundle-E-Mails. Ohne Eintrag gilt die Adresse des
+// Administrators aus den allgemeinen Contao-Einstellungen
+$GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_mail_absender'] = array
+(
+	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_mail_absender'],
+	'inputType'               => 'text',
+	'eval'                    => array
+	(
+		'mandatory'           => false,
+		'maxlength'           => 255,
+		'rgxp'                => 'email',
+		'tl_class'            => 'w50 clr'
+	)
+);
+
+// Absendername der Bundle-E-Mails; ohne Eintrag der Name der Website
+$GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_mail_absendername'] = array
+(
+	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_mail_absendername'],
+	'inputType'               => 'text',
+	'eval'                    => array
+	(
+		'mandatory'           => false,
+		'maxlength'           => 128,
+		'tl_class'            => 'w50'
+	)
+);
+
+// Vorlage der Schlüssel-E-Mail. Zur Auswahl stehen alle Templates, deren Name
+// mit wp_mail_token beginnt — eine eigene Fassung legt man als Kopie unter
+// templates/ an (z. B. wp_mail_token_dsb.html5)
+$GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_mail_token'] = array
+(
+	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_mail_token'],
+	'inputType'               => 'select',
+	'options_callback'        => static function ()
+	{
+		return \Contao\Controller::getTemplateGroup('wp_mail_token');
+	},
+	'eval'                    => array
+	(
+		'includeBlankOption'  => true,
+		'chosen'              => true,
+		'tl_class'            => 'w50 clr'
+	)
+);
+
+// Erlaubte Abrufe der Vereinsliste je Schlüssel und Tag. Der Wert steht auch
+// als Platzhalter in der Schlüssel-E-Mail, damit Text und Verhalten
+// zusammenpassen. 0 = unbegrenzt
+$GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_api_abrufe_tag'] = array
+(
+	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_api_abrufe_tag'],
+	'inputType'               => 'text',
+	'eval'                    => array
+	(
+		'mandatory'           => false,
+		'maxlength'           => 6,
+		'rgxp'                => 'natural',
+		'tl_class'            => 'w50'
+	)
+);
 
 // Neue Schlüssel erst nach Freigabe: Die Registrierung legt den Schlüssel
 // unveröffentlicht an, er wirkt bis zur Freischaltung wie gesperrt

@@ -193,15 +193,23 @@ class TokenRegistrierung extends \Module
 	protected function verschicke($objToken)
 	{
 		$verein = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalClubsModel::findByVkz((string) $objToken->vkz);
-		$vereinsname = $verein !== null ? (string) $verein->clubName : (string) $objToken->vkz;
+		$vereinsname = $verein !== null ? (string) $verein->clubName : '';
 
 		try
 		{
 			$objEmail = new \Email();
-			$objEmail->from = \Config::get('adminEmail');
-			$objEmail->fromName = \Config::get('websiteTitle') ?: 'Wertungsportal';
+			$objEmail->from = self::absenderadresse();
+			$objEmail->fromName = self::absendername();
 			$objEmail->subject = 'Ihr Zugangsschlüssel für die Vereinslisten-Schnittstelle';
+
+			// Beide Teile: Der HTML-Teil ist die Vorlage aus den Einstellungen,
+			// der Textteil die Rückfallebene. Manche Postfächer zeigen nur
+			// Text an, und zum Herauskopieren des Beispielskripts ist er
+			// ohnehin die verlässlichere Fassung
 			$objEmail->text = $this->mailtext($objToken, $vereinsname);
+			$html = $this->mailhtml($objToken, $vereinsname);
+
+			if($html !== '') $objEmail->html = $html;
 
 			$objEmail->sendTo((string) $objToken->email);
 		}
@@ -216,49 +224,156 @@ class TokenRegistrierung extends \Module
 	}
 
 	/**
-	 * Baut den Text der Schlüssel-E-Mail einschließlich des Beispielskripts.
+	 * Liefert die Absenderadresse der Bundle-E-Mails.
 	 *
-	 * Bewusst reiner Text: Der wichtigste Teil ist Quelltext, den der
-	 * Empfänger herauskopiert — in HTML-Post gehen dabei regelmäßig
-	 * Anführungszeichen und Zeilenumbrüche verloren.
+	 * Vorrang hat die eigene Einstellung; ohne sie die Adresse des
+	 * Administrators aus den allgemeinen Contao-Einstellungen. Der Rückgriff
+	 * ist wichtig: Ohne gültige Absenderadresse nimmt kein Mailserver die
+	 * Nachricht an.
+	 *
+	 * @return string
+	 */
+	public static function absenderadresse()
+	{
+		$adresse = trim((string) ($GLOBALS['TL_CONFIG']['wertungsportal_mail_absender'] ?? ''));
+
+		return $adresse !== '' ? $adresse : (string) \Config::get('adminEmail');
+	}
+
+	/**
+	 * Liefert den Absendernamen der Bundle-E-Mails.
+	 *
+	 * Vorrang hat die eigene Einstellung, danach der Name der Website.
+	 *
+	 * @return string
+	 */
+	public static function absendername()
+	{
+		$name = trim((string) ($GLOBALS['TL_CONFIG']['wertungsportal_mail_absendername'] ?? ''));
+
+		if($name !== '') return $name;
+
+		return (string) \Config::get('websiteTitle') ?: 'Wertungsportal';
+	}
+
+	/**
+	 * Stellt die Werte zusammen, die Text- und HTML-Fassung der E-Mail
+	 * gleichermaßen brauchen.
+	 *
+	 * An einer Stelle gebündelt, damit die beiden Fassungen nicht
+	 * auseinanderlaufen — sie sollen dasselbe sagen.
 	 *
 	 * @param  \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTokensModel $objToken
-	 * @param  string $vereinsname Klartextname des Vereins für die Anrede
+	 * @param  string $vereinsname Klartextname des Vereins, darf leer sein
+	 * @return array
+	 */
+	protected function mailwerte($objToken, $vereinsname)
+	{
+		$adresse = self::schnittstellenUrl();
+		$abrufe = \Schachbulle\ContaoWertungsportalBundle\Helper\VereinslisteApi::abrufeJeTag();
+
+		return array
+		(
+			'token'      => (string) $objToken->token,
+			'vkz'        => (string) $objToken->vkz,
+			'verein'     => $vereinsname,
+			'adresse'    => $adresse,
+			'aufruf'     => $adresse.'?token='.$objToken->token.'&vkz='.$objToken->vkz,
+			'email'      => (string) $objToken->email,
+			'vorname'    => (string) $objToken->vorname,
+			'nachname'   => (string) $objToken->nachname,
+			'name'       => trim($objToken->vorname.' '.$objToken->nachname),
+			'abrufe'     => $abrufe,
+			'abrufetext' => $abrufe > 0 ? $abrufe.' Abrufe' : 'beliebig viele Abrufe',
+			'beispiel'   => self::beispielskript((string) $objToken->token, (string) $objToken->vkz, $adresse),
+			'freigabe'   => (!$objToken->published || $objToken->gesperrt),
+			'absender'   => self::absendername(),
+		);
+	}
+
+	/**
+	 * Baut den HTML-Teil der E-Mail aus der in den Einstellungen gewählten
+	 * Vorlage.
+	 *
+	 * Ist keine Vorlage gewählt, bleibt der HTML-Teil leer und es geht nur der
+	 * Textteil hinaus — eine kaputte oder fehlende Vorlage darf den Versand
+	 * nicht verhindern.
+	 *
+	 * @param  \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTokensModel $objToken
+	 * @param  string $vereinsname Klartextname des Vereins
+	 * @return string HTML, oder '' wenn keine Vorlage greift
+	 */
+	protected function mailhtml($objToken, $vereinsname)
+	{
+		$vorlage = trim((string) ($GLOBALS['TL_CONFIG']['wertungsportal_mail_token'] ?? ''));
+
+		if($vorlage === '') return '';
+
+		try
+		{
+			$objTemplate = new \FrontendTemplate($vorlage);
+
+			foreach($this->mailwerte($objToken, $vereinsname) as $name => $wert)
+			{
+				$objTemplate->$name = $wert;
+			}
+
+			return $objTemplate->parse();
+		}
+		catch(\Throwable $e)
+		{
+			\System::log('Vorlage der Schlüssel-E-Mail konnte nicht erzeugt werden ('.$vorlage.'): '.$e->getMessage(), __METHOD__, TL_ERROR);
+
+			return '';
+		}
+	}
+
+	/**
+	 * Baut den Textteil der Schlüssel-E-Mail einschließlich des Beispielskripts.
+	 *
+	 * Der Textteil geht IMMER mit hinaus, auch wenn eine HTML-Vorlage gewählt
+	 * ist: Manche Postfächer zeigen nur Text, und zum Herauskopieren des
+	 * Skripts ist er die verlässlichere Fassung — in HTML-Post gehen dabei
+	 * regelmäßig Anführungszeichen und Zeilenumbrüche verloren.
+	 *
+	 * @param  \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTokensModel $objToken
+	 * @param  string $vereinsname Klartextname des Vereins, darf leer sein
 	 * @return string
 	 */
 	protected function mailtext($objToken, $vereinsname)
 	{
-		$adresse = self::schnittstellenUrl();
-		$aufruf = $adresse.'?token='.$objToken->token.'&vkz='.$objToken->vkz;
+		$w = $this->mailwerte($objToken, $vereinsname);
 
-		$text = "Guten Tag ".trim($objToken->vorname.' '.$objToken->nachname).",\n\n"
-			."für den Verein ".$vereinsname." (".$objToken->vkz.") wurde ein Zugangsschlüssel\n"
+		$text = "Guten Tag ".$w['name'].",\n\n"
+			."für den Verein ".($w['verein'] !== '' ? $w['verein'] : $w['vkz'])." (".$w['vkz'].") wurde ein Zugangsschlüssel\n"
 			."für die Vereinslisten-Schnittstelle erzeugt.\n\n"
-			."Schlüssel:        ".$objToken->token."\n"
-			."Vereinskennziffer: ".$objToken->vkz."\n"
-			."Adresse:          ".$adresse."\n\n"
+			."Schlüssel:         ".$w['token']."\n"
+			."Vereinskennziffer: ".$w['vkz']."\n"
+			."Adresse:           ".$w['adresse']."\n"
+			."Empfänger:         ".$w['email']."\n\n"
 			."Aufruf im Browser (liefert JSON):\n"
-			.$aufruf."\n\n";
+			.$w['aufruf']."\n\n";
 
-		if(!$objToken->published || $objToken->gesperrt)
+		if($w['freigabe'])
 		{
 			$text .= "HINWEIS: Der Schlüssel ist noch nicht freigeschaltet. Sobald das geschehen\n"
 				."ist, liefert der Aufruf die Mitgliederliste.\n\n";
 		}
 
 		$text .= "Bitte beachten Sie:\n"
-			."- Der Schlüssel gilt nur für den Verein ".$objToken->vkz.".\n"
+			."- Der Schlüssel gilt nur für den Verein ".$w['vkz'].".\n"
 			."- Geben Sie ihn nicht weiter und stellen Sie ihn nicht in öffentlich\n"
 			."  lesbaren Quelltext (etwa in Javascript auf Ihrer Website).\n"
-			."- Die Daten stammen aus dem Wertungsportal des Deutschen Schachbunds und\n"
-			."  werden zwischengespeichert. Ein Abruf am Tag genügt völlig.\n\n"
+			."- Erlaubt sind ".$w['abrufetext']." am Tag. Die Daten stammen aus dem\n"
+			."  Wertungsportal des Deutschen Schachbunds und werden zwischengespeichert;\n"
+			."  ein Abruf am Tag genügt völlig.\n\n"
 			."Das folgende PHP-Skript können Sie unverändert übernehmen. Speichern Sie es\n"
 			."als vereinsliste.php auf Ihrem Webspace und rufen Sie es im Browser auf.\n\n"
 			."------------------------------------------------------------------------\n"
-			.self::beispielskript((string) $objToken->token, (string) $objToken->vkz, $adresse)
+			.$w['beispiel']
 			."------------------------------------------------------------------------\n\n"
 			."Mit freundlichen Grüßen\n"
-			.(\Config::get('websiteTitle') ?: 'Wertungsportal')."\n";
+			.$w['absender']."\n";
 
 		return $text;
 	}

@@ -80,7 +80,7 @@ Personen, die im Backend gesperrt sind, fehlen in der Liste.
 |---|---|
 | 400 | Parameter fehlen oder die VKZ hat nicht fünf Zeichen |
 | 403 | Schlüssel unbekannt, gesperrt oder für einen anderen Verein ausgestellt; IP gesperrt |
-| 429 | Zu viele Anfragen (mehr als 120 je Stunde und IP-Adresse) |
+| 429 | Zu viele Anfragen: Tageskontingent des Schlüssels erschöpft, oder mehr als 120 Anfragen je Stunde von derselben IP-Adresse |
 | 502 | Der Verein ist unbekannt oder die Daten sind zurzeit nicht abrufbar |
 
 Der Rumpf enthält dann `{"fehler": true, "meldung": "..."}`.
@@ -106,8 +106,43 @@ selbst braucht keine Contao-Seite, sie liegt fest unter
 
 | Einstellung | Wirkung |
 |---|---|
+| **Absenderadresse** | Absender der Schlüssel-E-Mail. Ohne Eintrag die Adresse des Administrators. Sie muß zur Domain der Website passen, sonst stufen viele Postfächer die Nachricht als Fälschung ein. |
+| **Absendername** | Name, der beim Empfänger als Absender erscheint. Ohne Eintrag der Name der Website. |
+| **Vorlage der Schlüssel-E-Mail** | HTML-Vorlage der Nachricht (siehe unten). Ohne Auswahl geht sie als reiner Text hinaus. |
+| **Erlaubte Abrufe je Tag** | Höchstzahl je Schlüssel und Tag; gezählt werden nur erfolgreiche Abrufe. Ohne Eintrag 24, eine `0` hebt die Grenze auf. |
 | **Neue Schlüssel erst nach Freigabe** | Angeforderte Schlüssel werden unveröffentlicht angelegt und liefern erst nach Freischaltung Daten. Die Bestätigungsmail weist darauf hin. |
 | **Gesperrte IP-Adressen** | Eine Adresse je Zeile, Zeilen mit `#` sind Kommentare. Anfragen von dort werden abgewiesen. |
+
+### Die Schlüssel-E-Mail anpassen
+
+Die Nachricht geht immer zweiteilig hinaus: ein HTML-Teil aus der gewählten
+Vorlage und ein Textteil als Rückfallebene. Der Textteil steckt im Code
+(`Classes\TokenRegistrierung::mailtext()`), der HTML-Teil in der Vorlage.
+
+Eine eigene Fassung legt man als Kopie von
+`templates/wp_mail_token.html5` an — der Dateiname muß mit `wp_mail_token`
+beginnen, sonst erscheint sie nicht in der Auswahlliste. Verfügbare
+Platzhalter:
+
+| Platzhalter | Inhalt |
+|---|---|
+| `$this->token` | Zugangsschlüssel |
+| `$this->vkz` | Vereinskennziffer |
+| `$this->verein` | Name des Vereins (leer, wenn unbekannt) |
+| `$this->adresse` | Adresse der Schnittstelle ohne Parameter |
+| `$this->aufruf` | Fertiger Aufruf: Adresse + Schlüssel + VKZ |
+| `$this->email` | E-Mail-Adresse des Antragstellers |
+| `$this->vorname` / `$this->nachname` | Name des Antragstellers |
+| `$this->name` | Vor- und Nachname zusammen, für die Anrede |
+| `$this->abrufe` | Erlaubte Abrufe je Tag als Zahl (0 = unbegrenzt) |
+| `$this->abrufetext` | Derselbe Wert als Satzbaustein: „12 Abrufe" bzw. „beliebig viele Abrufe" |
+| `$this->beispiel` | Vollständiges PHP-Beispielskript mit eingesetzten Werten |
+| `$this->freigabe` | `true`, wenn der Schlüssel noch freigeschaltet werden muß |
+| `$this->absender` | Absendername aus den Einstellungen |
+
+Alle Werte sind **roh** — im HTML also durch `StringUtil::specialchars()`
+schicken, wie in der mitgelieferten Vorlage. Sie stammen aus einem Formular,
+das im offenen Internet steht.
 
 Ohne Freigabepflicht bekommt jeder, der eine Vereinskennziffer kennt, sofort
 Zugriff auf die Mitgliederliste dieses Vereins. Das ist so gewollt (der Abruf
@@ -139,6 +174,7 @@ gewählten Zeitraum:
 
 | Grenze | Wert | Konstante |
 |---|---|---|
+| Abrufe je Schlüssel und Tag | Einstellung, Vorgabe 24 | `Helper\VereinslisteApi::ABRUFE_JE_TAG` |
 | Anfragen an die Schnittstelle | 120 je Stunde und IP | `Helper\VereinslisteApi::ANFRAGEN_JE_STUNDE` |
 | Schlüsselanforderungen | 5 je Tag, je E-Mail-Adresse und je IP | `Classes\TokenRegistrierung::ANFORDERUNGEN_JE_TAG` |
 | Aufbewahrung der Zugriffe | 90 Tage | `Models\WertungsportalTokensAccessModel::AUFBEWAHRUNG` |

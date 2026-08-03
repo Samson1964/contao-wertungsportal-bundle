@@ -143,6 +143,9 @@ $GLOBALS['TL_CONFIG']['wertungsportal_passive_ausblenden'] = 0;
 $GLOBALS['TL_CONFIG']['wertungsportal_geburtsjahr_ausblenden'] = 1;
 $GLOBALS['TL_CONFIG']['wertungsportal_geschlecht_ausblenden'] = 1;
 $GLOBALS['TL_CONFIG']['wertungsportal_debuglog'] = 0;
+// Mitgelieferte HTML-Vorlage der Schlüssel-E-Mail. Wer keine HTML-Post will,
+// wählt in den Einstellungen die leere Option — dann geht nur Text hinaus
+$GLOBALS['TL_CONFIG']['wertungsportal_mail_token'] = 'wp_mail_token';
 
 /**
  * -------------------------------------------------------------------------
