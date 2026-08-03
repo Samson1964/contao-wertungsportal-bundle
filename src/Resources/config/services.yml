@@ -1,4 +1,11 @@
 services:
+    # Öffentliche Schnittstelle für Vereinslisten (Route in routing.yml).
+    # Muß öffentlich sein, damit der Router den Controller auflösen kann
+    Schachbulle\ContaoWertungsportalBundle\Controller\VereinslisteController:
+        public: true
+        arguments:
+            - '@contao.framework'
+
     # Füllt die Suchalias-Felder des Bestands beim contao:migrate.
     # Ausdrücklich registriert, weil dieses Bundle ohne Autoconfigure arbeitet
     Schachbulle\ContaoWertungsportalBundle\Migration\AliasMigration:

@@ -15,6 +15,7 @@ $GLOBALS['TL_LANG']['MOD']['wp-persons'] = array('Personen', 'Personen und Mitgl
 $GLOBALS['TL_LANG']['MOD']['wp-tournaments'] = array('Turniere', 'Turniere Wertungsportal verwalten');
 $GLOBALS['TL_LANG']['MOD']['wp-elo'] = array('FIDE-Elo', 'FIDE-Elo-Daten für die Anreicherung verwalten');
 $GLOBALS['TL_LANG']['MOD']['wp-stats'] = array('Statistik', 'Abrufe der Schnittstellenfunktionen auswerten');
+$GLOBALS['TL_LANG']['MOD']['wp-tokens'] = array('Zugangsschlüssel', 'Schlüssel für die Vereinslisten-Schnittstelle und deren Zugriffe verwalten');
 
 /**
  * Frontendmodule
@@ -25,3 +26,4 @@ $GLOBALS['TL_LANG']['FMD']['wertungsportal_verein'] = array('Vereinssuche','Vere
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_verband'] = array('Verbandssuche','Verbandssuche und -ausgabe aus dem Wertungsportal');
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_turnier'] = array('Turniersuche','Turniersuche und -ausgabe aus dem Wertungsportal');
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_bestenliste'] = array('DWZ-Bestenliste','DWZ-Bestenliste (Top-x, alle Spieler oder nur Frauen) aus der lokalen Personentabelle');
+$GLOBALS['TL_LANG']['FMD']['wertungsportal_token'] = array('Schnittstellen-Registrierung','Formular, über das Vereine einen Zugangsschlüssel für die Vereinslisten-Schnittstelle anfordern');

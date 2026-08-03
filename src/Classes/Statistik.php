@@ -256,6 +256,63 @@ class Statistik extends \BackendModule
 		$this->Template->farbeLokal = self::FARBE_LOKAL;
 		$this->Template->farbeCache = self::FARBE_CACHE;
 		$this->Template->farbeApi = self::FARBE_API;
+
+		$this->tokenStatistik($von, $bis);
+	}
+
+	/**
+	 * Stellt die Auswertung der örtlichen Vereinslisten-Schnittstelle für
+	 * denselben Zeitraum zusammen.
+	 *
+	 * Zwei Blöcke: die Zugriffe je Zugangsschlüssel und Verein sowie die
+	 * abgewiesenen Anfragen je IP-Adresse — letztere sind die Grundlage für
+	 * die Sperrliste in den Einstellungen.
+	 *
+	 * @param  string $von Erster Tag des Zeitraums (JJJJ-MM-TT)
+	 * @param  string $bis Letzter Tag des Zeitraums (JJJJ-MM-TT)
+	 * @return void
+	 */
+	protected function tokenStatistik($von, $bis)
+	{
+		$zeilen = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTokensAccessModel::uebersicht($von, $bis);
+		$abweisungen = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTokensAccessModel::abweisungen($von, $bis);
+
+		// Adresse des Schlüssel-Moduls. Über den Router statt von Hand, weil
+		// der Backend-Pfad je nach Installation abweichen kann
+		$backend = \System::getContainer()->get('router')->generate('contao_backend');
+		$format = \Config::get('datimFormat');
+
+		$gesamt = array('anzahl' => 0, 'erfolge' => 0);
+
+		foreach($zeilen as $i => $zeile)
+		{
+			$gesamt['anzahl'] += $zeile['anzahl'];
+			$gesamt['erfolge'] += $zeile['erfolge'];
+
+			$zeilen[$i]['letzterText'] = $zeile['letzter'] ? \Date::parse($format, $zeile['letzter']) : '';
+			// Zeigt die Zugriffe genau dieses Schlüssels (Kindtabelle)
+			$zeilen[$i]['url'] = $backend.'?do=wp-tokens&amp;table=tl_wertungsportal_tokens_access&amp;id='.$zeile['pid'];
+			// Der Schlüssel gehört nicht vollständig auf den Bildschirm —
+			// die ersten Zeichen genügen, um ihn wiederzuerkennen
+			$zeilen[$i]['kurz'] = substr($zeile['token'], 0, 8);
+		}
+
+		$gruende = $GLOBALS['TL_LANG']['tl_wertungsportal_tokens_access']['quellen'] ?? array();
+
+		foreach($abweisungen as $i => $eintrag)
+		{
+			$abweisungen[$i]['letzterText'] = $eintrag['letzter'] ? \Date::parse($format, $eintrag['letzter']) : '';
+
+			$texte = array();
+			foreach($eintrag['gruende'] as $grund) $texte[] = $gruende[$grund] ?? $grund;
+			$abweisungen[$i]['gruendeText'] = implode(', ', $texte);
+		}
+
+		$this->Template->tokenZeilen = $zeilen;
+		$this->Template->tokenGesamt = $gesamt;
+		$this->Template->tokenAbweisungen = $abweisungen;
+		$this->Template->tokenUrl = $backend.'?do=wp-tokens';
+		$this->Template->hatToken = (count($zeilen) > 0 || count($abweisungen) > 0);
 	}
 
 	/**

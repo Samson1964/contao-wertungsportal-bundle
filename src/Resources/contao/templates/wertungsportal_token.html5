@@ -1,0 +1,102 @@
+<?php
+/**
+ * Registrierung für die Vereinslisten-Schnittstelle
+ *
+ * Erwartete Variablen:
+ *   formId        Kennung des Formulars (FORM_SUBMIT)
+ *   action        Ziel-URL des Formulars
+ *   adresse       Vollständige Adresse der Schnittstelle
+ *   eingaben      vkz, vorname, nachname, email (Wiedervorlage nach Fehlern)
+ *   fehler        Liste der Fehlermeldungen
+ *   bestaetigung  Text nach erfolgreicher Anforderung (dann kein Formular)
+ */
+?>
+<div class="<?= $this->class ?> wp-token block"<?= $this->cssID ?>>
+
+	<?php if($this->headline): ?>
+		<<?= $this->hl ?>><?= $this->headline ?></<?= $this->hl ?>>
+	<?php endif; ?>
+
+	<?php if($this->bestaetigung): ?>
+
+		<p class="wp-bestaetigung" role="status"><?= $this->bestaetigung ?></p>
+		<p class="wp-hilfe">In der E-Mail finden Sie neben dem Schlüssel ein PHP-Beispielskript,
+			das sich unverändert übernehmen lässt. Kommt die Nachricht nicht an, prüfen Sie bitte
+			auch den Spam-Ordner.</p>
+
+	<?php else: ?>
+
+		<p>Mit einem Zugangsschlüssel können Sie die Mitgliederliste Ihres Vereins als JSON
+			abrufen und auf Ihrer eigenen Website ausgeben. Der Schlüssel gilt für genau einen
+			Verein und wird Ihnen per E-Mail zugeschickt.</p>
+
+		<div class="wp-suche">
+			<form action="<?= $this->action ?>" method="post">
+				<input type="hidden" name="FORM_SUBMIT" value="<?= $this->formId ?>">
+				<input type="hidden" name="REQUEST_TOKEN" value="<?= REQUEST_TOKEN ?>">
+
+				<div class="wp-suche-block wp-suche-block--offen">
+
+					<div class="wp-suche-felder">
+
+						<div class="wp-feld">
+							<label class="wp-label" for="ctrl_vkz">Vereinskennziffer (VKZ)</label>
+							<input type="text" class="tl_input_text wp-input" id="ctrl_vkz" name="vkz" maxlength="5" size="5"
+								value="<?= \Contao\StringUtil::specialchars($this->eingaben['vkz']) ?>" required>
+							<p class="wp-hilfe">Fünf Zeichen, zum Beispiel 30052. Sie finden die Kennziffer auf der Vereinsseite.</p>
+						</div>
+
+						<div class="wp-feld">
+							<label class="wp-label" for="ctrl_vorname">Vorname</label>
+							<input type="text" class="tl_input_text wp-input" id="ctrl_vorname" name="vorname" maxlength="128"
+								value="<?= \Contao\StringUtil::specialchars($this->eingaben['vorname']) ?>" required>
+						</div>
+
+						<div class="wp-feld">
+							<label class="wp-label" for="ctrl_nachname">Nachname</label>
+							<input type="text" class="tl_input_text wp-input" id="ctrl_nachname" name="nachname" maxlength="128"
+								value="<?= \Contao\StringUtil::specialchars($this->eingaben['nachname']) ?>" required>
+						</div>
+
+						<div class="wp-feld">
+							<label class="wp-label" for="ctrl_email">E-Mail-Adresse</label>
+							<input type="email" class="tl_input_text wp-input" id="ctrl_email" name="email" maxlength="255"
+								value="<?= \Contao\StringUtil::specialchars($this->eingaben['email']) ?>" required>
+							<p class="wp-hilfe">An diese Adresse wird der Zugangsschlüssel geschickt.</p>
+						</div>
+
+					</div>
+
+					<?php // Honigtopf gegen selbsttätig ausfüllende Skripte — für Besucher unsichtbar ?>
+					<div style="position:absolute;left:-9999px" aria-hidden="true">
+						<label for="ctrl_wp_homepage">Homepage</label>
+						<input type="text" id="ctrl_wp_homepage" name="wp_homepage" value="" tabindex="-1" autocomplete="off">
+					</div>
+
+					<?php if(count($this->fehler)): ?>
+						<div class="wp-fehler" role="alert">
+							<?php foreach($this->fehler as $meldung): ?>
+								<p><?= $meldung ?></p>
+							<?php endforeach; ?>
+						</div>
+					<?php endif; ?>
+
+					<div class="wp-suche-aktionen">
+						<button type="submit" class="tl_submit wp-button">Zugangsschlüssel anfordern</button>
+					</div>
+
+				</div>
+			</form>
+		</div>
+
+		<h3>Wie der Abruf funktioniert</h3>
+		<p>Die Schnittstelle liefert die Mitgliederliste als JSON:</p>
+		<p><code><?= \Contao\StringUtil::specialchars($this->adresse) ?>?token=<em>SCHLÜSSEL</em>&amp;vkz=<em>VKZ</em></code></p>
+		<p class="wp-hilfe">Bitte rufen Sie die Liste höchstens einmal am Tag ab — die Daten ändern
+			sich seltener, und die Schnittstelle liefert ohnehin einen zwischengespeicherten Stand.
+			Behandeln Sie den Schlüssel wie ein Kennwort: Er gehört nicht in Javascript oder in
+			anderen öffentlich lesbaren Quelltext.</p>
+
+	<?php endif; ?>
+
+</div>

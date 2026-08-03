@@ -153,6 +153,25 @@ a.wp-stat-knopf:hover {
 	white-space				: nowrap;
 }
 
+/* Zwischenüberschriften der Statistik (Vereinslisten-Schnittstelle) */
+.wp-stat-ueberschrift {
+	margin					: 28px 0 10px;
+	padding					: 0 0 4px;
+	border-bottom			: 1px solid #ddd;
+	font-size				: 1.1em;
+}
+
+/* Kennzeichnung eines gesperrten Zugangsschlüssels in der Auswertung */
+.wp-stat-sperre {
+	display					: inline-block;
+	margin-left				: 4px;
+	padding					: 1px 5px;
+	border-radius			: 2px;
+	background				: #c33;
+	color					: #fff;
+	font-size				: 0.8em;
+}
+
 .wp-stat-diagramm {
 	margin					: 0 0 22px;
 	padding					: 12px 14px 6px;

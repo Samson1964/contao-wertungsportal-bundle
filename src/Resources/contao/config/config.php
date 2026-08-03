@@ -71,6 +71,16 @@ $GLOBALS['BE_MOD']['wertungsportal'] = array
 			'tl_wertungsportal_stats',
 		),
 	),
+	'wp-tokens'    => array
+	(
+		'tables'         => array
+		(
+			'tl_wertungsportal_tokens',
+			'tl_wertungsportal_tokens_access',
+		),
+		// Globale Operation: alte Zugriffe löschen (key=aufraeumen)
+		'aufraeumen'     => array('Schachbulle\ContaoWertungsportalBundle\Classes\TokenVerwaltung', 'aufraeumen'),
+	),
 	'wp-elo'    => array
 	(
 		'tables'         => array
@@ -95,6 +105,8 @@ $GLOBALS['FE_MOD']['wertungsportal'] = array
 	'wertungsportal_verband'         => 'Schachbulle\ContaoWertungsportalBundle\Classes\Verband',
 	'wertungsportal_turnier'         => 'Schachbulle\ContaoWertungsportalBundle\Classes\Turnier',
 	'wertungsportal_bestenliste'     => 'Schachbulle\ContaoWertungsportalBundle\Classes\Bestenliste',
+	// Registrierung für die örtliche Vereinslisten-Schnittstelle
+	'wertungsportal_token'           => 'Schachbulle\ContaoWertungsportalBundle\Classes\TokenRegistrierung',
 );
 
 // http://de.contaowiki.org/Strukturierte_URLs
@@ -153,3 +165,5 @@ $GLOBALS['TL_MODELS']['tl_wertungsportal_tournaments'] = WertungsportalTournamen
 $GLOBALS['TL_MODELS']['tl_wertungsportal_tournaments_evaluation'] = WertungsportalTournamentsEvaluationModel::class;
 $GLOBALS['TL_MODELS']['tl_wertungsportal_tournaments_matches'] = WertungsportalTournamentsMatchesModel::class;
 $GLOBALS['TL_MODELS']['tl_wertungsportal_stats'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::class;
+$GLOBALS['TL_MODELS']['tl_wertungsportal_tokens'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTokensModel::class;
+$GLOBALS['TL_MODELS']['tl_wertungsportal_tokens_access'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTokensAccessModel::class;

@@ -13,6 +13,7 @@ $GLOBALS['TL_LANG']['MOD']['wp-persons'] = array('Persons', 'Manage rating porta
 $GLOBALS['TL_LANG']['MOD']['wp-tournaments'] = array('Tournaments', 'Manage rating portal tournaments');
 $GLOBALS['TL_LANG']['MOD']['wp-elo'] = array('FIDE Elo', 'Manage FIDE Elo data for the enrichment');
 $GLOBALS['TL_LANG']['MOD']['wp-stats'] = array('Statistics', 'Evaluate the requests of the API functions');
+$GLOBALS['TL_LANG']['MOD']['wp-tokens'] = array('Access keys', 'Manage the keys of the club list interface and their requests');
 
 /**
  * Front end modules
@@ -23,3 +24,4 @@ $GLOBALS['TL_LANG']['FMD']['wertungsportal_verein'] = array('Club search', 'Club
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_verband'] = array('Federation search', 'Federation search and output from the rating portal');
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_turnier'] = array('Tournament search', 'Tournament search and output from the rating portal');
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_bestenliste'] = array('DWZ best list', 'DWZ best list (top x, all players or women only) from the local persons table');
+$GLOBALS['TL_LANG']['FMD']['wertungsportal_token'] = array('Interface registration', 'Form for clubs to request an access key for the club list interface');

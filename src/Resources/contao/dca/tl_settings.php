@@ -1,9 +1,12 @@
 <?php
 
+use Contao\StringUtil;
+use Contao\Validator;
+
 /**
  * palettes
  */
-$GLOBALS['TL_DCA']['tl_settings']['palettes']['default'] .= ';{wertungsportal_legend:hide},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url,wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband,wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe,wertungsportal_crontoken,wertungsportal_api_aus,wertungsportal_api_timeout,wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_cachezeit_turnierdaten_alt,wertungsportal_zugriffslog,wertungsportal_debuglog,wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize';
+$GLOBALS['TL_DCA']['tl_settings']['palettes']['default'] .= ';{wertungsportal_legend:hide},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url,wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband,wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe,wertungsportal_crontoken,wertungsportal_api_aus,wertungsportal_api_timeout,wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_cachezeit_turnierdaten_alt,wertungsportal_api_freigabe,wertungsportal_api_sperren,wertungsportal_zugriffslog,wertungsportal_debuglog,wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize';
 
 /**
  * fields
@@ -301,6 +304,19 @@ $GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_playerDefaultImage']
 		'filesOnly'           => true,
 		'fieldType'           => 'radio',
 		'tl_class'            => 'w50 clr'
+	),
+	// Der Dateibaum liefert die UUID als 16 Byte Binärwert. Die Einstellungen
+	// landen aber in system/config/localconfig.php, also in einer PHP-Datei,
+	// die den Binärwert nicht unbeschadet übersteht: Nullbytes und Backslashes
+	// gehen dabei verloren, und FilesModel::findByUuid() findet die Datei
+	// später nicht mehr. Deshalb wird hier in die lesbare Schreibweise
+	// umgewandelt, die findByUuid() ebenso versteht.
+	'save_callback' => array
+	(
+		static function ($varValue)
+		{
+			return Validator::isBinaryUuid($varValue) ? StringUtil::binToUuid($varValue) : $varValue;
+		}
 	)
 );
 
@@ -317,9 +333,14 @@ $GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_playerImageSize'] = 
 		'helpwizard'          => true, 
 		'tl_class'            => 'w50'
 	),
+	// Liefert die im System hinterlegten Bildgrößen als Auswahlliste, beschränkt
+	// auf die Größen, die der angemeldete Benutzer sehen darf. Der Dienst heißt
+	// seit Contao 5 "contao.image.sizes"; unter Contao 4.13 ist
+	// "contao.image.image_sizes" nur noch ein Alias darauf, der alte Name führt
+	// in Contao 5 dagegen zu einem Fehler.
 	'options_callback' => static function ()
 	{
-		return System::getContainer()->get('contao.image.image_sizes')->getOptionsForUser(BackendUser::getInstance());
+		return System::getContainer()->get('contao.image.sizes')->getOptionsForUser(BackendUser::getInstance());
 	},
 ); 
 
@@ -332,6 +353,14 @@ $GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_clubDefaultImage'] =
 		'filesOnly'           => true,
 		'fieldType'           => 'radio',
 		'tl_class'            => 'w50 clr'
+	),
+	// Umwandlung der binären UUID, siehe Hinweis bei wertungsportal_playerDefaultImage
+	'save_callback' => array
+	(
+		static function ($varValue)
+		{
+			return Validator::isBinaryUuid($varValue) ? StringUtil::binToUuid($varValue) : $varValue;
+		}
 	)
 );
 
@@ -348,11 +377,39 @@ $GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_clubImageSize'] = ar
 		'helpwizard'          => true, 
 		'tl_class'            => 'w50'
 	),
+	// Liefert die im System hinterlegten Bildgrößen als Auswahlliste, beschränkt
+	// auf die Größen, die der angemeldete Benutzer sehen darf. Der Dienst heißt
+	// seit Contao 5 "contao.image.sizes"; unter Contao 4.13 ist
+	// "contao.image.image_sizes" nur noch ein Alias darauf, der alte Name führt
+	// in Contao 5 dagegen zu einem Fehler.
 	'options_callback' => static function ()
 	{
-		return System::getContainer()->get('contao.image.image_sizes')->getOptionsForUser(BackendUser::getInstance());
+		return System::getContainer()->get('contao.image.sizes')->getOptionsForUser(BackendUser::getInstance());
 	},
 ); 
+
+// Neue Schlüssel erst nach Freigabe: Die Registrierung legt den Schlüssel
+// unveröffentlicht an, er wirkt bis zur Freischaltung wie gesperrt
+$GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_api_freigabe'] = array
+(
+	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_api_freigabe'],
+	'inputType'               => 'checkbox',
+	'eval'                    => array('tl_class' => 'w50 clr')
+);
+
+// Gesperrte IP-Adressen für die örtliche Vereinslisten-Schnittstelle,
+// eine Adresse je Zeile. Zeilen mit # am Anfang gelten als Kommentar
+$GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_api_sperren'] = array
+(
+	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_api_sperren'],
+	'inputType'               => 'textarea',
+	'eval'                    => array
+	(
+		'rows'                => 4,
+		'style'               => 'height:80px',
+		'tl_class'            => 'clr'
+	)
+);
 
 // Zugriffs-Log: schreibt je Abfrage eine Zeile nach var/logs (eine Datei je
 // Tag). ACHTUNG Datenschutz: Die Zeile enthält die IP-Adresse des Besuchers

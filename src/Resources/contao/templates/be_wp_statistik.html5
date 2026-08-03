@@ -126,4 +126,84 @@
 
 	<?php endif; ?>
 
+	<h3 class="wp-stat-ueberschrift">Vereinslisten-Schnittstelle</h3>
+
+	<?php if(!$this->hatToken): ?>
+
+		<p class="tl_info">Im gewählten Zeitraum wurde die Vereinslisten-Schnittstelle nicht aufgerufen.
+			Die Zugangsschlüssel werden unter <a href="<?= $this->tokenUrl ?>">WP&nbsp;|&nbsp;Zugangsschlüssel</a> verwaltet.</p>
+
+	<?php else: ?>
+
+		<?php if(count($this->tokenZeilen)): ?>
+			<div class="wp-stat-scroll">
+			<table class="tl_listing wp-stat-tabelle">
+				<thead>
+					<tr>
+						<th>Schlüssel</th>
+						<th>Inhaber</th>
+						<th>VKZ</th>
+						<th class="rechts">Anfragen</th>
+						<th class="rechts">davon erfolgreich</th>
+						<th>letzte Anfrage</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach($this->tokenZeilen as $z): ?>
+						<tr>
+							<td><a href="<?= $z['url'] ?>" title="Zugriffe dieses Schlüssels anzeigen"><?= $z['kurz'] ?>…</a><?php if($z['gesperrt']): ?> <span class="wp-stat-sperre">gesperrt</span><?php endif; ?></td>
+							<td><?= \Contao\StringUtil::specialchars($z['name']) ?> <span class="wp-stat-pfad"><?= \Contao\StringUtil::specialchars($z['email']) ?></span></td>
+							<td><?= \Contao\StringUtil::specialchars($z['vkz']) ?></td>
+							<td class="rechts"><strong><?= number_format($z['anzahl'], 0, ',', '.') ?></strong></td>
+							<td class="rechts"><?= number_format($z['erfolge'], 0, ',', '.') ?></td>
+							<td><?= $z['letzterText'] ?></td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+				<tfoot>
+					<tr>
+						<td colspan="3"><strong>Summe</strong></td>
+						<td class="rechts"><strong><?= number_format($this->tokenGesamt['anzahl'], 0, ',', '.') ?></strong></td>
+						<td class="rechts"><strong><?= number_format($this->tokenGesamt['erfolge'], 0, ',', '.') ?></strong></td>
+						<td></td>
+					</tr>
+				</tfoot>
+			</table>
+			</div>
+		<?php endif; ?>
+
+		<?php if(count($this->tokenAbweisungen)): ?>
+			<h4 class="wp-stat-ueberschrift">Abgewiesene Anfragen</h4>
+			<div class="wp-stat-scroll">
+			<table class="tl_listing wp-stat-tabelle">
+				<thead>
+					<tr>
+						<th>IP-Adresse</th>
+						<th class="rechts">Anfragen</th>
+						<th>Gründe</th>
+						<th>letzte Anfrage</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach($this->tokenAbweisungen as $a): ?>
+						<tr>
+							<td><?= \Contao\StringUtil::specialchars($a['ip']) ?></td>
+							<td class="rechts"><strong><?= number_format($a['anzahl'], 0, ',', '.') ?></strong></td>
+							<td><?= \Contao\StringUtil::specialchars($a['gruendeText']) ?></td>
+							<td><?= $a['letzterText'] ?></td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+			</div>
+			<p class="tl_help">
+				Fällt eine Adresse mit vielen abgewiesenen Anfragen auf, läßt sie sich unter
+				System&nbsp;&rarr;&nbsp;Einstellungen im Feld „Gesperrte IP-Adressen“ eintragen.
+				Einzelne Schlüssel sperrt man dagegen am Datensatz unter
+				<a href="<?= $this->tokenUrl ?>">WP&nbsp;|&nbsp;Zugangsschlüssel</a>.
+			</p>
+		<?php endif; ?>
+
+	<?php endif; ?>
+
 </div>

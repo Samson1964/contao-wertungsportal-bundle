@@ -1,5 +1,91 @@
 # Wertungsportal Changelog
 
+## Version 1.12.0 (2026-08-03)
+
+**Beim Aktualisieren:** `contao:migrate` (zwei neue Tabellen), `contao:assets:install`
+(geänderte backend.css) und ein Neuaufbau des Produktions-Caches — es kommt eine neue
+Route hinzu, die sonst nicht bekannt wird.
+
+* Add: **Vereinslisten-Schnittstelle.** Unter `/wertungsportal-api/vereinsliste?token=…&vkz=…`
+  liefert die Website die Mitgliederliste eines Vereins als JSON. Gedacht ist sie für
+  Vereinswebsites, die ihre Spielerliste selbst ausgeben wollen. Gegenüber dem unmittelbaren
+  Zugriff auf nu hat sie zwei Vorteile: Die FIDE-Daten (Elo, Titel, Nation) sind hier
+  aktuell, weil sie beim Abruf aus der eigenen Elo-Tabelle ergänzt werden, und die Antworten
+  laufen über denselben Zwischenspeicher wie das Frontend — die nu-Schnittstelle wird also
+  nicht bei jedem Aufruf belastet. Vollständige Beschreibung in `docs/vereinslisten-api.md`
+* Ausgegeben werden je Spieler nur die Angaben zur Person; der Ballast der nu-Antwort
+  entfällt. Der Mitgliedsstatus (A/P) und die Mitgliedsnummer stammen ausschließlich aus der
+  Mitgliedschaft **im angefragten Verein** — welchen anderen Vereinen jemand angehört, geht
+  den Abrufer nichts an. Gesperrte Personen (Blacklist) fehlen wie im Frontend; sortiert wird
+  umlautsicher nach derselben Regel wie die Aliasfelder
+* Add: **Frontend-Modul „Schnittstellen-Registrierung"**. Formular mit Vereinskennziffer,
+  Vor- und Nachname sowie E-Mail-Adresse; der Schlüssel geht sofort an diese Adresse — mit
+  einem vollständigen PHP-Beispielskript, in dem Schlüssel, Vereinskennziffer und Adresse
+  bereits eingesetzt sind. Die Vereinskennziffer wird gegen den örtlichen Vereinsbestand
+  geprüft, sonst bekäme der Antragsteller einen Schlüssel, der ihm dauerhaft nur Fehler
+  liefert. Eine zweite Anforderung derselben Person für denselben Verein verschickt den
+  vorhandenen Schlüssel erneut, statt einen weiteren anzulegen
+* Add: **Backend-Modul „WP | Zugangsschlüssel"** mit der Schlüsseltabelle und den Zugriffen
+  als Kindtabelle (ein Datensatz je Anfrage mit Zeitpunkt, Quelle, Trefferzahl, Dauer und
+  IP-Adresse). Schlüssel lassen sich am Datensatz sperren (mit Begründung) oder über das
+  Auge-Symbol unveröffentlichen; gesperrte Schlüssel stehen in der Liste durchgestrichen.
+  Die globale Operation „Alte Zugriffe löschen" entfernt alles, was älter als 90 Tage ist
+* Add: Das Statistik-Modul zeigt für den gewählten Zeitraum zusätzlich die Zugriffe je
+  Schlüssel und Verein (Anfragen insgesamt und davon erfolgreich) sowie die abgewiesenen
+  Anfragen je IP-Adresse samt Grund — daraus lässt sich die Sperrliste befüllen
+* Add: Zwei Einstellungen im Bereich Wertungsportal. **Gesperrte IP-Adressen** (eine je
+  Zeile, `#` leitet einen Kommentar ein) weist Anfragen von dort ab. **Neue Schlüssel erst
+  nach Freigabe** legt angeforderte Schlüssel unveröffentlicht an; sie liefern erst nach
+  Freischaltung Daten, und die Bestätigungsmail sagt das auch. Ohne diesen Haken bekommt
+  jeder, der eine Vereinskennziffer kennt, sofort Zugriff auf die Mitgliederliste dieses
+  Vereins — das ist so gewollt, sollte aber eine bewusste Entscheidung sein
+* Bremsen gegen Missbrauch: 120 Anfragen je Stunde und IP-Adresse an die Schnittstelle,
+  fünf Schlüsselanforderungen am Tag je E-Mail-Adresse und je IP, dazu ein für Besucher
+  unsichtbares Feld im Formular (Honigtopf). Die Prüfung der IP-Sperre und die Bremse stehen
+  bewusst **vor** der Parameterprüfung — sonst ließe sich beides mit fehlerhaften Aufrufen
+  umgehen. Abgewiesene Anfragen werden mitgeschrieben, auch die ohne gültigen Schlüssel:
+  sonst bliebe systematisches Raten unsichtbar
+* **Datenschutz:** Die Zugriffstabelle speichert IP-Adressen (Aufbewahrung 90 Tage), der
+  Schlüssel merkt sich die Adresse, von der er angefordert wurde. Beides dient allein der
+  Missbrauchserkennung und gehört in die Datenschutzerklärung
+* Geprüft: Punkt 1 der Aufgabenliste erforderte keine Änderung — die FIDE-Anreicherung läuft
+  in `API::autoQueryIntern()` bereits vor `$cache->store()`, im Zwischenspeicher liegen also
+  angereicherte Antworten
+* Verifiziert mit 147 Tests. 105 davon gegen echtes MySQL (Zugangsprüfung mit allen fünf
+  Abweisungsgründen, Sperre von Schlüssel und IP, Bremse mit 120 Vorbelegungen, Aufbereitung
+  der Spielerliste einschließlich Feldbestand, Statusumsetzung und Sortierung, Protokoll und
+  Zähler, Schlüsselverwaltung, Auswertung, Registrierungsformular mit Honigtopf,
+  Wiederanforderung, Freigabepflicht und gescheitertem Versand); 42 gegen die echte
+  Contao-4.13-Installation (Routenladung, Controller-Antwort, DCA-Struktur, Sprachdateien,
+  Templates). Dabei gefunden: Das ContaoManager-Plugin hatte `LoaderInterface` statt
+  `LoaderResolverInterface` in der Signatur — PHP hätte die Klasse gar nicht erst geladen,
+  und weil das Plugin bei jedem Aufruf geladen wird, hätte das die ganze Seite lahmgelegt.
+  Ebenfalls gefunden: Dem Feld `published` der Schlüsseltabelle fehlte `toggle => true`,
+  ohne das DC_Table den Schalter in der Liste abweist
+
+## Version 1.11.3 (2026-08-03)
+
+**Wichtig beim Aktualisieren:** Das Standardbild für Spieler und das für Vereine müssen in
+den Einstellungen einmal neu ausgewählt und gespeichert werden. Die bisher gespeicherten
+Werte sind beschädigt und werden durch das Update nicht repariert.
+
+* Fix: Die beiden Standardbilder (Einstellungen, Bereich Wertungsportal) blieben in der
+  Karteikarte und auf der Vereinsseite wirkungslos. Der Dateibaum liefert die Kennung der
+  Datei als 16 Byte langen Binärwert; die Einstellungen landen aber in
+  `system/config/localconfig.php`, also in einer PHP-Datei mit einfach gequoteten
+  Zeichenketten. Nullbytes und Backslashes überleben das nicht — aus 16 Byte wurden beim
+  Zurücklesen 19, und `FilesModel::findByUuid()` fand die Datei nie. Ein `save_callback`
+  legt die Kennung jetzt in der lesbaren Schreibweise ab, die dieselbe Methode ebenso
+  versteht. Der Fehler fiel nicht auf, weil im Backend weiterhin ein Bild ausgewählt aussah.
+
+## Version 1.11.2 (2026-08-02)
+
+* Change: Die beiden Auswahllisten der Bildgrößen in den Einstellungen (Spieler- und
+  Vereinsbild) holen den Dienst jetzt unter seinem aktuellen Namen `contao.image.sizes`.
+  Der bisher benutzte Name `contao.image.image_sizes` ist unter Contao 4.13 nur ein
+  veralteter Alias auf denselben Dienst und in Contao 5 entfernt — dort bräche die
+  Einstellungsseite mit „You have requested a non-existent service“ ab.
+
 ## Version 1.11.1 (2026-08-02)
 
 * **Fix: Das Bundle ließ sich neben dem Helper-Bundle 2.0.0 nicht mehr installieren — mit der Folge, dass Composer stillschweigend auf Version 1.0.9 zurückfiel.** Die Anforderung lautete `^1.8.10` und schließt damit alles ab 2.0 aus. Weil 1.0.9 die letzte Fassung ist, die das Helper-Bundle noch als `*` fordert, war sie nach dem Erscheinen der 2.0.0 plötzlich die einzige installierbare — ein Update wurde so zum Downgrade über 30 Versionen hinweg, ohne Fehlermeldung

@@ -1,0 +1,12 @@
+# Öffentliche Schnittstelle des Wertungsportals.
+#
+# Bewusst unterhalb eines eigenen Präfixes, damit die Adresse nicht mit einer
+# Contao-Seite kollidieren kann. Geladen wird die Datei über das
+# ContaoManager-Plugin (RoutingPluginInterface).
+wertungsportal_api_vereinsliste:
+    path: /wertungsportal-api/vereinsliste
+    methods: [GET]
+    defaults:
+        _controller: Schachbulle\ContaoWertungsportalBundle\Controller\VereinslisteController
+        _scope: frontend
+        _token_check: false
