@@ -1,5 +1,15 @@
 # Wertungsportal Changelog
 
+## Version 1.13.2 (2026-08-03)
+
+* Doc: Der Abschnitt „Wenn statt JSON etwas anderes kommt" sagt jetzt auch, **wie man
+  herausfindet, wo die Sperre sitzt**: statische Dateien gegen PHP-Adressen abrufen und
+  vergleichen. Kommen alle statischen Dateien durch, wird aber jede Adresse abgewiesen, die
+  durch PHP läuft — Backend und nicht vorhandene Seiten eingeschlossen —, dann steht die
+  Sperre nicht im Webserver, sondern vor der Anwendung (häufig `auto_prepend_file` des
+  Hosters). Mit dabei: der Einzeiler zum Nachsehen und das Erkennungsmerkmal, daß jede
+  PHP-Adresse zusätzlich `?create_challenge` beantwortet
+
 ## Version 1.13.1 (2026-08-03)
 
 * Change: **Das Beispielskript sagt jetzt, wenn gar nicht die Schnittstelle geantwortet hat.**

@@ -99,8 +99,32 @@ sie eine Zeile hinterlassen, und sei es eine abgewiesene.
 
 Abhilfe gibt es nur auf der Serverseite: Der Pfad `/wertungsportal-api/` muß
 von der Bot-Sperre ausgenommen werden. Am Bundle liegt es nicht, die Anfrage
-erreicht es gar nicht. Am 03.08.2026 war das auf schachbund.de der Fall;
-`/dwz-spieler.html` kam durch, `/wertungsportal-api/vereinsliste` nicht.
+erreicht es gar nicht.
+
+**So findet man heraus, wo die Sperre sitzt.** Ohne Browser abrufen und
+vergleichen:
+
+| Abruf | Sperre in der `.htaccess` | Sperre auf PHP-Ebene |
+|---|---|---|
+| `/robots.txt`, `/favicon.ico` (statisch) | betroffen oder nicht, je nach Regel | kommt durch |
+| `/impressum.html` (normale Seite) | je nach Regel | abgewiesen |
+| `/contao` (Backend) | in aller Regel ausgenommen | abgewiesen |
+
+Werden **alle** statischen Dateien ausgeliefert, aber **jede** Adresse
+abgewiesen, die durch PHP läuft — bis hin zum Backend und zu nicht
+vorhandenen Seiten —, dann steht die Sperre nicht im Webserver, sondern vor
+der Anwendung. Häufig richtet der Hoster so etwas über `auto_prepend_file`
+ein. Nachsehen läßt sich das mit einer kleinen Datei im Webverzeichnis, die
+man **im Browser** aufruft (dort löst sich die Sperre selbst auf):
+
+```php
+<?php echo ini_get('auto_prepend_file') ?: 'nichts eingetragen';
+```
+
+Steht dort ein Pfad, kommt die Sperre von dort — und nur dort (oder beim
+Hoster) läßt sie sich für `/wertungsportal-api/` abschalten. Kennzeichen
+dieser Bauart: Jede PHP-Adresse beantwortet zusätzlich `?create_challenge`
+mit einer JSON-Rechenaufgabe.
 
 ### Bitte beachten
 
