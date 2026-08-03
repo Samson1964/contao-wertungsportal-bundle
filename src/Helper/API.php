@@ -189,9 +189,13 @@ class API
 			}
 		}
 
-		// Live-Abruf in den Einstellungen abgeschaltet: gar nicht erst
-		// verbinden, sondern direkt auf die Notreserve zurückgreifen
-		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_api_aus']))
+		// Live-Abruf in den Einstellungen abgeschaltet oder die Zugangsdaten
+		// noch nicht gepflegt: gar nicht erst verbinden, sondern direkt auf
+		// die Notreserve zurückgreifen. Eine frisch installierte Erweiterung
+		// verhält sich damit wie eine mit gestörter Schnittstelle — sie zeigt
+		// den örtlichen Bestand und einen Hinweis, statt in einen Fehler zu
+		// laufen
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_api_aus']) || !\Schachbulle\ContaoWertungsportalBundle\Helper\OAuth2Client::eingerichtet())
 		{
 			return self::notdaten($cache, $params, false);
 		}

@@ -22,6 +22,11 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_tokens_access'] = [
     'config' => [
         'dataContainer'     => DC_Table::class,
         'ptable'            => 'tl_wertungsportal_tokens',
+        // Anfragen ohne gültigen Schlüssel werden mit pid = 0 aufgezeichnet.
+        // Ohne diesen Schalter räumt DC_Table::reviseTable() sie beim Öffnen
+        // des Backend-Moduls als „verwaiste" Datensätze weg — ausgerechnet die
+        // Zeilen also, wegen denen die Aufzeichnung überhaupt existiert
+        'doNotDeleteRecords' => true,
         'closed'            => true,
         'notCreatable'      => true,
         'notCopyable'       => true,

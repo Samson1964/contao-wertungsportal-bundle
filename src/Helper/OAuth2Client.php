@@ -37,16 +37,39 @@ class OAuth2Client
 	 */
 	protected static int $aufrufe = 0;
 
+	/**
+	 * Prüft, ob die Zugangsdaten der Schnittstelle gepflegt sind.
+	 *
+	 * Ohne Basisadresse, Kennung, Geheimnis und Token-Adresse ist kein Abruf
+	 * möglich. Statisch, damit die Frage beantwortet werden kann, bevor
+	 * überhaupt eine Instanz entsteht.
+	 *
+	 * @return bool true, wenn alle vier Angaben vorliegen
+	 */
+	public static function eingerichtet(): bool
+	{
+		foreach (array('wertungsportal_apiBasisURL', 'wertungsportal_clientID', 'wertungsportal_clientSecret', 'wertungsportal_tokenURL') as $strEinstellung)
+		{
+			if (trim((string) ($GLOBALS['TL_CONFIG'][$strEinstellung] ?? '')) === '') return false;
+		}
+
+		return true;
+	}
+
 	// ─────────────────────────────────────────────
 	//  Konstruktor – initialisiert alle Konfigurationswerte
 	// ─────────────────────────────────────────────
 	public function __construct()
 	{
-		$this->apiBaseUrl    = $GLOBALS['TL_CONFIG']['wertungsportal_apiBasisURL'];
-		$this->clientId      = $GLOBALS['TL_CONFIG']['wertungsportal_clientID'];
-		$this->clientSecret  = str_replace('&#35;', '#', $GLOBALS['TL_CONFIG']['wertungsportal_clientSecret']);
-		$this->tokenEndpoint = $GLOBALS['TL_CONFIG']['wertungsportal_tokenURL'];
-		$this->scope         = $GLOBALS['TL_CONFIG']['wertungsportal_scopeListe'];
+		// Die Einstellungen werden ausdrücklich in Zeichenketten gewandelt:
+		// Solange sie im Backend nicht gepflegt sind, liefert TL_CONFIG null,
+		// und die getypten Eigenschaften quittieren das mit einem TypeError —
+		// also einem 500er auf jeder Seite, die das Bundle einbindet
+		$this->apiBaseUrl    = (string) ($GLOBALS['TL_CONFIG']['wertungsportal_apiBasisURL'] ?? '');
+		$this->clientId      = (string) ($GLOBALS['TL_CONFIG']['wertungsportal_clientID'] ?? '');
+		$this->clientSecret  = str_replace('&#35;', '#', (string) ($GLOBALS['TL_CONFIG']['wertungsportal_clientSecret'] ?? ''));
+		$this->tokenEndpoint = (string) ($GLOBALS['TL_CONFIG']['wertungsportal_tokenURL'] ?? '');
+		$this->scope         = (string) ($GLOBALS['TL_CONFIG']['wertungsportal_scopeListe'] ?? '');
 		$this->cacheFile     = sys_get_temp_dir() . '/oauth2_token_cache.json';
 		$this->timeout       = \Schachbulle\ContaoWertungsportalBundle\Helper\API::timeout();
 
@@ -56,7 +79,7 @@ class OAuth2Client
 		$log .= 'clientSecret = '.rawurldecode($this->clientSecret)."\n";
 		$log .= 'tokenEndpoint = '.$this->tokenEndpoint."\n";
 		$log .= 'scope = '.$this->scope;
-		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 	}
 
 	// ─────────────────────────────────────────────
@@ -82,7 +105,7 @@ class OAuth2Client
 		{
 			unlink($this->cacheFile);
 			$log = "🗑️ Token-Cache gelöscht.\n";
-			if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 		}
 	}
 
@@ -121,7 +144,7 @@ class OAuth2Client
 		if($effectiveUrl !== $this->tokenEndpoint)
 		{
 			$log = "ℹ️ Weitergeleitet zu: $effectiveUrl\n";
-			if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 		}
 
 		if($curlError)
@@ -146,7 +169,7 @@ class OAuth2Client
 	public function fetchNewToken(): array
 	{
 		$log = "🔑 Hole neuen Access Token (client_credentials) ...\n";
-		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 
 		$tokenData = $this->requestToken([
 		    'grant_type'    => 'client_credentials',
@@ -156,7 +179,7 @@ class OAuth2Client
 		]);
 
 		$log = "Neuer Access-Token:\n".print_r($tokenData, true);
-		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 
 		if($tokenData['error'])
 		{
@@ -165,7 +188,7 @@ class OAuth2Client
 
 		$this->saveTokenToCache($tokenData);
 		$log = "✅ Neuer Token erhalten (gültig für {$tokenData['expires_in']} Sekunden).\n";
-		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 		return $tokenData;
 	}
 
@@ -175,7 +198,7 @@ class OAuth2Client
 	public function refreshToken(string $refreshToken): array
 	{
 		$log = "🔄 Erneuere Access Token via Refresh-Token ...\n";
-		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 
 		$tokenData = $this->requestToken([
 			'grant_type'    => 'refresh_token',
@@ -185,7 +208,7 @@ class OAuth2Client
 		]);
 
 		$log = "Neuer Refresh-Token:\n".print_r($tokenData, true);
-		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 
 		if($tokenData['error'])
 		{
@@ -194,7 +217,7 @@ class OAuth2Client
 
 		$this->saveTokenToCache($tokenData);
 		$log = "✅ Token erneuert (gültig für {$tokenData['expires_in']} Sekunden).\n";
-		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 		return $tokenData;
 	}
 
@@ -210,7 +233,7 @@ class OAuth2Client
 			'expires_at'    => time() + $expiresIn,
 		]);
 		$log = "Token gespeichert:\n".print_r($tokenData, true);
-		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 	}
 
 	// ─────────────────────────────────────────────
@@ -229,9 +252,9 @@ class OAuth2Client
 		if(!empty($cache['access_token']) && isset($cache['expires_at']) && time() < ($cache['expires_at'] - 30))
 		{
 			$log = "ℹ️ Verwende gecachten Access Token.\n";
-			if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 			$log = "Gecachter Access-Token:\n".print_r($cache, true);
-			if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 			return ['error' => false, 'access_token' => $cache['access_token']];
 		}
 
@@ -245,7 +268,7 @@ class OAuth2Client
 			}
 			// Refresh-Token ungültig → Cache leeren und neu starten
 			$log = "⚠️ Refresh fehlgeschlagen ({$tokenData['error_message']}), hole neuen Token ...\n";
-			if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 			$this->clearCache();
 		}
 
@@ -379,37 +402,37 @@ class OAuth2Client
 	protected function callApiIntern(string $apiUrl, string $method = 'GET', ?array $body = null): array
 	{
 		$log = 'API-Aufruf: '.$apiUrl."\n";
-		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 
 		// Öffentliche Schnittstellen (alles außer /dwz/persons)
 		// werden ohne Token aufgerufen.
 		if(!$this->requiresToken($apiUrl))
 		{
 			$log = "ℹ️ Öffentlicher Endpunkt (".$apiUrl.") – Aufruf ohne Token.\n";
-			if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 			$result = $this->callApi(null, $apiUrl, $method, $body);
 			$log = "Answer REST-API:\n".print_r($result, true);
-			if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 			return $result;
 		}
 		else
 		{
 			$log = "ℹ️ Geschützter Endpunkt (".$apiUrl.") – Aufruf mit Token.\n";
-			if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 		}
 
 		$tokenResult = $this->getValidToken();
 		if($tokenResult['error'])
 		{
 			$log = "Fehler bei Token-Resultat:\n".print_r($tokenResult, true);
-			if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 			return $tokenResult;
 		}
 
-		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message("Request REST-API: ".$apiUrl, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message("Request REST-API: ".$apiUrl, 'wertungsportal_oauth2client.log');
 		$result = $this->callApi($tokenResult['access_token'], $apiUrl, $method, $body);
 		$log = "Answer REST-API:\n".print_r($result, true);
-		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 
 		if($result['error'])
 		{
@@ -420,7 +443,7 @@ class OAuth2Client
 		if($result['http_code'] === 401)
 		{
 			$log = "⚠️ HTTP 401 – Token wird erneuert ...\n";
-			if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 			$cache = $this->readCache();
 			$this->clearCache();
 
@@ -440,20 +463,20 @@ class OAuth2Client
 
 			$result = $this->callApi($tokenData['access_token'], $apiUrl, $method, $body);
 			$log = "Answer REST-API:\n".print_r($result, true);
-			if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 		}
 
 		if($result['error'])
 		{
 			$log = "❌ Fehler: " . $result['error_message'] . "\n";
-			if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 		}
 		else
 		{
 			$log = "📦 API-Antwort (HTTP {$result['http_code']}):\n";
-			if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 			$log = json_encode($result['body'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
-			if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 		}
 
 		return $result;

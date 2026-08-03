@@ -1,5 +1,37 @@
 # Wertungsportal Changelog
 
+## Version 1.12.1 (2026-08-03)
+
+Beim Einrichten des Bundles in einer frischen Contao-4.13-Installation gefunden.
+
+* **Fix: Eine noch nicht eingerichtete Installation lieferte HTTP 500.** Sobald die
+  Zugangsdaten der Schnittstelle in den Einstellungen fehlten, bekamen die getypten
+  Eigenschaften des OAuth2-Clients `null` und PHP brach mit einem TypeError ab
+  (`Cannot assign null to property … $apiBaseUrl of type string`). Betroffen war jede Seite,
+  die ein Modul einbindet, das beim Aufbau Daten braucht — Verbands- und Turnierseite fielen
+  sofort aus, noch bevor jemand etwas eingegeben hatte. Die Werte werden jetzt ausdrücklich
+  in Zeichenketten gewandelt
+* Zusätzlich prüft `autoQuery()` vor jedem Abruf, ob Basisadresse, Kennung, Geheimnis und
+  Token-Adresse überhaupt gepflegt sind. Fehlt eine davon, wird gar nicht erst verbunden,
+  sondern derselbe Weg wie bei abgeschalteter Schnittstelle genommen: örtlicher Bestand plus
+  Hinweis. Eine frisch installierte Erweiterung verhält sich damit wie eine mit gestörter
+  Schnittstelle statt wie eine kaputte
+* Fix: 25 Abfragen der Einstellung `wertungsportal_debuglog` im OAuth2-Client lösten in einer
+  Installation ohne gespeicherte Einstellungen jeweils eine „Undefined array key"-Warnung aus
+* **Fix: Contao löschte die Aufzeichnung abgewiesener Anfragen.** Anfragen ohne gültigen
+  Zugangsschlüssel werden mit `pid = 0` festgehalten; `DC_Table::reviseTable()` hält solche
+  Zeilen für verwaiste Kinddatensätze und räumt sie beim Öffnen des Backend-Moduls weg — also
+  ausgerechnet die Zeilen, wegen denen die Aufzeichnung existiert. Die Auswertung „Abgewiesene
+  Anfragen je IP-Adresse" wäre damit nach jedem Blick ins Backend leer gewesen. Behoben mit
+  `doNotDeleteRecords` in der Konfiguration der Zugriffstabelle
+* Verifiziert mit 393 Tests, davon 4 neue gegen die echte Contao-4.13-Installation: Sie legen
+  Zeilen ohne Schlüssel an, rufen `reviseTable()` über Reflexion genauso auf wie das
+  Backend und weisen nach, dass die Zeilen stehen bleiben — samt Gegenprobe, dass Contao sie
+  ohne den Schalter für verwaist hielte. Dazu sieben Tests für den nicht eingerichteten Fall
+  (keine Verbindung, Hinweis statt Fehler, Client ohne Absturz erzeugbar, ein leeres Geheimnis
+  genügt nicht). Die älteren Prüfstände setzen jetzt Zugangsdaten, weil sie sonst im neuen
+  Notbetrieb landen statt im gemessenen Fall
+
 ## Version 1.12.0 (2026-08-03)
 
 **Beim Aktualisieren:** `contao:migrate` (zwei neue Tabellen), `contao:assets:install`
