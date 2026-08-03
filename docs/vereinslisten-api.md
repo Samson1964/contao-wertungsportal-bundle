@@ -219,6 +219,10 @@ ist niederschwellig), sollte aber eine bewußte Entscheidung sein.
 * **Zugriffe** (Symbol „Bearbeiten") zeigt je Anfrage eine Zeile mit Zeitpunkt,
   Quelle, Trefferzahl, Dauer und IP-Adresse.
 * **Alte Zugriffe löschen** entfernt alles, was älter als 90 Tage ist.
+* **Wird ein Schlüssel gelöscht, verschwinden seine Zugriffe mit.** Sie enthalten
+  IP-Adressen, und ihr Zweck — die Zugriffe diesem Schlüssel zuzuordnen — endet
+  mit ihm. Die abgewiesenen Anfragen *ohne* gültigen Schlüssel bleiben davon
+  unberührt; sie hängen an keinem Datensatz.
 
 ### Auswertung
 

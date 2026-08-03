@@ -23,6 +23,12 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_tokens'] = [
         'onload_callback'   => [
             ['Schachbulle\ContaoWertungsportalBundle\Classes\TokenVerwaltung', 'zaehlerAktualisieren'],
         ],
+        // Räumt die Zugriffe des Schlüssels mit weg. Contao täte das selbst,
+        // ist hier aber durch das doNotDeleteRecords der Zugriffstabelle
+        // abgeschaltet — siehe die Begründung an der Methode
+        'ondelete_callback' => [
+            ['Schachbulle\ContaoWertungsportalBundle\Classes\TokenVerwaltung', 'zugriffeLoeschen'],
+        ],
         'sql'               => [
             'keys' => [
                 'id'        => 'primary',

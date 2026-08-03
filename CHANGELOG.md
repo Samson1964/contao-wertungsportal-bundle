@@ -1,5 +1,25 @@
 # Wertungsportal Changelog
 
+## Version 1.14.1 (2026-08-03)
+
+* **Fix: Beim Löschen eines Zugangsschlüssels blieben dessen Zugriffe liegen.** Nicht
+  beabsichtigt, sondern eine Nebenwirkung von 1.12.1: Dort bekam die Zugriffstabelle
+  `doNotDeleteRecords`, damit die Anfragen OHNE gültigen Schlüssel (pid = 0) beim Öffnen des
+  Backend-Moduls nicht als verwaist weggeräumt werden. Dieselbe Angabe fragt Contao aber auch
+  in `DC_Table::deleteChilds()` ab — der Schalter schaltet also beides zugleich ab, und über
+  die Konfiguration lässt sich das nicht trennen
+* Die Zugriffe eines gelöschten Schlüssels werden jetzt über ein `ondelete_callback` gezielt
+  mit entfernt. Damit verhält sich das Modul wieder wie in Contao üblich, ohne den Schutz für
+  die Anfragen ohne Schlüssel aufzugeben
+* Warum löschen und nicht behalten: Die Zeilen enthalten IP-Adressen, und ihr Zweck — Zugriffe
+  einem Schlüssel zuzuordnen — endet mit dem Schlüssel. Zurückgeblieben wären sie ohnehin
+  unbrauchbar gewesen: im Backend unsichtbar (die Elternansicht braucht einen vorhandenen
+  Schlüssel) und in der Auswertung eine Zeile ohne Inhaber
+* Verifiziert mit 10 Tests gegen die echte Contao-4.13-Installation, die ein
+  `DC_Table::delete()` wie im Backend ausführen: Schlüssel weg, seine Zugriffe weg, die
+  Zugriffe eines zweiten Schlüssels unberührt, die abgewiesene Anfrage ohne Schlüssel weiterhin
+  vorhanden und in der Auswertung sichtbar
+
 ## Version 1.14.0 (2026-08-03)
 
 * Add: **Backend-Modul „WP | Zwischenspeicher"** — löscht die Cache-Einträge zu *einem*
