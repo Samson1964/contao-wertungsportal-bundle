@@ -324,7 +324,7 @@ class Helper extends \Frontend
 	 */
 	public static function getSpielerseite($alias = true)
 	{
-		if($GLOBALS['TL_CONFIG']['wertungsportal_seite_spieler'])
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_seite_spieler']))
 		{
 			$pageModel = \PageModel::findByPK($GLOBALS['TL_CONFIG']['wertungsportal_seite_spieler']);
 
@@ -352,7 +352,7 @@ class Helper extends \Frontend
 	 */
 	public static function getTurnierseite($alias = true)
 	{
-		if($GLOBALS['TL_CONFIG']['wertungsportal_seite_turnier'])
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_seite_turnier']))
 		{
 			$pageModel = \PageModel::findByPK($GLOBALS['TL_CONFIG']['wertungsportal_seite_turnier']);
 
@@ -380,7 +380,7 @@ class Helper extends \Frontend
 	 */
 	public static function getVereinseite($alias = true)
 	{
-		if($GLOBALS['TL_CONFIG']['wertungsportal_seite_verein'])
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_seite_verein']))
 		{
 			$pageModel = \PageModel::findByPK($GLOBALS['TL_CONFIG']['wertungsportal_seite_verein']);
 
@@ -409,7 +409,7 @@ class Helper extends \Frontend
 	 */
 	public static function getVerbandseite($alias = true)
 	{
-		if($GLOBALS['TL_CONFIG']['wertungsportal_seite_verband'])
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_seite_verband']))
 		{
 			$pageModel = \PageModel::findByPK($GLOBALS['TL_CONFIG']['wertungsportal_seite_verband']);
 
@@ -496,7 +496,7 @@ class Helper extends \Frontend
 		$mitglied = self::getMitglied(); // Daten des aktuellen Mitgliedes laden
 
 		// Sperrstatus festlegen
-		if($GLOBALS['TL_CONFIG']['wertungsportal_karteisperre_gaeste']) $gesperrt = $mitglied->id ? false : true;
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_karteisperre_gaeste'])) $gesperrt = $mitglied->id ? false : true;
 		else $gesperrt = false;
 		
 		return $gesperrt;
@@ -1225,17 +1225,25 @@ class Helper extends \Frontend
 		{
 			if(empty($result['cachequelle'])) return '';
 			$ablauf = isset($result['cacheablauf']) ? (int) $result['cacheablauf'] : 0;
+			$stand = isset($result['cachestand']) ? (int) $result['cachestand'] : 0;
 		}
 		else
 		{
 			$status = \Schachbulle\ContaoWertungsportalBundle\Helper\API::cacheStatus();
 			if($status === false) return ''; // nichts kam aus dem Zwischenspeicher
 			$ablauf = (int) $status;
+			$stand = (int) \Schachbulle\ContaoWertungsportalBundle\Helper\API::cacheStand();
 		}
 
-		if($ablauf <= 0) return 'Diese Daten stammen aus dem Zwischenspeicher.';
+		// Der Speicherzeitpunkt ist die wichtigere Angabe: Bei einer Cachezeit
+		// von einer Woche sagt „gültig bis" wenig darüber, wie alt der
+		// angezeigte Stand ist
+		$woher = 'Diese Daten stammen aus dem Zwischenspeicher';
+		if($stand > 0) $woher .= ' vom '.\Date::parse($format, $stand).' Uhr';
 
-		return 'Diese Daten stammen aus dem Zwischenspeicher und werden am '.\Date::parse($format, $ablauf).' Uhr erneuert.';
+		if($ablauf <= 0) return $woher.'.';
+
+		return $woher.' und werden am '.\Date::parse($format, $ablauf).' Uhr erneuert.';
 	}
 
 	/**

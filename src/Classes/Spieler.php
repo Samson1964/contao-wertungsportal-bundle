@@ -77,7 +77,7 @@ class Spieler extends \Module
 		$mitglied = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getMitglied(); // Daten des aktuellen Mitgliedes laden
 
 		// Sperrstatus festlegen
-		if($GLOBALS['TL_CONFIG']['wertungsportal_karteisperre_gaeste']) $gesperrt = $mitglied->id ? false : true;
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_karteisperre_gaeste'])) $gesperrt = $mitglied->id ? false : true;
 		else $gesperrt = false;
 
 		/*********************************************************

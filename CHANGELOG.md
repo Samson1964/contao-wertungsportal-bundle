@@ -1,5 +1,31 @@
 # Wertungsportal Changelog
 
+## Version 1.15.0 (2026-08-03)
+
+* Add: **Der Cache-Hinweis nennt jetzt auch, von wann die Daten sind** — „Diese Daten stammen
+  aus dem Zwischenspeicher vom 31.07.2026 09:15 Uhr und werden am 01.08.2026 14:30 Uhr
+  erneuert." Bei einer Cachezeit von einer Woche sagt „gültig bis" wenig darüber, wie alt der
+  angezeigte Stand tatsächlich ist. Kamen mehrere Abfragen einer Seite aus dem
+  Zwischenspeicher, gilt der **älteste** Zeitpunkt: Der Hinweis soll die Seite nicht jünger
+  darstellen, als ihr ältester Bestandteil ist
+* **Fix: DWZ-Umstufungen standen in der Karteikarte an der falschen Stelle.** Bei gleichem
+  Datum entschied bisher die Art des Eintrags — jetzt entscheidet der **DWZ-Index**, der die
+  Auswertungen durchzählt und damit die eigentliche Chronologie abbildet. Gemeldeter Fall
+  NU4342718 (beides am 07.06.2026): Der 16. RLP-Open ergibt 1389-20 → 1366-21, darauf setzt
+  die „Umstufung 2026" mit 1366-21 → 1634-22 auf. Die Umstufung gehört also darüber
+* Damit sitzt auch **AKT** wieder richtig: Es markierte die Zeile mit 1366-21, während die
+  Kopfzeile der Karteikarte 1634-22 zeigte. Die Index-Spalte lief entsprechend 21, 22, 20
+  statt lückenlos abwärts
+* Fix: Sieben weitere ungeschützte Zugriffe auf Wertungsportal-Einstellungen
+  (`wertungsportal_seite_spieler|_turnier|_verein|_verband`, `karteisperre_gaeste`,
+  `historie`) lösten in einer Installation ohne gespeicherte Einstellungen jeweils eine
+  „Undefined array key"-Warnung aus
+* Verifiziert mit 537 Tests, davon 11 neue zur Reihenfolge (der gemeldete Fall mit echten
+  Daten, der umgekehrte Fall mit der Umstufung VOR dem Turnier, verschiedene Tage, fehlender
+  Index, reine Turnierliste) und 7 zum Cache-Hinweis. Der gemeldete Fall wurde zusätzlich
+  gegen die echte Schnittstelle nachgestellt: Kopfzeile 1634-22, oberste Zeile AKT mit
+  1634-22, darunter 21, 20, 19
+
 ## Version 1.14.2 (2026-08-03)
 
 * Change: **Die Zugriffe eines gelöschten Zugangsschlüssels bleiben doch erhalten** und

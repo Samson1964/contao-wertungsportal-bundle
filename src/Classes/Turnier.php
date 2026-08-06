@@ -72,7 +72,7 @@ class Turnier extends \Module
 		$view = \Input::get('view'); // View
 
 		// GET-Parameter nur bei aktiviertem Debug-Log protokollieren
-		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']))
 		{
 			$log = "GET-Parameter Turnier-Klasse\n";
 			$log .= print_r($_GET, true)."\n";

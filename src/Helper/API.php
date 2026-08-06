@@ -36,6 +36,13 @@ class API
 	protected static $stoerungGemeldet = false;
 
 	/**
+	 * Speicherzeitpunkte der in diesem Seitenaufruf aus dem Zwischenspeicher
+	 * gelesenen Einträge. Daraus nennt der Hinweis, von wann die angezeigten
+	 * Daten sind — nicht nur, bis wann sie gelten.
+	 */
+	protected static $cacheStand = array();
+
+	/**
 	 * Meldung, die angezeigt wird, wenn die Schnittstelle nicht zur
 	 * Verfügung steht — abgeschaltet oder ohne Antwort.
 	 */
@@ -289,8 +296,15 @@ class API
 		$ablauf = $cache->getExpiration($params['cachekey']);
 		self::$cacheTreffer[] = $ablauf;
 
+		// Speicherzeitpunkt: Der Hinweis nennt damit nicht nur, bis wann die
+		// Daten gelten, sondern auch von wann sie sind — bei einer Cachezeit
+		// von einer Woche ist das der weit wichtigere Wert
+		$stand = $cache->getStoreTime($params['cachekey']);
+		if($stand > 0) self::$cacheStand[] = (int) $stand;
+
 		$cache_result['cachequelle'] = true;
 		$cache_result['cacheablauf'] = $ablauf;
+		$cache_result['cachestand'] = (int) $stand;
 
 		// Notdaten bleiben als solche erkennbar, auch wenn sie zwischenzeitlich
 		// mit einer Notfrist neu datiert wurden und damit wieder als „gültig"
@@ -1011,6 +1025,24 @@ class API
 		$zeiten = array_filter(self::$cacheTreffer, function($wert) { return $wert > 0; });
 
 		return count($zeiten) ? min($zeiten) : null;
+	}
+
+	/**
+	 * Speicherzeitpunkt der auf dieser Seite aus dem Zwischenspeicher
+	 * gelesenen Daten.
+	 *
+	 * Kamen mehrere Abfragen aus dem Zwischenspeicher, gilt der ÄLTESTE
+	 * Zeitpunkt: Der Hinweis soll nicht jünger klingen, als die Seite in ihrem
+	 * ältesten Bestandteil tatsächlich ist.
+	 *
+	 * @return int|false Zeitstempel, oder false wenn nichts aus dem
+	 *                   Zwischenspeicher kam bzw. kein Zeitpunkt vorliegt
+	 */
+	public static function cacheStand()
+	{
+		if(!count(self::$cacheStand)) return false;
+
+		return min(self::$cacheStand);
 	}
 
 	/**

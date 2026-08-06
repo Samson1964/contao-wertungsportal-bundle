@@ -134,19 +134,27 @@ class Karteikarte
 			$eintraege = array();
 			foreach($entries as $turnier)
 			{
-				$eintraege[] = array('typ' => 'turnier', 'datum' => (string) ($turnier['tournament']['enddate'] ?? ''), 'data' => $turnier);
+				$eintraege[] = array('typ' => 'turnier', 'datum' => (string) ($turnier['tournament']['enddate'] ?? ''), 'index' => (int) ($turnier['player']['indexNew'] ?? 0), 'data' => $turnier);
 			}
 			foreach($upgrades as $up)
 			{
-				$eintraege[] = array('typ' => 'upgrade', 'datum' => (string) ($up['referenceDate'] ?? ''), 'data' => $up);
+				$eintraege[] = array('typ' => 'upgrade', 'datum' => (string) ($up['referenceDate'] ?? ''), 'index' => (int) ($up['indexNew'] ?? 0), 'data' => $up);
 			}
 
-			// Absteigend nach Datum (neueste zuerst); bei gleichem Datum
-			// gewinnt das Turnier (das Upgrade baut darauf auf)
+			// Absteigend nach Datum (neueste zuerst). Bei gleichem Datum
+			// entscheidet der DWZ-INDEX, nicht die Art des Eintrags: Er zählt
+			// die Auswertungen durch und ist damit die eigentliche
+			// Chronologie. Beispiel NU4342718 (beides am 07.06.2026):
+			// 16. RLP-Open 1389-20 → 1366-21, danach die Umstufung 2026
+			// 1366-21 → 1634-22 — die Umstufung baut auf dem Turnierergebnis
+			// auf und gehört deshalb darüber. Nur wenn auch der Index nichts
+			// hergibt, steht die Umstufung oben
 			usort($eintraege, function($a, $b)
 			{
-				if($a['datum'] === $b['datum']) return ($a['typ'] === 'turnier') ? -1 : 1;
-				return strcmp($b['datum'], $a['datum']);
+				if($a['datum'] !== $b['datum']) return strcmp($b['datum'], $a['datum']);
+				if($a['index'] !== $b['index']) return $b['index'] <=> $a['index'];
+
+				return ($a['typ'] === 'upgrade') ? -1 : 1;
 			});
 
 			// Durchgehende Nummerierung über ALLE Einträge (Turniere UND
