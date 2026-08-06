@@ -1130,10 +1130,14 @@ class API
 	 * sollen, kann für alte trotzdem eine Cachezeit eingestellt sein — dann
 	 * muss der Cache-Speicher angelegt werden.
 	 *
+	 * Öffentlich statt geschützt, seit der Vorlade-Cronjob
+	 * (Cron\TurnierVorlader) vorab wissen muss, ob ein Vorladen überhaupt
+	 * gespeichert würde — sonst liefe er täglich ins Leere.
+	 *
 	 * @param       String $funktion
 	 * @return      Boolean
 	 */
-	protected static function cacheAktiv($funktion)
+	public static function cacheAktiv($funktion)
 	{
 		if(empty($GLOBALS['TL_CONFIG']['wertungsportal_cache'])) return false;
 		if(self::cachezeit($funktion) != 0) return true;

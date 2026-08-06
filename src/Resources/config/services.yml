@@ -6,6 +6,12 @@ services:
         arguments:
             - '@contao.framework'
 
+    # Täglicher Cronjob: lädt Turnierdaten der letzten Wochen vor, damit nicht
+    # jeder erste Besucher auf die Schnittstelle warten muss
+    Schachbulle\ContaoWertungsportalBundle\Cron\TurnierVorlader:
+        tags:
+            - { name: contao.cronjob, interval: daily }
+
     # Füllt die Suchalias-Felder des Bestands beim contao:migrate.
     # Ausdrücklich registriert, weil dieses Bundle ohne Autoconfigure arbeitet
     Schachbulle\ContaoWertungsportalBundle\Migration\AliasMigration:

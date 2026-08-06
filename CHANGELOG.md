@@ -1,5 +1,31 @@
 # Wertungsportal Changelog
 
+## Version 1.16.0 (2026-08-06)
+
+* Add: **Täglicher Cronjob, der Turnierdaten vorlädt.** Turnierauswertungen, -ergebnisse und
+  Spielberichtsbögen kamen nur zu 4, 5 und 3 Prozent aus dem Zwischenspeicher — bei frischen
+  Turnieren wartete also praktisch jeder erste Besucher auf die Schnittstelle. Der Lauf holt
+  die Turniere der **letzten 30 Tage**, von denen noch nichts im Zwischenspeicher liegt.
+  Vorhandene Einträge bleiben unangetastet, auch abgelaufene: Die sind die Notreserve, und der
+  nächste Seitenaufruf frischt sie ohnehin auf
+* Gearbeitet wird in **drei Durchgängen nach Wichtigkeit** — erst die Auswertungen aller
+  Turniere, dann die Ergebnisse, zuletzt die Spielberichtsbögen (die sind je Spieler ein
+  eigener Abruf und würden das Budget sonst für ein einziges Turnier verbrauchen). Reicht die
+  Zeit nicht, haben so mehr Turniere wenigstens ihre Auswertung. Zuerst die gewerteten
+  Turniere, darin die jüngsten
+* **Die Laufzeitgrenze wird eingehalten:** Der Lauf endet nach 20 Sekunden und macht am
+  nächsten Tag weiter. Ist die Skriptlaufzeit begrenzt (im Web-Betrieb üblich 30 Sekunden),
+  fällt das Budget entsprechend kleiner aus — nach dem letzten Budgettest läuft ein begonnener
+  Abruf noch bis zu seiner Wartezeit weiter. Aus demselben Grund setzt der Lauf die Wartezeit
+  der Schnittstelle für sich auf 8 Sekunden herunter (eine kürzere Einstellung bleibt)
+* Neue Einstellung **„Tägliches Vorladen abschalten"** im Bereich Wertungsportal. Der Lauf
+  unterbleibt ohnehin, wenn der Live-Abruf aus ist, keine Zugangsdaten hinterlegt sind oder
+  der Zwischenspeicher für Turnierauswertungen auf „aus" steht
+* Hat ein Lauf etwas geholt, steht das im Systemlog („79 Turnierabrufe vorgeladen …"); ein
+  Lauf ohne Abrufe schreibt nichts, sonst stünde dort jeden Tag eine Nullmeldung
+* Doku: `docs/vorladen.md`. Beim Deployment nur Cache-Rebuild nötig (neuer Dienst), keine
+  Datenbankänderung
+
 ## Version 1.15.0 (2026-08-03)
 
 * Add: **Der Cache-Hinweis nennt jetzt auch, von wann die Daten sind** — „Diese Daten stammen
