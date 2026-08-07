@@ -1,5 +1,32 @@
 # Wertungsportal Changelog
 
+## Version 1.16.1 (2026-08-07)
+
+* **Fix: Der Verteiler der Schnittstelle las Parameter ungeschützt.** In `API::getAPI()` griff
+  der Fall „Turnierliste" ohne Absicherung auf `zps`, `suche`, `von` und `bis` zu — fehlte einer
+  davon, gab PHP 8 eine „Undefined array key"-Meldung aus. Es ist dieselbe Bauart, die 1.15.0
+  schon an sieben Stellen bei den Einstellungen abgestellt hat; aufgefallen ist sie bei einem
+  Aufruf ohne `suche`
+* Im laufenden Betrieb blieb das unsichtbar, weil das Turniermodul stets alle vier Angaben
+  füllt. Ein Aufruf aus einem Cronjob, einem Prüfstand oder künftigem Code tut das nicht
+  zwingend — und dann steht die Meldung mitten in der Ausgabe
+* Mitgenommen: **derselbe Fehler in allen übrigen Fällen des Verteilers** — `vorname` und
+  `nachname` (Spielerliste), `id` (Karteikarte, Turnierhistorie), `turnier` (Turnierinfo,
+  Turnierauswertung, Turnierergebnisse, Spielberichtsbogen), `zps` (Vereinsliste, Vereinsname,
+  Verbandsliste) sowie `limit`, `geschlecht`, `alter_von` und `alter_bis` (Verbandsliste).
+  Zusammen sind es 22 abgesicherte Zugriffe, die Auswahl der Funktion selbst eingeschlossen
+* Ebenfalls abgestellt: Bei **unbekannter oder fehlender Funktion** blieb die Antwortvariable
+  unbelegt, der Aufrufer bekam „Undefined variable $result" samt Folgefehlern. Jetzt kommt eine
+  Fehlerantwort im Format der Schnittstelle mit HTTP-Code 400 — bewusst nicht 0, denn die 0
+  steht für „keine Antwort" und löste den Notbetrieb samt irreführender Störmeldung im
+  Systemlog aus
+* Für vollständige Aufrufe ändert sich nichts: Die gebauten Abfrage-URLs sind Zeichen für
+  Zeichen dieselben. Reine Vorsorge, kein Verhalten, das jemand nachstellen müsste
+* Verifiziert mit 754 Prüfpunkten der Testreihen, davon 62 neue (`test_apiparams.php`): jeder
+  Fall des Verteilers einmal vollständig (URL unverändert) und einmal mit fehlenden Angaben,
+  wobei jede PHP-Meldung als Fehlschlag zählt. Gegenprobe mit demselben Test gegen den Stand
+  1.16.0: dort 23 Beanstandungen, hier keine
+
 ## Version 1.16.0 (2026-08-06)
 
 * Add: **Täglicher Cronjob, der Turnierdaten vorlädt.** Turnierauswertungen, -ergebnisse und
