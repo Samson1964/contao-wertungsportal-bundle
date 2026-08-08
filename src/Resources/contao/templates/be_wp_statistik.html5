@@ -69,6 +69,7 @@
 				<span><i style="background:<?= $this->farbeApi ?>"></i> von der API</span>
 				<span><i style="background:<?= $this->farbeCache ?>"></i> aus dem lokalen Cache</span>
 				<span><i style="background:<?= $this->farbeLokal ?>"></i> aus dem örtlichen Datenbestand</span>
+				<span><i style="background:<?= $this->farbeVorlader ?>"></i> nächtliches Vorladen (keine Besucher)</span>
 			</div>
 			<div class="wp-stat-scroll">
 				<?= $this->diagramm ?>
@@ -86,6 +87,7 @@
 					<th class="rechts">örtlich</th>
 					<th class="rechts">gesamt</th>
 					<th class="rechts">ohne API</th>
+					<th class="rechts" title="Abrufe des nächtlichen Cronjobs — nicht in „gesamt“ und „ohne API“ enthalten">vorgeladen</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -100,6 +102,7 @@
 						<td class="rechts"><?= number_format($z['lokal'], 0, ',', '.') ?></td>
 						<td class="rechts"><strong><?= number_format($z['gesamt'], 0, ',', '.') ?></strong></td>
 						<td class="rechts"><?= $z['gesamt'] ? $z['quote'].' %' : '&ndash;' ?></td>
+						<td class="rechts wp-stat-neben"><?= $z['vorlader'] ? number_format($z['vorlader'], 0, ',', '.') : '&ndash;' ?></td>
 					</tr>
 				<?php endforeach; ?>
 			</tbody>
@@ -111,6 +114,7 @@
 					<td class="rechts"><strong><?= number_format($this->gesamt['lokal'], 0, ',', '.') ?></strong></td>
 					<td class="rechts"><strong><?= number_format($this->gesamt['gesamt'], 0, ',', '.') ?></strong></td>
 					<td class="rechts"><strong><?= $this->gesamt['quote'] ?> %</strong></td>
+					<td class="rechts wp-stat-neben"><strong><?= $this->gesamt['vorlader'] ? number_format($this->gesamt['vorlader'], 0, ',', '.') : '&ndash;' ?></strong></td>
 				</tr>
 			</tfoot>
 		</table>

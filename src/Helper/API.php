@@ -1112,14 +1112,47 @@ class API
 	}
 
 	/**
+	 * Merker: Läuft gerade der nächtliche Vorlader?
+	 * @var bool
+	 */
+	protected static $vorladen = false;
+
+	/**
+	 * Schaltet die Zählung auf den Vorlader um oder zurück.
+	 *
+	 * Der Vorlader holt bewusst über denselben Weg wie das Frontend
+	 * (autoQuery), damit Cachezeiten, Abgleich und Zählung identisch sind.
+	 * Damit landen aber auch seine Abrufe in der Statistik — und weil er in
+	 * einer Nacht ein Vielfaches dessen holt, was Besucher an einem Tag
+	 * auslösen, wäre danach nicht mehr zu erkennen, wie gut der
+	 * Zwischenspeicher die BESUCHER bedient. Deshalb schaltet er für die Dauer
+	 * seines Laufs auf eine eigene Quelle um.
+	 *
+	 * Aufzurufen paarweise in einem try/finally — bleibt der Schalter stehen,
+	 * würden im Web-Betrieb die Abrufe des restlichen Seitenaufrufs
+	 * falsch verbucht.
+	 *
+	 * @param  bool $an true zu Beginn des Laufs, false am Ende
+	 * @return void
+	 */
+	public static function vorladen($an)
+	{
+		self::$vorladen = (bool) $an;
+	}
+
+	/**
 	 * Zählt einen Abruf für die Statistik
 	 *
 	 * @param       String $funktion   interne Funktion
-	 * @param       String $quelle     'api' oder 'cache'
+	 * @param       String $quelle     'api', 'cache' oder 'lokal'
 	 */
 	protected static function zaehleAbruf($funktion, $quelle)
 	{
 		$endpunkte = self::endpunkte();
+
+		// Während des Vorladens zählt alles auf dessen Konto — auch die
+		// Cache-Treffer, denn ausgelöst hat sie kein Besucher
+		if(self::$vorladen) $quelle = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::QUELLE_VORLADER;
 
 		\Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::zaehle
 		(

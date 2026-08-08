@@ -112,6 +112,27 @@ Der Lauf tut außerdem nichts, wenn der Live-Abruf abgeschaltet ist, keine
 Zugangsdaten hinterlegt sind oder der Zwischenspeicher für Turnierauswertungen
 auf „aus" steht — vorzuladen gäbe es dann nichts.
 
+## In der Statistik
+
+Der Vorlader holt über denselben Weg wie das Frontend (`API::autoQuery`) und
+wird deshalb mitgezählt — aber unter einer **eigenen Quelle „vorlader"** neben
+api, cache und lokal.
+
+Das ist kein Schönheitsfehler, sondern nötig: Der Vorlader macht in einer Nacht
+ein Vielfaches dessen, was Besucher an einem Tag auslösen. Zusammengezählt wäre
+nicht mehr zu erkennen, wie gut der Zwischenspeicher die **Besucher** bedient —
+und genau diese Zahl war der Anlass für den Vorlader. Deshalb:
+
+* Die Spalten „gesamt" und „ohne API" im Backend-Modul zählen weiter nur die
+  Besucherabrufe. Der Vorlader steht abgesetzt in einer eigenen Spalte.
+* Im Diagramm sitzt er als grauer Abschnitt oben auf dem Balken, außerhalb der
+  blauen Reihe der Besucherquellen.
+
+Umgeschaltet wird über `API::vorladen(true|false)`, gesetzt vom Cronjob in
+einem `try`/`finally`. Bleibt der Schalter stehen, würden im Web-Betrieb die
+Abrufe des restlichen Seitenaufrufs falsch verbucht — deshalb dort niemals ohne
+`finally` arbeiten.
+
 ## Voraussetzung: ein echter Cronjob beim Hoster
 
 **Ohne den bleibt es faktisch bei einem Lauf je Nacht.** Contao führt Cronjobs

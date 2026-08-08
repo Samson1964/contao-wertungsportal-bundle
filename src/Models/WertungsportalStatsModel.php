@@ -21,7 +21,7 @@ use Contao\Model\Collection;
  * @property string $datum      Tag der Zählung (JJJJ-MM-TT)
  * @property string $funktion   interne Funktion (z. B. Spielerliste)
  * @property string $endpunkt   API-Pfad (z. B. /dwz/dwzliste/persons)
- * @property string $quelle     api | cache
+ * @property string $quelle     api | cache | lokal | vorlader
  * @property int    $anzahl     Abrufe an diesem Tag
  *
  * @method static WertungsportalStatsModel|null findById($id, array $opt = [])
@@ -36,6 +36,19 @@ class WertungsportalStatsModel extends Model
     public const QUELLE_API = 'api';
     public const QUELLE_CACHE = 'cache';
     public const QUELLE_LOKAL = 'lokal';
+
+    /**
+     * Abrufe des nächtlichen Vorladers (Cron\TurnierVorlader).
+     *
+     * Bewusst eine eigene Quelle und nicht QUELLE_API: Der Vorlader macht in
+     * einer Nacht ein Vielfaches dessen, was Besucher an einem Tag auslösen.
+     * Zusammengezählt wäre nicht mehr zu erkennen, wie gut der
+     * Zwischenspeicher die Besucher bedient — und genau diese Zahl war der
+     * Anlass für den Vorlader.
+     *
+     * Der Wert ist genau 8 Zeichen lang; die Spalte fasst nicht mehr.
+     */
+    public const QUELLE_VORLADER = 'vorlader';
 
     /**
      * Zählt einen Abruf. Der Datensatz des Tages wird angelegt oder sein
@@ -65,7 +78,11 @@ class WertungsportalStatsModel extends Model
     /**
      * Liefert die Summen je Funktion und Quelle für einen Zeitraum.
      *
-     * @return array funktion => ['api' => x, 'cache' => y, 'lokal' => l, 'gesamt' => z]
+     * `gesamt` zählt NUR die Besucherabrufe (api + cache + lokal). Der
+     * Vorlader bleibt außen vor, damit die davon abgeleitete Quote weiter
+     * beantwortet, wie gut der Zwischenspeicher die Besucher bedient.
+     *
+     * @return array funktion => ['api' => x, 'cache' => y, 'lokal' => l, 'vorlader' => v, 'gesamt' => z]
      */
     public static function summenNachFunktion(string $strVon, string $strBis): array
     {
@@ -80,12 +97,16 @@ class WertungsportalStatsModel extends Model
                 $strFunktion = (string) $objRows->funktion;
 
                 if (!isset($arrReturn[$strFunktion])) {
-                    $arrReturn[$strFunktion] = ['api' => 0, 'cache' => 0, 'lokal' => 0, 'gesamt' => 0];
+                    $arrReturn[$strFunktion] = ['api' => 0, 'cache' => 0, 'lokal' => 0, 'vorlader' => 0, 'gesamt' => 0];
                 }
 
                 $intSumme = (int) $objRows->summe;
-                $arrReturn[$strFunktion][(string) $objRows->quelle] = $intSumme;
-                $arrReturn[$strFunktion]['gesamt'] += $intSumme;
+                $strQuelle = (string) $objRows->quelle;
+                $arrReturn[$strFunktion][$strQuelle] = $intSumme;
+
+                if (self::QUELLE_VORLADER !== $strQuelle) {
+                    $arrReturn[$strFunktion]['gesamt'] += $intSumme;
+                }
             }
         } catch (\Throwable $e) {
             return [];
@@ -99,7 +120,7 @@ class WertungsportalStatsModel extends Model
      *
      * @param string $strFunktion leer = alle Funktionen zusammen
      *
-     * @return array datum => ['api' => x, 'cache' => y, 'lokal' => l]
+     * @return array datum => ['api' => x, 'cache' => y, 'lokal' => l, 'vorlader' => v]
      */
     public static function verlauf(string $strVon, string $strBis, string $strFunktion = ''): array
     {
@@ -122,7 +143,7 @@ class WertungsportalStatsModel extends Model
                 $strDatum = (string) $objRows->datum;
 
                 if (!isset($arrReturn[$strDatum])) {
-                    $arrReturn[$strDatum] = ['api' => 0, 'cache' => 0, 'lokal' => 0];
+                    $arrReturn[$strDatum] = ['api' => 0, 'cache' => 0, 'lokal' => 0, 'vorlader' => 0];
                 }
 
                 $arrReturn[$strDatum][(string) $objRows->quelle] = (int) $objRows->summe;
@@ -139,7 +160,7 @@ class WertungsportalStatsModel extends Model
      *
      * @param string $strRaster 'woche' oder 'monat'
      *
-     * @return array bezeichnung => ['api' => x, 'cache' => y, 'lokal' => l, 'sortier' => s]
+     * @return array bezeichnung => ['api' => x, 'cache' => y, 'lokal' => l, 'vorlader' => v, 'sortier' => s]
      */
     public static function summenNachRaster(string $strVon, string $strBis, string $strRaster = 'monat', string $strFunktion = ''): array
     {
@@ -167,7 +188,7 @@ class WertungsportalStatsModel extends Model
                 $strGruppeWert = (string) $objRows->gruppe;
 
                 if (!isset($arrReturn[$strGruppeWert])) {
-                    $arrReturn[$strGruppeWert] = ['api' => 0, 'cache' => 0, 'lokal' => 0, 'erster' => (string) $objRows->erster];
+                    $arrReturn[$strGruppeWert] = ['api' => 0, 'cache' => 0, 'lokal' => 0, 'vorlader' => 0, 'erster' => (string) $objRows->erster];
                 }
 
                 $arrReturn[$strGruppeWert][(string) $objRows->quelle] = (int) $objRows->summe;

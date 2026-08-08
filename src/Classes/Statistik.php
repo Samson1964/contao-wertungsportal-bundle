@@ -42,6 +42,10 @@ class Statistik extends \BackendModule
 	const FARBE_CACHE = '#7FB3D5';
 	const FARBE_API   = '#1F618D';
 
+	// Der Vorlader fällt bewusst aus der blauen Reihe: Er ist keine
+	// Besucheranfrage, sondern Technik im Hintergrund
+	const FARBE_VORLADER = '#9E9E9E';
+
 	/**
 	 * Generate the module
 	 */
@@ -96,11 +100,12 @@ class Statistik extends \BackendModule
 		$summen = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::summenNachFunktion($von, $bis);
 
 		$zeilen = array();
-		$gesamt = array('api' => 0, 'cache' => 0, 'lokal' => 0, 'gesamt' => 0);
+		$leer = array('api' => 0, 'cache' => 0, 'lokal' => 0, 'vorlader' => 0, 'gesamt' => 0);
+		$gesamt = $leer;
 
 		foreach($endpunkte as $name => $pfad)
 		{
-			$werte = isset($summen[$name]) ? $summen[$name] : array('api' => 0, 'cache' => 0, 'lokal' => 0, 'gesamt' => 0);
+			$werte = isset($summen[$name]) ? $summen[$name] : $leer;
 
 			$zeilen[] = array
 			(
@@ -109,8 +114,11 @@ class Statistik extends \BackendModule
 				'api'      => $werte['api'],
 				'cache'    => $werte['cache'],
 				'lokal'    => $werte['lokal'],
+				'vorlader' => $werte['vorlader'],
 				'gesamt'   => $werte['gesamt'],
-				// Anteil der Abrufe, die die Schnittstelle nicht belastet haben
+				// Anteil der Abrufe, die die Schnittstelle nicht belastet haben.
+				// Der Vorlader steckt bewusst weder in Zähler noch Nenner: Die
+				// Quote soll sagen, wie gut die BESUCHER bedient werden
 				'quote'    => $werte['gesamt'] ? round(($werte['cache'] + $werte['lokal']) * 100 / $werte['gesamt']) : 0,
 				'aktiv'    => ($funktion === $name),
 			);
@@ -118,6 +126,7 @@ class Statistik extends \BackendModule
 			$gesamt['api'] += $werte['api'];
 			$gesamt['cache'] += $werte['cache'];
 			$gesamt['lokal'] += $werte['lokal'];
+			$gesamt['vorlader'] += $werte['vorlader'];
 			$gesamt['gesamt'] += $werte['gesamt'];
 		}
 
@@ -146,10 +155,11 @@ class Statistik extends \BackendModule
 
 				$balken[] = array
 				(
-					'titel' => date('d.m.', $zeiger),
-					'cache' => isset($tage[$tag]) ? (int) $tage[$tag]['cache'] : 0,
-					'lokal' => isset($tage[$tag]) ? (int) $tage[$tag]['lokal'] : 0,
-					'api'   => isset($tage[$tag]) ? (int) $tage[$tag]['api'] : 0,
+					'titel'    => date('d.m.', $zeiger),
+					'cache'    => isset($tage[$tag]) ? (int) $tage[$tag]['cache'] : 0,
+					'lokal'    => isset($tage[$tag]) ? (int) $tage[$tag]['lokal'] : 0,
+					'api'      => isset($tage[$tag]) ? (int) $tage[$tag]['api'] : 0,
+					'vorlader' => isset($tage[$tag]) ? (int) $tage[$tag]['vorlader'] : 0,
 				);
 
 				$zeiger = strtotime('+1 day', $zeiger);
@@ -163,10 +173,11 @@ class Statistik extends \BackendModule
 			{
 				$balken[] = array
 				(
-					'titel' => self::rasterTitel((string) $gruppe, $raster, isset($werte['erster']) ? $werte['erster'] : ''),
-					'cache' => (int) $werte['cache'],
-					'lokal' => (int) $werte['lokal'],
-					'api'   => (int) $werte['api'],
+					'titel'    => self::rasterTitel((string) $gruppe, $raster, isset($werte['erster']) ? $werte['erster'] : ''),
+					'cache'    => (int) $werte['cache'],
+					'lokal'    => (int) $werte['lokal'],
+					'api'      => (int) $werte['api'],
+					'vorlader' => (int) $werte['vorlader'],
 				);
 			}
 		}
@@ -256,6 +267,7 @@ class Statistik extends \BackendModule
 		$this->Template->farbeLokal = self::FARBE_LOKAL;
 		$this->Template->farbeCache = self::FARBE_CACHE;
 		$this->Template->farbeApi = self::FARBE_API;
+		$this->Template->farbeVorlader = self::FARBE_VORLADER;
 
 		$this->tokenStatistik($von, $bis);
 	}
@@ -386,7 +398,7 @@ class Statistik extends \BackendModule
 
 		// Maximalwert und runde Skala bestimmen
 		$max = 0;
-		foreach($balken as $b) $max = max($max, $b['lokal'] + $b['cache'] + $b['api']);
+		foreach($balken as $b) $max = max($max, $b['lokal'] + $b['cache'] + $b['api'] + $b['vorlader']);
 		if($max < 1) $max = 1;
 
 		$schritt = pow(10, max(0, strlen((string) (int) $max) - 2));
@@ -425,15 +437,18 @@ class Statistik extends \BackendModule
 		foreach($balken as $b)
 		{
 			// Gestapelt von unten nach oben: örtlicher Bestand, Cache, API —
-			// von der günstigsten zur teuersten Quelle
-			$summe = $b['lokal'] + $b['cache'] + $b['api'];
+			// von der günstigsten zur teuersten Quelle. Ganz oben der Vorlader,
+			// der keine Besucheranfrage ist und deshalb abgesetzt sitzt
+			$summe = $b['lokal'] + $b['cache'] + $b['api'] + $b['vorlader'];
 			$hLokal = $summe ? round($nutzHoehe * $b['lokal'] / $maxSkala, 1) : 0;
 			$hCache = $summe ? round($nutzHoehe * $b['cache'] / $maxSkala, 1) : 0;
 			$hApi = $summe ? round($nutzHoehe * $b['api'] / $maxSkala, 1) : 0;
+			$hVor = $summe ? round($nutzHoehe * $b['vorlader'] / $maxSkala, 1) : 0;
 
 			$yLokal = $randOben + $nutzHoehe - $hLokal;
 			$yCache = $yLokal - $hCache;
 			$yApi = $yCache - $hApi;
+			$yVor = $yApi - $hVor;
 
 			if($hLokal > 0)
 			{
@@ -450,10 +465,16 @@ class Statistik extends \BackendModule
 				$svg[] = '<rect x="'.$x.'" y="'.$yApi.'" width="'.$balkenBreite.'" height="'.$hApi.'" fill="'.self::FARBE_API.'"><title>'.$b['titel'].': '.$b['api'].' von der API</title></rect>';
 			}
 
-			// Summe über dem Balken
+			if($hVor > 0)
+			{
+				$svg[] = '<rect x="'.$x.'" y="'.$yVor.'" width="'.$balkenBreite.'" height="'.$hVor.'" fill="'.self::FARBE_VORLADER.'"><title>'.$b['titel'].': '.$b['vorlader'].' vom nächtlichen Vorladen</title></rect>';
+			}
+
+			// Summe über dem Balken. Bezugspunkt ist der oberste Abschnitt —
+			// ohne Vorlader-Anteil ist $yVor mit $yApi identisch
 			if($summe > 0)
 			{
-				$svg[] = '<text x="'.($x + $balkenBreite / 2).'" y="'.round($yApi - 4, 1).'" text-anchor="middle" class="wpst-wert">'.$summe.'</text>';
+				$svg[] = '<text x="'.($x + $balkenBreite / 2).'" y="'.round($yVor - 4, 1).'" text-anchor="middle" class="wpst-wert">'.$summe.'</text>';
 			}
 
 			// Beschriftung schräg unter dem Balken

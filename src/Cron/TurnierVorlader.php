@@ -110,6 +110,10 @@ class TurnierVorlader
 
 		$timeoutAlt = $this->timeoutSetzen();
 
+		// Abrufe dieses Laufs zählen als eigene Quelle, sonst überdeckt der
+		// Vorlader in der Statistik die Abrufe der Besucher
+		\Schachbulle\ContaoWertungsportalBundle\Helper\API::vorladen(true);
+
 		try
 		{
 			$zaehler = $this->durchgaenge();
@@ -120,6 +124,7 @@ class TurnierVorlader
 			// Cronjob weitere, im Web-Betrieb ist der Aufruf Teil eines
 			// gewöhnlichen Seitenaufrufs
 			$this->timeoutSetzen($timeoutAlt);
+			\Schachbulle\ContaoWertungsportalBundle\Helper\API::vorladen(false);
 		}
 
 		$this->protokolliere($scope, $zaehler);

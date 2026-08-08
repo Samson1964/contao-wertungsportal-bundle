@@ -1,5 +1,23 @@
 # Wertungsportal Changelog
 
+## Version 1.18.0 (2026-08-07)
+
+* Add: **Der Vorlader zählt in der Statistik jetzt als eigene Quelle.** Bisher landeten seine
+  Abrufe im selben Topf wie die eines Besuchers — bei rund 2.000 Abrufen je Nacht hätte das
+  die Kennzahl unbrauchbar gemacht, die den Vorlader überhaupt veranlasst hat („nur 4, 5 und
+  3 Prozent aus dem Zwischenspeicher"). Der Anteil hätte nach dem Deployment schlechter
+  ausgesehen als vorher, obwohl die Besucher schneller bedient werden
+* Neben `api`, `cache` und `lokal` gibt es deshalb die Quelle **`vorlader`**. Die Spalten
+  „gesamt" und „ohne API" zählen weiterhin **nur die Besucherabrufe**; das Vorladen steht
+  abgesetzt in einer eigenen Spalte und im Diagramm als grauer Abschnitt außerhalb der blauen
+  Reihe
+* Umgeschaltet wird über `API::vorladen(true|false)`, gesetzt vom Cronjob in einem
+  `try`/`finally` — bliebe der Schalter stehen, würden im Web-Betrieb die Abrufe des
+  restlichen Seitenaufrufs falsch verbucht
+* Keine Datenbankänderung nötig: `vorlader` ist genau 8 Zeichen lang und passt in die
+  vorhandene Spalte. Abrufe, die VOR dieser Fassung vorgeladen wurden, stehen weiterhin als
+  `api` in der Tabelle und lassen sich nur anhand des Systemprotokolls zuordnen
+
 ## Version 1.17.0 (2026-08-07)
 
 * Change: **Der Vorlader arbeitet jetzt eine ganze Nacht durch statt einmal täglich.** Termin

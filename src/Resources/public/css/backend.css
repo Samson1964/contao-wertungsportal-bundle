@@ -229,7 +229,7 @@ a.wp-stat-knopf:hover {
 	/* Ohne Mindestbreite quetscht sich die Tabelle im schmalen
 	   Backend-Fenster zusammen, statt den Scrollbereich zu nutzen —
 	   die langen Schnittstellenpfade brechen dann unleserlich um */
-	min-width				: 760px;
+	min-width				: 840px;
 	border-collapse			: collapse;
 }
 
@@ -248,6 +248,13 @@ a.wp-stat-knopf:hover {
 .wp-stat-tabelle .rechts {
 	text-align				: right;
 	white-space				: nowrap;
+}
+
+/* Das Vorladen gehört nicht zu den Besucherabrufen und steht deshalb
+   abgesetzt hinter der Quote — sichtbar, aber nicht mitgelesen */
+.wp-stat-tabelle .wp-stat-neben {
+	border-left				: 1px solid #e2e2e2;
+	color					: #777;
 }
 
 .wp-stat-tabelle tfoot td {
