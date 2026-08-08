@@ -6,11 +6,17 @@ services:
         arguments:
             - '@contao.framework'
 
-    # Täglicher Cronjob: lädt Turnierdaten der letzten Wochen vor, damit nicht
-    # jeder erste Besucher auf die Schnittstelle warten muss
+    # Nächtlicher Cronjob: lädt Turnierdaten der letzten Wochen vor, damit
+    # nicht jeder erste Besucher auf die Schnittstelle warten muss.
+    # Alle 5 Minuten zwischen 1 und 3 Uhr; jeder Lauf macht dort weiter, wo
+    # der vorige aufgehört hat. Der Lauf um 3:00 ist der letzte der Nacht —
+    # die Termine bis 3:55 lehnt die Klasse selbst ab (STUNDE_ENDE).
+    # ACHTUNG: Ohne einen echten Cronjob beim Hoster (contao:cron alle 5
+    # Minuten) löst nur ein Seitenaufruf den Termin aus — dann bleibt es
+    # faktisch bei einem Lauf je Nacht
     Schachbulle\ContaoWertungsportalBundle\Cron\TurnierVorlader:
         tags:
-            - { name: contao.cronjob, interval: daily }
+            - { name: contao.cronjob, interval: '*/5 1-3 * * *' }
 
     # Füllt die Suchalias-Felder des Bestands beim contao:migrate.
     # Ausdrücklich registriert, weil dieses Bundle ohne Autoconfigure arbeitet

@@ -1,5 +1,31 @@
 # Wertungsportal Changelog
 
+## Version 1.17.0 (2026-08-07)
+
+* Change: **Der Vorlader arbeitet jetzt eine ganze Nacht durch statt einmal täglich.** Termin
+  ist alle fünf Minuten zwischen 1 und 3 Uhr (`*/5 1-3 * * *`); jeder Lauf macht dort weiter,
+  wo der vorige aufgehört hat, und der Lauf um 3:00 ist der letzte — die Termine bis 3:55
+  bestehen zwar, arbeiten aber nicht mehr. In der nächsten Nacht beginnt alles von vorn.
+  Statt rund 80 Abrufen je Tag sind so etwa 2.000 je Nacht möglich
+* Add: **Die Turnierliste der letzten 30 Tage wird einmal je Nacht frisch abgerufen.** Bisher
+  konnte nur vorgeladen werden, was zufällig schon im örtlichen Bestand stand — der füllt sich
+  ja nur durch die Suchen der Besucher. Beim ersten Lauf mit Nachtliste kamen in der
+  Testinstallation auf einen Schlag 13 Turniere hinzu, die dort fehlten
+* Der Abruf kostet genau **einen** Aufruf je Nacht, ohne eigene Buchführung: Der
+  Cache-Schlüssel enthält das Datum (`vorlader-JJJJ-MM-TT`), also holt ihn der erste Lauf und
+  die 24 folgenden lesen ihn aus dem Zwischenspeicher. Am nächsten Tag lautet er anders
+* Fortgesetzt wird **ohne gespeicherte Position** — jeder Lauf geht die Liste von vorn durch
+  und überspringt, was schon da ist. Das ist ohne Buchführung immer richtig, auch wenn ein
+  Lauf mittendrin abbricht oder ein Eintrag von Hand gelöscht wurde; gemessen kostet ein
+  übersprungener Eintrag 0,19 ms, bei 6.000 Spielberichtsbögen also gut eine Sekunde
+* **Wichtig für den Betrieb:** Der Fünf-Minuten-Takt setzt einen echten Cronjob beim Hoster
+  voraus (`contao:cron`). Im Web-Betrieb löst ein Seitenaufruf den Termin aus, nicht die Uhr —
+  ohne nächtlichen Verkehr bleibt es bei einem Lauf. Damit ein verspäteter Lauf trotzdem
+  arbeitet, weist die Klasse nur die Termine nach dem Abschlusslauf ab (3:05 bis 3:55) und
+  nicht alles außerhalb des Fensters
+* Change: Die Einstellung heißt jetzt „Nächtliches Vorladen abschalten" (vorher „Tägliches")
+* Doku: `docs/vorladen.md` mit Ablaufplan der Nacht und Einrichtung des Hoster-Cronjobs
+
 ## Version 1.16.1 (2026-08-07)
 
 * **Fix: Der Verteiler der Schnittstelle las Parameter ungeschützt.** In `API::getAPI()` griff

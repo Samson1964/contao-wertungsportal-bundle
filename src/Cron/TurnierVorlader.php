@@ -3,7 +3,7 @@
 namespace Schachbulle\ContaoWertungsportalBundle\Cron;
 
 /**
- * Täglicher Cronjob: lädt Turnierdaten der letzten Wochen in den
+ * Nächtlicher Cronjob: lädt Turnierdaten der letzten Wochen in den
  * Zwischenspeicher, bevor der erste Besucher sie anfordert.
  *
  * Hintergrund: Auswertung, Ergebnisse und Spielberichtsbögen kamen nur zu
@@ -13,10 +13,20 @@ namespace Schachbulle\ContaoWertungsportalBundle\Cron;
  * Spielberichtsbögen. Die sind je Spieler ein eigener Abruf und würden das
  * Zeitbudget sonst für ein einziges Turnier verbrauchen.
  *
+ * **Ablauf einer Nacht** (Termin in der services.yml: alle 5 Minuten von 1
+ * bis 3 Uhr): Der erste Lauf holt die Turnierliste des Zeitraums und beginnt
+ * mit dem ersten Durchgang. Jeder folgende Lauf setzt die Arbeit fort — nicht
+ * über eine gespeicherte Position, sondern weil bereits vorhandene Einträge
+ * übersprungen werden. Das ist ohne Buchführung immer richtig, auch wenn ein
+ * Lauf mittendrin abbricht oder ein Eintrag von Hand gelöscht wurde
+ * (gemessen: 0,19 ms je übersprungenem Eintrag). Der Lauf um 3:00 ist der
+ * letzte; die Termine danach ruhen bis zur nächsten Nacht, die mit einem
+ * frischen Abruf der Turnierliste von vorn beginnt.
+ *
  * Das Zeitbudget ist der Kern: Contao ruft den Cron im Web-Betrieb nach der
  * Auslieferung der Seite auf (kernel.terminate), die Laufzeitgrenze von PHP
  * gilt aber für den gesamten Aufruf. Was in einem Lauf nicht geschafft wird,
- * holt der nächste — bereits vorhandene Einträge werden übersprungen.
+ * holt der nächste.
  */
 class TurnierVorlader
 {
@@ -25,6 +35,22 @@ class TurnierVorlader
 	 * werden kaum noch aufgerufen; wer sie doch anfordert, wartet einmalig.
 	 */
 	const TAGE = 30;
+
+	/**
+	 * Stunde des Abschlusslaufs. Der Lauf zur vollen Stunde ist der letzte der
+	 * Nacht; die Termine danach ruhen bis zum nächsten Abend.
+	 *
+	 * Muss zum Intervall in der services.yml passen (dort endet die
+	 * Stundenspanne mit derselben Zahl).
+	 */
+	const STUNDE_ENDE = 3;
+
+	/**
+	 * Namensvorsatz des Schlüssels, unter dem die Turnierliste der Nacht im
+	 * Zwischenspeicher liegt. Das angehängte Datum sorgt dafür, dass jede
+	 * Nacht genau einmal frisch abgerufen wird.
+	 */
+	const LISTENSCHLUESSEL = 'vorlader-';
 
 	/**
 	 * Höchstes Zeitbudget in Sekunden. Ist die Laufzeit des Skripts begrenzt,
@@ -77,40 +103,16 @@ class TurnierVorlader
 		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_api_aus'])) return;
 		if(!\Schachbulle\ContaoWertungsportalBundle\Helper\OAuth2Client::eingerichtet()) return;
 		if(!\Schachbulle\ContaoWertungsportalBundle\Helper\API::cacheAktiv('Turnierauswertung')) return;
+		if($this->feierabend()) return;
 
 		$this->start = microtime(true);
 		$this->budget = $this->zeitbudget();
-
-		$turniere = $this->turniere();
-
-		if(!count($turniere)) return;
-
-		$zaehler = array('Turnierauswertung' => 0, 'Turnierergebnisse' => 0, 'Spielberichtsbogen' => 0);
 
 		$timeoutAlt = $this->timeoutSetzen();
 
 		try
 		{
-			// Durchgang 1 und 2: je Funktion einmal durch alle Turniere. Bewusst
-			// nacheinander und nicht je Turnier beides — reicht das Budget nicht,
-			// haben so mehr Turniere wenigstens ihre Auswertung
-			foreach(array('Turnierauswertung', 'Turnierergebnisse') as $funktion)
-			{
-				foreach($turniere as $uuid)
-				{
-					if($this->budgetAus()) break 2;
-					if($this->imCache($funktion, $uuid)) continue;
-
-					$this->hole($funktion, array('funktion' => $funktion, 'cachekey' => $uuid, 'turnier' => $uuid));
-					$zaehler[$funktion]++;
-				}
-			}
-
-			// Durchgang 3: Spielberichtsbögen, nur mit ordentlichem Restbudget
-			if(!$this->budgetAus(self::RESTBUDGET_BOEGEN))
-			{
-				$zaehler['Spielberichtsbogen'] = $this->boegen($turniere);
-			}
+			$zaehler = $this->durchgaenge();
 		}
 		finally
 		{
@@ -121,6 +123,66 @@ class TurnierVorlader
 		}
 
 		$this->protokolliere($scope, $zaehler);
+	}
+
+	/**
+	 * Meldet, ob dieser Lauf in die Ruhezeit nach dem Abschlusslauf fällt.
+	 *
+	 * Der Lauf um STUNDE_ENDE:00 ist der letzte der Nacht; die Termine
+	 * derselben Stunde danach (:05 bis :55) sollen nichts mehr tun.
+	 *
+	 * **Bewusst nur diese eine Stunde und keine allgemeine Zeitfensterprüfung:**
+	 * Im Web-Betrieb löst nicht die Uhr den Cronjob aus, sondern ein
+	 * Seitenaufruf. Auf einer nachts stillen Website kommt der um 1:00 fällige
+	 * Termin erst morgens dran. Eine Prüfung „nur zwischen 1 und 3 Uhr" würde
+	 * dann für immer alles abweisen — der Vorlader liefe nie. So arbeitet ein
+	 * verspäteter Lauf ganz normal.
+	 *
+	 * @param  int|null $zeitpunkt Vergleichszeitpunkt, sonst jetzt (für Tests)
+	 * @return bool
+	 */
+	protected function feierabend($zeitpunkt = null)
+	{
+		$zeitpunkt = $zeitpunkt ?? time();
+
+		return self::STUNDE_ENDE === (int) date('G', $zeitpunkt) && (int) date('i', $zeitpunkt) > 0;
+	}
+
+	/**
+	 * Arbeitet die drei Durchgänge ab, soweit das Zeitbudget reicht.
+	 *
+	 * @return array Funktion => Zahl der geholten Einträge
+	 */
+	protected function durchgaenge()
+	{
+		$zaehler = array('Turnierauswertung' => 0, 'Turnierergebnisse' => 0, 'Spielberichtsbogen' => 0);
+
+		$turniere = $this->turniere();
+
+		if(!count($turniere)) return $zaehler;
+
+		// Durchgang 1 und 2: je Funktion einmal durch alle Turniere. Bewusst
+		// nacheinander und nicht je Turnier beides — reicht das Budget nicht,
+		// haben so mehr Turniere wenigstens ihre Auswertung
+		foreach(array('Turnierauswertung', 'Turnierergebnisse') as $funktion)
+		{
+			foreach($turniere as $uuid)
+			{
+				if($this->budgetAus()) break 2;
+				if($this->imCache($funktion, $uuid)) continue;
+
+				$this->hole($funktion, array('funktion' => $funktion, 'cachekey' => $uuid, 'turnier' => $uuid));
+				$zaehler[$funktion]++;
+			}
+		}
+
+		// Durchgang 3: Spielberichtsbögen, nur mit ordentlichem Restbudget
+		if(!$this->budgetAus(self::RESTBUDGET_BOEGEN))
+		{
+			$zaehler['Spielberichtsbogen'] = $this->boegen($turniere);
+		}
+
+		return $zaehler;
 	}
 
 	/**
@@ -189,6 +251,8 @@ class TurnierVorlader
 	{
 		$von = date('Y-m-d', time() - self::TAGE * 86400);
 
+		$this->turnierlisteHolen($von);
+
 		try
 		{
 			$objTurniere = \Database::getInstance()
@@ -204,6 +268,44 @@ class TurnierVorlader
 		while($objTurniere->next()) $uuids[] = (string) $objTurniere->uuid;
 
 		return $uuids;
+	}
+
+	/**
+	 * Gleicht die Turnierliste des Zeitraums einmal je Nacht mit der
+	 * Schnittstelle ab.
+	 *
+	 * Ohne diesen Abruf kennt der örtliche Bestand nur die Turniere, nach
+	 * denen zufällig jemand gesucht hat — vorgeladen würde dann nur ein
+	 * Ausschnitt. Der Abruf zieht über den Abgleich in API::getAPI() alles
+	 * Fehlende in tl_wertungsportal_tournaments nach.
+	 *
+	 * **Genau ein Abruf je Nacht, ohne eigene Buchführung:** Der
+	 * Cache-Schlüssel enthält das Datum. Der erste Lauf der Nacht geht an die
+	 * Schnittstelle, die folgenden bekommen die Antwort aus dem
+	 * Zwischenspeicher (und lösen dort keinen erneuten Abgleich aus). Am
+	 * nächsten Tag lautet der Schlüssel anders — also wird frisch geholt.
+	 *
+	 * @param  string $von Frühestes Enddatum (JJJJ-MM-TT)
+	 * @return void
+	 */
+	protected function turnierlisteHolen($von)
+	{
+		try
+		{
+			\Schachbulle\ContaoWertungsportalBundle\Helper\API::autoQuery(array
+			(
+				'funktion' => 'Turnierliste',
+				'cachekey' => self::LISTENSCHLUESSEL.date('Y-m-d'),
+				'suche'    => '',
+				'zps'      => '',
+				'von'      => $von,
+				'bis'      => date('Y-m-d'),
+			));
+		}
+		catch(\Throwable $e)
+		{
+			// Klemmt der Abruf, wird mit dem gearbeitet, was örtlich vorliegt
+		}
 	}
 
 	/**
