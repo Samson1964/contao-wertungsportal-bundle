@@ -1362,6 +1362,11 @@ class Helper extends \Frontend
 	{
 		if(!empty($result['keine_livedaten'])) return \Schachbulle\ContaoWertungsportalBundle\Helper\API::MELDUNG_KEINE_LIVEDATEN;
 
+		// Gebremster Besucher: Das ist kein Fehler der Schnittstelle, sondern
+		// eine Entscheidung dieser Website — entsprechend ohne HTTP-Code und
+		// ohne technischen Beitext
+		if(!empty($result['gebremst'])) return \Schachbulle\ContaoWertungsportalBundle\Helper\Besucherbremse::MELDUNG;
+
 		// Fehlermeldung der API ermitteln (body ist im Fehlerfall meist ein String)
 		$meldung = '';
 		if(isset($result['body']) && is_string($result['body']) && $result['body'] != '') $meldung = $result['body'];

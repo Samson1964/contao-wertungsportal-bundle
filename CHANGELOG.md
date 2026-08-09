@@ -1,5 +1,34 @@
 # Wertungsportal Changelog
 
+## Version 1.22.0 (2026-08-09)
+
+**Neue Tabellen — beim Deployment `contao:migrate` ausführen.**
+
+* Add: **Bremse gegen Massenabfragen.** Drei neue Einstellungen im Bereich Wertungsportal
+  begrenzen die Abrufe je Besucher (IP-Adresse) auf Höchstwerte **je Minute, Stunde und Tag**.
+  Leer oder 0 schaltet die jeweilige Grenze ab; ohne Einstellungen ist die Bremse aus und es
+  wird auch nichts gezählt oder gespeichert
+* **Gezählt wird je Seitenaufruf, nicht je Schnittstellenabfrage.** Eine Turnierseite löst
+  mehrere Abfragen aus — würde jede zählen, träfe die Bremse ausgerechnet die aufwendigen
+  Seiten zuerst, und die eingestellten Zahlen wären nicht mehr abschätzbar. Der nächtliche
+  Vorlade-Cronjob ist ausgenommen
+* Wer eine Grenze reißt, bekommt bis zum Ende des Fensters einen Hinweis statt Daten. In
+  dieser Zeit wird weder die Schnittstelle noch der Zwischenspeicher noch die örtliche
+  Datenbank bemüht — die Bremse sitzt vor allem anderen
+* Add: **Backend-Modul „WP | Sperren"** mit Zeitpunkt, überschrittenem Fenster, IP-Adresse,
+  Browserkennung und — sofern angemeldet — **Anmeldename UND Kennung des Mitglieds**
+  (`tl_member.id`). Manche Bots rufen angemeldet ab; die Kennung steht neben dem Namen, weil
+  Namen doppelt vorkommen und sich ändern
+* Ein Vorfall ergibt **einen** Eintrag, nicht tausend: Solange dasselbe Fenster läuft, wächst
+  nur der Zähler des vorhandenen Eintrags. „Alte Einträge löschen" entfernt, was älter als
+  90 Tage ist
+* Die Zählung speichert **keine Zugriffshistorie**: je Adresse eine Zeile mit den Ständen der
+  laufenden Fenster, mehr nicht. Ein neuer Cronjob (4 Uhr) entfernt Adressen, die seit einem
+  Tag nichts mehr abgerufen haben
+* Die IP-Adresse wird so gespeichert, wie Contao sie führt — ist dort die Anonymisierung
+  eingeschaltet, gilt sie auch hier
+* Doku: `docs/besucherbremse.md`
+
 ## Version 1.21.0 (2026-08-09)
 
 * **Fix: Die nächtlichen CSV-Exporte enthielten gesperrte Spieler.** Wer auf der Blacklist

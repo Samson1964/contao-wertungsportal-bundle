@@ -187,6 +187,23 @@ class API
 	protected static function autoQueryIntern($params)
 	{
 		// ======================================================================
+		// Massenabfragen bremsen — VOR allem anderen, damit ein gebremster
+		// Besucher weder die Schnittstelle noch den Zwischenspeicher noch die
+		// örtliche Datenbank beschäftigt. Der Vorlade-Cronjob ist ausgenommen:
+		// Er ist kein Besucher und hat keine sinnvolle IP-Adresse
+		// ======================================================================
+		if(!self::$vorladen && \Schachbulle\ContaoWertungsportalBundle\Helper\Besucherbremse::gesperrt())
+		{
+			return array
+			(
+				'error'         => true,
+				'error_message' => \Schachbulle\ContaoWertungsportalBundle\Helper\Besucherbremse::MELDUNG,
+				'http_code'     => 429,
+				'gebremst'      => true,
+			);
+		}
+
+		// ======================================================================
 		// Wenn Cache aktiviert, dann Daten laden, wenn vorhanden
 		// ======================================================================
 		$cachetime = self::cachezeit($params['funktion']);

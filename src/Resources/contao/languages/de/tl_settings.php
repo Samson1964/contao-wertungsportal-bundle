@@ -90,3 +90,8 @@ $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_api_sperren'] = array('Gesper
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_zugriffslog'] = array('Zugriffs-Log', 'Schreibt je Abfrage eine Zeile nach var/logs (eine Datei je Tag, Semikolon-getrennt): Dauer, Quelle, Funktion, Trefferzahl, IP-Adresse, Browser und Seite. Zum Beobachten der Laufzeiten. ACHTUNG: Die IP-Adresse ist ein personenbezogenes Datum — dauerhafter Betrieb gehört in die Datenschutzerklärung, und die Dateien sollten regelmäßig gelöscht werden.');
 
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_debuglog'] = array('Debug-Log', 'Debug-Log aktivieren');
+
+// Besucherbremse gegen Massenabfragen
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_limit_minute'] = array('Höchstabrufe je Minute', 'Wie viele Wertungsportal-Seiten ein Besucher (eine IP-Adresse) je Minute abrufen darf. Gezählt wird je Seitenaufruf, nicht je Schnittstellenabfrage. Leer oder 0 schaltet diese Grenze ab.');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_limit_stunde'] = array('Höchstabrufe je Stunde', 'Dasselbe für eine Stunde. Ein Mensch kommt selten über einige Dutzend; ein Bot, der einen Verband abklappert, sofort über tausend.');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_limit_tag'] = array('Höchstabrufe je Tag', 'Dasselbe für einen Tag. Wer eine Grenze reißt, bekommt bis zum Ende des jeweiligen Zeitfensters einen Hinweis statt Daten; der Vorfall steht mit IP-Adresse, Browserkennung und — falls angemeldet — Mitgliedskennung unter „WP | Sperren".');

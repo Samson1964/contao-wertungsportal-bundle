@@ -6,7 +6,7 @@ use Contao\Validator;
 /**
  * palettes
  */
-$GLOBALS['TL_DCA']['tl_settings']['palettes']['default'] .= ';{wertungsportal_legend:hide},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url,wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband,wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe,wertungsportal_crontoken,wertungsportal_api_aus,wertungsportal_api_timeout,wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_cachezeit_turnierdaten_alt,wertungsportal_cron_aus,wertungsportal_mail_absender,wertungsportal_mail_absendername,wertungsportal_mail_token,wertungsportal_api_abrufe_tag,wertungsportal_api_freigabe,wertungsportal_api_sperren,wertungsportal_zugriffslog,wertungsportal_debuglog,wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize';
+$GLOBALS['TL_DCA']['tl_settings']['palettes']['default'] .= ';{wertungsportal_legend:hide},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url,wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband,wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe,wertungsportal_crontoken,wertungsportal_api_aus,wertungsportal_api_timeout,wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_cachezeit_turnierdaten_alt,wertungsportal_cron_aus,wertungsportal_mail_absender,wertungsportal_mail_absendername,wertungsportal_mail_token,wertungsportal_api_abrufe_tag,wertungsportal_api_freigabe,wertungsportal_api_sperren,wertungsportal_limit_minute,wertungsportal_limit_stunde,wertungsportal_limit_tag,wertungsportal_zugriffslog,wertungsportal_debuglog,wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize';
 
 /**
  * fields
@@ -389,6 +389,25 @@ $GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_clubImageSize'] = ar
 ); 
 
 // Tägliches Vorladen der Turnierdaten abschalten (Cron\TurnierVorlader)
+// Höchstzahl der Wertungsportal-Abrufe je Besucher und Zeitfenster.
+// 0 oder leer schaltet das jeweilige Fenster ab
+foreach(array('minute' => 'w50 clr', 'stunde' => 'w50', 'tag' => 'w50') as $wertungsportalFenster => $wertungsportalKlasse)
+{
+	$GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_limit_'.$wertungsportalFenster] = array
+	(
+		'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_limit_'.$wertungsportalFenster],
+		'inputType'               => 'text',
+		'eval'                    => array
+		(
+			'rgxp'                => 'natural',
+			'maxlength'           => 6,
+			'tl_class'            => $wertungsportalKlasse,
+		)
+	);
+}
+
+unset($wertungsportalFenster, $wertungsportalKlasse);
+
 $GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_cron_aus'] = array
 (
 	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cron_aus'],
