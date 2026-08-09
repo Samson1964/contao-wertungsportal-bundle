@@ -1,5 +1,24 @@
 # Wertungsportal Changelog
 
+## Version 1.20.0 (2026-08-09)
+
+* **Fix: Eine Vereinsseite mit einer Verbands-Kennziffer zeigte Unsinn.** VKZ 300 brachte die
+  Mitglieder ALLER 50 Berliner Vereine, überschrieben mit dem Namen des ersten Treffers
+  („BSG 1827 Eckbauer"); VKZ 100 eine leere Rangliste unter dem Namen des Badischen
+  Schachverbands. Ursache: Der Parameter `vkz` der Schnittstelle ist eine **Präfixsuche** —
+  nur eine fünfstellige Vereins-VKZ trifft genau einen Verein. Das Modul nahm den ersten
+  Datensatz der Antwort, ohne zu prüfen, ob er überhaupt der angefragte ist
+* Add: **Eine Verbands-Kennziffer zeigt jetzt die Vereine dieses Verbandes** — mit Links auf
+  deren Mitgliederlisten und, sofern vorhanden, den Untergliederungen (Bezirken) darüber.
+  Ein Klick auf einen Bezirk führt eine Ebene tiefer. Gemessen: VKZ 300 listet die 50
+  Berliner Vereine, VKZ 100 den Badischen Schachverband samt seiner Bezirke
+* Die Unterscheidung Verband/Verein steht jetzt zentral in `Helper::istVerband()`: Die VKZ ist
+  gegliedert (erste Stelle Landesverband, Stelle 2–3 Bezirk, Stelle 4–5 Verein), eine
+  Organisationseinheit endet deshalb auf `00`. `API::Verbandsliste()` nutzt dieselbe Methode,
+  damit Aufteilung und Anzeige nicht auseinanderlaufen
+* Unbekannte Kennziffern melden das sauber („Zu der Kennziffer 99000 ist kein Verband
+  bekannt.") statt eine leere Seite zu zeigen
+
 ## Version 1.19.0 (2026-08-09)
 
 * Change: **Cache-Hinweis kürzer und deutlicher.** Statt „Diese Daten stammen aus dem

@@ -1008,7 +1008,10 @@ class API
 		$verbaende = array(); $vereine = array();
 		foreach($resultArr['body']['data'] as $item)
 		{
-			if(substr($item['clubVkz'], -2) == '00' || $item['clubVkz'] == 'L0001' || $item['clubVkz'] == 'M0001')
+			// Die Regel steht in Helper::istVerband() — dieselbe Stelle, an der
+			// auch die Vereinsseite entscheidet, ob sie Mitglieder oder Vereine
+			// zeigt. Zwei Kopien liefen sonst irgendwann auseinander
+			if(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::istVerband($item['clubVkz']))
 			{
 				$verbaende[] = $item;
 			}

@@ -121,6 +121,45 @@ class Verein extends \Module
 			$this->Subtemplate->anzahl_vn = count($suche->Vereine);
 			$this->Template->searchresult = $this->Subtemplate->parse();
 		}
+		// Verbands-VKZ: keine Mitgliederliste, sondern die Vereine darunter
+		elseif($zps && \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::istVerband($zps))
+		{
+			/*********************************************************
+			 * Vereine eines Verbandes
+			 *
+			 * Der Parameter vkz der Schnittstelle ist eine Präfixsuche: „300"
+			 * liefert die Mitglieder ALLER Berliner Vereine, „100" gar keine
+			 * (der Verband selbst hat keine). Beides ergab bisher eine
+			 * irreführende Seite — Mitglieder unter dem Namen des ersten
+			 * Treffers beziehungsweise eine leere Rangliste
+			*/
+
+			$liste = \Schachbulle\ContaoWertungsportalBundle\Helper\API::Verbandsliste();
+			$vereine = new \Schachbulle\ContaoWertungsportalBundle\Helper\Verbandsvereine($liste, $zps);
+
+			$this->Template->sichtbar = false; // keine Mitgliederliste anzeigen
+
+			if(!$vereine->Gefunden)
+			{
+				$titel = 'Unbekannte Kennziffer '.$zps;
+				$this->Template->fehler = 'Zu der Kennziffer '.$zps.' ist kein Verband bekannt.';
+			}
+			else
+			{
+				$name = $vereine->Name !== '' ? $vereine->Name : 'Verband '.$zps;
+				$titel = 'Vereine im Verband '.$name;
+
+				$this->Subtemplate = new \FrontendTemplate($this->subTemplate);
+				$this->Subtemplate->daten_vb = $vereine->Verbaende;
+				$this->Subtemplate->anzahl_vb = count($vereine->Verbaende);
+				$this->Subtemplate->daten_vn = $vereine->Vereine;
+				$this->Subtemplate->anzahl_vn = count($vereine->Vereine);
+				$this->Template->searchresult = $this->Subtemplate->parse();
+			}
+
+			$objPage->pageTitle = $titel;
+			$this->Template->subHeadline = $titel;
+		}
 		// Vereinsliste anfordern
 		elseif($zps)
 		{

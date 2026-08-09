@@ -803,6 +803,67 @@ class Helper extends \Frontend
 	}
 
 	/**
+	 * Meldet, ob eine VKZ einen Verband bezeichnet und keinen Verein.
+	 *
+	 * Die VKZ ist fünfstellig und gegliedert: erste Stelle Landesverband,
+	 * Stelle 2–3 Bezirk, Stelle 4–5 Verein (10102 = Baden, Bezirk 01, Verein
+	 * 02). Organisationseinheiten haben an den Vereinsstellen Nullen — daran
+	 * sind sie zu erkennen: 10000 Badischer Schachverband, 10100 Bezirk
+	 * Mannheim. Verkürzte Schreibweisen wie „300" für 30000 zählen ebenso.
+	 *
+	 * Zwei Sonderfälle kommen aus der Schnittstelle: L0001 und M0001.
+	 *
+	 * Diese Regel stand bisher nur in API::Verbandsliste(); sie liegt jetzt
+	 * hier, damit Anzeige und Aufteilung nicht auseinanderlaufen können.
+	 *
+	 * @param  string $vkz Vereins- oder Verbandskennziffer
+	 * @return bool        true = Verband/Bezirk, false = Verein
+	 */
+	public static function istVerband($vkz)
+	{
+		$vkz = (string) $vkz;
+
+		if($vkz === '') return false;
+		if($vkz === 'L0001' || $vkz === 'M0001') return true;
+
+		return substr($vkz, -2) === '00';
+	}
+
+	/**
+	 * Liefert den Teil einer Verbands-VKZ, mit dem die zugehörigen Vereine
+	 * beginnen.
+	 *
+	 * Die nachlaufenden Nullen einer Verbands-VKZ stehen für „alles darunter":
+	 * 30000 und die Kurzform 300 werden beide zu „3" — die Berliner Vereine
+	 * heißen 30001, 30002 und so fort. Der Bezirk 10100 wird zu „101" und
+	 * fasst damit 10101, 10102 … zusammen.
+	 *
+	 * @param  string $vkz Verbands-VKZ, ganz oder verkürzt
+	 * @return string      Präfix; leer bei „00000" (dann ist alles gemeint)
+	 */
+	public static function vkzPraefix($vkz)
+	{
+		return rtrim((string) $vkz, '0');
+	}
+
+	/**
+	 * Ergänzt eine verkürzte Verbands-VKZ auf die volle Fünfstelligkeit.
+	 * Aus „300" wird „30000" — unter dieser Kennziffer steht der Verband in
+	 * der Vereinsliste der Schnittstelle.
+	 *
+	 * @param  string $vkz Verbands-VKZ, ganz oder verkürzt
+	 * @return string      Fünfstellige Fassung (Sonderfälle unverändert)
+	 */
+	public static function vkzVoll($vkz)
+	{
+		$vkz = (string) $vkz;
+
+		if($vkz === 'L0001' || $vkz === 'M0001') return $vkz;
+
+		return str_pad($vkz, 5, '0');
+	}
+
+	/**
 	 * Gibt die Navigation zurück
 	 * @param 		-
 	 * @return		Array mit den Links
