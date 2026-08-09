@@ -117,6 +117,9 @@ class Wertungsportal_Converter
 			$this->verbaende = self::readCSV('verbaende.csv');
 			$this->vereine = self::readCSV('vereine.csv');
 
+			// Gesperrte Spieler entfernen, BEVOR irgendetwas geschrieben wird
+			self::entferneGesperrte();
+
 			// Spieler bearbeiten
 			self::modifySpieler();
 
@@ -363,6 +366,67 @@ class Wertungsportal_Converter
 			fclose($fp);
 		}
 		return $arr;
+	}
+
+	/**
+	 * Entfernt gesperrte Spieler aus der eingelesenen spieler.csv.
+	 *
+	 * Wer auf der Blacklist steht (tl_wertungsportal_persons.blocked), hat der
+	 * Veröffentlichung widersprochen. Im Frontend lassen die Listen solche
+	 * Zeilen weg — für die Exportdateien galt das bisher NICHT: Sie kamen
+	 * unverändert von nu und wurden nur um FIDE-Daten ergänzt.
+	 *
+	 * Gefiltert wird über Spalte 0 der CSV („ID", z. B. NU4073762). Sie
+	 * entspricht eins zu eins der Spalte nuLigaPersonId, unter der die Sperre
+	 * geführt wird — es ist keine Umrechnung nötig.
+	 *
+	 * Ein gesperrter Spieler kann mehrfach vorkommen (eine Zeile je
+	 * Mitgliedschaft); alle seine Zeilen fallen weg. Die Spielerzahlen in den
+	 * README-Dateien der Pakete ergeben sich anschließend von selbst, weil der
+	 * Packer die verbliebenen Zeilen zählt.
+	 *
+	 * Aufzurufen VOR modifySpieler() und dem Packen, damit gesperrte Spieler
+	 * auch nicht im FIDE-Abgleichprotokoll auftauchen.
+	 *
+	 * @return int Zahl der entfernten Zeilen
+	 */
+	public function entferneGesperrte()
+	{
+		$gesperrt = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::alleGesperrten();
+
+		if(!count($gesperrt))
+		{
+			echo "Blacklist: keine gesperrten Spieler<br>\n";
+
+			return 0;
+		}
+
+		$behalten = array();
+		$entfernt = 0;
+
+		foreach($this->spieler as $zeile => $item)
+		{
+			// Kopfzeile bleibt in jedem Fall stehen
+			if($zeile == 0)
+			{
+				$behalten[] = $item;
+				continue;
+			}
+
+			if(isset($gesperrt[(string) ($item[0] ?? '')]))
+			{
+				$entfernt++;
+				continue;
+			}
+
+			$behalten[] = $item;
+		}
+
+		$this->spieler = $behalten;
+
+		echo 'Blacklist: '.$entfernt.' Zeile(n) von '.count($gesperrt)." gesperrten Spielern entfernt<br>\n";
+
+		return $entfernt;
 	}
 
 	public function modifySpieler()

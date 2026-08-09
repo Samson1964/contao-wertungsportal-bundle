@@ -1,5 +1,23 @@
 # Wertungsportal Changelog
 
+## Version 1.21.0 (2026-08-09)
+
+* **Fix: Die nächtlichen CSV-Exporte enthielten gesperrte Spieler.** Wer auf der Blacklist
+  steht (`tl_wertungsportal_persons.blocked`), hat der Veröffentlichung widersprochen — im
+  Frontend lassen die Listen solche Zeilen weg, in den Exportdateien standen sie weiter drin.
+  `Wertungsportal_Converter.php` entfernt sie jetzt, bevor irgendetwas geschrieben wird
+* Gefiltert wird über Spalte 0 der spieler.csv („ID", z. B. NU4073762) — sie entspricht eins
+  zu eins der Spalte `nuLigaPersonId`, unter der die Sperre geführt wird. Ein Spieler mit
+  mehreren Mitgliedschaften hat mehrere Zeilen; **alle** fallen weg. Die Spielerzahlen in den
+  README-Dateien der Pakete stimmen automatisch, weil der Packer die verbliebenen Zeilen zählt
+* Der Filter läuft **vor** dem FIDE-Abgleich, damit gesperrte Spieler auch nicht im
+  Abgleichprotokoll auftauchen
+* Add: `Helper::alleGesperrten()` — liefert die gesamte Sperrliste als Nachschlagewerk. Für
+  100.000 Zeilen ist das eine Abfrage statt der blockweisen Nachfragen von `getBlacklist()`
+* Geprüft mit der echten Datei von nu (100.061 Zeilen): Ein Testspieler mit sieben
+  Mitgliedschaften verlor alle sieben Zeilen, ein zweiter seine eine — 8 von 8, keine weitere
+  Zeile angetastet
+
 ## Version 1.20.0 (2026-08-09)
 
 * **Fix: Eine Vereinsseite mit einer Verbands-Kennziffer zeigte Unsinn.** VKZ 300 brachte die

@@ -665,6 +665,34 @@ class Helper extends \Frontend
 	 * @param     array $nuIds  nu-Personen-IDs (leere Werte werden ignoriert)
 	 * @return    array         nuLigaPersonId => true für gesperrte Personen
 	 */
+	/**
+	 * Liefert ALLE gesperrten nu-Nummern als Nachschlagewerk.
+	 *
+	 * Gegenstück zu getBlacklist() für Massenverarbeitung: Wer 100.000 Zeilen
+	 * einer Exportdatei prüfen muss, fragt nicht blockweise nach, sondern holt
+	 * einmal die (naturgemäß kurze) Sperrliste und schlägt darin nach.
+	 *
+	 * @return array nu-Nummer => true; leer, wenn nichts gesperrt ist oder die
+	 *               Spalte blocked noch fehlt (vor contao:migrate)
+	 */
+	public static function alleGesperrten()
+	{
+		static $spalteVorhanden = null;
+		if($spalteVorhanden === null) $spalteVorhanden = \Database::getInstance()->fieldExists('blocked', 'tl_wertungsportal_persons');
+		if(!$spalteVorhanden) return array();
+
+		$gesperrt = array();
+
+		$objPersonen = \Database::getInstance()->execute("SELECT nuLigaPersonId FROM tl_wertungsportal_persons WHERE blocked = '1' AND nuLigaPersonId != ''");
+
+		while($objPersonen->next())
+		{
+			$gesperrt[(string) $objPersonen->nuLigaPersonId] = true;
+		}
+
+		return $gesperrt;
+	}
+
 	public static function getBlacklist($nuIds)
 	{
 		// Die Spalte blocked existiert erst nach contao:migrate —
