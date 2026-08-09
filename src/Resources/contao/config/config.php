@@ -86,6 +86,13 @@ $GLOBALS['BE_MOD']['wertungsportal'] = array
 		// Globale Operation: alte Zugriffe löschen (key=aufraeumen)
 		'aufraeumen'     => array('Schachbulle\ContaoWertungsportalBundle\Classes\TokenVerwaltung', 'aufraeumen'),
 	),
+	'wp-referenten' => array
+	(
+		'tables'         => array
+		(
+			'tl_wertungsportal_referenten',
+		),
+	),
 	'wp-sperren'   => array
 	(
 		'tables'         => array
@@ -185,4 +192,5 @@ $GLOBALS['TL_MODELS']['tl_wertungsportal_stats'] = \Schachbulle\ContaoWertungspo
 $GLOBALS['TL_MODELS']['tl_wertungsportal_tokens'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTokensModel::class;
 $GLOBALS['TL_MODELS']['tl_wertungsportal_tokens_access'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTokensAccessModel::class;
 $GLOBALS['TL_MODELS']['tl_wertungsportal_besucher'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalBesucherModel::class;
+$GLOBALS['TL_MODELS']['tl_wertungsportal_referenten'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalReferentenModel::class;
 $GLOBALS['TL_MODELS']['tl_wertungsportal_sperren'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalSperrenModel::class;

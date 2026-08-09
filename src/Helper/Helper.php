@@ -900,7 +900,7 @@ class Helper extends \Frontend
 	{
 		return array
 		(
-			'<li class="first"><a href="'.self::getSpielerseite(false).'">Spieler</a></li>',
+			'<li class="first"><a href="'.self::getSpielerseite(false).'">Personen</a></li>',
 			'<li class=""><a href="'.self::getVereinseite(false).'">Vereine</a></li>',
 			'<li class=""><a href="'.self::getVerbandseite(false).'">Verbände</a></li>',
 			'<li class="last"><a href="'.self::getTurnierseite(false).'">Turniere</a></li>',

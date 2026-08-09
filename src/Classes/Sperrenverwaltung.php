@@ -3,7 +3,7 @@
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 
 /**
- * Rückrufe des Backend-Moduls „WP | Sperren".
+ * Rückrufe des Backend-Moduls „Sperren".
  *
  * Die Liste zeigt, wer wegen Massenabfragen gebremst wurde. Diese Klasse
  * bereitet die Zeilen auf und räumt alte Einträge weg.

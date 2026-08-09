@@ -12,7 +12,7 @@
  * @copyright Frank Binding 2026
  *
  * Backend-Import für die Vereinsmitglieder-CSV in tl_wertungsportal_persons.
- * Wird als globale Operation (key=importPersons) unter WP | Personen
+ * Wird als globale Operation (key=importPersons) im Backend-Modul Personen
  * aufgerufen. Upload und Import laufen in kleinen AJAX-Schritten, damit es
  * auch bei sehr großen Dateien (~100.000 Zeilen) nicht zu Timeouts kommt:
  * - Upload: Die Datei wird clientseitig in Blöcke zerlegt und blockweise in

@@ -1,7 +1,7 @@
 <?php
 /**
  * Backend-Template für die Ergebnisseite der Altdaten-Übernahmen
- * (WP | Vereine: key=importDwzVer, WP | Personen: key=importPhotos)
+ * (Vereine: key=importDwzVer, Personen: key=importPhotos)
  */
 ?>
 <div id="tl_buttons">

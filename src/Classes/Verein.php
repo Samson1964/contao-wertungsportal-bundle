@@ -184,7 +184,7 @@ class Verein extends \Module
 			// tl_dwz_ver ist entfallen: Sie gehört dem abgelösten DeWIS-Bundle,
 			// fehlt in jeder Installation ohne dieses und ließ die Vereinsseite
 			// dort mit einem SQL-Fehler abbrechen. Bestandsdaten holt man
-			// einmalig über „Altdaten übernehmen" unter WP | Vereine herüber
+			// einmalig über „Altdaten übernehmen" im Backend-Modul Vereine herüber
 			$objClub = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalClubsModel::findByVkz($zps);
 
 			$this->Template->homepage = ($objClub && $objClub->homepage != '') ? $objClub->homepage : '';
@@ -198,7 +198,7 @@ class Verein extends \Module
 
 			if($objClub && $objClub->addImage && $objClub->singleSRC !== null)
 			{
-				// Vereinslogo aus WP | Vereine
+				// Vereinslogo aus dem Backend-Modul Vereine
 				$objFile = \FilesModel::findByPk($objClub->singleSRC);
 			}
 			elseif(!empty($GLOBALS['TL_CONFIG']['wertungsportal_clubDefaultImage']))

@@ -1,5 +1,30 @@
 # Wertungsportal Changelog
 
+## Version 1.23.0 (2026-08-09)
+
+**Neue Tabelle — beim Deployment `contao:migrate` ausführen.**
+
+* Add: **Backend-Modul „Referenten"** (`tl_wertungsportal_referenten`) für die
+  Wertungsreferenten der Verbände: Nachname, Vorname, nu-ID, E-Mail, Telefon, Anschrift
+  (Straße, PLZ, Ort) und eine Mehrfachauswahl der Verbände, für die der Referent zuständig ist
+* Die Verbandsauswahl wird **nicht gepflegt, sondern gelesen**: Sie kommt aus dem örtlichen
+  Vereinsbestand (Kennziffer endet auf `00`, also Landesverbände wie Bezirke) und zeigt
+  „30000 Berliner Schachverband". Eine Umgliederung bei nu wandert damit von selbst in die
+  Liste. Gelesen wird aus der Datenbank, nicht über die Schnittstelle — das Backend bleibt
+  auch dann bedienbar, wenn nu nicht antwortet
+* Die Übersicht nennt neben dem Namen die Zuständigkeiten (ab vier Verbänden gekürzt);
+  `WertungsportalReferentenModel::findByVerband()` findet die Referenten eines Verbandes
+* Fix: **Der Vorlader bekam sein Zeitbudget nicht.** `ZEITBUDGET` stand zwar auf 120 Sekunden,
+  eine `max_execution_time` von 30 in der php-cli.ini deckelte den Lauf aber auf 13 Sekunden.
+  Er hebt die Grenze jetzt selbst an, soweit er sie braucht; verbietet der Hoster das, greift
+  weiterhin die automatische Deckelung
+* Change: Der Menüpunkt **„Spieler" heißt jetzt „Personen"** — passend zum Backend-Modul und
+  zum Inhalt (die Seite zeigt Personen, nicht nur aktive Spieler). Die Überschrift der Seite
+  wurde mitgezogen
+* Change: Veraltete Modulnamen mit dem Vorsatz „WP |" aus Hilfetexten und Kommentaren
+  entfernt — die Backend-Module heißen längst schlicht „Zugangsschlüssel", „Sperren" oder
+  „Personen"
+
 ## Version 1.22.0 (2026-08-09)
 
 **Neue Tabellen — beim Deployment `contao:migrate` ausführen.**

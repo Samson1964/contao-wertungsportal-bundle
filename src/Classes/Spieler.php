@@ -71,7 +71,9 @@ class Spieler extends \Module
 		// Template vorbelegen
 		$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 		$this->Template->shl = 'h2'; // Standard-Überschriftgröße 2
-		$this->Template->headline = 'Wertungsportal - Spieler'; // Standard-Überschrift
+		// Überschrift passend zum Menüpunkt: Der Bereich heißt „Personen",
+		// nicht mehr „Spieler"
+		$this->Template->headline = 'Wertungsportal - Personen'; // Standard-Überschrift
 		$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
 
 		$mitglied = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getMitglied(); // Daten des aktuellen Mitgliedes laden
@@ -200,17 +202,17 @@ class Spieler extends \Module
 				 * Spielerfoto
 				*/
 
-				// Bild der Person aus WP | Personen. Der frühere Rückgriff auf
+				// Bild der Person aus dem Backend-Modul Personen. Der frühere Rückgriff auf
 				// tl_dwz_spi ist entfallen: Die Tabelle gehört dem abgelösten
 				// DeWIS-Bundle und fehlt in jeder Installation ohne dieses, was
 				// die Karteikarte mit einem SQL-Fehler abbrechen ließ. Bilder
-				// holt man einmalig über „Bilder übernehmen" unter WP | Personen
+				// holt man einmalig über „Bilder übernehmen" im Backend-Modul Personen
 				$objFile = null;
 				$objPerson = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalPersonsModel::findOneBy('nuLigaPersonId', $kartei->NuId);
 
 				if($objPerson && $objPerson->addImage && $objPerson->singleSRC !== null)
 				{
-					// Spielerbild aus WP | Personen
+					// Spielerbild aus dem Backend-Modul Personen
 					$objFile = \FilesModel::findByPk($objPerson->singleSRC);
 				}
 

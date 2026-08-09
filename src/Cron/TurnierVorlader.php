@@ -232,12 +232,43 @@ class TurnierVorlader
 	 */
 	protected function zeitbudget()
 	{
-		$grenze = (int) ini_get('max_execution_time');
+		$grenze = $this->laufzeitgrenze();
+
+		// Steht die Laufzeitgrenze dem vollen Budget im Weg, erst einmal
+		// höflich nachfragen. Auf der Kommandozeile geht das durch; im
+		// Web-Betrieb und bei gesperrter Funktion bleibt sie stehen, und das
+		// Budget fällt weiter unten entsprechend kleiner aus.
+		//
+		// Ohne diesen Versuch nützte ein hohes ZEITBUDGET nichts: Ein echter
+		// Hoster-Cronjob läuft zwar über die Kommandozeile, viele php-cli.ini
+		// setzen dort aber trotzdem 30 Sekunden — der Lauf bekäme dann nur
+		// 13 Sekunden, obwohl 120 eingestellt sind
+		$noetig = self::ZEITBUDGET + 2 * self::TIMEOUT_ABRUF + 1;
+
+		if($grenze > 0 && $grenze < $noetig)
+		{
+			@set_time_limit($noetig);
+			$grenze = $this->laufzeitgrenze();
+		}
 
 		// 0 heißt unbegrenzt — üblich auf der Kommandozeile
 		if($grenze < 1) return self::ZEITBUDGET;
 
 		return max(5, min(self::ZEITBUDGET, $grenze - 2 * self::TIMEOUT_ABRUF - 1));
+	}
+
+	/**
+	 * Liefert die geltende Laufzeitgrenze in Sekunden (0 = unbegrenzt).
+	 *
+	 * Eigene Methode, damit der Prüfstand den Fall nachstellen kann, dass ein
+	 * Hoster das Anheben verbietet — dann bleibt die Grenze stehen und das
+	 * Budget muss sich danach richten.
+	 *
+	 * @return int
+	 */
+	protected function laufzeitgrenze()
+	{
+		return (int) ini_get('max_execution_time');
 	}
 
 	/**

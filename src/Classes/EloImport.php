@@ -12,7 +12,7 @@
  * @copyright Frank Binding 2026
  *
  * Backend-Import der FIDE-Ratingliste (XML) in tl_wertungsportal_elo.
- * Wird als globale Operation (key=importElo) unter WP | FIDE-Elo aufgerufen.
+ * Wird als globale Operation (key=importElo) im Backend-Modul FIDE-Elo aufgerufen.
  *
  * Die XML-Datei ist sehr groß (komplette FIDE-Liste, mehrere hundert MB),
  * deshalb läuft alles in kleinen AJAX-Schritten wie beim Personen-Import:

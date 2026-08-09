@@ -26,3 +26,4 @@ $GLOBALS['TL_LANG']['FMD']['wertungsportal_verband'] = array('Federation search'
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_turnier'] = array('Tournament search', 'Tournament search and output from the rating portal');
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_bestenliste'] = array('DWZ best list', 'DWZ best list (top x, all players or women only) from the local persons table');
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_token'] = array('Interface registration', 'Form for clubs to request an access key for the club list interface');
+$GLOBALS['TL_LANG']['MOD']['wp-referenten'] = array('Rating officers', 'Manage the rating officers of the associations');

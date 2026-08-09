@@ -29,3 +29,4 @@ $GLOBALS['TL_LANG']['FMD']['wertungsportal_turnier'] = array('Turniersuche','Tur
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_bestenliste'] = array('DWZ-Bestenliste','DWZ-Bestenliste (Top-x, alle Spieler oder nur Frauen) aus der lokalen Personentabelle');
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_token'] = array('Schnittstellen-Registrierung','Formular, über das Vereine einen Zugangsschlüssel für die Vereinslisten-Schnittstelle anfordern');
 $GLOBALS['TL_LANG']['MOD']['wp-sperren'] = array('Sperren', 'Besucher, die wegen Massenabfragen gebremst wurden');
+$GLOBALS['TL_LANG']['MOD']['wp-referenten'] = array('Referenten', 'Wertungsreferenten der Verbände verwalten');
