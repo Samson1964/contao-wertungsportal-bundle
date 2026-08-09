@@ -54,9 +54,26 @@ class TurnierVorlader
 
 	/**
 	 * Höchstes Zeitbudget in Sekunden. Ist die Laufzeit des Skripts begrenzt,
-	 * fällt das tatsächliche Budget kleiner aus (siehe zeitbudget()).
+	 * fällt das tatsächliche Budget kleiner aus (siehe zeitbudget()) — der
+	 * Wert wirkt sich also nur dort voll aus, wo keine Grenze gilt, praktisch
+	 * auf der Kommandozeile.
+	 *
+	 * Bei 25 Terminen je Nacht bedeuten 120 Sekunden bis zu 50 Minuten
+	 * Abrufzeit. Das ist Absicht: Die Schnittstellenlast soll möglichst
+	 * vollständig in die Nacht wandern, damit tagsüber niemand mehr wartet.
 	 */
-	const ZEITBUDGET = 20;
+	const ZEITBUDGET = 120;
+
+	/**
+	 * Zahl aufeinanderfolgender Fehlschläge, nach der ein Lauf abbricht.
+	 *
+	 * Antwortet die Schnittstelle nicht mehr (Wartung, erschöpftes
+	 * Token-Kontingent, HTTP 403/500), bringt Weitermachen nichts: Der Lauf
+	 * würde sein ganzes Budget gegen die Wand rennen und nebenbei die
+	 * Statistik mit Fehlversuchen fluten. Ein einzelner Fehlschlag ist dagegen
+	 * normal — nicht jedes Turnier hat zu jeder Funktion Daten.
+	 */
+	const FEHLSCHLAEGE_MAX = 5;
 
 	/**
 	 * Wartezeit eines einzelnen Abrufs während des Laufs, in Sekunden. Der
@@ -84,6 +101,18 @@ class TurnierVorlader
 	 * @var int
 	 */
 	protected $budget = self::ZEITBUDGET;
+
+	/**
+	 * Fehlschläge dieses Laufs insgesamt (für das Protokoll).
+	 * @var int
+	 */
+	protected $fehlschlaege = 0;
+
+	/**
+	 * Fehlschläge in ununterbrochener Folge (für den Abbruch).
+	 * @var int
+	 */
+	protected $fehlschlaegeInFolge = 0;
 
 	/**
 	 * Führt den Lauf aus.
@@ -173,16 +202,15 @@ class TurnierVorlader
 		{
 			foreach($turniere as $uuid)
 			{
-				if($this->budgetAus()) break 2;
+				if($this->budgetAus() || $this->abbruch()) break 2;
 				if($this->imCache($funktion, $uuid)) continue;
 
-				$this->hole($funktion, array('funktion' => $funktion, 'cachekey' => $uuid, 'turnier' => $uuid));
-				$zaehler[$funktion]++;
+				if($this->hole($funktion, array('funktion' => $funktion, 'cachekey' => $uuid, 'turnier' => $uuid))) $zaehler[$funktion]++;
 			}
 		}
 
 		// Durchgang 3: Spielberichtsbögen, nur mit ordentlichem Restbudget
-		if(!$this->budgetAus(self::RESTBUDGET_BOEGEN))
+		if(!$this->budgetAus(self::RESTBUDGET_BOEGEN) && !$this->abbruch())
 		{
 			$zaehler['Spielberichtsbogen'] = $this->boegen($turniere);
 		}
@@ -329,7 +357,7 @@ class TurnierVorlader
 
 		foreach($turniere as $uuid)
 		{
-			if($this->budgetAus()) break;
+			if($this->budgetAus() || $this->abbruch()) break;
 
 			try
 			{
@@ -344,14 +372,13 @@ class TurnierVorlader
 
 			while($objSpieler->next())
 			{
-				if($this->budgetAus()) break 2;
+				if($this->budgetAus() || $this->abbruch()) break 2;
 
 				$schluessel = $uuid.'-'.$objSpieler->playerUuid;
 
 				if($this->imCache('Spielberichtsbogen', $schluessel)) continue;
 
-				$this->hole('Spielberichtsbogen', array('funktion' => 'Spielberichtsbogen', 'cachekey' => $schluessel, 'turnier' => $uuid, 'id' => (string) $objSpieler->playerUuid));
-				$geholt++;
+				if($this->hole('Spielberichtsbogen', array('funktion' => 'Spielberichtsbogen', 'cachekey' => $schluessel, 'turnier' => $uuid, 'id' => (string) $objSpieler->playerUuid))) $geholt++;
 			}
 		}
 
@@ -392,9 +419,15 @@ class TurnierVorlader
 	 * gelten dieselben Cachezeiten, dieselbe Statistikzählung und derselbe
 	 * Abgleich mit den Spiegeltabellen wie im Frontend.
 	 *
+	 * **Maßstab für den Erfolg ist nicht die Antwort, sondern was von ihr
+	 * gespeichert wurde:** Fehlgeschlagene Abrufe legt autoQuery bewusst nicht
+	 * ab. Wer nur die Versuche zählt, meldet auch dann Vollzug, wenn die
+	 * Schnittstelle durchgehend mit HTTP 403 antwortet — und genau als
+	 * Nachweis, dass das Vorladen wirkt, ist die Zählung gedacht.
+	 *
 	 * @param  string $funktion Name der Schnittstellenfunktion
 	 * @param  array  $params   Parameter für autoQuery
-	 * @return void
+	 * @return bool             Ob der Eintrag jetzt im Zwischenspeicher liegt
 	 */
 	protected function hole($funktion, $params)
 	{
@@ -406,6 +439,30 @@ class TurnierVorlader
 		{
 			// Ein einzelner Fehlschlag darf den Lauf nicht beenden
 		}
+
+		$erfolg = $this->imCache($funktion, $params['cachekey']);
+
+		if($erfolg)
+		{
+			$this->fehlschlaegeInFolge = 0;
+		}
+		else
+		{
+			$this->fehlschlaege++;
+			$this->fehlschlaegeInFolge++;
+		}
+
+		return $erfolg;
+	}
+
+	/**
+	 * Meldet, ob der Lauf wegen anhaltender Fehlschläge abbrechen soll.
+	 *
+	 * @return bool
+	 */
+	protected function abbruch()
+	{
+		return $this->fehlschlaegeInFolge >= self::FEHLSCHLAEGE_MAX;
 	}
 
 	/**
@@ -432,12 +489,21 @@ class TurnierVorlader
 	{
 		$summe = array_sum($zaehler);
 
-		if($summe < 1) return;
+		// Ein Lauf ohne Fehlschläge, der nichts zu tun fand, schweigt. Sobald
+		// aber etwas schiefging, gehört das ins Protokoll — auch (und gerade)
+		// wenn NICHTS geholt werden konnte
+		if($summe < 1 && $this->fehlschlaege < 1) return;
 
 		$teile = array();
 		foreach($zaehler as $funktion => $anzahl)
 		{
 			if($anzahl > 0) $teile[] = $anzahl.'× '.$funktion;
+		}
+
+		if($this->fehlschlaege > 0)
+		{
+			$teile[] = $this->fehlschlaege.' Fehlschläge';
+			if($this->abbruch()) $teile[] = 'Lauf abgebrochen';
 		}
 
 		try

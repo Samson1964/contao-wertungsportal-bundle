@@ -64,13 +64,30 @@
 
 	<?php else: ?>
 
+		<p class="wp-stat-last">
+			<strong>Belastung der Schnittstelle: <?= $this->last['anteil'] ?>&nbsp;%</strong>
+			&ndash; <?= number_format($this->last['abrufe'], 0, ',', '.') ?> von
+			<?= number_format($this->last['alle'], 0, ',', '.') ?> Abrufen gingen an nu,
+			davon <?= $this->last['vorlader'] ?>&nbsp;% aus dem nächtlichen Vorladen.
+			<span class="wp-stat-ziel">Ziel: unter 10&nbsp;%, und diese Last möglichst
+			vollständig aus dem Vorladen &ndash; dann wartet tagsüber kein Besucher mehr.</span>
+		</p>
+
 		<div class="wp-stat-diagramm">
 			<div class="wp-stat-legende">
 				<span><i style="background:<?= $this->farbeApi ?>"></i> von der API</span>
 				<span><i style="background:<?= $this->farbeCache ?>"></i> aus dem lokalen Cache</span>
 				<span><i style="background:<?= $this->farbeLokal ?>"></i> aus dem örtlichen Datenbestand</span>
-				<span><i style="background:<?= $this->farbeVorlader ?>"></i> nächtliches Vorladen (keine Besucher)</span>
+				<span><i style="background:<?= $this->farbeVorlader ?>"></i> nächtliches Vorladen</span>
 			</div>
+			<p class="wp-stat-erklaerung">
+				Das <strong>nächtliche Vorladen</strong> holt zwischen 1 und 3 Uhr die Turnierdaten
+				der letzten 30 Tage in den Zwischenspeicher, damit nicht der erste Besucher einer
+				Turnierseite auf die Schnittstelle warten muss. Diese Abrufe stammen von keinem
+				Besucher &ndash; sie <strong>belasten die Schnittstelle aber genauso</strong> und
+				zählen deshalb oben zur Belastung mit. Aus den Spalten „gesamt“ und „ohne API“
+				bleiben sie heraus: Die sagen, wie gut die <em>Besucher</em> bedient werden.
+			</p>
 			<div class="wp-stat-scroll">
 				<?= $this->diagramm ?>
 			</div>

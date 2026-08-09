@@ -71,23 +71,24 @@ Auswertung bleiben außen vor — für sie ist nicht bekannt, welche Bögen es g
 
 ## Zeitbudget
 
-Der Lauf endet nach **20 Sekunden**, auch mitten in einem Durchgang. Was liegen
+Der Lauf endet nach **120 Sekunden**, auch mitten in einem Durchgang. Was liegen
 bleibt, holt der nächste Lauf fünf Minuten später. Gemessen in der
 Testinstallation: rund **80 Abrufe je Lauf**, 212 Turniere waren nach drei
 Läufen mit Auswertungen versorgt.
 
-Hochgerechnet sind das bei 25 Läufen **etwa 2.000 Abrufe je Nacht** — deutlich
-mehr Last für die Schnittstelle als vorher, aber verteilt auf zwei Stunden und
-nur so lange, bis der Zwischenspeicher voll ist. Wer das enger halten will,
-verkleinert das Fenster im `interval` der `services.yml` und passt
-`STUNDE_ENDE` in der Klasse entsprechend an.
+Ist die **Laufzeit des Skripts begrenzt**, fällt das Budget kleiner aus — die
+120 Sekunden wirken sich also nur dort voll aus, wo keine Grenze gilt,
+praktisch auf der Kommandozeile. Denn nach dem letzten Budgettest läuft ein
+begonnener Abruf noch bis zu seiner Wartezeit weiter, im ungünstigen Fall
+zweimal (bei abgelaufenem Zugangstoken kommt dessen Erneuerung dazu). Bei einer
+30-Sekunden-Grenze bleiben deshalb 13 Sekunden Budget, bei 60 Sekunden sind es
+43.
 
-Ist die **Laufzeit des Skripts begrenzt** — im Web-Betrieb üblicherweise auf
-30 Sekunden —, fällt das Budget kleiner aus. Denn nach dem letzten Budgettest
-läuft ein begonnener Abruf noch bis zu seiner Wartezeit weiter, im ungünstigen
-Fall zweimal (bei abgelaufenem Zugangstoken kommt dessen Erneuerung dazu). Bei
-30 Sekunden Grenze bleiben deshalb 13 Sekunden Budget; auf der Kommandozeile
-(keine Grenze) sind es die vollen 20.
+Das ist Absicht: Die Last soll möglichst vollständig in die Nacht wandern,
+damit tagsüber niemand mehr wartet. Bei 25 Terminen bedeuten volle 120 Sekunden
+allerdings bis zu **50 Minuten Abrufzeit je Nacht**. Wer das enger halten will,
+verkleinert `ZEITBUDGET` oder das Fenster im `interval` der `services.yml` (und
+passt dann `STUNDE_ENDE` in der Klasse an).
 
 Aus demselben Grund setzt der Lauf die **Wartezeit der Schnittstelle** für sich
 auf 8 Sekunden herunter — eine kürzere Einstellung bleibt unangetastet.
@@ -101,12 +102,27 @@ hinterlassen.
 Hat ein Lauf etwas geholt, steht im **Systemlog** eine Zeile:
 
 ```
-Wertungsportal: 79 Turnierabrufe vorgeladen (79× Turnierauswertung, 20.1 s von 20 s, cli)
+Wertungsportal: 79 Turnierabrufe vorgeladen (79× Turnierauswertung, 20.1 s von 120 s, cli)
 ```
 
-Ein Lauf ohne Abrufe schreibt nichts — sonst stünde dort jeden Tag eine
-Nullmeldung. **Kein Eintrag heißt also: alles war schon da** (oder der Cronjob
-ist abgeschaltet).
+**Gezählt wird, was danach wirklich im Zwischenspeicher liegt** — nicht, wie oft
+es versucht wurde. Fehlgeschlagene Abrufe legt das Bundle bewusst nicht ab; wer
+nur die Versuche zählte, meldete auch dann Vollzug, wenn die Schnittstelle
+durchgehend mit HTTP 403 antwortet. Fehlschläge stehen mit in der Zeile:
+
+```
+Wertungsportal: 0 Turnierabrufe vorgeladen (5 Fehlschläge, Lauf abgebrochen, 0.4 s von 120 s, cli)
+```
+
+Nach **fünf Fehlschlägen hintereinander** bricht der Lauf ab. Antwortet die
+Schnittstelle nicht mehr, bringt Weitermachen nichts — der Lauf würde nur sein
+Budget gegen die Wand rennen und die Statistik mit Fehlversuchen fluten. Ein
+einzelner Fehlschlag ist dagegen normal: Nicht jedes Turnier hat zu jeder
+Funktion Daten.
+
+Ein Lauf ohne Abrufe **und ohne Fehlschläge** schreibt nichts — sonst stünde
+dort jeden Tag eine Nullmeldung. **Kein Eintrag heißt also: alles war schon da**
+(oder der Cronjob ist abgeschaltet).
 
 Der Lauf tut außerdem nichts, wenn der Live-Abruf abgeschaltet ist, keine
 Zugangsdaten hinterlegt sind oder der Zwischenspeicher für Turnierauswertungen
@@ -127,6 +143,18 @@ und genau diese Zahl war der Anlass für den Vorlader. Deshalb:
   Besucherabrufe. Der Vorlader steht abgesetzt in einer eigenen Spalte.
 * Im Diagramm sitzt er als grauer Abschnitt oben auf dem Balken, außerhalb der
   blauen Reihe der Besucherquellen.
+
+**Bei der Belastung der Schnittstelle zählt er dagegen mit.** Über dem Diagramm
+steht dafür eine eigene Kennzahl: Anteil aller Abrufe, die tatsächlich bei nu
+gelandet sind (`api` + `vorlader`), und wie viel davon auf das Vorladen
+entfällt. Denn ein Vorlade-Abruf belastet den Server des DSB genauso wie der
+eines Besuchers. Das Ziel: **unter 10 %**, und diese Last möglichst vollständig
+aus dem Vorladen — dann wartet tagsüber niemand mehr.
+
+Gezählt wird dort der **Versuch**, nicht der Erfolg: Ein Abruf, den die
+Schnittstelle mit einem Fehler beantwortet, hat sie trotzdem beschäftigt. Das
+Systemlog zählt umgekehrt nur, was ankam (siehe oben) — beide Zahlen
+beantworten verschiedene Fragen.
 
 Umgeschaltet wird über `API::vorladen(true|false)`, gesetzt vom Cronjob in
 einem `try`/`finally`. Bleibt der Schalter stehen, würden im Web-Betrieb die
@@ -150,7 +178,7 @@ php vendor/bin/contao-console contao:cron
 Dann kann in den Contao-Einstellungen unter *Cron* zusätzlich „Cronjobs über
 die Website ausführen" abgeschaltet werden (`disableCron`), damit nicht beides
 nebeneinander läuft. Auf der Kommandozeile gilt außerdem keine Laufzeitgrenze —
-der Vorlader bekommt dort seine vollen 20 Sekunden statt 13.
+der Vorlader bekommt dort seine vollen 120 Sekunden statt 13.
 
 **Nicht** per Curl auf eine URL: Ein solcher Aufruf geht durch den Webserver
 und scheitert an einem aktiven Bot-Schutz (bei Hetzner der Under-Attack-Modus,
@@ -159,7 +187,7 @@ der jede PHP-Adresse mit HTTP 401 beantwortet).
 Damit ein verspäteter Lauf nicht ganz ausfällt, arbeitet die Klasse auch
 außerhalb des Fensters — abgewiesen werden nur die Termine zwischen 3:05 und
 3:55, also genau die nach dem Abschlusslauf. Ein Lauf, der erst um 8 Uhr
-ausgelöst wird, holt seine 20 Sekunden Daten.
+ausgelöst wird, holt seine 120 Sekunden Daten.
 
 ## Technisch
 

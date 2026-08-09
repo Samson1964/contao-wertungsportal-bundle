@@ -250,6 +250,32 @@ a.wp-stat-knopf:hover {
 	white-space				: nowrap;
 }
 
+/* Kennzahl über dem Diagramm: was die Schnittstelle tatsächlich kostet.
+   Gleiche Kastenform wie die Steuerungsleiste darüber, damit die Ansicht
+   nicht in verschiedene Gestaltungen zerfällt */
+.wp-stat-last {
+	margin					: 0 0 14px;
+	padding					: 12px 14px;
+	background				: #f7f7f7;
+	border					: 1px solid #ddd;
+	border-radius			: 3px;
+	line-height				: 1.5;
+}
+
+.wp-stat-last .wp-stat-ziel {
+	display					: block;
+	color					: #777;
+}
+
+/* Erklärung unter der Legende — beantwortet die Frage, was das Vorladen ist
+   und warum es bei der Belastung mitzählt, aber nicht bei der Besucherquote */
+.wp-stat-erklaerung {
+	margin					: 6px 0 0;
+	max-width				: 70em;
+	color					: #555;
+	line-height				: 1.5;
+}
+
 /* Das Vorladen gehört nicht zu den Besucherabrufen und steht deshalb
    abgesetzt hinter der Quote — sichtbar, aber nicht mitgelesen */
 .wp-stat-tabelle .wp-stat-neben {

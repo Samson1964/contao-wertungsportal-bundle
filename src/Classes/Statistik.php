@@ -135,6 +135,24 @@ class Statistik extends \BackendModule
 
 		$gesamt['quote'] = $gesamt['gesamt'] ? round(($gesamt['cache'] + $gesamt['lokal']) * 100 / $gesamt['gesamt']) : 0;
 
+		// Belastung der Schnittstelle: Anteil ALLER Abrufe, die bei nu
+		// gelandet sind — das Vorladen zählt hier mit, denn es belastet die
+		// Schnittstelle genauso. Das ist die Gegenzahl zur Quote oben: Die
+		// sagt, wie gut die Besucher bedient werden, diese hier, was das
+		// den Server des DSB kostet
+		$alle = $gesamt['gesamt'] + $gesamt['vorlader'];
+		$last = $gesamt['api'] + $gesamt['vorlader'];
+
+		$this->Template->last = array
+		(
+			'abrufe'   => $last,
+			'alle'     => $alle,
+			'anteil'   => $alle ? round($last * 100 / $alle) : 0,
+			// Anteil, der davon auf das nächtliche Vorladen entfällt — das
+			// Ziel ist, dass die Belastung nur noch daraus besteht
+			'vorlader' => $last ? round($gesamt['vorlader'] * 100 / $last) : 0,
+		);
+
 		/*********************************************************
 		 * Verlauf für das Diagramm (Tag, Woche oder Monat)
 		*/

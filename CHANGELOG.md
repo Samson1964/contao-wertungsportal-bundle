@@ -1,5 +1,32 @@
 # Wertungsportal Changelog
 
+## Version 1.19.0 (2026-08-09)
+
+* Change: **Cache-Hinweis kürzer und deutlicher.** Statt „Diese Daten stammen aus dem
+  Zwischenspeicher vom 08.08.2026 13:53 Uhr und werden am 15.08.2026 13:53 Uhr erneuert."
+  steht jetzt **„Stand: 08.08.2026 13:53** (Nächstes Update: 15.08.2026 13:53)"
+* **Der Hinweis erscheint jetzt auch bei frisch abgerufenen Daten** — mit dem Zeitpunkt des
+  Abrufs. Bisher stand er nur auf Seiten, die aus dem Zwischenspeicher kamen; damit sah seine
+  Abwesenheit aus wie ein Mangel, statt zu bedeuten „diese Daten sind gerade eben geholt"
+* Change: **Zeitbudget des Vorladers auf 120 Sekunden** (vorher 20). Bei begrenzter
+  Skriptlaufzeit greift weiterhin die automatische Deckelung — bei 30 Sekunden Grenze bleiben
+  13 Sekunden, bei 60 Sekunden 43. Voll wirkt der Wert also auf der Kommandozeile, wo keine
+  Grenze gilt
+* **Fix: Der Vorlader zählte Versuche statt Erfolge.** Antwortete die Schnittstelle mit einem
+  Fehler (etwa HTTP 403 bei erschöpftem Token-Kontingent), meldete er trotzdem „x Turnierabrufe
+  vorgeladen" — obwohl nichts im Zwischenspeicher landete, denn fehlgeschlagene Abrufe werden
+  bewusst nicht abgelegt. Gezählt wird jetzt, was danach wirklich gespeichert ist
+* Nach **fünf Fehlschlägen hintereinander** bricht ein Lauf ab, statt sein Budget gegen eine
+  klemmende Schnittstelle zu fahren. Fehlschläge stehen in der Protokollzeile, und ein Lauf mit
+  Fehlschlägen protokolliert auch dann, wenn er nichts holen konnte
+* Add: **Kennzahl „Belastung der Schnittstelle"** über dem Statistik-Diagramm — Anteil aller
+  Abrufe, die tatsächlich bei nu gelandet sind (api + vorlader), und wie viel davon auf das
+  Vorladen entfällt. Ein Vorlade-Abruf belastet den Server des DSB genauso wie der eines
+  Besuchers; die Spalten „gesamt" und „ohne API" bleiben davon unberührt und messen weiter,
+  wie gut die Besucher bedient werden
+* Add: Erklärung unter der Legende, was das nächtliche Vorladen ist und warum es bei der
+  Belastung mitzählt, bei der Besucherquote aber nicht
+
 ## Version 1.18.0 (2026-08-07)
 
 * Add: **Der Vorlader zählt in der Statistik jetzt als eigene Quelle.** Bisher landeten seine

@@ -43,6 +43,17 @@ class API
 	protected static $cacheStand = array();
 
 	/**
+	 * Dasselbe für Abfragen, die in diesem Seitenaufruf FRISCH von der
+	 * Schnittstelle kamen und dabei abgelegt wurden: Zeitpunkt des Abrufs und
+	 * Ablauf des neuen Eintrags.
+	 *
+	 * Der Hinweis nennt den Stand auch für frische Daten — sonst stünde die
+	 * Angabe nur auf manchen Seiten und sähe aus wie ein Mangel.
+	 */
+	protected static $frischStand = array();
+	protected static $frischTreffer = array();
+
+	/**
 	 * Meldung, die angezeigt wird, wenn die Schnittstelle nicht zur
 	 * Verfügung steht — abgeschaltet oder ohne Antwort.
 	 */
@@ -248,6 +259,18 @@ class API
 			if($cache !== null && $speicherzeit != 0)
 			{
 				$cache->store($params['cachekey'], $result, $speicherzeit > 0 ? $speicherzeit : 0);
+
+				// Stand und Ablauf ERST NACH dem Ablegen vermerken, sonst
+				// wanderten sie mit in den gespeicherten Datensatz und der
+				// Hinweis nennte später den Zeitpunkt von damals
+				$jetzt = time();
+				$ablauf = $speicherzeit > 0 ? $jetzt + $speicherzeit : null;
+
+				self::$frischStand[] = $jetzt;
+				self::$frischTreffer[] = $ablauf;
+
+				$result['cachestand'] = $jetzt;
+				$result['cacheablauf'] = $ablauf;
 			}
 		}
 		elseif($cache !== null && 404 === (int) $result['http_code'])
@@ -1080,6 +1103,34 @@ class API
 		if(!count(self::$cacheStand)) return false;
 
 		return min(self::$cacheStand);
+	}
+
+	/**
+	 * Gegenstück zu cacheStatus() für die in diesem Seitenaufruf FRISCH
+	 * abgerufenen und abgelegten Daten.
+	 *
+	 * @return      false|int|null  false = nichts frisch geholt,
+	 *                              null = ohne Ablauf, sonst Zeitstempel
+	 */
+	public static function frischStatus()
+	{
+		if(!count(self::$frischTreffer)) return false;
+
+		$zeiten = array_filter(self::$frischTreffer, function($wert) { return $wert > 0; });
+
+		return count($zeiten) ? min($zeiten) : null;
+	}
+
+	/**
+	 * Zeitpunkt des ältesten frischen Abrufs dieses Seitenaufrufs.
+	 *
+	 * @return int|false Zeitstempel, oder false wenn nichts frisch geholt wurde
+	 */
+	public static function frischStand()
+	{
+		if(!count(self::$frischStand)) return false;
+
+		return min(self::$frischStand);
 	}
 
 	/**

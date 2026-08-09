@@ -1223,27 +1223,41 @@ class Helper extends \Frontend
 
 		if(is_array($result))
 		{
-			if(empty($result['cachequelle'])) return '';
+			// cachestand/cacheablauf setzt API::autoQuery in BEIDEN Fällen —
+			// beim Lesen aus dem Zwischenspeicher wie beim frischen Abruf
 			$ablauf = isset($result['cacheablauf']) ? (int) $result['cacheablauf'] : 0;
 			$stand = isset($result['cachestand']) ? (int) $result['cachestand'] : 0;
 		}
 		else
 		{
 			$status = \Schachbulle\ContaoWertungsportalBundle\Helper\API::cacheStatus();
-			if($status === false) return ''; // nichts kam aus dem Zwischenspeicher
+			$stand = \Schachbulle\ContaoWertungsportalBundle\Helper\API::cacheStand();
+
+			// Kam nichts aus dem Zwischenspeicher, sind die Daten frisch von
+			// der Schnittstelle — auch dafür gehört ein Stand hin
+			if($status === false)
+			{
+				$status = \Schachbulle\ContaoWertungsportalBundle\Helper\API::frischStatus();
+				$stand = \Schachbulle\ContaoWertungsportalBundle\Helper\API::frischStand();
+			}
+
+			// Weder das eine noch das andere: Auf dieser Seite wurde gar keine
+			// Abfrage gestellt (oder keine, die abgelegt werden durfte)
+			if($status === false) return '';
+
 			$ablauf = (int) $status;
-			$stand = (int) \Schachbulle\ContaoWertungsportalBundle\Helper\API::cacheStand();
+			$stand = (int) $stand;
 		}
 
-		// Der Speicherzeitpunkt ist die wichtigere Angabe: Bei einer Cachezeit
-		// von einer Woche sagt „gültig bis" wenig darüber, wie alt der
-		// angezeigte Stand ist
-		$woher = 'Diese Daten stammen aus dem Zwischenspeicher';
-		if($stand > 0) $woher .= ' vom '.\Date::parse($format, $stand).' Uhr';
+		$teile = array();
 
-		if($ablauf <= 0) return $woher.'.';
+		// Der Stand ist die wichtigere Angabe: Bei einer Cachezeit von einer
+		// Woche sagt der Erneuerungszeitpunkt wenig darüber, wie alt das ist,
+		// was gerade auf dem Bildschirm steht
+		if($stand > 0) $teile[] = '<b>Stand: '.\Date::parse($format, $stand).'</b>';
+		if($ablauf > 0) $teile[] = '(Nächstes Update: '.\Date::parse($format, $ablauf).')';
 
-		return $woher.' und werden am '.\Date::parse($format, $ablauf).' Uhr erneuert.';
+		return implode(' ', $teile);
 	}
 
 	/**
