@@ -90,7 +90,7 @@ class Turnierauswertung
 				$key = \StringUtil::generateAlias(sprintf('%04d', $t['playerNo']).$t['lastname'].$t['firstname']);
 
 				// FIDE-Daten laden
-				$fide = $t['fideId'] && isset($fideliste[$t['fideId']]) ? $fideliste[$t['fideId']] : array('land' => '', 'elo' => '', 'titel' => '');
+				$fide = $t['fideId'] && isset($fideliste[$t['fideId']]) ? $fideliste[$t['fideId']] : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::leererFIDESatz();
 
 				$this->daten['Spieler'][$key] = array
 				(

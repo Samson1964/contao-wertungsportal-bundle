@@ -9,8 +9,10 @@ namespace Schachbulle\ContaoWertungsportalBundle\Helper;
  * JSON-Format. Der Weg zu den Daten ist derselbe wie im Frontend
  * (API::autoQuery): erst der Zwischenspeicher, dann die Schnittstelle von nu,
  * im Notfall der örtliche Datenbestand. Der Vorteil gegenüber einem direkten
- * Zugriff auf nu: Die FIDE-Daten (Elo, Titel, Nation) sind hier aktuell, weil
- * sie beim Abruf aus der eigenen Elo-Tabelle ergänzt werden.
+ * Zugriff auf nu: Die FIDE-Daten sind hier aktuell, weil sie bei jeder Anfrage
+ * frisch aus der eigenen Elo-Tabelle geholt werden — und nu kennt neben Titel
+ * und Nation ohnehin nur die Standard-Elo, nicht die für Schnell- und
+ * Blitzschach.
  *
  * Zugang nur mit einem Schlüssel, der für genau einen Verein gilt
  * (tl_wertungsportal_tokens). Jede Anfrage wird mitgeschrieben.
@@ -190,6 +192,14 @@ class VereinslisteApi
 	 * denen sie je gemeldet war. Für eine Vereinsliste ist das Ballast — und
 	 * es wären Daten über andere Vereine, die hier niemanden angehen.
 	 *
+	 * Die FIDE-Werte werden hier NEU aus der örtlichen Elo-Tabelle geholt und
+	 * nicht aus der Antwort übernommen, obwohl Helper::setFIDEDaten sie dort
+	 * schon eingetragen hat. Grund: Jene Werte wandern mit in den
+	 * Zwischenspeicher und sind so alt wie der Eintrag — nach einem
+	 * Elo-Import stünden bis zu 24 Stunden lang die alten Zahlen in der
+	 * Schnittstelle, und ein neu hinzugekommenes Feld fehlte in allen älteren
+	 * Einträgen ganz. Der Aufwand ist eine einzige Sammelabfrage je Anfrage.
+	 *
 	 * @param  array  $daten  body.data der Antwort
 	 * @param  string $vkz    angefragter Verein
 	 * @return array
@@ -198,6 +208,10 @@ class VereinslisteApi
 	{
 		// Gesperrte Personen (Blacklist) wie im Frontend aussortieren
 		$blacklist = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getBlacklist(array_column($daten, 'nuLigaPersonId'));
+
+		// FIDE-Daten aller Spieler in einem Rutsch, taufrisch aus der Elo-Tabelle
+		$fideliste = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getFIDEDatenListe(array_column($daten, 'fideId'));
+		$fideleer = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::leererFIDESatz();
 
 		$liste = array();
 
@@ -221,6 +235,10 @@ class VereinslisteApi
 				if($status === 'A') break;
 			}
 
+			// FIDE-Satz der Person; ohne Eintrag in der Elo-Tabelle bleibt alles leer
+			$fideId = !empty($person['fideId']) ? (int) $person['fideId'] : null;
+			$fide = $fideId && isset($fideliste[$fideId]) ? $fideliste[$fideId] : $fideleer;
+
 			$eintrag = array
 			(
 				'id'              => $nuId,
@@ -233,10 +251,12 @@ class VereinslisteApi
 				'dwz'             => !empty($person['rating']) ? (int) $person['rating'] : null,
 				'dwzIndex'        => !empty($person['index']) ? (int) $person['index'] : null,
 				'letzteAuswertung'=> (string) ($person['weekOfLastTournamentEvaluation'] ?? ''),
-				'fideId'          => !empty($person['fideId']) ? (int) $person['fideId'] : null,
-				'elo'             => !empty($person['fideElo']) ? (int) $person['fideElo'] : null,
-				'titel'           => (string) ($person['fideTitle'] ?? ''),
-				'nation'          => (string) ($person['fideNation'] ?? ''),
+				'fideId'          => $fideId,
+				'elo'             => !empty($fide['elo']) ? (int) $fide['elo'] : null,
+				'eloSchnell'      => !empty($fide['eloSchnell']) ? (int) $fide['eloSchnell'] : null,
+				'eloBlitz'        => !empty($fide['eloBlitz']) ? (int) $fide['eloBlitz'] : null,
+				'titel'           => (string) $fide['titel'],
+				'nation'          => (string) $fide['land'],
 			);
 
 			$liste[] = $eintrag;

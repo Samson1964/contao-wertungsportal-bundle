@@ -1,5 +1,25 @@
 # Wertungsportal Changelog
 
+## Version 1.26.0 (2026-08-10)
+
+* Add: **Die Vereinslisten-Schnittstelle liefert die FIDE-Wertungen für Schnell- und
+  Blitzschach mit** — zwei neue Felder `eloSchnell` und `eloBlitz` je Spieler. Sie stammen
+  aus dem XML-Import der FIDE in die eigene Tabelle; nu kennt nur die Standard-Elo. Die drei
+  Wertungen sind voneinander unabhängig: Wer nur Blitz spielt, bekommt nur dort eine Zahl.
+  Fehlt eine Wertung, steht `null` da — nie eine 0, die bei FIDE „keine Wertung" heißt und in
+  einer Tabelle wie eine echte Zahl aussähe
+* Change: **Die FIDE-Werte werden bei jeder Anfrage frisch nachgeschlagen.** Bisher kamen sie
+  aus der zwischengespeicherten nu-Antwort und waren damit so alt wie der Eintrag — nach einem
+  Elo-Import standen bis zu 24 Stunden lang die alten Zahlen in der Schnittstelle. Kostenpunkt
+  ist eine einzige Sammelabfrage je Anfrage. Nebeneffekt: Die neuen Felder sind **sofort nach
+  dem Deployment** da, ohne dass der Zwischenspeicher geleert werden muss
+* Change: **Das PHP-Beispiel in der Schlüssel-E-Mail** gibt die beiden neuen Spalten mit aus
+* Die Felder kommen **zusätzlich** — bestehende Auswertungen laufen unverändert weiter
+* Intern: `Helper::leererFIDESatz()` als einzige Stelle für die leere Feldform; die drei
+  Module, die sie von Hand nachgebaut hatten (Bestenliste, Turnierauswertung,
+  Verbandsrangliste), nutzen sie jetzt. Sonst fehlt dort beim nächsten neuen Feld die Angabe
+* Doku: `docs/vereinslisten-api.md` beschreibt die drei Wertungen und ihre Herkunft
+
 ## Version 1.25.0 (2026-08-10)
 
 **Der Vorlader braucht ab jetzt deutlich mehr Plattenplatz — siehe unten.**

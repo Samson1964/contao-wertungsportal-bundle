@@ -4,10 +4,11 @@ Die Schnittstelle liefert die Mitgliederliste eines Vereins als JSON. Sie ist
 für Vereinswebsites gedacht, die ihre Spielerliste selbst ausgeben wollen.
 
 Gegenüber einem unmittelbaren Zugriff auf die nu-Schnittstelle des
-Wertungsportals hat sie zwei Vorteile: Die FIDE-Daten (Elo, Titel, Nation) sind
-hier aktuell, weil sie beim Abruf aus der eigenen Elo-Tabelle ergänzt werden,
-und die Antworten kommen aus dem Zwischenspeicher, belasten die nu-Schnittstelle
-also nicht bei jedem Aufruf.
+Wertungsportals hat sie zwei Vorteile: Die FIDE-Daten sind hier vollständig und
+aktuell — nu kennt nur die Standard-Elo, hier kommen **Schnell- und
+Blitzschach** dazu, und alle drei werden bei jeder Anfrage frisch aus der
+eigenen Elo-Tabelle geholt. Und die Antworten kommen aus dem Zwischenspeicher,
+belasten die nu-Schnittstelle also nicht bei jedem Aufruf.
 
 ## Für Vereine: so wird die Liste abgerufen
 
@@ -53,6 +54,8 @@ Beide Parameter sind Pflicht. Erlaubt ist nur GET.
       "letzteAuswertung": "2026-20",
       "fideId": 4611111,
       "elo": 1950,
+      "eloSchnell": 1912,
+      "eloBlitz": 1874,
       "titel": "FM",
       "nation": "GER"
     }
@@ -67,8 +70,17 @@ Beide Parameter sind Pflicht. Erlaubt ist nur GET.
 | `status` | `A` = aktiv, `P` = passiv; andere Werte der Schnittstelle werden unverändert durchgereicht |
 | `dwz` / `dwzIndex` | DWZ und Index, `null` wenn keine DWZ vorliegt |
 | `letzteAuswertung` | Kalenderwoche der letzten Auswertung (JJJJ-WW) |
-| `elo` / `titel` / `nation` | FIDE-Daten aus der örtlichen Elo-Tabelle |
+| `elo` | FIDE-Wertung Standardschach, `null` wenn keine vorliegt |
+| `eloSchnell` / `eloBlitz` | FIDE-Wertungen für Schnell- und Blitzschach, `null` wenn keine vorliegt |
+| `titel` / `nation` | FIDE-Titel und Nation, leer wenn nichts vorliegt |
 | `quelle` | `api`, `cache` oder `lokal` — woher die Daten stammen |
+
+**Zu den drei Elo-Werten:** Sie stammen aus dem monatlichen XML-Import der FIDE
+in die eigene Tabelle, nicht von nu. Wer keine FIDE-ID hat oder in der
+FIDE-Liste keine Wertung führt, bekommt `null` — die drei Werte sind
+unabhängig voneinander, ein Spieler kann eine Blitzwertung haben und keine für
+Standardschach. Eine `0` wird nie geliefert; sie hieße bei FIDE „keine
+Wertung" und sähe in einer Tabelle wie eine echte Zahl aus.
 
 Die Liste ist nach Nachname und Vorname sortiert (umlautsicher: Ä wird wie Ae
 einsortiert). Mitgliedschaften in **anderen** Vereinen erscheinen nicht;

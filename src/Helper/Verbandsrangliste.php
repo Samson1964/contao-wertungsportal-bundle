@@ -76,7 +76,7 @@ class Verbandsrangliste
 				if(!array_key_exists('index', $spieler)) $spieler['index'] = false;
 
 				// FIDE-Daten aus Tabelle tl_wertungsportal_elo holen
-				$fide = $spieler['fideId'] && isset($fideliste[$spieler['fideId']]) ? $fideliste[$spieler['fideId']] : array('land' => '', 'elo' => '', 'titel' => '');
+				$fide = $spieler['fideId'] && isset($fideliste[$spieler['fideId']]) ? $fideliste[$spieler['fideId']] : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::leererFIDESatz();
 				$fide_nation = $fide['land'];
 				$fide_elo = $fide['elo'];
 				$fide_titel = $fide['titel'];

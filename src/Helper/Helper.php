@@ -508,10 +508,22 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Fügt in der Rückgabe der Wertungsportal-API die aktuellen FIDE-Daten hinzu
-	 * @result         Array    API-Antwort
-	 * @param          Array    Parameter für die API
-	 * @return         Array    Modifizierte API-Antwort
+	 * Fügt in der Rückgabe der Wertungsportal-API die aktuellen FIDE-Daten hinzu.
+	 *
+	 * Ergänzt werden Elo, Titel und Nation sowie die Wertungen für Schnell- und
+	 * Blitzschach. Die Schnittstelle von nu kennt nur die Standard-Elo und die
+	 * ist dort oft veraltet; maßgeblich ist die eigene Tabelle
+	 * tl_wertungsportal_elo aus dem XML-Import der FIDE.
+	 *
+	 * ACHTUNG: Der Aufruf sitzt in API::autoQuery VOR dem Ablegen im
+	 * Zwischenspeicher — die Werte wandern also mit in den gespeicherten Satz.
+	 * Ein neu hinzugekommenes Feld fehlt deshalb in allen Einträgen, die vor
+	 * der Änderung entstanden sind, bis diese ablaufen.
+	 *
+	 * @param  array $result API-Antwort
+	 * @param  array $params Parameter der Abfrage; nur 'funktion' wird gelesen
+	 * @return array         Antwort mit ergänzten fide*-Feldern; bei allen
+	 *                       anderen Funktionen unverändert
 	 */
 	public static function setFIDEDaten($result, $params)
 	{
@@ -526,7 +538,7 @@ class Helper extends \Frontend
 					if(!empty($result['body']['data'][$x]['fideId'])) $fideids[] = $result['body']['data'][$x]['fideId'];
 				}
 				$fideliste = self::getFIDEDatenListe($fideids);
-				$leer = array('land' => '', 'elo' => '', 'titel' => '');
+				$leer = self::leererFIDESatz();
 
 				for($x = 0; $x < count($result['body']['data']); $x++)
 				{
@@ -535,6 +547,8 @@ class Helper extends \Frontend
 					$result['body']['data'][$x]['fideElo'] = $fide['elo'];
 					$result['body']['data'][$x]['fideTitle'] = $fide['titel'];
 					$result['body']['data'][$x]['fideNation'] = $fide['land'];
+					$result['body']['data'][$x]['fideEloRapid'] = $fide['eloSchnell'];
+					$result['body']['data'][$x]['fideEloBlitz'] = $fide['eloBlitz'];
 				}
 				break;
 			case 'Karteikarte': // Karteikarte eines Spielers nach nu-ID
@@ -543,6 +557,8 @@ class Helper extends \Frontend
 				$result['body']['fideElo'] = $fide['elo'];
 				$result['body']['fideTitle'] = $fide['titel'];
 				$result['body']['fideNation'] = $fide['land'];
+				$result['body']['fideEloRapid'] = $fide['eloSchnell'];
+				$result['body']['fideEloBlitz'] = $fide['eloBlitz'];
 				break;
 			default:
 		}
@@ -550,11 +566,53 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Lädt die FIDE-Daten Elo, Titel, Nation aus der lokalen Quelle
+	 * Liefert den leeren FIDE-Satz — eine Person ohne Eintrag in der Elo-Tabelle.
+	 *
+	 * Eigene Methode, damit die leere Form an EINER Stelle steht: Kommt ein
+	 * Feld hinzu, fehlt es sonst irgendwo, und der Aufrufer bekommt für
+	 * unbekannte Spieler eine Warnung statt eines leeren Wertes.
+	 *
+	 * @return array Alle FIDE-Felder mit Leerwert
+	 */
+	public static function leererFIDESatz()
+	{
+		return array('land' => '', 'elo' => '', 'titel' => '', 'eloSchnell' => '', 'eloBlitz' => '');
+	}
+
+	/**
+	 * Baut aus einer Zeile der Tabelle tl_wertungsportal_elo den FIDE-Satz.
+	 *
+	 * Eine 0 in einer der Wertungsspalten heißt bei FIDE „keine Wertung", nicht
+	 * „Wertung null" — deshalb wird sie zum Leerstring. Sonst stünde in der
+	 * Ausgabe eine 0, die wie eine echte Zahl aussieht.
+	 *
+	 * @param  object $objPlayer Datenbankzeile mit country, rating, title,
+	 *                           rapid_rating und blitz_rating
+	 * @return array             Feldform wie leererFIDESatz()
+	 */
+	protected static function fideSatz($objPlayer)
+	{
+		return array
+		(
+			'land'       => $objPlayer->country,
+			'elo'        => $objPlayer->rating ? $objPlayer->rating : '',
+			'titel'      => $objPlayer->title,
+			'eloSchnell' => $objPlayer->rapid_rating ? $objPlayer->rapid_rating : '',
+			'eloBlitz'   => $objPlayer->blitz_rating ? $objPlayer->blitz_rating : ''
+		);
+	}
+
+	/**
+	 * Lädt die FIDE-Daten (Nation, Elo, Titel, Schnell- und Blitz-Elo) einer
+	 * einzelnen FIDE-ID aus der örtlichen Tabelle tl_wertungsportal_elo.
+	 *
+	 * @param  int|string|false $fideid FIDE-ID, leer/false für „keine"
+	 * @return array                    Feldform wie leererFIDESatz(); für
+	 *                                  unbekannte IDs sind alle Felder leer
 	 */
 	public static function getFIDEDatenLokal($fideid)
 	{
-		$fide = array('land' => '', 'elo' => '', 'titel' => '');
+		$fide = self::leererFIDESatz();
 		if($fideid)
 		{
 			// FIDE-ID in lokaler Datenbank suchen
@@ -562,24 +620,21 @@ class Helper extends \Frontend
 			                                     ->execute($fideid);
 			if($objPlayer->numRows)
 			{
-				$fide = array
-				(
-					'land'  => $objPlayer->country,
-					'elo'   => $objPlayer->rating ? $objPlayer->rating : '',
-					'titel' => $objPlayer->title
-				);
+				$fide = self::fideSatz($objPlayer);
 			}
 		}
 		return $fide;
 	}
 
 	/**
-	 * Lädt die FIDE-Daten (Elo, Titel, Nation) für mehrere FIDE-IDs in einem
-	 * Rutsch aus der lokalen Tabelle tl_wertungsportal_elo — vermeidet die Einzelabfrage
-	 * je Spieler bei großen Listen.
+	 * Lädt die FIDE-Daten (Nation, Elo, Titel, Schnell- und Blitz-Elo) für
+	 * mehrere FIDE-IDs in einem Rutsch aus der örtlichen Tabelle
+	 * tl_wertungsportal_elo — vermeidet die Einzelabfrage je Spieler bei
+	 * großen Listen.
 	 *
 	 * @param     array $fideids  FIDE-IDs (leere Werte werden ignoriert)
-	 * @return    array           FIDE-ID => array('land' => ..., 'elo' => ..., 'titel' => ...)
+	 * @return    array           FIDE-ID => Feldform wie leererFIDESatz();
+	 *                            unbekannte IDs fehlen im Ergebnis
 	 */
 	public static function getFIDEDatenListe($fideids)
 	{
@@ -593,16 +648,11 @@ class Helper extends \Frontend
 		foreach(array_chunk($fideids, 500) as $chunk)
 		{
 			$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
-			$objPlayer = \Database::getInstance()->prepare("SELECT fideid, country, rating, title FROM tl_wertungsportal_elo WHERE fideid IN ($platzhalter)")
+			$objPlayer = \Database::getInstance()->prepare("SELECT fideid, country, rating, title, rapid_rating, blitz_rating FROM tl_wertungsportal_elo WHERE fideid IN ($platzhalter)")
 			                                     ->execute($chunk);
 			while($objPlayer->next())
 			{
-				$liste[$objPlayer->fideid] = array
-				(
-					'land'  => $objPlayer->country,
-					'elo'   => $objPlayer->rating ? $objPlayer->rating : '',
-					'titel' => $objPlayer->title
-				);
+				$liste[$objPlayer->fideid] = self::fideSatz($objPlayer);
 			}
 		}
 

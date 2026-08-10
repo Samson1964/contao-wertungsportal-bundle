@@ -460,9 +460,12 @@ usort(\$daten['spieler'], function (\$a, \$b) {
 
 echo '<h1>' . htmlspecialchars(\$daten['verein']) . ' (' . htmlspecialchars(\$daten['vkz']) . ')</h1>';
 echo '<p>' . (int) \$daten['anzahl'] . ' Spieler, Stand: ' . htmlspecialchars(\$daten['stand']) . '</p>';
+// Die drei Elo-Spalten sind die FIDE-Wertungen fuer Standard-, Schnell- und
+// Blitzschach. Wer sie nicht braucht, laesst die Spalten einfach weg.
 echo '<table border="1" cellpadding="4"><tr>'
    . '<th>Pl.</th><th>Name</th><th>Jg.</th><th>Mgl.-Nr.</th><th>Status</th>'
-   . '<th>DWZ</th><th>Index</th><th>Elo</th><th>Titel</th></tr>';
+   . '<th>DWZ</th><th>Index</th><th>Elo</th><th>Elo schnell</th><th>Elo blitz</th>'
+   . '<th>Titel</th></tr>';
 
 \$platz = 0;
 
@@ -481,6 +484,8 @@ foreach (\$daten['spieler'] as \$spieler) {
        . '<td>' . (\$spieler['dwz'] ? (int) \$spieler['dwz'] : '') . '</td>'
        . '<td>' . (\$spieler['dwzIndex'] ? (int) \$spieler['dwzIndex'] : '') . '</td>'
        . '<td>' . (\$spieler['elo'] ? (int) \$spieler['elo'] : '') . '</td>'
+       . '<td>' . (\$spieler['eloSchnell'] ? (int) \$spieler['eloSchnell'] : '') . '</td>'
+       . '<td>' . (\$spieler['eloBlitz'] ? (int) \$spieler['eloBlitz'] : '') . '</td>'
        . '<td>' . htmlspecialchars(\$spieler['titel']) . '</td>'
        . '</tr>';
 }

@@ -117,7 +117,7 @@ class Bestenliste extends \Module
 		{
 			$platz++;
 			$verein = isset($vereine[$spieler['id']]) ? $vereine[$spieler['id']] : null;
-			$fide = ($spieler['fideId'] && isset($fideliste[$spieler['fideId']])) ? $fideliste[$spieler['fideId']] : array('land' => '', 'elo' => '', 'titel' => '');
+			$fide = ($spieler['fideId'] && isset($fideliste[$spieler['fideId']])) ? $fideliste[$spieler['fideId']] : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::leererFIDESatz();
 
 			$daten[] = array
 			(
