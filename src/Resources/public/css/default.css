@@ -871,3 +871,45 @@
 	max-width				: 100%;
 	overflow-wrap			: anywhere;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Wertungsreferenten (Modul und Block unter der Verbandsrangliste)
+   ───────────────────────────────────────────────────────────── */
+
+.dewis .wp-referenten {
+	margin					: 0;
+	padding					: 0;
+	list-style				: none;
+}
+
+.dewis .wp-referent {
+	margin					: 0 0 8px;
+}
+
+.dewis .wp-referent:last-child {
+	margin-bottom			: 0;
+}
+
+/* Jede Angabe in eine eigene Zeile — Anschriften lesen sich sonst als
+   Fließtext und lassen sich schlecht abschreiben */
+.dewis .wp-referent span {
+	display					: block;
+}
+
+.dewis .wp-referent-name {
+	font-weight				: bold;
+}
+
+.dewis .wp-referent-adresse,
+.dewis .wp-referent-telefon {
+	color					: #444;
+}
+
+/* Block unter der Rangliste */
+.dewis .wp-referenten-block {
+	margin					: 18px 0;
+}
+
+.dewis .wp-referenten-block h3 {
+	margin					: 0 0 6px;
+}

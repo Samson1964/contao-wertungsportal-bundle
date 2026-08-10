@@ -117,6 +117,21 @@
 			</table>
 		</div>
 
+		<?php if(!empty($this->referenten['referenten'])): ?>
+			<div class="wp-referenten-block">
+				<h3>Wertungsreferent<?= count($this->referenten['referenten']) > 1 ? 'en' : '' ?></h3>
+				<?php if($this->referenten['ersatzweise']): ?>
+					<p class="wp-meta">Für diesen Verband ist niemand gesondert eingetragen; zuständig ist
+					<?= $this->referenten['name'] ?>.</p>
+				<?php endif; ?>
+				<?php
+					$objReferenten = new \FrontendTemplate('wertungsportal_sub_referenten');
+					$objReferenten->referenten = $this->referenten['referenten'];
+					echo $objReferenten->parse();
+				?>
+			</div>
+		<?php endif; ?>
+
 		<?php if($this->verbaende): ?>
 			<div class="table_responsiv">
 				<table class="body">

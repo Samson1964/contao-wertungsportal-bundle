@@ -1,0 +1,27 @@
+<?php
+/**
+ * Teiltemplate: Anschriften von Wertungsreferenten
+ *
+ * Erwartet in $this->referenten eine Liste aufbereiteter Personen aus
+ * Helper\Referentenbaum. Die E-Mail-Adresse kommt bereits als verschleierter
+ * Link — deshalb OHNE weiteres Maskieren ausgeben.
+ */
+?>
+<?php if(!empty($this->referenten)): ?>
+	<ul class="wp-referenten">
+		<?php foreach($this->referenten as $r): ?>
+			<li class="wp-referent">
+				<span class="wp-referent-name"><?= $r['name'] ?></span>
+				<?php if($r['strasse'] || $r['plz'] || $r['ort']): ?>
+					<span class="wp-referent-adresse"><?= trim($r['strasse'].', '.trim($r['plz'].' '.$r['ort']), ', ') ?></span>
+				<?php endif; ?>
+				<?php if($r['telefon']): ?>
+					<span class="wp-referent-telefon">Telefon: <?= $r['telefon'] ?></span>
+				<?php endif; ?>
+				<?php if($r['email']): ?>
+					<span class="wp-referent-email"><?= $r['email'] ?></span>
+				<?php endif; ?>
+			</li>
+		<?php endforeach; ?>
+	</ul>
+<?php endif; ?>

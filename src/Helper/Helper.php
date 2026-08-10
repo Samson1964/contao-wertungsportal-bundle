@@ -892,6 +892,54 @@ class Helper extends \Frontend
 	}
 
 	/**
+	 * Liefert die Gliederungsebene einer Verbands-VKZ.
+	 *
+	 * Die Kennziffer ist gestaffelt: erste Stelle Landesverband, Stelle 2–3
+	 * Bezirk, Stelle 4–5 Verein. Daraus ergibt sich die Ebene, mit der die
+	 * Ausgaben einrücken (dieselben Stufen wie in der Verbandsnavigation).
+	 *
+	 * @param  string $vkz Verbands-VKZ, ganz oder verkürzt
+	 * @return int         0 = DSB, 1 = Landesverband, 2 = Bezirk, 3 = darunter
+	 */
+	public static function verbandsebene($vkz)
+	{
+		$vkz = self::vkzVoll($vkz);
+
+		if($vkz === '00000') return 0;
+		if(substr($vkz, 1, 4) === '0000') return 1;
+		if(substr($vkz, 3, 2) === '00') return 2;
+
+		return 3;
+	}
+
+	/**
+	 * Liefert die Kette einer Kennziffer bis hinauf zum DSB.
+	 *
+	 * Aus 10102 (SC Viernheim) wird 10102 → 10100 (Bezirk Mannheim) → 10000
+	 * (Badischer Schachverband) → 00000 (DSB). Gedacht für Zuständigkeiten:
+	 * Ist für die Kennziffer selbst niemand eingetragen, gilt der nächste
+	 * darüber.
+	 *
+	 * @param  string $vkz Kennziffer, ganz oder verkürzt
+	 * @return array       Kennziffern von unten nach oben, ohne Wiederholungen
+	 */
+	public static function vkzKette($vkz)
+	{
+		$vkz = self::vkzVoll($vkz);
+		$kette = array($vkz);
+
+		if(strlen($vkz) === 5)
+		{
+			$kette[] = substr($vkz, 0, 3).'00';   // Bezirk
+			$kette[] = substr($vkz, 0, 1).'0000'; // Landesverband
+		}
+
+		$kette[] = '00000'; // DSB
+
+		return array_values(array_unique($kette));
+	}
+
+	/**
 	 * Gibt die Navigation zurück
 	 * @param 		-
 	 * @return		Array mit den Links

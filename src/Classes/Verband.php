@@ -166,6 +166,12 @@ class Verband extends \Module
 			$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
 			$this->Template->subHeadline = $titel;
 			$this->Template->daten = $rangliste->Rangliste;
+
+			// Zuständiger Wertungsreferent unter der Rangliste. Ist für den
+			// Verband selbst niemand eingetragen, gilt der nächste darüber —
+			// die Auskunft „wenden Sie sich an den Landesverband" ist immer
+			// noch besser als gar keine
+			$this->Template->referenten = \Schachbulle\ContaoWertungsportalBundle\Helper\Referentenbaum::zustaendig($zps);
 			$this->Template->fehler = $resultArr['error'] ? \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::apiFehler($resultArr) : false;
 			$this->Template->verbaende = $verbaende;
 

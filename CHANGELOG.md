@@ -1,5 +1,23 @@
 # Wertungsportal Changelog
 
+## Version 1.24.0 (2026-08-09)
+
+* Add: **Frontend-Modul „Wertungsreferenten"** — gibt die im Backend gepflegten Referenten
+  als Gliederung aus: DSB, darunter die Landesverbände, darunter deren Bezirke, jeweils mit
+  Name, Anschrift, Telefon und E-Mail. Aufgeführt werden nur Verbände, unter denen jemand
+  steht, samt ihrer übergeordneten Ebenen — sonst stünden dort 197 leere Zeilen
+* Add: **Unter der Verbandsrangliste steht der zuständige Referent.** Ist für den Verband
+  selbst niemand eingetragen, geht die Suche die Gliederung hinauf (Bezirk → Landesverband →
+  DSB) und sagt dazu, wessen Zuständigkeit greift: „Für diesen Verband ist niemand gesondert
+  eingetragen; zuständig ist der Badische Schachverband e.V."
+* **Die E-Mail-Adressen sind geschützt:** Sie stehen als HTML-Entities im Quelltext
+  (`StringUtil::encodeEmail`), nicht im Klartext — auch das „mailto" selbst ist verschleiert.
+  Im Browser bleibt der Link normal anklickbar, ein Sammler, der nach „@" sucht, geht leer aus
+* Beide Ausgaben kosten **keinen Schnittstellenabruf**: Die Daten stehen vollständig in der
+  eigenen Tabelle
+* Fix: Die Kennziffern der Gliederung kamen als Ganzzahlen aus `array_keys()` zurück — bei
+  Vergleichen und führenden Nullen wäre das früher oder später schiefgegangen
+
 ## Version 1.23.0 (2026-08-09)
 
 **Neue Tabelle — beim Deployment `contao:migrate` ausführen.**

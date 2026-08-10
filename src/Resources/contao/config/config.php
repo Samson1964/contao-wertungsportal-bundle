@@ -126,6 +126,8 @@ $GLOBALS['FE_MOD']['wertungsportal'] = array
 	'wertungsportal_verband'         => 'Schachbulle\ContaoWertungsportalBundle\Classes\Verband',
 	'wertungsportal_turnier'         => 'Schachbulle\ContaoWertungsportalBundle\Classes\Turnier',
 	'wertungsportal_bestenliste'     => 'Schachbulle\ContaoWertungsportalBundle\Classes\Bestenliste',
+	// Wertungsreferenten der Verbände als Gliederung
+	'wertungsportal_referenten'      => 'Schachbulle\ContaoWertungsportalBundle\Classes\Referentenliste',
 	// Registrierung für die örtliche Vereinslisten-Schnittstelle
 	'wertungsportal_token'           => 'Schachbulle\ContaoWertungsportalBundle\Classes\TokenRegistrierung',
 );

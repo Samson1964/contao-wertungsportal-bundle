@@ -1,0 +1,72 @@
+<?php
+/**
+ * Frontend-Modul: Wertungsreferenten der Verbände
+ *
+ * Zeigt die Referenten als Gliederung. Die Einrückung kommt aus den Klassen
+ * level_0 bis level_3 (dieselben wie in der Verbandsnavigation).
+ */
+?>
+<?php
+	$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/default.css';
+?>
+<!-- indexer::stop -->
+<div class="dewis <?= $this->class ?>" <?= $this->cssID ?><?php if($this->style): ?> style="<?= $this->style ?>"<?php endif; ?>>
+
+	<?php if($this->headline): ?>
+		<<?= $this->hl ?>><?= $this->headline ?></<?= $this->hl ?>>
+	<?php endif; ?>
+
+	<ul class="navigation">
+		<?php foreach($this->navigation as $d): ?>
+			<?= $d ?>
+		<?php endforeach; ?>
+	</ul>
+
+	<?php if($this->subHeadline): ?>
+		<<?= $this->shl ?>><?= $this->subHeadline ?></<?= $this->shl ?>>
+	<?php endif; ?>
+
+	<?php if(!$this->zeilen): ?>
+
+		<p class="wp-hinweis">Es sind noch keine Wertungsreferenten hinterlegt.</p>
+
+	<?php else: ?>
+
+		<table class="body">
+			<thead>
+				<tr>
+					<th width="40%">Verband</th>
+					<th width="60%">Wertungsreferent</th>
+				</tr>
+			</thead>
+			<tbody>
+			<?php $x = 0; ?>
+			<?php foreach($this->zeilen as $d): ?>
+				<?php $x++; $class = ($x < count($this->zeilen)) ? ' bottom-line' : ''; ?>
+				<tr>
+					<td class="<?= $d['ebene'] ?> right-line<?= $class ?>">
+						<?= $d['name'] ?>
+						<span class="wp-meta"><?= $d['vkz'] ?></span>
+					</td>
+					<td class="<?= $class ?>">
+						<?php if($d['referenten']): ?>
+							<?php
+								// Teiltemplate einbinden — dieselbe Darstellung
+								// wie unter der Verbandsrangliste
+								$objTeil = new \FrontendTemplate('wertungsportal_sub_referenten');
+								$objTeil->referenten = $d['referenten'];
+								echo $objTeil->parse();
+							?>
+						<?php else: ?>
+							<span class="wp-meta">&ndash;</span>
+						<?php endif; ?>
+					</td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+
+	<?php endif; ?>
+
+</div>
+<!-- indexer::continue -->

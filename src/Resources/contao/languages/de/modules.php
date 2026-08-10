@@ -30,3 +30,4 @@ $GLOBALS['TL_LANG']['FMD']['wertungsportal_bestenliste'] = array('DWZ-Bestenlist
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_token'] = array('Schnittstellen-Registrierung','Formular, über das Vereine einen Zugangsschlüssel für die Vereinslisten-Schnittstelle anfordern');
 $GLOBALS['TL_LANG']['MOD']['wp-sperren'] = array('Sperren', 'Besucher, die wegen Massenabfragen gebremst wurden');
 $GLOBALS['TL_LANG']['MOD']['wp-referenten'] = array('Referenten', 'Wertungsreferenten der Verbände verwalten');
+$GLOBALS['TL_LANG']['FMD']['wertungsportal_referenten'] = array('Wertungsreferenten','Die Wertungsreferenten der Verbände als Gliederung, mit Anschrift und geschützter E-Mail-Adresse');
