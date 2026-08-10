@@ -8,15 +8,17 @@ services:
 
     # Nächtlicher Cronjob: lädt Turnierdaten der letzten Wochen vor, damit
     # nicht jeder erste Besucher auf die Schnittstelle warten muss.
-    # Alle 5 Minuten zwischen 1 und 3 Uhr; jeder Lauf macht dort weiter, wo
+    # Alle 10 Minuten zwischen 1 und 3 Uhr; jeder Lauf macht dort weiter, wo
     # der vorige aufgehört hat. Der Lauf um 3:00 ist der letzte der Nacht —
-    # die Termine bis 3:55 lehnt die Klasse selbst ab (STUNDE_ENDE).
-    # ACHTUNG: Ohne einen echten Cronjob beim Hoster (contao:cron alle 5
+    # die Termine bis 3:50 lehnt die Klasse selbst ab (STUNDE_ENDE).
+    # Der Takt passt zum Zeitbudget: 180 Sekunden Arbeit, dann gut sieben
+    # Minuten Ruhe, bevor der nächste Lauf beginnt.
+    # ACHTUNG: Ohne einen echten Cronjob beim Hoster (contao:cron alle 10
     # Minuten) löst nur ein Seitenaufruf den Termin aus — dann bleibt es
     # faktisch bei einem Lauf je Nacht
     Schachbulle\ContaoWertungsportalBundle\Cron\TurnierVorlader:
         tags:
-            - { name: contao.cronjob, interval: '*/5 1-3 * * *' }
+            - { name: contao.cronjob, interval: '*/10 1-3 * * *' }
 
     # Räumt täglich die Arbeitsablagen weg (Zähler der Besucherbremse).
     # Nachts um vier, wenn der Vorlader fertig ist

@@ -1,5 +1,38 @@
 # Wertungsportal Changelog
 
+## Version 1.25.0 (2026-08-10)
+
+**Der Vorlader braucht ab jetzt deutlich mehr Plattenplatz — siehe unten.**
+
+* Change: **Der Vorlader lädt jetzt auch die Karteikarten vor** — `/dwz/dwzliste/persons/{id}`
+  und `/dwz/persons/{id}/history` für alle veröffentlichten Personen. Ein Lauf arbeitet damit
+  fünf Durchgänge ab: Turnierauswertungen, Turnierergebnisse, Karteikarten, Turnierhistorien
+  und zuletzt die Spielberichtsbögen
+* Change: **Alle Turniere statt der letzten 30 Tage.** Die 30 Tage gelten weiterhin für den
+  einmaligen Abruf der Turnierliste je Nacht (neue Turniere entstehen nun einmal in den letzten
+  Wochen), begrenzen aber nicht mehr, was vorgeladen wird — vorgeladen wird der gesamte örtliche
+  Bestand
+* Change: **180 Sekunden je Lauf statt 120**, dafür alle **10 Minuten** zwischen 1 und 3 Uhr
+  statt alle 5. Das sind 13 Läufe je Nacht mit gut sieben Minuten Ruhe dazwischen, zusammen
+  39 Minuten Abrufzeit. Gemessen in der Testinstallation: **714 Abrufe in einem Lauf**
+* **Gesperrte Personen werden nicht vorgeladen** (Blacklist): Ihre Karteikarte zeigt das
+  Frontend ohnehin nicht — und die Daten von jemandem, der der Veröffentlichung widersprochen
+  hat, haben im Zwischenspeicher nichts zu suchen. Die übrigen kommen nach DWZ absteigend dran:
+  Ein vollständiger Durchgang dauert bei 95.000 Personen mehrere Nächte, und in dieser Zeit soll
+  da sein, was am häufigsten nachgeschlagen wird
+* Change: Die Prüfung „liegt schon vor?" schaut nur noch nach, **ob die Cache-Datei existiert**,
+  statt sie zu lesen und zu entpacken — **0,014 ms statt 0,19 ms** je Eintrag, auf 200.000
+  Einträge hochgerechnet 2,8 Sekunden statt 38. Der Vorlader prüft dabei einmal je Funktion, ob
+  seine eigene Pfadberechnung mit der des Helper-Bundles übereinstimmt, und fällt sonst auf den
+  langsamen Weg zurück; ohne diese Absicherung hielte er nach einer Änderung dort jeden Eintrag
+  für fehlend und holte jede Nacht alles neu
+* **Plattenplatz:** Eine Karteikarte belegt im Zwischenspeicher rund 4 KB, eine Turnierhistorie
+  rund 32 KB. Bei 95.000 Personen summiert sich das auf etwa **3,4 GB**, dazu kommen die
+  Turnierdaten. Wer knapp bei Speicherplatz ist, schaltet das Vorladen ab oder verkleinert das
+  Zeitfenster
+* Doku: `docs/vorladen.md` beschreibt den neuen Umfang, die Reihenfolge der fünf Durchgänge und
+  den Platzbedarf
+
 ## Version 1.24.0 (2026-08-09)
 
 * Add: **Frontend-Modul „Wertungsreferenten"** — gibt die im Backend gepflegten Referenten

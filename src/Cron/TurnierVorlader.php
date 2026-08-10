@@ -31,8 +31,13 @@ namespace Schachbulle\ContaoWertungsportalBundle\Cron;
 class TurnierVorlader
 {
 	/**
-	 * Zeitraum in Tagen, aus dem Turniere vorgeladen werden. Ältere Turniere
-	 * werden kaum noch aufgerufen; wer sie doch anfordert, wartet einmalig.
+	 * Zeitraum in Tagen, über den die Turnierliste der Nacht abgerufen wird.
+	 *
+	 * Das begrenzt NICHT, was vorgeladen wird — vorgeladen wird der gesamte
+	 * örtliche Turnierbestand. Der Abruf dient allein dazu, neu angelegte
+	 * Turniere kennenzulernen; die entstehen naturgemäß in den letzten Wochen.
+	 * Ältere Turniere kommen über die Turniersuche der Besucher in den
+	 * Bestand und werden von da an mit vorgeladen.
 	 */
 	const TAGE = 30;
 
@@ -58,11 +63,11 @@ class TurnierVorlader
 	 * Wert wirkt sich also nur dort voll aus, wo keine Grenze gilt, praktisch
 	 * auf der Kommandozeile.
 	 *
-	 * Bei 25 Terminen je Nacht bedeuten 120 Sekunden bis zu 50 Minuten
+	 * Bei 13 Terminen je Nacht bedeuten 180 Sekunden bis zu 39 Minuten
 	 * Abrufzeit. Das ist Absicht: Die Schnittstellenlast soll möglichst
 	 * vollständig in die Nacht wandern, damit tagsüber niemand mehr wartet.
 	 */
-	const ZEITBUDGET = 120;
+	const ZEITBUDGET = 180;
 
 	/**
 	 * Zahl aufeinanderfolgender Fehlschläge, nach der ein Lauf abbricht.
@@ -113,6 +118,13 @@ class TurnierVorlader
 	 * @var int
 	 */
 	protected $fehlschlaegeInFolge = 0;
+
+	/**
+	 * Verzeichnis des Zwischenspeichers je Funktion (false = eigene
+	 * Pfadberechnung nicht verwendbar, siehe cachepfad()).
+	 * @var array
+	 */
+	protected $pfade = array();
 
 	/**
 	 * Führt den Lauf aus.
@@ -189,11 +201,9 @@ class TurnierVorlader
 	 */
 	protected function durchgaenge()
 	{
-		$zaehler = array('Turnierauswertung' => 0, 'Turnierergebnisse' => 0, 'Spielberichtsbogen' => 0);
+		$zaehler = array('Turnierauswertung' => 0, 'Turnierergebnisse' => 0, 'Karteikarte' => 0, 'Karteikarte_Turniere' => 0, 'Spielberichtsbogen' => 0);
 
 		$turniere = $this->turniere();
-
-		if(!count($turniere)) return $zaehler;
 
 		// Durchgang 1 und 2: je Funktion einmal durch alle Turniere. Bewusst
 		// nacheinander und nicht je Turnier beides — reicht das Budget nicht,
@@ -209,13 +219,68 @@ class TurnierVorlader
 			}
 		}
 
-		// Durchgang 3: Spielberichtsbögen, nur mit ordentlichem Restbudget
+		// Durchgang 3 und 4: Karteikarten und deren Turnierhistorie.
+		//
+		// Vor den Spielberichtsbögen, weil eine Karteikarte weit häufiger
+		// aufgerufen wird als ein einzelner Bogen — und weil es von den Bögen
+		// ein Vielfaches gibt. Die Personen werden erst hier gelesen: Reicht
+		// das Budget nicht einmal für die Turniere, wäre die Abfrage umsonst
+		if(!$this->budgetAus() && !$this->abbruch())
+		{
+			$personen = $this->personen();
+
+			foreach(array('Karteikarte', 'Karteikarte_Turniere') as $funktion)
+			{
+				foreach($personen as $nuid)
+				{
+					if($this->budgetAus() || $this->abbruch()) break 2;
+					if($this->imCache($funktion, $nuid)) continue;
+
+					if($this->hole($funktion, array('funktion' => $funktion, 'cachekey' => $nuid, 'id' => $nuid))) $zaehler[$funktion]++;
+				}
+			}
+		}
+
+		// Durchgang 5: Spielberichtsbögen, nur mit ordentlichem Restbudget
 		if(!$this->budgetAus(self::RESTBUDGET_BOEGEN) && !$this->abbruch())
 		{
 			$zaehler['Spielberichtsbogen'] = $this->boegen($turniere);
 		}
 
 		return $zaehler;
+	}
+
+	/**
+	 * Liefert die nu-Nummern der Personen, deren Karteikarte vorgeladen wird.
+	 *
+	 * Gesperrte Personen (Blacklist) bleiben außen vor: Ihre Karteikarte
+	 * zeigt das Frontend ohnehin nicht an — der Abruf wäre verschwendet, und
+	 * die Daten von jemandem, der der Veröffentlichung widersprochen hat,
+	 * hätten im Zwischenspeicher nichts zu suchen.
+	 *
+	 * Sortiert nach DWZ absteigend: Ein vollständiger Durchgang über den
+	 * ganzen Bestand dauert mehrere Nächte, und die stärksten Spieler werden
+	 * am häufigsten nachgeschlagen.
+	 *
+	 * @return array Liste der nu-Nummern
+	 */
+	protected function personen()
+	{
+		try
+		{
+			$objPersonen = \Database::getInstance()
+				->prepare("SELECT nuLigaPersonId FROM tl_wertungsportal_persons WHERE published = '1' AND nuLigaPersonId != '' AND blocked != '1' ORDER BY rating DESC, id");
+			$objPersonen = $objPersonen->execute();
+		}
+		catch(\Throwable $e)
+		{
+			return array();
+		}
+
+		$nuids = array();
+		while($objPersonen->next()) $nuids[] = (string) $objPersonen->nuLigaPersonId;
+
+		return $nuids;
 	}
 
 	/**
@@ -319,9 +384,11 @@ class TurnierVorlader
 
 		try
 		{
+			// Ohne Zeitfenster: Vorgeladen wird der GESAMTE örtliche Bestand.
+			// Die Reihenfolge sorgt dafür, daß die lohnenden zuerst drankommen
 			$objTurniere = \Database::getInstance()
-				->prepare("SELECT uuid FROM tl_wertungsportal_tournaments WHERE uuid != '' AND enddate >= ? AND enddate <= ? ORDER BY (ratingState = 'RATED') DESC, enddate DESC")
-				->execute($von, date('Y-m-d'));
+				->prepare("SELECT uuid FROM tl_wertungsportal_tournaments WHERE uuid != '' ORDER BY (ratingState = 'RATED') DESC, enddate DESC")
+				->execute();
 		}
 		catch(\Throwable $e)
 		{
@@ -431,6 +498,19 @@ class TurnierVorlader
 	{
 		try
 		{
+			$pfad = $this->cachepfad($funktion, $schluessel);
+
+			// Der schnelle Weg: nur nachsehen, ob die Datei da ist.
+			// isCached() liest und entpackt dafür den ganzen Eintrag — bei
+			// gemessenen 0,19 ms je vorhandenem Eintrag und 200.000 Einträgen
+			// gingen 38 der 180 Sekunden allein fürs Überspringen drauf.
+			// Der Dateitest kostet 0,014 ms.
+			//
+			// Inhaltlich ist beides gleichwertig: Gefragt ist „liegt etwas
+			// vor", NICHT „ist es noch gültig" — ein abgelaufener Eintrag ist
+			// die Notreserve und wird bewusst nicht ersetzt
+			if($pfad !== null) return is_file($pfad);
+
 			$cache = new \Schachbulle\ContaoHelperBundle\Classes\Cache(array('name' => $schluessel, 'path' => 'wp_'.$funktion, 'extension' => '.cache'));
 
 			return (bool) $cache->isCached($schluessel, true);
@@ -441,6 +521,43 @@ class TurnierVorlader
 			// als bei einem Dateisystemproblem in einer Schleife zu hängen
 			return true;
 		}
+	}
+
+	/**
+	 * Baut den Dateipfad eines Cache-Eintrags selbst.
+	 *
+	 * Das Helper-Bundle legt je Eintrag eine Datei ab, deren Name der
+	 * SHA1-Wert des bereinigten Schlüssels ist (kleingeschrieben, alles außer
+	 * Ziffern, Buchstaben, Punkt, Unterstrich und Bindestrich entfernt). Diese
+	 * Regel wird hier nachgebildet, um nicht für jeden der zehntausenden
+	 * Schlüssel ein Cache-Objekt bauen zu müssen.
+	 *
+	 * **Selbstprüfung:** Einmal je Funktion wird der eigene Pfad gegen den des
+	 * Helper-Bundles gehalten. Weichen sie ab — etwa weil dort die Regel
+	 * geändert wurde —, wird der eigene Weg NICHT verwendet. Ohne diese
+	 * Prüfung hielte der Vorlader jeden Eintrag für fehlend und holte jede
+	 * Nacht den gesamten Bestand neu, ohne daß es jemandem auffiele.
+	 *
+	 * @param  string $funktion   Name der Schnittstellenfunktion
+	 * @param  string $schluessel Cache-Schlüssel
+	 * @return string|null        Pfad, oder null wenn die Regel nicht paßt
+	 */
+	protected function cachepfad($funktion, $schluessel)
+	{
+		if(!array_key_exists($funktion, $this->pfade))
+		{
+			$probe = 'vorlader-pruefschluessel';
+			$cache = new \Schachbulle\ContaoHelperBundle\Classes\Cache(array('name' => $probe, 'path' => 'wp_'.$funktion, 'extension' => '.cache'));
+
+			$muster = (string) $cache->getCacheDir();
+			$eigen = dirname($muster).'/'.sha1($probe).'.cache';
+
+			$this->pfade[$funktion] = ($muster === $eigen) ? dirname($muster).'/' : false;
+		}
+
+		if($this->pfade[$funktion] === false) return null;
+
+		return $this->pfade[$funktion].sha1(preg_replace('/[^0-9a-z\.\_\-]/i', '', strtolower((string) $schluessel))).'.cache';
 	}
 
 	/**

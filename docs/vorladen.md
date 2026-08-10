@@ -1,10 +1,11 @@
 # Turnierdaten nachts vorladen
 
-Ein Cronjob füllt jede Nacht den Zwischenspeicher mit den Turnierdaten der
-letzten 30 Tage. Ohne ihn wartet der **erste** Besucher einer Turnierseite auf
-die Schnittstelle — und das ist bei frischen Turnieren fast jeder Besucher:
-Gemessen kamen Turnierauswertungen zu 4 %, Turnierergebnisse zu 5 % und
-Spielberichtsbögen zu 3 % aus dem Zwischenspeicher.
+Ein Cronjob füllt jede Nacht den Zwischenspeicher — mit den Turnierdaten des
+gesamten örtlichen Bestands und mit den Karteikarten aller Personen. Ohne ihn
+wartet der **erste** Besucher einer Turnierseite auf die Schnittstelle — und das
+ist bei frischen Turnieren fast jeder Besucher: Gemessen kamen
+Turnierauswertungen zu 4 %, Turnierergebnisse zu 5 % und Spielberichtsbögen zu
+3 % aus dem Zwischenspeicher.
 
 Vorgeladen wird nur, was **fehlt**. Ein vorhandener Eintrag wird nie ersetzt,
 auch kein abgelaufener: Der ist die Notreserve, falls die Schnittstelle
@@ -15,12 +16,22 @@ ausfällt, und der nächste Seitenaufruf frischt ihn ohnehin auf.
 | Uhrzeit | Was passiert |
 |---|---|
 | 1:00 | Turnierliste der letzten 30 Tage abrufen, dann mit dem ersten Durchgang beginnen |
-| 1:05 … 2:55 | alle 5 Minuten weitermachen, wo der vorige Lauf aufgehört hat |
+| 1:10 … 2:50 | alle 10 Minuten weitermachen, wo der vorige Lauf aufgehört hat |
 | 3:00 | letzter Lauf der Nacht |
-| 3:05 … 3:55 | die Termine bestehen, arbeiten aber nicht mehr |
+| 3:10 … 3:50 | die Termine bestehen, arbeiten aber nicht mehr |
+
+Das sind **13 Läufe zu je 180 Sekunden**, zusammen also gut 39 Minuten
+Abrufzeit. Zwischen zwei Läufen liegen rund sieben Minuten Ruhe.
 
 Am nächsten Abend beginnt alles von vorn — mit einem **frischen Abruf der
-Turnierliste**, damit die inzwischen dazugekommenen Turniere dabei sind.
+Turnierliste** über die letzten 30 Tage, damit die inzwischen dazugekommenen
+Turniere dabei sind.
+
+**Die 30 Tage begrenzen nicht, was vorgeladen wird.** Sie gelten nur für diesen
+einen Abruf: Neue Turniere entstehen naturgemäß in den letzten Wochen.
+Vorgeladen wird anschließend der **gesamte** Bestand der Tabelle
+`tl_wertungsportal_tournaments`. Ältere Turniere kommen über die Turniersuche
+der Besucher hinein und werden von da an mit vorgeladen.
 
 Der Abruf der Liste kostet genau **einen** Aufruf je Nacht, ohne dass dafür
 etwas gespeichert werden müsste: Der Cache-Schlüssel enthält das Datum
@@ -37,24 +48,43 @@ Bestand nicht hatte.
 **Fortgesetzt wird ohne gespeicherte Position.** Jeder Lauf geht die Liste von
 vorn durch und überspringt, was schon da ist — das ist ohne Buchführung immer
 richtig, auch wenn ein Lauf mittendrin abbricht oder jemand einen Eintrag von
-Hand löscht. Gemessen kostet ein übersprungener Eintrag 0,19 ms; selbst bei
-6.000 Spielberichtsbögen ist das gut eine Sekunde je Lauf.
+Hand löscht.
+
+Damit das bei Hunderttausenden Einträgen nicht selbst zum Kostenfaktor wird,
+prüft der Vorlader **nur, ob die Cache-Datei da ist** — statt sie zu lesen und
+zu entpacken. Gemessen: **0,014 ms statt 0,19 ms** je Eintrag; auf 200.000
+Einträge hochgerechnet 2,8 Sekunden statt 38. Inhaltlich ist beides
+gleichwertig, gefragt ist ja „liegt etwas vor" und nicht „ist es noch gültig".
+
+Der Dateiname ist der SHA1-Wert des **bereinigten** Schlüssels
+(kleingeschrieben!) — ein naives `sha1('NU4093214')` wäre falsch. Der Vorlader
+prüft deshalb einmal je Funktion, ob seine eigene Rechnung mit der des
+Helper-Bundles übereinstimmt, und fällt sonst auf den langsamen Weg zurück.
+Ohne diese Prüfung hielte er nach einer Änderung dort jeden Eintrag für fehlend
+und holte jede Nacht den gesamten Bestand neu.
 
 ## Abschalten
 
 Einstellungen → Bereich Wertungsportal → **Nächtliches Vorladen abschalten**.
 
-## Drei Durchgänge
+## Fünf Durchgänge
 
-Ein Lauf arbeitet die Turniere dreimal durch, nach Wichtigkeit:
+Ein Lauf arbeitet fünf Durchgänge ab, nach Wichtigkeit:
 
 1. **Turnierauswertungen** aller Turniere
 2. **Turnierergebnisse** aller Turniere
-3. **Spielberichtsbögen** — einer je Spieler, also schnell hundert je Turnier
+3. **Karteikarten** aller Personen (`/dwz/dwzliste/persons/{id}`)
+4. **Turnierhistorien** aller Personen (`/dwz/persons/{id}/history`)
+5. **Spielberichtsbögen** — einer je Spieler und Turnier, also schnell hundert
+   je Turnier
 
-Bewusst nacheinander und nicht je Turnier alles: Reicht die Zeit nicht, haben
+Bewusst nacheinander und nicht alles je Turnier: Reicht die Zeit nicht, haben
 so mehr Turniere wenigstens ihre Auswertung, statt dass sich ein einzelnes
-Turnier das ganze Budget nimmt. Der dritte Durchgang beginnt nur, wenn noch
+Turnier das ganze Budget nimmt.
+
+Die **Bögen stehen zuletzt**, auch hinter den Karteikarten: Von ihnen gibt es
+ein Vielfaches, und eine Karteikarte wird weit häufiger aufgerufen als ein
+einzelner Spielberichtsbogen. Der fünfte Durchgang beginnt nur, wenn noch
 mindestens 5 Sekunden übrig sind.
 
 Die Reihenfolge der Turniere: **gewertete zuerst** (ein noch nicht gewertetes
@@ -65,30 +95,39 @@ Schnittstelle für ein ungewertetes Turnier mit „No evaluation found", landet
 das als Negativ-Eintrag im Zwischenspeicher. Auch dieser Besucher wartet dann
 nicht.
 
-Die Spielerliste des dritten Durchgangs kommt aus der örtlichen
+Die Personen kommen **nach DWZ absteigend** dran. Bei rund 95.000 veröffentlichten
+Personen dauert ein vollständiger Durchgang mehrere Nächte — und in dieser Zeit
+soll das da sein, was am häufigsten nachgeschlagen wird.
+
+**Gesperrte Personen bleiben außen vor** (Blacklist): Ihre Karteikarte zeigt das
+Frontend ohnehin nicht, der Abruf wäre also verschwendet — und die Daten von
+jemandem, der der Veröffentlichung widersprochen hat, haben im Zwischenspeicher
+nichts zu suchen.
+
+Die Spielerliste des fünften Durchgangs kommt aus der örtlichen
 Auswertungstabelle, kostet also keinen Abruf. Turniere ohne gespeicherte
 Auswertung bleiben außen vor — für sie ist nicht bekannt, welche Bögen es gibt.
 
 ## Zeitbudget
 
-Der Lauf endet nach **120 Sekunden**, auch mitten in einem Durchgang. Was liegen
-bleibt, holt der nächste Lauf fünf Minuten später. Gemessen in der
-Testinstallation: rund **80 Abrufe je Lauf**, 212 Turniere waren nach drei
-Läufen mit Auswertungen versorgt.
+Der Lauf endet nach **180 Sekunden**, auch mitten in einem Durchgang. Was liegen
+bleibt, holt der nächste Lauf zehn Minuten später. Gemessen in der
+Testinstallation: **714 Abrufe in einem Lauf** (101 Auswertungen, 97 Ergebnisse,
+516 Karteikarten).
 
-Ist die **Laufzeit des Skripts begrenzt**, fällt das Budget kleiner aus — die
-120 Sekunden wirken sich also nur dort voll aus, wo keine Grenze gilt,
-praktisch auf der Kommandozeile. Denn nach dem letzten Budgettest läuft ein
-begonnener Abruf noch bis zu seiner Wartezeit weiter, im ungünstigen Fall
-zweimal (bei abgelaufenem Zugangstoken kommt dessen Erneuerung dazu). Bei einer
-30-Sekunden-Grenze bleiben deshalb 13 Sekunden Budget, bei 60 Sekunden sind es
-43.
+Ist die **Laufzeit des Skripts begrenzt**, hebt der Lauf die Grenze zuerst
+selbst an, soweit er sie braucht (`set_time_limit`). Erst wenn der Hoster das
+verbietet, fällt das Budget kleiner aus — und zwar deutlich: Nach dem letzten
+Budgettest läuft ein begonnener Abruf noch bis zu seiner Wartezeit weiter, im
+ungünstigen Fall zweimal (bei abgelaufenem Zugangstoken kommt dessen Erneuerung
+dazu). Bei einer nicht anhebbaren 30-Sekunden-Grenze bleiben deshalb 13 Sekunden
+Budget, bei 60 Sekunden sind es 43.
 
 Das ist Absicht: Die Last soll möglichst vollständig in die Nacht wandern,
-damit tagsüber niemand mehr wartet. Bei 25 Terminen bedeuten volle 120 Sekunden
-allerdings bis zu **50 Minuten Abrufzeit je Nacht**. Wer das enger halten will,
-verkleinert `ZEITBUDGET` oder das Fenster im `interval` der `services.yml` (und
-passt dann `STUNDE_ENDE` in der Klasse an).
+damit tagsüber niemand mehr wartet. Bei 13 Terminen bedeuten volle 180 Sekunden
+bis zu **39 Minuten Abrufzeit je Nacht**. Wer das enger halten will, verkleinert
+`ZEITBUDGET` oder das Fenster im `interval` der `services.yml` (und passt dann
+`STUNDE_ENDE` in der Klasse an).
 
 Aus demselben Grund setzt der Lauf die **Wartezeit der Schnittstelle** für sich
 auf 8 Sekunden herunter — eine kürzere Einstellung bleibt unangetastet.
@@ -97,12 +136,29 @@ aber an einer klemmenden Schnittstelle nicht die Laufzeitgrenze reißen: Ein
 mittendrin abgeschossener Lauf könnte einen halb geschriebenen Cache-Eintrag
 hinterlassen.
 
+## Platzbedarf
+
+Der Zwischenspeicher legt je Eintrag eine Datei an. Gemessene Durchschnitte:
+
+| Was | Größe je Eintrag |
+|---|---|
+| Karteikarte | ~4 KB |
+| Turnierhistorie | ~32 KB |
+| Turnierauswertung | ~19 KB |
+| Spielberichtsbogen | ~12 KB |
+
+**Das summiert sich.** Bei rund 95.000 Personen im Bestand kommen allein für
+Karteikarten und Historien etwa **3,4 GB** zusammen, dazu die Turnierdaten. Wer
+knapp bei Speicherplatz ist, sollte das im Auge behalten — der Zwischenspeicher
+lässt sich jederzeit über System → Systemwartung leeren, und einzelne Einträge
+über das Backend-Modul „Zwischenspeicher".
+
 ## Nachsehen, ob er läuft
 
 Hat ein Lauf etwas geholt, steht im **Systemlog** eine Zeile:
 
 ```
-Wertungsportal: 79 Turnierabrufe vorgeladen (79× Turnierauswertung, 20.1 s von 120 s, cli)
+Wertungsportal: 714 Turnierabrufe vorgeladen (101× Turnierauswertung, 97× Turnierergebnisse, 516× Karteikarte, 180.2 s von 180 s, cli)
 ```
 
 **Gezählt wird, was danach wirklich im Zwischenspeicher liegt** — nicht, wie oft
@@ -111,7 +167,7 @@ nur die Versuche zählte, meldete auch dann Vollzug, wenn die Schnittstelle
 durchgehend mit HTTP 403 antwortet. Fehlschläge stehen mit in der Zeile:
 
 ```
-Wertungsportal: 0 Turnierabrufe vorgeladen (5 Fehlschläge, Lauf abgebrochen, 0.4 s von 120 s, cli)
+Wertungsportal: 0 Turnierabrufe vorgeladen (5 Fehlschläge, Lauf abgebrochen, 0.4 s von 180 s, cli)
 ```
 
 Nach **fünf Fehlschlägen hintereinander** bricht der Lauf ab. Antwortet die
@@ -169,7 +225,7 @@ löst also nicht die Uhr aus, sondern ein Besucher. Auf einer nachts stillen
 Website wird der um 1:00 fällige Termin erst am Morgen abgearbeitet, und
 danach ist der nächste erst wieder in der Folgenacht fällig.
 
-Richtig läuft es mit einem Cronjob beim Hoster, alle fünf Minuten:
+Richtig läuft es mit einem Cronjob beim Hoster, alle zehn Minuten:
 
 ```bash
 php vendor/bin/contao-console contao:cron
@@ -178,21 +234,21 @@ php vendor/bin/contao-console contao:cron
 Dann kann in den Contao-Einstellungen unter *Cron* zusätzlich „Cronjobs über
 die Website ausführen" abgeschaltet werden (`disableCron`), damit nicht beides
 nebeneinander läuft. Auf der Kommandozeile gilt außerdem keine Laufzeitgrenze —
-der Vorlader bekommt dort seine vollen 120 Sekunden statt 13.
+der Vorlader bekommt dort seine vollen 180 Sekunden.
 
 **Nicht** per Curl auf eine URL: Ein solcher Aufruf geht durch den Webserver
 und scheitert an einem aktiven Bot-Schutz (bei Hetzner der Under-Attack-Modus,
 der jede PHP-Adresse mit HTTP 401 beantwortet).
 
 Damit ein verspäteter Lauf nicht ganz ausfällt, arbeitet die Klasse auch
-außerhalb des Fensters — abgewiesen werden nur die Termine zwischen 3:05 und
-3:55, also genau die nach dem Abschlusslauf. Ein Lauf, der erst um 8 Uhr
-ausgelöst wird, holt seine 120 Sekunden Daten.
+außerhalb des Fensters — abgewiesen werden nur die Termine zwischen 3:10 und
+3:50, also genau die nach dem Abschlusslauf. Ein Lauf, der erst um 8 Uhr
+ausgelöst wird, holt seine 180 Sekunden Daten.
 
 ## Technisch
 
 `Cron\TurnierVorlader`, angemeldet in `services.yml` mit
-`tags: [{ name: contao.cronjob, interval: '*/5 1-3 * * *' }]`. Achtung bei
+`tags: [{ name: contao.cronjob, interval: '*/10 1-3 * * *' }]`. Achtung bei
 Änderungen am Intervall: Contao ersetzt die Schlagworte `daily`, `hourly` … per
 `str_replace` — die @-Schreibweise (`'@daily'`) wird dabei zu `@@daily` und
 lässt den Container nicht mehr bauen.
@@ -200,5 +256,14 @@ lässt den Container nicht mehr bauen.
 Geholt wird über `API::autoQuery()` und nicht über einen eigenen Abruf: So
 gelten dieselben Cachezeiten, dieselbe Statistikzählung und derselbe Abgleich
 mit den Spiegeltabellen wie im Frontend — und vor allem entstehen dieselben
-Cache-Schlüssel (`<uuid>`, bei Bögen `<uuid>-<playerUuid>`). Ein abweichender
-Schlüssel würde am Frontend vorbei laden.
+Cache-Schlüssel:
+
+| Funktion | Schlüssel |
+|---|---|
+| Turnierauswertung, Turnierergebnisse | `<uuid>` des Turniers |
+| Spielberichtsbogen | `<uuid>-<playerUuid>` |
+| Karteikarte, Karteikarte_Turniere | `<nuLigaPersonId>`, z. B. `NU4093214` |
+
+Ein abweichender Schlüssel würde am Frontend vorbei laden — die Aufrufe im
+Vorlader sind deshalb Zeile für Zeile denen in `Classes/Spieler.php` und
+`Classes/Turnier.php` nachgebildet.
