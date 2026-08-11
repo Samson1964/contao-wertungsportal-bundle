@@ -176,6 +176,16 @@ Budget gegen die Wand rennen und die Statistik mit Fehlversuchen fluten. Ein
 einzelner Fehlschlag ist dagegen normal: Nicht jedes Turnier hat zu jeder
 Funktion Daten.
 
+**Der Grund steht hinter „zuletzt:"** in derselben Zeile:
+
+```
+Wertungsportal: 0 Turnierabrufe vorgeladen (5 Fehlschläge, Lauf abgebrochen, zuletzt: Turnierauswertung — Token-Anfrage fehlgeschlagen (HTTP 403): Too much access tokens for the requested client-id, 0.6 s von 180 s, cli)
+```
+
+Ohne ihn ist die Meldung wertlos. Am 11.08.2026 stand dort anderthalb Tage lang
+nur „5 Fehlschläge, Lauf abgebrochen" — und nirgends, dass die Schnittstelle das
+Zugangstoken verweigerte.
+
 Ein Lauf ohne Abrufe **und ohne Fehlschläge** schreibt nichts — sonst stünde
 dort jeden Tag eine Nullmeldung. **Kein Eintrag heißt also: alles war schon da**
 (oder der Cronjob ist abgeschaltet).
@@ -183,6 +193,38 @@ dort jeden Tag eine Nullmeldung. **Kein Eintrag heißt also: alles war schon da*
 Der Lauf tut außerdem nichts, wenn der Live-Abruf abgeschaltet ist, keine
 Zugangsdaten hinterlegt sind oder der Zwischenspeicher für Turnierauswertungen
 auf „aus" steht — vorzuladen gäbe es dann nichts.
+
+## Wenn die Schnittstelle das Zugangstoken verweigert
+
+Antwortet nu mit **„Too much access tokens for the requested client-id"**, sind
+zu viele Zugangstoken auf einmal auf die Kennung ausgestellt. Betroffen sind nur
+die **geschützten** Endpunkte — `/dwz/tournaments/…` und `/dwz/persons/…`. Der
+öffentliche Teil (`/dwz/dwzliste/…`, also die Karteikarte selbst) antwortet
+weiter normal.
+
+Ein Token gilt eine Zeit lang und wird in `system/tmp/wertungsportal-token.json`
+abgelegt, damit alle Seitenaufrufe und alle Cronläufe dasselbe benutzen. Lässt
+sich diese Datei **nicht schreiben**, holt sich jeder Aufruf ein eigenes Token —
+bei einem Vorladelauf Hunderte in Minuten, und das Kontingent ist erschöpft.
+Genau das steht dann im Systemprotokoll:
+
+```
+Wertungsportal: Die Tokendatei … läßt sich nicht schreiben. … Bitte Schreibrechte prüfen.
+```
+
+Bis Fassung 1.26.0 lag die Datei in `sys_get_temp_dir()`. Das ist auf einem
+gemieteten Server nicht verlässlich: Webserver und Kommandozeile laufen dort je
+nach Hoster unter verschiedenen Benutzern oder in getrennten Namensräumen
+(systemd `PrivateTmp`), und ein Aufräumdienst kann jederzeit dazwischenfahren.
+
+**Nach einem abgelehnten Tokenabruf wartet das Bundle 300 Sekunden**, bevor es
+erneut anfragt. Ohne diese Wartezeit wurde aus jedem abgelehnten Abruf sofort
+der nächste — und bei einem Kontingentfehler fütterte das genau die Ursache: Die
+Anlage kam aus dem Zustand nicht mehr heraus, weil sie ihn selbst am Leben hielt.
+
+Für die Besucher wird ein Tokenausfall wie ein **Verbindungsausfall** behandelt:
+Sie bekommen die Daten aus dem Zwischenspeicher oder dem örtlichen Bestand samt
+Hinweis auf deren Alter — nicht eine Fehlermeldung.
 
 ## In der Statistik
 

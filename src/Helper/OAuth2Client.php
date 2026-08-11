@@ -38,6 +38,35 @@ class OAuth2Client
 	protected static int $aufrufe = 0;
 
 	/**
+	 * Wartezeit nach einem gescheiterten Tokenabruf, in Sekunden.
+	 *
+	 * Ohne sie wird aus einem abgelehnten Tokenabruf sofort der nächste: Da ein
+	 * Fehlschlag nichts hinterlegt, fragt jeder folgende Aufruf von vorn an.
+	 * Bei einem Kontingentfehler („Too much access tokens") füttert das genau
+	 * die Ursache und die Anlage kommt aus dem Zustand nicht mehr heraus.
+	 */
+	const TOKENSPERRE = 300;
+
+	/**
+	 * Tokendaten für die Dauer dieses Prozesses.
+	 *
+	 * Zweite Verteidigungslinie neben der Datei: Läßt sich die Datei nicht
+	 * schreiben — verschiedene Benutzer für Web und Kommandozeile, ein eigenes
+	 * /tmp je Dienst, ein Aufräumer dazwischen —, bliebe sonst jeder einzelne
+	 * Abruf ohne hinterlegtes Token und holte sich ein eigenes. Bei einem
+	 * Vorladelauf sind das Hunderte in Minuten.
+	 */
+	protected static array $tokenSpeicher = array();
+
+	/**
+	 * Zeitpunkt, bis zu dem nach einem Fehlschlag nicht erneut angefragt wird,
+	 * samt der Meldung von damals. Gilt für diesen Prozess; für die folgenden
+	 * steht dasselbe in der Tokendatei.
+	 */
+	protected static int $gesperrtBis = 0;
+	protected static string $sperrgrund = '';
+
+	/**
 	 * Prüft, ob die Zugangsdaten der Schnittstelle gepflegt sind.
 	 *
 	 * Ohne Basisadresse, Kennung, Geheimnis und Token-Adresse ist kein Abruf
@@ -70,7 +99,7 @@ class OAuth2Client
 		$this->clientSecret  = str_replace('&#35;', '#', (string) ($GLOBALS['TL_CONFIG']['wertungsportal_clientSecret'] ?? ''));
 		$this->tokenEndpoint = (string) ($GLOBALS['TL_CONFIG']['wertungsportal_tokenURL'] ?? '');
 		$this->scope         = (string) ($GLOBALS['TL_CONFIG']['wertungsportal_scopeListe'] ?? '');
-		$this->cacheFile     = sys_get_temp_dir() . '/oauth2_token_cache.json';
+		$this->cacheFile     = self::tokendatei();
 		$this->timeout       = \Schachbulle\ContaoWertungsportalBundle\Helper\API::timeout();
 
 		$log = 'OAuth2Client initialisiert mit folgenden Werten:'."\n";
@@ -85,28 +114,199 @@ class OAuth2Client
 	// ─────────────────────────────────────────────
 	//  Cache lesen / schreiben / löschen
 	// ─────────────────────────────────────────────
+
+	/**
+	 * Liefert den Pfad der Tokendatei.
+	 *
+	 * Sie liegt in `system/tmp` des Projekts und NICHT mehr in
+	 * `sys_get_temp_dir()`. Der Grund ist eine echte Störung vom 11.08.2026:
+	 * Das Systemverzeichnis gehört nicht der Anwendung. Webserver und
+	 * Kommandozeile laufen dort je nach Hoster unter verschiedenen Benutzern
+	 * oder sogar in getrennten Namensräumen (systemd `PrivateTmp`), und ein
+	 * Aufräumer kann jederzeit dazwischenfahren. Kann die Datei nicht
+	 * geschrieben werden, holt sich JEDER Abruf ein eigenes Token — bei einem
+	 * Vorladelauf Hunderte, bis die Schnittstelle mit „Too much access tokens"
+	 * abweist. `system/tmp` gehört der Anwendung und wird von beiden Wegen
+	 * gleich gesehen.
+	 *
+	 * Ist der Projektpfad nicht zu ermitteln (eigenständige Download-Skripte
+	 * ohne Container), bleibt das Systemverzeichnis als Ausweg.
+	 *
+	 * @return string Vollständiger Pfad zur Tokendatei
+	 */
+	public static function tokendatei(): string
+	{
+		$wurzel = '';
+
+		try
+		{
+			$container = \System::getContainer();
+			if($container && $container->hasParameter('kernel.project_dir')) $wurzel = (string) $container->getParameter('kernel.project_dir');
+		}
+		catch(\Throwable $e)
+		{
+			$wurzel = '';
+		}
+
+		if($wurzel === '' && \defined('TL_ROOT')) $wurzel = TL_ROOT;
+
+		if($wurzel !== '')
+		{
+			$verzeichnis = $wurzel.'/system/tmp';
+
+			if(is_dir($verzeichnis) || @mkdir($verzeichnis, 0775, true))
+			{
+				if(is_writable($verzeichnis)) return $verzeichnis.'/wertungsportal-token.json';
+			}
+		}
+
+		return sys_get_temp_dir().'/oauth2_token_cache.json';
+	}
+
+	/**
+	 * Liest die hinterlegten Tokendaten.
+	 *
+	 * Zuerst aus dem Prozessspeicher, dann aus der Datei — in dieser
+	 * Reihenfolge, damit ein Lauf auch dann mit einem Token auskommt, wenn die
+	 * Datei nicht beschreibbar ist.
+	 *
+	 * @return array Leeres Array, wenn nichts hinterlegt oder lesbar ist
+	 */
 	public function readCache(): array
 	{
+		if(!empty(self::$tokenSpeicher)) return self::$tokenSpeicher;
+
 		if(!file_exists($this->cacheFile))
 		{
 			return [];
 		}
-		return json_decode(file_get_contents($this->cacheFile), true) ?? [];
+
+		$inhalt = @file_get_contents($this->cacheFile);
+
+		if($inhalt === false) return [];
+
+		$daten = json_decode($inhalt, true) ?? [];
+
+		// Was aus der Datei kommt, gilt auch für diesen Prozess
+		if(!empty($daten)) self::$tokenSpeicher = $daten;
+
+		return $daten;
 	}
 
+	/**
+	 * Legt Tokendaten ab — immer im Prozessspeicher, zusätzlich in der Datei.
+	 *
+	 * Schlägt das Schreiben fehl, wird das EINMAL im Systemprotokoll vermerkt.
+	 * Lautlos darf es nicht bleiben: Genau dieser Fall führt dazu, dass jeder
+	 * Abruf ein neues Token anfordert und das Kontingent der Schnittstelle
+	 * aufbraucht.
+	 *
+	 * @param  array $data Tokendaten (access_token, refresh_token, expires_at …)
+	 * @return void
+	 */
 	public function writeCache(array $data): void
 	{
-		file_put_contents($this->cacheFile, json_encode($data));
+		self::$tokenSpeicher = $data;
+
+		if(@file_put_contents($this->cacheFile, json_encode($data)) === false)
+		{
+			static $gemeldet = false;
+
+			if(!$gemeldet)
+			{
+				$gemeldet = true;
+				$this->protokolliere('Die Tokendatei '.$this->cacheFile.' läßt sich nicht schreiben. Innerhalb eines Aufrufs hilft der Zwischenspeicher im Arbeitsspeicher, aber jeder neue Seitenaufruf und jeder Cronlauf fordert ein eigenes Zugangstoken an — die Schnittstelle weist das irgendwann mit "Too much access tokens" ab. Bitte Schreibrechte prüfen.');
+			}
+		}
 	}
 
 	public function clearCache(): void
 	{
+		self::$tokenSpeicher = array();
+
 		if(file_exists($this->cacheFile))
 		{
-			unlink($this->cacheFile);
+			@unlink($this->cacheFile);
 			$log = "🗑️ Token-Cache gelöscht.\n";
 			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
 		}
+	}
+
+	/**
+	 * Vermerkt einen gescheiterten Tokenabruf und verhängt die Wartezeit.
+	 *
+	 * Der Vermerk geht in den Prozessspeicher UND in die Tokendatei, damit auch
+	 * der nächste Seitenaufruf und der nächste Cronlauf ihn sehen. Die Datei
+	 * enthält dann kein Token, sondern nur die Sperre — `readCache` liefert
+	 * keinen `access_token`, der Ablauf bleibt also derselbe.
+	 *
+	 * @param  string $meldung Fehlertext der Schnittstelle, für das Protokoll
+	 * @return void
+	 */
+	protected function sperreSetzen(string $meldung): void
+	{
+		self::$gesperrtBis = time() + self::TOKENSPERRE;
+		self::$sperrgrund = $meldung;
+
+		@file_put_contents($this->cacheFile, json_encode(array(
+			'gesperrt_bis' => self::$gesperrtBis,
+			'sperrgrund'   => $meldung,
+		)));
+
+		$this->protokolliere('Zugangstoken nicht zu bekommen — '.$meldung.'. Weitere Versuche werden für '.self::TOKENSPERRE.' Sekunden ausgesetzt.');
+	}
+
+	/**
+	 * Schreibt eine Zeile ins Systemprotokoll.
+	 *
+	 * Eigene Methode, weil `TL_ERROR` in den eigenständigen Download-Skripten
+	 * nicht zwingend definiert ist und ein klemmendes Protokoll den Abruf nicht
+	 * zusätzlich stören darf.
+	 *
+	 * @param  string $meldung Text ohne Präfix
+	 * @return void
+	 */
+	protected function protokolliere(string $meldung): void
+	{
+		try
+		{
+			\System::log('Wertungsportal: '.$meldung, __METHOD__, \defined('TL_ERROR') ? TL_ERROR : 'ERROR');
+		}
+		catch(\Throwable $e)
+		{
+			// Beiwerk
+		}
+	}
+
+	/**
+	 * Meldet, ob zurzeit eine Wartezeit nach einem Fehlschlag läuft.
+	 *
+	 * Prüft den Prozessspeicher und die Tokendatei. Ist die Wartezeit
+	 * abgelaufen, gilt sie als aufgehoben.
+	 *
+	 * @return array|null Fehlerantwort im Format der Schnittstelle,
+	 *                    null wenn keine Sperre läuft
+	 */
+	protected function sperre(): ?array
+	{
+		$bis = self::$gesperrtBis;
+		$grund = self::$sperrgrund;
+
+		if($bis === 0 && file_exists($this->cacheFile))
+		{
+			$daten = json_decode((string) @file_get_contents($this->cacheFile), true) ?? [];
+			$bis = (int) ($daten['gesperrt_bis'] ?? 0);
+			$grund = (string) ($daten['sperrgrund'] ?? '');
+		}
+
+		if($bis <= time()) return null;
+
+		return array(
+			'error'         => true,
+			'error_message' => $grund !== '' ? $grund : 'Zugangstoken nicht verfügbar',
+			'http_code'     => 403,
+			'tokenfehler'   => true,
+		);
 	}
 
 	// ─────────────────────────────────────────────
@@ -246,6 +446,19 @@ class OAuth2Client
 	// ─────────────────────────────────────────────
 	public function getValidToken(): array
 	{
+		// 0. Läuft nach einem Fehlschlag noch die Wartezeit? Dann gar nicht
+		//    erst anfragen — sonst wird aus einem abgelehnten Tokenabruf sofort
+		//    der nächste, und bei einem Kontingentfehler füttert das die Ursache
+		$sperre = $this->sperre();
+
+		if($sperre !== null)
+		{
+			$log = "⛔ Tokenabruf ausgesetzt: ".$sperre['error_message']."\n";
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+
+			return $sperre;
+		}
+
 		$cache = $this->readCache();
 
 		// 1. Access Token noch gültig? (30 Sekunden Puffer)
@@ -273,7 +486,23 @@ class OAuth2Client
 		}
 
 		// 3. Komplett neuen Token holen
-		return $this->fetchNewToken();
+		$tokenData = $this->fetchNewToken();
+
+		// Auch das gescheitert: Wartezeit verhängen und den Grund festhalten.
+		// Eine ausgefallene Verbindung (HTTP-Code 0) wird ausgenommen — die
+		// belastet die Schnittstelle nicht und darf die Anlage nicht für fünf
+		// Minuten lahmlegen, wenn das Netz nur kurz stockte
+		if(!empty($tokenData['error']))
+		{
+			$tokenData['tokenfehler'] = true;
+
+			if(0 !== (int) ($tokenData['http_code'] ?? 0))
+			{
+				$this->sperreSetzen((string) ($tokenData['error_message'] ?? ''));
+			}
+		}
+
+		return $tokenData;
 	}
 
 	// ─────────────────────────────────────────────

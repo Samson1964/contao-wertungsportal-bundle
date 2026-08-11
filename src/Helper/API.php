@@ -36,6 +36,26 @@ class API
 	protected static $stoerungGemeldet = false;
 
 	/**
+	 * Grund der zuletzt gescheiterten Verbindung im Klartext.
+	 * @var string
+	 */
+	protected static $letzteStoerung = '';
+
+	/**
+	 * Liefert den Grund der zuletzt gescheiterten Verbindung.
+	 *
+	 * Wird vom Vorlader für seine Protokollzeile gelesen: Nach einem Ausfall
+	 * kommt die Antwort aus dem örtlichen Bestand und trägt nur noch „Der
+	 * Abruf von Live-Daten ist z.Z. nicht möglich" — was die Ursache verschweigt.
+	 *
+	 * @return string Leer, wenn in diesem Aufruf keine Störung auftrat
+	 */
+	public static function letzteStoerung()
+	{
+		return self::$letzteStoerung;
+	}
+
+	/**
 	 * Speicherzeitpunkte der in diesem Seitenaufruf aus dem Zwischenspeicher
 	 * gelesenen Einträge. Daraus nennt der Hinweis, von wann die angezeigten
 	 * Daten sind — nicht nur, bis wann sie gelten.
@@ -253,8 +273,16 @@ class API
 		// Gar keine Antwort (Wartezeit abgelaufen, Verbindung gescheitert,
 		// Namensauflösung fehlgeschlagen — alles HTTP-Code 0): Notreserve.
 		// Fehlermeldungen MIT HTTP-Code bleiben unberührt, ein „Person not
-		// found" ist eine gültige Antwort und darf keine alten Daten wecken
-		if(!empty($result['error']) && 0 === (int) ($result['http_code'] ?? 0))
+		// found" ist eine gültige Antwort und darf keine alten Daten wecken.
+		//
+		// Ein gescheiterter TOKENABRUF zählt ausdrücklich mit dazu, obwohl er
+		// einen HTTP-Code trägt (403). Er sagt nichts über die angefragten
+		// Daten aus, sondern nur, dass der Zugang zur Schnittstelle gerade
+		// nicht zu haben ist — und dann sind alte Daten mit Hinweis für den
+		// Besucher allemal besser als eine Fehlermeldung. Gefunden am
+		// 11.08.2026, als das Tokenkontingent bei nu erschöpft war und
+		// sämtliche Turnierseiten statt der Daten einen Fehler zeigten
+		if(!empty($result['error']) && (0 === (int) ($result['http_code'] ?? 0) || !empty($result['tokenfehler'])))
 		{
 			self::meldeStoerung($result);
 
@@ -485,12 +513,18 @@ class API
 	 */
 	protected static function meldeStoerung($result)
 	{
+		$meldung = trim((string) ($result['error_message'] ?? ''));
+		if($meldung === '') $meldung = 'Die Schnittstelle hat nicht geantwortet.';
+
+		// Grund festhalten, auch wenn schon gemeldet wurde: Der Vorlader baut
+		// seine Protokollzeile daraus. Die Ersatzantwort aus dem örtlichen
+		// Bestand trägt nur noch „Abruf nicht möglich" — die eigentliche
+		// Ursache steckt allein hier
+		self::$letzteStoerung = $meldung;
+
 		if(self::$stoerungGemeldet) return;
 
 		self::$stoerungGemeldet = true;
-
-		$meldung = trim((string) ($result['error_message'] ?? ''));
-		if($meldung === '') $meldung = 'Die Schnittstelle hat nicht geantwortet.';
 
 		try
 		{

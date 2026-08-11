@@ -120,6 +120,12 @@ class TurnierVorlader
 	protected $fehlschlaegeInFolge = 0;
 
 	/**
+	 * Meldung des zuletzt gescheiterten Abrufs, für das Protokoll.
+	 * @var string
+	 */
+	protected $letzterFehler = '';
+
+	/**
 	 * Verzeichnis des Zwischenspeichers je Funktion (false = eigene
 	 * Pfadberechnung nicht verwendbar, siehe cachepfad()).
 	 * @var array
@@ -579,13 +585,16 @@ class TurnierVorlader
 	 */
 	protected function hole($funktion, $params)
 	{
+		$antwort = null;
+
 		try
 		{
-			\Schachbulle\ContaoWertungsportalBundle\Helper\API::autoQuery($params);
+			$antwort = \Schachbulle\ContaoWertungsportalBundle\Helper\API::autoQuery($params);
 		}
 		catch(\Throwable $e)
 		{
 			// Ein einzelner Fehlschlag darf den Lauf nicht beenden
+			$this->letzterFehler = $funktion.': '.$e->getMessage();
 		}
 
 		$erfolg = $this->imCache($funktion, $params['cachekey']);
@@ -598,6 +607,25 @@ class TurnierVorlader
 		{
 			$this->fehlschlaege++;
 			$this->fehlschlaegeInFolge++;
+
+			// Grund festhalten, solange er noch vorliegt — die Zählung allein
+			// sagt nicht, ob die Schnittstelle den Zugang verweigert, eine
+			// Störung hat oder das Turnier schlicht keine Daten führt.
+			//
+			// Vorrang hat die gemeldete Störung: Bei einem Ausfall kommt die
+			// Antwort aus dem örtlichen Bestand und trägt nur noch „Abruf
+			// z.Z. nicht möglich" — der eigentliche Grund steckt in der Störung
+			$stoerung = \Schachbulle\ContaoWertungsportalBundle\Helper\API::letzteStoerung();
+
+			if($stoerung !== '')
+			{
+				$this->letzterFehler = $funktion.' — '.$stoerung;
+			}
+			elseif(is_array($antwort) && !empty($antwort['error']))
+			{
+				$code = (int) ($antwort['http_code'] ?? 0);
+				$this->letzterFehler = $funktion.' HTTP '.$code.' — '.trim((string) ($antwort['error_message'] ?? 'ohne Meldung'));
+			}
 		}
 
 		return $erfolg;
@@ -652,6 +680,11 @@ class TurnierVorlader
 		{
 			$teile[] = $this->fehlschlaege.' Fehlschläge';
 			if($this->abbruch()) $teile[] = 'Lauf abgebrochen';
+
+			// Ohne den Grund ist die Meldung wertlos. Am 11.08.2026 stand hier
+			// anderthalb Tage lang „5 Fehlschläge, Lauf abgebrochen" — und
+			// nirgends, dass die Schnittstelle das Zugangstoken verweigerte
+			if($this->letzterFehler !== '') $teile[] = 'zuletzt: '.$this->letzterFehler;
 		}
 
 		try

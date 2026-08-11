@@ -1,5 +1,35 @@
 # Wertungsportal Changelog
 
+## Version 1.26.1 (2026-08-12)
+
+**Behebt einen Ausfall der geschützten Endpunkte seit 11.08.2026.**
+
+* Fix: **Die Tokendatei liegt jetzt in `system/tmp/wertungsportal-token.json`** statt in
+  `sys_get_temp_dir()`. Das Systemverzeichnis gehört nicht der Anwendung: Webserver und
+  Kommandozeile laufen dort je nach Hoster unter verschiedenen Benutzern oder in getrennten
+  Namensräumen (systemd `PrivateTmp`), und ein Aufräumdienst kann dazwischenfahren. Ließ sich
+  die Datei nicht schreiben, holte sich **jeder einzelne Abruf ein eigenes Zugangstoken** —
+  bei einem Vorladelauf Hunderte in Minuten, bis nu mit „Too much access tokens for the
+  requested client-id" abwies
+* Fix: **Nach einem abgelehnten Tokenabruf wird 300 Sekunden gewartet.** Bisher hinterließ ein
+  Fehlschlag nichts, also fragte der nächste Abruf sofort wieder von vorn an — bei einem
+  Kontingentfehler fütterte das genau die Ursache, und die Anlage kam aus dem Zustand nicht
+  mehr heraus. Ein Verbindungsausfall (kein HTTP-Code) ist ausgenommen, der belastet die
+  Schnittstelle nicht
+* Fix: **Innerhalb eines Laufs reicht ein Token**, auch wenn die Datei nicht beschreibbar ist —
+  das Token liegt zusätzlich im Arbeitsspeicher des Prozesses. Ein gescheiterter Schreibversuch
+  wird einmalig im Systemprotokoll gemeldet, statt lautlos zu bleiben
+* Fix: **Ein Tokenausfall zeigt Besuchern keine Fehlermeldung mehr**, sondern die Daten aus dem
+  Zwischenspeicher oder dem örtlichen Bestand samt Hinweis auf deren Alter. Ein verweigerter
+  Zugang sagt nichts über die angefragten Daten aus — er gehört zu den Störungen, nicht zu den
+  Fehlantworten
+* Fix: **Die Protokollzeile des Vorladers nennt den Grund** („zuletzt: Turnierauswertung —
+  Token-Anfrage fehlgeschlagen (HTTP 403): Too much access tokens …"). Bisher stand dort nur
+  „5 Fehlschläge, Lauf abgebrochen" — anderthalb Tage lang, ohne dass daraus hervorging, woran
+  es lag
+* Doku: `docs/vorladen.md` bekommt den Abschnitt „Wenn die Schnittstelle das Zugangstoken
+  verweigert" mit Erkennungsmerkmalen und Abhilfe
+
 ## Version 1.26.0 (2026-08-10)
 
 * Add: **Die Vereinslisten-Schnittstelle liefert die FIDE-Wertungen für Schnell- und
