@@ -240,11 +240,13 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_persons_tournaments'] = [
             'eval'      => ['rgxp' => 'digit', 'tl_class' => 'w50'],
             'sql'       => "double NOT NULL default 0",
         ],
+        // Vorzeichenbehaftet — Begründung siehe tl_wertungsportal_tournaments_evaluation:
+        // Eine Turnierleistung kann rechnerisch unter null liegen
         'tournamentPerformance' => [
             'exclude'   => true,
             'inputType' => 'text',
-            'eval'      => ['rgxp' => 'digit', 'tl_class' => 'w50'],
-            'sql'       => "int(10) unsigned NOT NULL default 0",
+            'eval'      => ['tl_class' => 'w50'],
+            'sql'       => "int(11) NOT NULL default 0",
         ],
 
         'published' => [

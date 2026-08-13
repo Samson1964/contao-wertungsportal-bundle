@@ -1,5 +1,26 @@
 # Wertungsportal Changelog
 
+## Version 1.26.2 (2026-08-13)
+
+**Spaltenänderung — beim Deployment `contao:migrate` ausführen.**
+
+* Fix: **Die Turnierleistung darf negativ sein.** `tournamentPerformance` stand in
+  `tl_wertungsportal_tournaments_evaluation` und `tl_wertungsportal_persons_tournaments` als
+  `int(10) unsigned`. Sie errechnet sich aber aus dem Schnitt der Gegner und dem erzielten
+  Anteil — wer in einem schwachen Feld ohne Punkt bleibt, kommt rechnerisch unter null. Auf
+  einem Server im Strict-Modus brach damit der ganze Abgleich ab („Out of range value for
+  column 'tournamentPerformance'"), auf einem ohne wurde der Wert lautlos zu 0 gekappt. Jetzt
+  `int(11)`
+* Fix: **Ein gescheiterter Abgleich reißt die Antwort nicht mehr mit.** Das Spiegeln in die
+  örtlichen Tabellen läuft in jedem Zweig NACH dem Abruf; steht die Antwort schon, wird sie
+  jetzt ausgeliefert und abgelegt, auch wenn das Wegschreiben scheitert. Der Grund kommt ins
+  Systemprotokoll. Bisher riß ein einziger Datensatz, der nicht in seine Spalte paßte, den
+  ganzen Aufruf mit: Der Besucher bekam einen Fehler, nichts landete im Zwischenspeicher, und
+  der Vorlader lief Nacht für Nacht gegen dasselbe Turnier
+* **Nach dem Update:** Turniere, deren Auswertung bisher an dieser Stelle scheiterte, werden
+  beim nächsten Abruf normal übernommen. Wo eine negative Leistung zuvor als 0 gespeichert
+  wurde (Server ohne Strict-Modus), berichtigt sich das mit dem nächsten Abgleich des Turniers
+
 ## Version 1.26.1 (2026-08-12)
 
 **Behebt einen Ausfall der geschützten Endpunkte seit 11.08.2026.**

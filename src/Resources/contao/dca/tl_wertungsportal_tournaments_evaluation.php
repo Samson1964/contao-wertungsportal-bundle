@@ -227,11 +227,18 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_tournaments_evaluation'] = [
             'eval'      => ['rgxp' => 'digit', 'tl_class' => 'w50'],
             'sql'       => "double NOT NULL default 0",
         ],
+        // VORZEICHENBEHAFTET, und das ist kein Versehen: Die Turnierleistung
+        // errechnet sich aus dem Schnitt der Gegner und dem erzielten Anteil.
+        // Wer in einem schwachen Feld ohne Punkt bleibt, kommt rechnerisch
+        // unter null. Bis Fassung 1.26.1 stand hier `unsigned` — auf einem
+        // Server im Strict-Modus brach damit der ganze Abgleich ab
+        // („Out of range value for column 'tournamentPerformance'"), auf einem
+        // ohne wurde der Wert lautlos zu 0 gekappt
         'tournamentPerformance' => [
             'exclude'   => true,
             'inputType' => 'text',
-            'eval'      => ['rgxp' => 'digit', 'tl_class' => 'w50'],
-            'sql'       => "int(10) unsigned NOT NULL default 0",
+            'eval'      => ['tl_class' => 'w50'],
+            'sql'       => "int(11) NOT NULL default 0",
         ],
 
         'published' => [

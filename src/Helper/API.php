@@ -42,6 +42,12 @@ class API
 	protected static $letzteStoerung = '';
 
 	/**
+	 * Merker, ob ein gescheiterter Abgleich in diesem Seitenaufruf schon im
+	 * Systemprotokoll steht.
+	 */
+	protected static $abgleichGemeldet = false;
+
+	/**
 	 * Liefert den Grund der zuletzt gescheiterten Verbindung.
 	 *
 	 * Wird vom Vorlader für seine Protokollzeile gelesen: Nach einem Ausfall
@@ -569,6 +575,10 @@ class API
 	{
 		$client = new \Schachbulle\ContaoWertungsportalBundle\Helper\OAuth2Client();
 		$get = '';
+		$result = null;
+
+		try
+		{
 
 		switch($params['funktion'] ?? '')
 		{
@@ -687,6 +697,25 @@ class API
 				);
 		}
 
+		}
+		catch(\Throwable $e)
+		{
+			// Der Abgleich mit den Spiegeltabellen läuft in jedem Zweig NACH
+			// dem Abruf. Steht die Antwort also schon, ist nicht die
+			// Schnittstelle gescheitert, sondern das Wegschreiben — und die
+			// Antwort selbst ist tadellos. Sie wird ausgeliefert und abgelegt.
+			//
+			// Ohne das reißt ein einziger Datensatz, der nicht in seine Spalte
+			// paßt, den ganzen Aufruf mit: Der Besucher bekommt einen Fehler,
+			// nichts landet im Zwischenspeicher, und der Vorlader läuft Nacht
+			// für Nacht gegen dasselbe Turnier. Genau so geschehen am
+			// 13.08.2026 mit einer negativen Turnierleistung in einer
+			// vorzeichenlosen Spalte
+			if(!is_array($result)) throw $e;
+
+			self::meldeAbgleichfehler($params, $e);
+		}
+
 		// Abfrageergebnis zurückgeben
 		// $result = array
 		// (
@@ -696,6 +725,41 @@ class API
 		//   'body'      => [...],        // API-Antwort oder null
 		// )
 		return $result;
+	}
+
+	/**
+	 * Meldet einen gescheiterten Abgleich mit den Spiegeltabellen.
+	 *
+	 * Die Antwort der Schnittstelle wird trotzdem ausgeliefert — der örtliche
+	 * Bestand hinkt dann in diesem einen Punkt hinterher. Lautlos darf das
+	 * nicht bleiben: Der Bestand ist die Notreserve, wenn nu nicht antwortet.
+	 *
+	 * Der Text wandert zusätzlich in `letzteStoerung`, damit der Vorlader ihn
+	 * in seine Protokollzeile schreiben kann.
+	 *
+	 * @param  array      $params Parameter der Abfrage
+	 * @param  \Throwable $e      Der aufgetretene Fehler
+	 * @return void
+	 */
+	protected static function meldeAbgleichfehler($params, \Throwable $e)
+	{
+		$meldung = ($params['funktion'] ?? '?').': Abgleich mit dem örtlichen Bestand gescheitert — '.$e->getMessage();
+
+		self::$letzteStoerung = $meldung;
+
+		// Je Seitenaufruf nur einmal, sonst füllt eine große Liste das Protokoll
+		if(self::$abgleichGemeldet) return;
+
+		self::$abgleichGemeldet = true;
+
+		try
+		{
+			\System::log('Wertungsportal: '.$meldung, __METHOD__, defined('TL_ERROR') ? TL_ERROR : 'ERROR');
+		}
+		catch(\Throwable $x)
+		{
+			// Beiwerk
+		}
 	}
 
 	/*********************************************************
