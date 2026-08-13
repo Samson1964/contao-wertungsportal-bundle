@@ -1,5 +1,20 @@
 # Wertungsportal Changelog
 
+## Version 1.29.2 (2026-08-13)
+
+* Fix: **Die Vereinssuche fand keine Namen mit Sonderzeichen.** „baden-baden" wurde mit
+  „Der Suchbegriff darf nur Buchstaben, Zahlen und Leerzeichen enthalten!" abgewiesen —
+  ebenso alles mit Punkt (`e.V.`), Schrägstrich (`Ludwigshafen/Rhein`), Komma oder
+  Kaufmanns-Und. Betroffen waren **966 von 2401 Vereinsnamen**, also 40 % des Bestands
+* Die Zeichenliste hat dabei nichts geschützt: Contao wandelt `< > " ' ( ) = \ #` schon in
+  `Input::get()` in Entities um, und verglichen wird ohnehin über `Helper::alias()`, dessen
+  Ausgabe nur `[a-z0-9-]` enthält — ein Angriffsversuch wird damit zu einem harmlosen
+  Suchbegriff, der schlicht nichts findet
+* Geprüft wird jetzt die Frage, auf die es ankommt: Bleibt nach der Umwandlung überhaupt
+  etwas übrig? Bei „---" oder „..." nicht — dann kommt weiterhin ein Hinweis, statt den
+  gesamten Bestand auszugeben
+* Spieler- und Turniersuche hatten diese Hürde nicht
+
 ## Version 1.29.1 (2026-08-13)
 
 * Fix: **Ein fehlendes Refresh-Token in der Antwort wurde als „es gibt keins" gedeutet.** Nach

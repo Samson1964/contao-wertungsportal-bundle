@@ -80,12 +80,26 @@ class Verein extends \Module
 		$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
 		$this->Template->search = $search;
 
-		// Auf ungültige Zeichen im Suchbegriff prüfen (alles außer Buchstaben,
-		// Zahlen, Umlauten und Leerzeichen ist nicht erlaubt) — nur prüfen,
-		// wenn überhaupt ein Suchbegriff eingegeben wurde
-		if($search && !preg_match("#^[a-zA-Z0-9äöüÄÖÜß ]+$#", $search))
+		// Prüfen, ob der Suchbegriff überhaupt etwas Suchbares enthält.
+		//
+		// Hier stand bis 1.29.1 eine Liste erlaubter Zeichen
+		// (`[a-zA-Z0-9äöüÄÖÜß ]`). Die wies aber 966 von 2401 Vereinsnamen ab:
+		// Punkt (e.V.), Bindestrich (Baden-Baden), Schrägstrich
+		// (Ludwigshafen/Rhein), Komma, Kaufmanns-Und. Gemeldet wurde es für
+		// „baden-baden" — betroffen waren 40 % des Bestands.
+		//
+		// Geschützt hat die Liste dabei nichts: Contao wandelt `< > " ' ( ) = \ #`
+		// bereits in `Input::get()` in Entities um, und verglichen wird ohnehin
+		// über `Helper::alias()`, dessen Ausgabe nur `[a-z0-9-]` enthält. Ein
+		// Angriffsversuch wird damit zu einem harmlosen Suchbegriff, der
+		// schlicht nichts findet.
+		//
+		// Sinnvoll bleibt genau eine Frage: Ist nach der Umwandlung noch etwas
+		// übrig? Bei „---" oder „..." ist es das nicht, und statt den ganzen
+		// Bestand auszugeben, gehört dann ein Hinweis her.
+		if($search && \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::alias($search) === '-')
 		{
-			$this->Template->fehler = 'Der Suchbegriff darf nur Buchstaben, Zahlen und Leerzeichen enthalten!';
+			$this->Template->fehler = 'Der Suchbegriff enthält keine verwertbaren Zeichen.';
 			$search = '';
 		}
 
