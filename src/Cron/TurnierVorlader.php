@@ -126,6 +126,81 @@ class TurnierVorlader
 	protected $letzterFehler = '';
 
 	/**
+	 * Beobachter, der über jeden einzelnen Abruf unterrichtet wird.
+	 *
+	 * Der Cronjob setzt keinen — er protokolliert nur die Zusammenfassung.
+	 * Der Befehl `wertungsportal:vorladen` hängt sich hier ein, damit auf der
+	 * Kommandozeile zu sehen ist, was gerade passiert und woran es hakt.
+	 * Aufgerufen mit (Funktion, Schlüssel, Erfolg, Fehlertext).
+	 *
+	 * @var callable|null
+	 */
+	protected $melder;
+
+	/**
+	 * Abweichendes Zeitbudget in Sekunden; 0 = ZEITBUDGET.
+	 * @var int
+	 */
+	protected $budgetWunsch = 0;
+
+	/**
+	 * Ausdrücklich von Hand angestoßen — dann gilt die Ruhezeit nicht.
+	 * @var bool
+	 */
+	protected $aufAbruf = false;
+
+	/**
+	 * Hängt einen Beobachter ein, der über jeden Abruf unterrichtet wird.
+	 *
+	 * Gedacht für den Kommandozeilenbefehl: Der Cronjob schweigt bis zur
+	 * Zusammenfassung, von Hand will man dagegen zusehen können.
+	 *
+	 * @param  callable|null $melder Funktion(string $funktion, string $schluessel, bool $erfolg, string $fehler)
+	 * @return $this
+	 */
+	public function setMelder($melder = null)
+	{
+		$this->melder = \is_callable($melder) ? $melder : null;
+
+		return $this;
+	}
+
+	/**
+	 * Setzt ein abweichendes Zeitbudget für diesen Lauf.
+	 *
+	 * Die Deckelung durch die Laufzeitgrenze des Skripts bleibt bestehen — ein
+	 * Wunsch von einer Stunde nützt nichts, wenn der Hoster nach 30 Sekunden
+	 * abschaltet.
+	 *
+	 * @param  int $sekunden 0 = Vorgabe der Klasse (ZEITBUDGET)
+	 * @return $this
+	 */
+	public function setBudget($sekunden)
+	{
+		$this->budgetWunsch = max(0, (int) $sekunden);
+
+		return $this;
+	}
+
+	/**
+	 * Meldet den Lauf als von Hand angestoßen an.
+	 *
+	 * Damit entfällt die Ruhezeit nach dem Abschlusslauf: Wer den Befehl
+	 * ausdrücklich eintippt, will nicht mit „ist gerade Feierabend" abgewiesen
+	 * werden. Die übrigen Sperren (Vorladen abgeschaltet, Schnittstelle aus,
+	 * keine Zugangsdaten) gelten weiter — sie sind bewusste Einstellungen.
+	 *
+	 * @param  bool $an
+	 * @return $this
+	 */
+	public function setAufAbruf($an = true)
+	{
+		$this->aufAbruf = (bool) $an;
+
+		return $this;
+	}
+
+	/**
 	 * Verzeichnis des Zwischenspeichers je Funktion (false = eigene
 	 * Pfadberechnung nicht verwendbar, siehe cachepfad()).
 	 * @var array
@@ -150,7 +225,7 @@ class TurnierVorlader
 		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_api_aus'])) return;
 		if(!\Schachbulle\ContaoWertungsportalBundle\Helper\OAuth2Client::eingerichtet()) return;
 		if(!\Schachbulle\ContaoWertungsportalBundle\Helper\API::cacheAktiv('Turnierauswertung')) return;
-		if($this->feierabend()) return;
+		if(!$this->aufAbruf && $this->feierabend()) return;
 
 		$this->start = microtime(true);
 		$this->budget = $this->zeitbudget();
@@ -314,7 +389,11 @@ class TurnierVorlader
 		// Hoster-Cronjob läuft zwar über die Kommandozeile, viele php-cli.ini
 		// setzen dort aber trotzdem 30 Sekunden — der Lauf bekäme dann nur
 		// 13 Sekunden, obwohl 120 eingestellt sind
-		$noetig = self::ZEITBUDGET + 2 * self::TIMEOUT_ABRUF + 1;
+		// Von Hand darf ein anderes Budget gewünscht werden (Befehl
+		// wertungsportal:vorladen --budget); der Cronjob nimmt die Vorgabe
+		$wunsch = $this->budgetWunsch > 0 ? $this->budgetWunsch : self::ZEITBUDGET;
+
+		$noetig = $wunsch + 2 * self::TIMEOUT_ABRUF + 1;
 
 		if($grenze > 0 && $grenze < $noetig)
 		{
@@ -323,9 +402,9 @@ class TurnierVorlader
 		}
 
 		// 0 heißt unbegrenzt — üblich auf der Kommandozeile
-		if($grenze < 1) return self::ZEITBUDGET;
+		if($grenze < 1) return $wunsch;
 
-		return max(5, min(self::ZEITBUDGET, $grenze - 2 * self::TIMEOUT_ABRUF - 1));
+		return max(5, min($wunsch, $grenze - 2 * self::TIMEOUT_ABRUF - 1));
 	}
 
 	/**
@@ -626,6 +705,20 @@ class TurnierVorlader
 				$code = (int) ($antwort['http_code'] ?? 0);
 				$this->letzterFehler = $funktion.' HTTP '.$code.' — '.trim((string) ($antwort['error_message'] ?? 'ohne Meldung'));
 			}
+			else
+			{
+				// Kein Fehler in der Antwort, trotzdem nichts abgelegt: Das ist
+				// der Fall „nicht zwischenspeicherbar" (Cachezeit 0 für diese
+				// Funktion). Ohne diesen Zweig bliebe die Meldung von vorhin
+				// stehen und zeigte auf die falsche Ursache
+				$this->letzterFehler = $funktion.' — Antwort kam an, wurde aber nicht abgelegt (Cachezeit 0?)';
+			}
+		}
+
+		// Beobachter unterrichten (Kommandozeile); der Cronjob setzt keinen
+		if($this->melder !== null)
+		{
+			\call_user_func($this->melder, $funktion, (string) $params['cachekey'], $erfolg, $erfolg ? '' : $this->letzterFehler);
 		}
 
 		return $erfolg;
@@ -639,6 +732,20 @@ class TurnierVorlader
 	protected function abbruch()
 	{
 		return $this->fehlschlaegeInFolge >= self::FEHLSCHLAEGE_MAX;
+	}
+
+	/**
+	 * Meldet nach dem Lauf, ob er wegen anhaltender Fehlschläge abgebrochen ist.
+	 *
+	 * Für den Kommandozeilenbefehl, der daraus seinen Rückgabewert bildet —
+	 * damit ein Skript den Unterschied zwischen „fertig" und „aufgegeben"
+	 * erkennt, ohne ihn aus Laufzeit und Fehlerzahl zu erraten.
+	 *
+	 * @return bool
+	 */
+	public function abgebrochen()
+	{
+		return $this->abbruch();
 	}
 
 	/**

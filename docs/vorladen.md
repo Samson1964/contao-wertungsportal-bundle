@@ -67,6 +67,50 @@ und holte jede Nacht den gesamten Bestand neu.
 
 Einstellungen → Bereich Wertungsportal → **Nächtliches Vorladen abschalten**.
 
+## Von Hand anstoßen
+
+```bash
+php vendor/bin/contao-console wertungsportal:vorladen
+```
+
+**`contao:cron` tut es nicht.** Der Befehl führt nur aus, was nach Zeitplan
+gerade fällig ist — der Vorlader steht auf „alle 10 Minuten zwischen 1 und
+3 Uhr" und rührt sich um 14 Uhr nicht. Ein „nur diesen einen Job, und zwar
+jetzt" kennt Contao 4.13 nicht, ein Erzwingen ebensowenig.
+
+Vor allem aber **schweigt der Cronjob**: Er fängt jeden Fehler ab, damit ein
+einzelnes Turnier den Lauf nicht beendet, und schreibt am Ende eine Zeile ins
+Systemprotokoll. Auf der Kommandozeile ist deshalb nichts zu sehen — auch keine
+Ausnahmen, denn ein abgefangener Fehler erreicht die Ausgabe nie. Der Befehl
+hängt sich als Beobachter ein und schreibt **jeden Fehlschlag sofort samt
+Grund** heraus:
+
+```
+  FEHLER  Turnierauswertung 019f75b9-aed3-7220-89ad-2adadc281f59
+          Turnierauswertung — cURL-Fehler beim API-Aufruf: HTTP/2 stream 1 reset by server
+  …       25 geholt
+  …       50 geholt
+```
+
+Am Ende steht eine Übersicht nach Abrufart, die Laufzeit und der letzte Fehler.
+
+| Schalter | Wirkung |
+|---|---|
+| `--budget=600` (`-b`) | Laufzeit in Sekunden statt der üblichen 180 |
+| `--alle` (`-a`) | jeden einzelnen Abruf zeigen, nicht nur die Fehlschläge |
+
+Der **Rückgabewert** taugt für Skripte: `0` fertig, `1` nach Abbruch wegen fünf
+Fehlschlägen hintereinander, `2` wenn gar nicht gelaufen (dann sagt der Befehl
+auch, welche Einstellung im Weg steht).
+
+Die Ruhezeit nach dem Abschlusslauf gilt hier **nicht** — wer den Befehl
+eintippt, will ihn laufen sehen. Die Einstellungen im Backend gelten weiter.
+
+Nebenbei: Contao gibt Einträge des Systemprotokolls ab Stufe ERROR auch auf der
+Konsole aus. Störungsmeldungen (`Kein Zugriff auf die Schnittstelle …`) sind
+dort also ohnehin zu sehen, bei `contao:cron` genauso — nur eben nicht, welcher
+Abruf gescheitert ist.
+
 ## Fünf Durchgänge
 
 Ein Lauf arbeitet fünf Durchgänge ab, nach Wichtigkeit:

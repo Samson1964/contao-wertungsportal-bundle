@@ -26,6 +26,17 @@ services:
         tags:
             - { name: contao.cronjob, interval: '0 4 * * *' }
 
+    # Stößt das Vorladen von Hand an: wertungsportal:vorladen.
+    # Nötig, weil contao:cron nur ausführt, was nach Zeitplan fällig ist — und
+    # weil der Cronjob selbst schweigt, während dieser Befehl jeden Fehlschlag
+    # samt Grund auf der Kommandozeile zeigt.
+    # Ausdrücklich getaggt, weil dieses Bundle ohne Autoconfigure arbeitet
+    Schachbulle\ContaoWertungsportalBundle\Command\VorladenCommand:
+        arguments:
+            - '@contao.framework'
+        tags:
+            - { name: console.command }
+
     # Füllt die Suchalias-Felder des Bestands beim contao:migrate.
     # Ausdrücklich registriert, weil dieses Bundle ohne Autoconfigure arbeitet
     Schachbulle\ContaoWertungsportalBundle\Migration\AliasMigration:

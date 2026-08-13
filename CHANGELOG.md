@@ -1,5 +1,26 @@
 # Wertungsportal Changelog
 
+## Version 1.28.0 (2026-08-13)
+
+* Add: **Befehl `wertungsportal:vorladen`** — stößt das Vorladen sofort an und zeigt dabei zu.
+  `contao:cron` taugt dafür nicht: Es führt nur aus, was nach Zeitplan fällig ist, und der
+  Vorlader steht auf „alle 10 Minuten zwischen 1 und 3 Uhr". Ein Erzwingen oder das gezielte
+  Auslösen eines einzelnen Cronjobs kennt Contao 4.13 nicht
+* **Jeder Fehlschlag erscheint sofort mit Grund.** Der Cronjob schweigt bis zur Zusammenfassung
+  — er fängt jeden Fehler ab, damit ein einzelnes Turnier den Lauf nicht beendet, und ein
+  abgefangener Fehler erreicht die Ausgabe nie. Genau diese Lücke schließt der Befehl
+* `--budget=600` für eine längere Laufzeit, `--alle` zeigt auch die erfolgreichen Abrufe.
+  Rückgabewert 0 fertig, 1 abgebrochen, 2 gar nicht gelaufen (mit Angabe, welche Einstellung
+  im Weg steht)
+* Die Ruhezeit nach dem Abschlusslauf gilt beim Aufruf von Hand nicht; die Einstellungen im
+  Backend gelten weiter
+* Dafür neu am Vorlader: `setMelder()`, `setBudget()`, `setAufAbruf()` und `abgebrochen()`.
+  Der Cronjob nutzt keine davon und verhält sich unverändert
+* Fix: Wurde ein Abruf ohne Fehler beantwortet, aber trotzdem nichts abgelegt (Cachezeit 0),
+  blieb im Protokoll die Meldung des vorigen Fehlschlags stehen und zeigte auf die falsche
+  Ursache
+* Doku: `docs/vorladen.md`, Abschnitt „Von Hand anstoßen"
+
 ## Version 1.27.0 (2026-08-13)
 
 * Add: **Unmögliche Werte der Schnittstelle werden protokolliert** — mit Spieler, Turnier und
