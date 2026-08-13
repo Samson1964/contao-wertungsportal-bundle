@@ -231,6 +231,12 @@ class WertungsportalTournamentsEvaluationModel extends Model
             return;
         }
 
+        // Werte festhalten, die es nach dem Regelwerk nicht geben dürfte —
+        // etwa eine negative Turnierleistung. Sie werden trotzdem übernommen,
+        // aber mit Spieler und Turnier protokolliert, damit sich daraus eine
+        // Fehlermeldung an nu schreiben läßt
+        \Schachbulle\ContaoWertungsportalBundle\Helper\Auffaellig::pruefeSpieler($arrByUuid, $tournamentUuid, 'Turnierauswertung');
+
         // Turnier-UUID für die Historien-Einträge ggf. nachladen
         if ('' === $tournamentUuid) {
             $tournament = WertungsportalTournamentsModel::findByPk($pid);

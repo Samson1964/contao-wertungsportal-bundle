@@ -160,6 +160,12 @@ class WertungsportalPersonsTournamentsModel extends Model
             return;
         }
 
+        // Unmögliche Werte festhalten (siehe Helper\Auffaellig). Doppelmeldungen
+        // sind unschädlich: Die Klasse merkt sich, was sie schon aufgeschrieben
+        // hat — und dieser Weg wird sowohl aus der Turnierauswertung heraus als
+        // auch bei der Karteikarte begangen
+        \Schachbulle\ContaoWertungsportalBundle\Helper\Auffaellig::pruefeSpieler($arrPlayers, $tournamentUuid, 'Turnierhistorie');
+
         // Eindeutige Einträge nach Personen-ID einsammeln
         $arrByPid = [];
 

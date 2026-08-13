@@ -1,5 +1,22 @@
 # Wertungsportal Changelog
 
+## Version 1.27.0 (2026-08-13)
+
+* Add: **Unmögliche Werte der Schnittstelle werden protokolliert** — mit Spieler, Turnier und
+  den Zahlen, aus denen sie sich errechnen. Anlass ist die negative Turnierleistung vom
+  13.08.2026: Nach der Wertungsordnung kann die Leistung nicht unter null fallen, der Wert ist
+  also ein Fehler bei nu. Meldbar war er bisher nicht — übrig blieb eine SQL-Meldung ohne Namen
+* Geprüft werden alle Ganzzahlfelder der Spielerdaten, die nicht negativ sein können:
+  Turnierleistung, DWZ alt/neu, Index alt/neu, Gegnerschnitt, Partienzahl und Geburtsjahr
+* Die Befunde stehen in `var/logs/wertungsportal-auffaellig-JJJJ-MM.log`, semikolongetrennt mit
+  Kopfzeile — die Datei lässt sich unverändert an nu weiterreichen. **Partien, Gegnerschnitt und
+  Punkte stehen mit dabei**, sonst müsste die Gegenseite den Fall selbst zusammensuchen
+* Eine Zusammenfassung geht ins Systemprotokoll, damit die Datei nicht unbemerkt liegenbleibt.
+  Ohne Befunde wird nichts geschrieben — weder Datei noch Protokollzeile
+* Der beanstandete Wert wird trotzdem übernommen und angezeigt. Ihn stillschweigend auf 0 zu
+  setzen wäre schlechter: Dann wäre die Ausgabe falsch, ohne dass es jemandem auffiele
+* Doku: `docs/auffaellige-werte.md`
+
 ## Version 1.26.2 (2026-08-13)
 
 **Spaltenänderung — beim Deployment `contao:migrate` ausführen.**

@@ -716,6 +716,11 @@ class API
 			self::meldeAbgleichfehler($params, $e);
 		}
 
+		// Hat der Abgleich unmögliche Werte gesehen, kommt hier die
+		// Zusammenfassung ins Systemprotokoll — an dieser Stelle, weil alle
+		// Abgleiche durch sind und der Zähler danach wieder bei null steht
+		\Schachbulle\ContaoWertungsportalBundle\Helper\Auffaellig::fasseZusammen();
+
 		// Abfrageergebnis zurückgeben
 		// $result = array
 		// (
