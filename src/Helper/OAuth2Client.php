@@ -673,6 +673,21 @@ class OAuth2Client
 		{
 			$log = "⚠️ HTTP 401 – Token wird erneuert ...\n";
 			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+
+			// Einmal je Aufruf ins Systemprotokoll, auch ohne Debug-Log: Diese
+			// Erneuerung ist die unauffälligste Art, das Tokenkontingent zu
+			// verbrauchen. Ein 401 mitten in einem Lauf, dessen Token noch
+			// gültig war, deutet auf eine Drosselung der Gegenseite hin — und
+			// die Antwort des Bundles darauf ist ausgerechnet ein NEUES Token.
+			// Ohne diese Zeile ist das von außen nicht zu erkennen
+			static $gemeldet401 = false;
+
+			if(!$gemeldet401)
+			{
+				$gemeldet401 = true;
+				$this->protokolliere('Die Schnittstelle hat einen Abruf mit HTTP 401 abgewiesen, obwohl ein Token vorlag ('.$apiUrl.'). Das Token wird erneuert — das kostet ein weiteres aus dem Kontingent.');
+			}
+
 			$cache = $this->readCache();
 			$this->clearCache();
 
@@ -687,6 +702,13 @@ class OAuth2Client
 
 			if($tokenData['error'])
 			{
+				$tokenData['tokenfehler'] = true;
+
+				if(0 !== (int) ($tokenData['http_code'] ?? 0))
+				{
+					$this->sperreSetzen((string) ($tokenData['error_message'] ?? ''));
+				}
+
 				return $tokenData;
 			}
 

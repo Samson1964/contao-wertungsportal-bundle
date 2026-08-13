@@ -1,5 +1,24 @@
 # Wertungsportal Changelog
 
+## Version 1.29.0 (2026-08-13)
+
+* Add: **Befehl `wertungsportal:token`** — zeigt, ob das Zugangstoken richtig zwischengespeichert
+  wird. Er fragt von sich aus **nichts** bei nu an und kostet damit auch kein Token. Ausgegeben
+  werden Ablageort, Schreibbarkeit, Gültigkeit des hinterlegten Tokens und eine laufende
+  Wartezeit. Mit `--pruefen` zusätzlich je ein Abruf auf einen öffentlichen und einen
+  geschützten Endpunkt
+* Die entscheidende Zeile ist **„Schreibbar"**: Steht dort NEIN, holt sich jeder Seitenaufruf
+  und jeder Cronlauf ein eigenes Token — dann ist das Kontingent bei nu binnen Stunden
+  erschöpft, und daran ändert Abwarten nichts. Bisher ließ sich das von außen nicht feststellen
+* Add: **Ein HTTP 401 mitten im Betrieb wird jetzt protokolliert.** Weist die Schnittstelle
+  einen Abruf ab, obwohl ein gültiges Token vorlag, erneuert das Bundle das Token — und
+  verbraucht damit ausgerechnet das Kontingent, an dem es womöglich gerade scheitert. Ohne
+  diese Zeile war das nicht zu erkennen. Einmal je Aufruf, nicht je Abruf
+* Fix: Scheitert die Erneuerung nach einem 401, greift jetzt dieselbe Wartezeit wie bei jedem
+  anderen abgelehnten Tokenabruf — vorher lief dieser Zweig daran vorbei
+* Gemessen: **Ein Token der Produktivschnittstelle lebt 300 Sekunden.** Innerhalb eines
+  Vorladelaufs reicht also eines; jede Pause von mehr als fünf Minuten kostet ein neues
+
 ## Version 1.28.1 (2026-08-13)
 
 * Fix: **Im Systemprotokoll stand nur die allererste Störung eines Aufrufs**, alle weiteren

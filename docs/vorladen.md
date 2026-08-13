@@ -276,6 +276,25 @@ gemieteten Server nicht verlässlich: Webserver und Kommandozeile laufen dort je
 nach Hoster unter verschiedenen Benutzern oder in getrennten Namensräumen
 (systemd `PrivateTmp`), und ein Aufräumdienst kann jederzeit dazwischenfahren.
 
+**Ein Token lebt 300 Sekunden** (gemessen am 13.08.2026 auf der
+Produktivschnittstelle). Innerhalb eines Vorladelaufs reicht also eines; jede
+Pause von mehr als fünf Minuten kostet dagegen ein neues. Wieviele dabei
+zusammenkommen, hängt vor allem daran, wie oft die Website länger als fünf
+Minuten ohne geschützten Abruf war.
+
+Nachsehen, ob alles stimmt:
+
+```bash
+php vendor/bin/contao-console wertungsportal:token
+```
+
+Der Befehl fragt **nichts** bei nu an und kostet kein Token. Die entscheidende
+Zeile ist „Schreibbar": Steht dort NEIN, holt sich jeder Seitenaufruf und jeder
+Cronlauf ein eigenes Token, und dann hilft auch Abwarten nicht. Mit `--pruefen`
+macht er je einen Abruf auf einen öffentlichen und einen geschützten Endpunkt —
+antwortet der erste mit 200 und der zweite mit 403, liegt es am Token und nicht
+an der Verbindung.
+
 **Nach einem abgelehnten Tokenabruf wartet das Bundle 300 Sekunden**, bevor es
 erneut anfragt. Ohne diese Wartezeit wurde aus jedem abgelehnten Abruf sofort
 der nächste — und bei einem Kontingentfehler fütterte das genau die Ursache: Die

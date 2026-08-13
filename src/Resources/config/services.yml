@@ -37,6 +37,14 @@ services:
         tags:
             - { name: console.command }
 
+    # Zeigt, ob das Zugangstoken richtig zwischengespeichert wird:
+    # wertungsportal:token. Fragt von sich aus NICHTS bei nu an
+    Schachbulle\ContaoWertungsportalBundle\Command\TokenCommand:
+        arguments:
+            - '@contao.framework'
+        tags:
+            - { name: console.command }
+
     # Füllt die Suchalias-Felder des Bestands beim contao:migrate.
     # Ausdrücklich registriert, weil dieses Bundle ohne Autoconfigure arbeitet
     Schachbulle\ContaoWertungsportalBundle\Migration\AliasMigration:
