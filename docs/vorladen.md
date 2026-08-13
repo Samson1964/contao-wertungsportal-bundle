@@ -295,6 +295,21 @@ macht er je einen Abruf auf einen öffentlichen und einen geschützten Endpunkt 
 antwortet der erste mit 200 und der zweite mit 403, liegt es am Token und nicht
 an der Verbindung.
 
+**Jede Tokenanfrage wird aufgezeichnet**, in `var/logs/wertungsportal-token-JJJJ-MM.log`:
+
+```
+Zeitpunkt;Art;Ergebnis;Hinweis;Herkunft
+2026-08-13 09:19:53;client_credentials;ausgestellt;gültig 300 s;web
+2026-08-13 09:25:10;refresh_token;ausgestellt;gültig 300 s;cli
+2026-08-13 09:31:02;client_credentials;abgelehnt;HTTP 403: … Too much access tokens …;cli
+```
+
+Eine Zeile je **Anfrage**, nicht je Abruf — das sind wenige hundert am Tag, nicht
+Zehntausende. `wertungsportal:token` zählt die des laufenden Tages zusammen.
+
+Das ist die Zahl, die fehlt, wenn man mit nu über das Kontingent sprechen will:
+Ohne eigene Aufzeichnung weiß niemand, wie oft die Anlage überhaupt anfragt.
+
 **Nach einem abgelehnten Tokenabruf wartet das Bundle 300 Sekunden**, bevor es
 erneut anfragt. Ohne diese Wartezeit wurde aus jedem abgelehnten Abruf sofort
 der nächste — und bei einem Kontingentfehler fütterte das genau die Ursache: Die

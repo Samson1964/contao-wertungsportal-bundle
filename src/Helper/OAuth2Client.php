@@ -357,10 +357,84 @@ class OAuth2Client
 		if($httpCode !== 200 || empty($data['access_token']))
 		{
 			$errorMsg = $data['error_description'] ?? $data['error'] ?? 'Unbekannter Fehler';
+
+			self::buchen($postFields['grant_type'] ?? '?', 'abgelehnt', 'HTTP '.$httpCode.': '.$errorMsg);
+
 			return ['error' => true, 'error_message' => "Token-Anfrage fehlgeschlagen (HTTP $httpCode): $errorMsg", 'http_code' => $httpCode];
 		}
 
+		self::buchen($postFields['grant_type'] ?? '?', 'ausgestellt', 'gültig '.($data['expires_in'] ?? '?').' s');
+
 		return array_merge(['error' => false], $data);
+	}
+
+	/**
+	 * Schreibt jede Tokenanfrage in eine Monatsdatei unter `var/logs`.
+	 *
+	 * Die Schnittstelle von nu gibt je Kennung nur eine begrenzte Zahl Token
+	 * aus und antwortet danach mit „Too much access tokens" — ohne zu sagen,
+	 * wo die Grenze liegt oder wieviele gerade offen sind. Ohne eigene
+	 * Aufzeichnung läßt sich also weder beurteilen, ob die Anlage zu oft
+	 * anfragt, noch der Gegenseite eine Zahl nennen.
+	 *
+	 * Die Datei ist bewußt klein: eine Zeile je Anfrage, nicht je Abruf. Bei
+	 * fünf Minuten Lebensdauer sind das im ungünstigen Fall ein paar hundert
+	 * Zeilen am Tag.
+	 *
+	 * @param  string $art      grant_type der Anfrage (client_credentials, refresh_token)
+	 * @param  string $ergebnis 'ausgestellt' oder 'abgelehnt'
+	 * @param  string $hinweis  Gültigkeitsdauer bzw. Fehlertext
+	 * @return void
+	 */
+	protected static function buchen(string $art, string $ergebnis, string $hinweis): void
+	{
+		try
+		{
+			$datei = self::tokenprotokoll();
+
+			if($datei === '') return;
+
+			$neu = !is_file($datei);
+			$zeile = date('Y-m-d H:i:s').';'.$art.';'.$ergebnis.';'.str_replace(array(';', "\n", "\r"), ' ', $hinweis).';'.(\PHP_SAPI === 'cli' ? 'cli' : 'web')."\n";
+
+			if($neu) $zeile = "Zeitpunkt;Art;Ergebnis;Hinweis;Herkunft\n".$zeile;
+
+			@file_put_contents($datei, $zeile, FILE_APPEND | LOCK_EX);
+		}
+		catch(\Throwable $e)
+		{
+			// Ein klemmendes Protokoll darf keinen Abruf verhindern
+		}
+	}
+
+	/**
+	 * Liefert den Pfad der Monatsdatei für die Tokenanfragen.
+	 *
+	 * @return string Vollständiger Pfad, '' wenn kein Verzeichnis nutzbar ist
+	 */
+	public static function tokenprotokoll(): string
+	{
+		$wurzel = '';
+
+		try
+		{
+			$container = \System::getContainer();
+			if($container && $container->hasParameter('kernel.project_dir')) $wurzel = (string) $container->getParameter('kernel.project_dir');
+		}
+		catch(\Throwable $e)
+		{
+			$wurzel = '';
+		}
+
+		if($wurzel === '' && \defined('TL_ROOT')) $wurzel = TL_ROOT;
+		if($wurzel === '') return '';
+
+		$verzeichnis = $wurzel.'/var/logs';
+
+		if(!is_dir($verzeichnis) && !@mkdir($verzeichnis, 0775, true)) return '';
+		if(!is_writable($verzeichnis)) return '';
+
+		return $verzeichnis.'/wertungsportal-token-'.date('Y-m').'.log';
 	}
 
 	// ─────────────────────────────────────────────
@@ -427,9 +501,26 @@ class OAuth2Client
 	public function saveTokenToCache(array $tokenData): void
 	{
 		$expiresIn = $tokenData['expires_in'] ?? 3600;
+
+		// **Ein fehlendes Refresh-Token in der Antwort heißt nicht, dass es
+		// keins mehr gibt.** Nach RFC 6749 §6 KANN der Server bei einer
+		// Erneuerung ein neues ausstellen — muss aber nicht; dann gilt das
+		// bisherige weiter. Wer es hier trotzdem auf null setzt, hat beim
+		// nächsten Mal keines mehr und muss über `client_credentials` gehen —
+		// und das erzeugt eine neue Token-Familie. Bei fünf Minuten
+		// Lebensdauer wäre das alle zehn Minuten eine, und genau daran läuft
+		// das Kontingent von nu voll („Too much access tokens").
+		$refresh = $tokenData['refresh_token'] ?? null;
+
+		if($refresh === null || $refresh === '')
+		{
+			$bisher = $this->readCache();
+			$refresh = $bisher['refresh_token'] ?? null;
+		}
+
 		$this->writeCache([
 			'access_token'  => $tokenData['access_token'],
-			'refresh_token' => $tokenData['refresh_token'] ?? null,
+			'refresh_token' => $refresh,
 			'expires_at'    => time() + $expiresIn,
 		]);
 		$log = "Token gespeichert:\n".print_r($tokenData, true);

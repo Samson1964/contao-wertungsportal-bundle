@@ -1,5 +1,21 @@
 # Wertungsportal Changelog
 
+## Version 1.29.1 (2026-08-13)
+
+* Fix: **Ein fehlendes Refresh-Token in der Antwort wurde als „es gibt keins" gedeutet.** Nach
+  RFC 6749 §6 *kann* der Server bei einer Erneuerung ein neues ausstellen — muss aber nicht;
+  dann gilt das bisherige weiter. Das Bundle setzte es in diesem Fall auf null und musste beim
+  nächsten Ablauf über `client_credentials` gehen. Das erzeugt eine **neue Token-Familie**, und
+  bei 300 Sekunden Lebensdauer wäre das alle zehn Minuten eine — genau das, woran das
+  Kontingent von nu vollläuft. Jetzt bleibt ein vorhandenes Refresh-Token erhalten
+* Add: **Jede Tokenanfrage wird aufgezeichnet** (`var/logs/wertungsportal-token-JJJJ-MM.log`):
+  Zeitpunkt, Art (`client_credentials`/`refresh_token`), ausgestellt oder abgelehnt, Grund und
+  Herkunft (cli/web). Eine Zeile je Anfrage, nicht je Abruf. `wertungsportal:token` zählt die
+  des laufenden Tages zusammen — die Zahl, die fehlt, wenn man mit nu über das Kontingent
+  sprechen will
+* `wertungsportal:token --pruefen` zieht jetzt ein Fazit: Antwortet der öffentliche Endpunkt
+  und der geschützte nicht, sagt der Befehl ausdrücklich, dass es nicht an dieser Anlage liegt
+
 ## Version 1.29.0 (2026-08-13)
 
 * Add: **Befehl `wertungsportal:token`** — zeigt, ob das Zugangstoken richtig zwischengespeichert

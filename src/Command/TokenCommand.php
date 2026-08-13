@@ -130,6 +130,38 @@ class TokenCommand extends Command
             }
         }
 
+        // Wieviele Token die Anlage tatsächlich anfordert — die Zahl, die der
+        // Gegenseite fehlt, wenn man über das Kontingent sprechen will
+        $protokoll = OAuth2Client::tokenprotokoll();
+
+        if ('' !== $protokoll && is_file($protokoll)) {
+            $heute = date('Y-m-d');
+            $ausgestellt = 0;
+            $abgelehnt = 0;
+            $ersteHeute = '';
+
+            foreach (file($protokoll, \FILE_IGNORE_NEW_LINES | \FILE_SKIP_EMPTY_LINES) ?: [] as $zeile) {
+                if (0 !== strpos($zeile, $heute)) {
+                    continue;
+                }
+
+                $teile = explode(';', $zeile);
+
+                if ('' === $ersteHeute) {
+                    $ersteHeute = substr($teile[0] ?? '', 11, 5);
+                }
+
+                if ('abgelehnt' === ($teile[2] ?? '')) {
+                    ++$abgelehnt;
+                } else {
+                    ++$ausgestellt;
+                }
+            }
+
+            $zeilen[] = ['Tokenanfragen heute', $ausgestellt.' ausgestellt'.($abgelehnt > 0 ? ', <fg=red>'.$abgelehnt.' abgelehnt</>' : '').($ersteHeute !== '' ? ' (seit '.$ersteHeute.' Uhr)' : '')];
+            $zeilen[] = ['Aufzeichnung', basename($protokoll)];
+        }
+
         $io->table(['Angabe', 'Wert'], $zeilen);
 
         if (!$schreibbar) {
@@ -149,6 +181,7 @@ class TokenCommand extends Command
             $io->newLine();
 
             $client = new OAuth2Client();
+            $ergebnis = [];
 
             foreach ([
                 'öffentlich (ohne Token)' => $client->apiBaseUrl.'/dwz/dwzliste/persons?lastname=Muster&firstname=Max',
@@ -156,6 +189,7 @@ class TokenCommand extends Command
             ] as $was => $url) {
                 $r = $client->callApiWithRefresh($url);
                 $code = (int) ($r['http_code'] ?? 0);
+                $ergebnis[$was] = $code;
 
                 if (200 === $code) {
                     $io->writeln(sprintf('  <info>HTTP 200</info>  %s', $was));
@@ -166,11 +200,33 @@ class TokenCommand extends Command
             }
 
             $io->newLine();
-            $io->text('Antwortet der öffentliche Endpunkt mit 200 und der geschützte mit 403, liegt es');
-            $io->text('am Zugangstoken und nicht an der Verbindung.');
+
+            $oeffentlich = $ergebnis['öffentlich (ohne Token)'] ?? 0;
+            $geschuetzt = $ergebnis['geschützt (mit Token)'] ?? 0;
+
+            if (200 === $oeffentlich && 200 !== $geschuetzt) {
+                $io->warning(
+                    'Die Verbindung zu nu steht — der öffentliche Endpunkt antwortet. Nur das '
+                    ."Zugangstoken ist nicht zu bekommen.\nAn dieser Anlage liegt es nicht: Die "
+                    .'Tokendatei ist schreibbar und wird verwendet. Die Grenze liegt bei nu und '
+                    .'gehört dort angesprochen (Kennung, Kontingent, Scope).'
+                );
+
+                return 1;
+            }
+
+            if (200 !== $oeffentlich) {
+                $io->error('Schon der öffentliche Endpunkt antwortet nicht — dann steht die Verbindung selbst in Frage, nicht das Token.');
+
+                return 1;
+            }
+
+            $io->success('Beide Endpunkte antworten. Das Zugangstoken ist in Ordnung.');
+
+            return 0;
         }
 
-        $io->success('Die Tokendatei ist brauchbar. Kommt trotzdem „Too much access tokens", liegt die Grenze bei nu.');
+        $io->success('Die Tokendatei ist brauchbar und wird verwendet. Kommt trotzdem „Too much access tokens", liegt die Grenze bei nu.');
 
         return 0;
     }
