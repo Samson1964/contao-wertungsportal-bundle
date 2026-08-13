@@ -58,6 +58,7 @@ class VorladenCommand extends Command
             ->setDescription('Lädt Turnierdaten und Karteikarten in den Zwischenspeicher (wie der nächtliche Cronjob, aber sofort und mit Ausgabe)')
             ->addOption('budget', 'b', InputOption::VALUE_REQUIRED, 'Laufzeit in Sekunden', (string) TurnierVorlader::ZEITBUDGET)
             ->addOption('alle', 'a', InputOption::VALUE_NONE, 'Erfolge einzeln ausgeben, nicht nur Fehlschläge')
+            ->addOption('protokoll', 'p', InputOption::VALUE_REQUIRED, 'Alle Fehlschläge zusätzlich in diese Datei schreiben')
             ->setHelp(
                 "Der Befehl macht dasselbe wie der nächtliche Cronjob, aber sofort und mit\n"
                 ."sichtbarer Ausgabe. Fehlschläge erscheinen mit Grund, am Ende steht eine\n"
@@ -66,10 +67,15 @@ class VorladenCommand extends Command
                 ."den Befehl eintippt, will ihn laufen sehen. Die Einstellungen im Backend\n"
                 ."gelten weiter: Ist das Vorladen oder der Live-Abruf abgeschaltet oder fehlen\n"
                 ."die Zugangsdaten, sagt der Befehl das und tut nichts.\n\n"
+                ."Bei einem langen Lauf scrollen die ersten Meldungen aus dem Fenster. Dagegen\n"
+                ."hilft --protokoll (nur die Fehlschläge, sauber untereinander) oder das\n"
+                ."Mitschreiben der ganzen Ausgabe mit tee.\n\n"
                 ."Beispiele:\n"
-                ."  wertungsportal:vorladen                 einmal mit der üblichen Laufzeit\n"
-                ."  wertungsportal:vorladen --budget=600    zehn Minuten lang\n"
-                ."  wertungsportal:vorladen --alle          jeden einzelnen Abruf zeigen\n"
+                ."  wertungsportal:vorladen                        einmal mit der üblichen Laufzeit\n"
+                ."  wertungsportal:vorladen --budget=600           zehn Minuten lang\n"
+                ."  wertungsportal:vorladen --alle                 jeden einzelnen Abruf zeigen\n"
+                ."  wertungsportal:vorladen -p var/logs/vorlader.log   Fehlschläge in eine Datei\n"
+                ."  wertungsportal:vorladen 2>&1 | tee vorlader.log    alles mitschreiben\n"
             )
         ;
     }
@@ -100,6 +106,19 @@ class VorladenCommand extends Command
 
         $budget = max(5, (int) $input->getOption('budget'));
         $alle = (bool) $input->getOption('alle');
+        $protokoll = (string) ($input->getOption('protokoll') ?? '');
+
+        if ('' !== $protokoll) {
+            // Gleich zu Beginn anlegen: Scheitert das Schreiben erst nach zwei
+            // Minuten Lauf, ist die Zeit verloren und die Fehler sind es auch
+            if (false === @file_put_contents($protokoll, '# Vorladen '.date('Y-m-d H:i:s')."\n", FILE_APPEND)) {
+                $io->error('In die Datei '.$protokoll.' lässt sich nicht schreiben.');
+
+                return 2;
+            }
+
+            $io->text('Fehlschläge werden zusätzlich nach '.$protokoll.' geschrieben.');
+        }
 
         $io->title('Wertungsportal: Vorladen');
         $io->text('Laufzeit bis zu '.$budget.' Sekunden. Abbruch nach fünf Fehlschlägen hintereinander.');
@@ -114,7 +133,7 @@ class VorladenCommand extends Command
             ->setAufAbruf()
             ->setBudget($budget)
             ->setMelder(
-                static function (string $funktion, string $schluessel, bool $erfolg, string $grund) use ($io, $output, $alle, &$zaehler, &$fehler): void {
+                static function (string $funktion, string $schluessel, bool $erfolg, string $grund) use ($io, $alle, $protokoll, &$zaehler, &$fehler): void {
                     if ($erfolg) {
                         $zaehler[$funktion] = ($zaehler[$funktion] ?? 0) + 1;
 
@@ -135,6 +154,13 @@ class VorladenCommand extends Command
                     // diesen Befehl gibt
                     $io->writeln('  <fg=red>FEHLER</>  '.$funktion.' '.$schluessel);
                     $io->writeln('          '.$grund);
+
+                    // ... und bei Bedarf zusätzlich wegschreiben. Bei einem
+                    // langen Lauf scrollen die ersten Meldungen sonst aus dem
+                    // Fenster, und der Anfang ist oft der aufschlussreichste Teil
+                    if ('' !== $protokoll) {
+                        @file_put_contents($protokoll, date('H:i:s').' '.$funktion.' '.$schluessel.': '.$grund."\n", FILE_APPEND);
+                    }
                 }
             )
         ;

@@ -1,5 +1,18 @@
 # Wertungsportal Changelog
 
+## Version 1.28.1 (2026-08-13)
+
+* Fix: **Im Systemprotokoll stand nur die allererste Störung eines Aufrufs**, alle weiteren
+  fielen weg — auch dann, wenn sie eine ganz andere Ursache hatten. Für einen Seitenaufruf war
+  das richtig (dieselbe Störung trifft alle Abfragen), für einen Vorladelauf über Minuten mit
+  Hunderten Abrufen nicht. Jetzt kommt **jeder verschiedene Grund einmal** ins Protokoll,
+  höchstens zehn je Lauf. Gilt ebenso für gescheiterte Abgleiche
+* Add: **`--protokoll=DATEI` beim Befehl `wertungsportal:vorladen`** schreibt alle Fehlschläge
+  zusätzlich mit Uhrzeit in eine Datei. Bei einem langen Lauf scrollen die ersten Meldungen
+  sonst aus dem Fenster — und gerade der Anfang ist oft der aufschlussreichste Teil. Die Datei
+  wird zu Beginn angelegt: Läßt sie sich nicht schreiben, sagt der Befehl das sofort, statt
+  nach zwei Minuten Lauf
+
 ## Version 1.28.0 (2026-08-13)
 
 * Add: **Befehl `wertungsportal:vorladen`** — stößt das Vorladen sofort an und zeigt dabei zu.

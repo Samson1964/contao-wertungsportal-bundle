@@ -98,6 +98,21 @@ Am Ende steht eine Übersicht nach Abrufart, die Laufzeit und der letzte Fehler.
 |---|---|
 | `--budget=600` (`-b`) | Laufzeit in Sekunden statt der üblichen 180 |
 | `--alle` (`-a`) | jeden einzelnen Abruf zeigen, nicht nur die Fehlschläge |
+| `--protokoll=DATEI` (`-p`) | alle Fehlschläge zusätzlich in eine Datei schreiben |
+
+**Bei einem langen Lauf scrollen die ersten Meldungen aus dem Fenster** — und
+gerade der Anfang ist oft der aufschlussreichste Teil. Dagegen hilft entweder
+
+```bash
+php vendor/bin/contao-console wertungsportal:vorladen -p var/logs/vorlader.log
+```
+
+(nur die Fehlschläge, sauber untereinander mit Uhrzeit) oder das Mitschreiben
+der ganzen Ausgabe:
+
+```bash
+php vendor/bin/contao-console wertungsportal:vorladen 2>&1 | tee vorlader.log
+```
 
 Der **Rückgabewert** taugt für Skripte: `0` fertig, `1` nach Abbruch wegen fünf
 Fehlschlägen hintereinander, `2` wenn gar nicht gelaufen (dann sagt der Befehl

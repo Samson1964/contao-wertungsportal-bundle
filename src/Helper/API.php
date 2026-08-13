@@ -29,11 +29,21 @@ class API
 	protected static $notdaten = array();
 
 	/**
-	 * Merker, ob der Grund einer gescheiterten Verbindung in diesem
-	 * Seitenaufruf schon im Systemprotokoll steht. Verhindert, dass eine
-	 * Störung so viele Protokollzeilen erzeugt, wie die Seite Abfragen hat.
+	 * Bereits protokollierte Störungsgründe dieses Aufrufs, als Schlüssel.
+	 *
+	 * Verhindert, dass ein und derselbe Grund so viele Protokollzeilen erzeugt,
+	 * wie es Abfragen gab — lässt aber einen ZWEITEN, anderen Grund durch.
 	 */
-	protected static $stoerungGemeldet = false;
+	protected static $stoerungGemeldet = array();
+
+	/**
+	 * Höchstzahl verschiedener Störungsgründe je Aufruf im Protokoll.
+	 *
+	 * Ein Vorladelauf kann Hunderte Abrufe machen; fällt die Schnittstelle
+	 * dabei auf verschiedene Weisen aus, soll das Protokoll trotzdem lesbar
+	 * bleiben.
+	 */
+	const STOERUNGEN_MAX = 10;
 
 	/**
 	 * Grund der zuletzt gescheiterten Verbindung im Klartext.
@@ -42,10 +52,9 @@ class API
 	protected static $letzteStoerung = '';
 
 	/**
-	 * Merker, ob ein gescheiterter Abgleich in diesem Seitenaufruf schon im
-	 * Systemprotokoll steht.
+	 * Bereits protokollierte Gründe gescheiterter Abgleiche, als Schlüssel.
 	 */
-	protected static $abgleichGemeldet = false;
+	protected static $abgleichGemeldet = array();
 
 	/**
 	 * Liefert den Grund der zuletzt gescheiterten Verbindung.
@@ -510,9 +519,16 @@ class API
 	 * Der cURL-Fehlertext beantwortet das und steht damit unter
 	 * System → Systemlog.
 	 *
-	 * Höchstens ein Eintrag je Seitenaufruf (statischer Merker): Eine Seite
-	 * setzt mehrere Abfragen ab, und bei einer Störung scheitern sie alle —
-	 * das Protokoll soll den Grund nennen, nicht zulaufen.
+	 * **Jeder Grund einmal, nicht die erste Störung und dann Schweigen.** Eine
+	 * Seite setzt mehrere Abfragen ab, und bei einer Störung scheitern sie alle
+	 * mit demselben Text — der gehört nicht zehnmal ins Protokoll. Ein Lauf des
+	 * Vorladers dauert dagegen Minuten und trifft dabei durchaus auf
+	 * verschiedene Ursachen. Bis Fassung 1.28.0 stand nur die allererste im
+	 * Protokoll; die übrigen gingen ersatzlos verloren, weil die Ausgabe auf
+	 * der Kommandozeile inzwischen weitergescrollt war.
+	 *
+	 * Nach STOERUNGEN_MAX verschiedenen Gründen ist Schluss — bei einem
+	 * flächendeckenden Ausfall soll das Protokoll nicht volllaufen.
 	 *
 	 * @param  array $result Fehlerhafte Antwort mit error_message
 	 * @return void
@@ -528,9 +544,10 @@ class API
 		// Ursache steckt allein hier
 		self::$letzteStoerung = $meldung;
 
-		if(self::$stoerungGemeldet) return;
+		if(isset(self::$stoerungGemeldet[$meldung])) return;
+		if(\count(self::$stoerungGemeldet) >= self::STOERUNGEN_MAX) return;
 
-		self::$stoerungGemeldet = true;
+		self::$stoerungGemeldet[$meldung] = true;
 
 		try
 		{
@@ -752,10 +769,12 @@ class API
 
 		self::$letzteStoerung = $meldung;
 
-		// Je Seitenaufruf nur einmal, sonst füllt eine große Liste das Protokoll
-		if(self::$abgleichGemeldet) return;
+		// Jeder Grund einmal — derselbe Fehler bei 700 Abrufen füllt das
+		// Protokoll, zwei VERSCHIEDENE Fehler sind dagegen zwei Befunde
+		if(isset(self::$abgleichGemeldet[$meldung])) return;
+		if(\count(self::$abgleichGemeldet) >= self::STOERUNGEN_MAX) return;
 
-		self::$abgleichGemeldet = true;
+		self::$abgleichGemeldet[$meldung] = true;
 
 		try
 		{
