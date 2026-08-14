@@ -562,7 +562,82 @@ class OAuth2Client
 			return ['error' => false, 'access_token' => $cache['access_token']];
 		}
 
-		// 2. Refresh-Token vorhanden → erneuern statt neu anfordern
+		// 2. Erneuern — aber immer nur EINER auf einmal.
+		//
+		// Der Fund vom 13.08.2026 aus dem Tokenprotokoll des Livesystems:
+		// Läuft das Token ab, während mehrere Seitenaufrufe gleichzeitig
+		// arbeiten, erneuern sie ALLE. nu verbraucht ein Refresh-Token beim
+		// Einlösen (Rotation), also bekommt der erste ein neues und die
+		// übrigen „HTTP 400: Refresh Token already used or invalid" — und
+		// weichen auf `client_credentials` aus. **Jedes Mal entsteht dabei
+		// eine neue Token-Familie.** Im Protokoll standen an einer Sekunde
+		// bis zu drei solcher Ausweichvorgänge; über den Tag summierte sich
+		// das, bis nu mit „Too much access tokens" abwies.
+		//
+		// Die Dateisperre serialisiert das: Wer sie hat, erneuert; die
+		// anderen warten kurz und finden danach das frische Token vor,
+		// ohne selbst anzufragen.
+		return $this->erneuereMitSperre();
+	}
+
+	/**
+	 * Erneuert das Token unter einer Dateisperre und gibt es zurück.
+	 *
+	 * Nach dem Erhalt der Sperre wird **erneut nachgesehen**: Ein anderer
+	 * Prozess kann in der Zwischenzeit erneuert haben, dann ist gar keine
+	 * Anfrage mehr nötig. Ohne diese zweite Prüfung brächte die Sperre nichts —
+	 * die Wartenden würden der Reihe nach doch alle anfragen.
+	 *
+	 * Läßt sich die Sperre nicht setzen (kein `flock`, keine Schreibrechte),
+	 * wird ohne sie gearbeitet. Lieber ein möglicher Wettlauf als gar kein
+	 * Token.
+	 *
+	 * @return array Tokendaten oder Fehlerantwort
+	 */
+	protected function erneuereMitSperre(): array
+	{
+		$sperrdatei = @fopen($this->cacheFile.'.lock', 'c');
+
+		if($sperrdatei === false || !@flock($sperrdatei, LOCK_EX))
+		{
+			if($sperrdatei !== false) @fclose($sperrdatei);
+
+			return $this->erneuere($this->readCache());
+		}
+
+		try
+		{
+			// Zweite Prüfung — und zwar aus der DATEI, nicht aus dem
+			// Prozessspeicher: Der kennt nur den Stand von vorhin
+			self::$tokenSpeicher = array();
+			$cache = $this->readCache();
+
+			if(!empty($cache['access_token']) && isset($cache['expires_at']) && time() < ($cache['expires_at'] - 30))
+			{
+				$log = "ℹ️ Ein anderer Vorgang hat inzwischen erneuert.\n";
+				if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+
+				return ['error' => false, 'access_token' => $cache['access_token']];
+			}
+
+			return $this->erneuere($cache);
+		}
+		finally
+		{
+			@flock($sperrdatei, LOCK_UN);
+			@fclose($sperrdatei);
+		}
+	}
+
+	/**
+	 * Holt ein frisches Token: erst über das Refresh-Token, sonst neu.
+	 *
+	 * @param  array $cache Bisher hinterlegte Tokendaten
+	 * @return array        Tokendaten oder Fehlerantwort mit `tokenfehler`
+	 */
+	protected function erneuere(array $cache): array
+	{
+		// Refresh-Token vorhanden → erneuern statt neu anfordern
 		if(!empty($cache['refresh_token']))
 		{
 			$tokenData = $this->refreshToken($cache['refresh_token']);
@@ -576,7 +651,7 @@ class OAuth2Client
 			$this->clearCache();
 		}
 
-		// 3. Komplett neuen Token holen
+		// Komplett neuen Token holen
 		$tokenData = $this->fetchNewToken();
 
 		// Auch das gescheitert: Wartezeit verhängen und den Grund festhalten.

@@ -1,5 +1,25 @@
 # Wertungsportal Changelog
 
+## Version 1.30.0 (2026-08-14)
+
+**Der Grund für „Too much access tokens" steht fest — er stand im eigenen Tokenprotokoll.**
+
+* Fix: **Wettlauf bei der Tokenerneuerung.** Läuft das Token ab, während mehrere Seitenaufrufe
+  gleichzeitig arbeiten, erneuerten sie **alle**. nu verbraucht ein Refresh-Token beim Einlösen
+  (Rotation): Der erste bekommt ein neues, die übrigen „HTTP 400: Refresh Token already used or
+  invalid" — und weichen auf `client_credentials` aus. **Jedes Ausweichen erzeugt eine neue
+  Token-Familie.** Im Protokoll des Livesystems standen an einer einzigen Sekunde bis zu drei
+  davon; über den Tag summierte es sich, bis nu abwies
+* Eine **Dateisperre** zieht die Erneuerung jetzt auf einen Vorgang zusammen. Wer sie hält,
+  erneuert; die anderen warten kurz und finden danach das frische Token vor, ohne selbst
+  anzufragen. Nach dem Erhalt der Sperre wird erneut in der Datei nachgesehen — ohne diese
+  zweite Prüfung würden die Wartenden der Reihe nach doch alle anfragen
+* Läßt sich die Sperre nicht setzen (kein `flock`, keine Schreibrechte), wird ohne sie
+  gearbeitet: lieber ein möglicher Wettlauf als gar kein Token
+* Add: **`wertungsportal:token --auswertung`** wertet das Tokenprotokoll aus: Anfragen je
+  Stunde, neue Token-Familien, erkannte Wettläufe und wie viele Familien daraus entstanden.
+  Das sind die Zahlen für ein Gespräch mit dem Betreiber der Schnittstelle über das Kontingent
+
 ## Version 1.29.2 (2026-08-13)
 
 * Fix: **Die Vereinssuche fand keine Namen mit Sonderzeichen.** „baden-baden" wurde mit

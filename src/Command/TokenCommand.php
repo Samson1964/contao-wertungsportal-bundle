@@ -56,6 +56,7 @@ class TokenCommand extends Command
         $this
             ->setDescription('Zeigt, ob das Zugangstoken der Schnittstelle richtig zwischengespeichert wird')
             ->addOption('pruefen', null, InputOption::VALUE_NONE, 'Zusätzlich einen echten Abruf machen (kostet ein Token!)')
+            ->addOption('auswertung', null, InputOption::VALUE_NONE, 'Das Tokenprotokoll auswerten: Anfragen, Wettläufe, neue Familien')
             ->setHelp(
                 "Ohne Schalter fragt der Befehl NICHTS bei der Schnittstelle an und kostet\n"
                 ."damit auch kein Token. Er sieht nur nach, was örtlich hinterlegt ist.\n\n"
@@ -175,6 +176,10 @@ class TokenCommand extends Command
             return 1;
         }
 
+        if ($input->getOption('auswertung')) {
+            $this->auswertung($io, $protokoll);
+        }
+
         if ($input->getOption('pruefen')) {
             $io->section('Abruf zur Probe');
             $io->text('Je ein Aufruf: einmal öffentlich, einmal mit Token.');
@@ -229,5 +234,121 @@ class TokenCommand extends Command
         $io->success('Die Tokendatei ist brauchbar und wird verwendet. Kommt trotzdem „Too much access tokens", liegt die Grenze bei nu.');
 
         return 0;
+    }
+
+    /**
+     * Wertet das Tokenprotokoll aus.
+     *
+     * Beantwortet drei Fragen, die man ohne Aufzeichnung nur raten kann:
+     * Wie oft wird überhaupt angefragt? Wie viele **neue Token-Familien**
+     * entstehen dabei (jede `client_credentials`-Ausstellung ist eine)? Und
+     * wie viele davon gehen auf einen **Wettlauf** zurück — mehrere Vorgänge,
+     * die gleichzeitig erneuern, wobei nur der erste das Refresh-Token
+     * einlösen kann und die übrigen auf `client_credentials` ausweichen?
+     *
+     * Genau diese Zahlen braucht ein Gespräch mit dem Betreiber der
+     * Schnittstelle über das Kontingent.
+     *
+     * @param  SymfonyStyle $io        Ausgabe
+     * @param  string       $protokoll Pfad der Monatsdatei, darf leer sein
+     * @return void
+     */
+    private function auswertung(SymfonyStyle $io, string $protokoll): void
+    {
+        $io->section('Auswertung des Tokenprotokolls');
+
+        if ('' === $protokoll || !is_file($protokoll)) {
+            $io->text('Noch keine Aufzeichnung vorhanden.');
+
+            return;
+        }
+
+        $saetze = [];
+
+        foreach (file($protokoll, \FILE_IGNORE_NEW_LINES | \FILE_SKIP_EMPTY_LINES) ?: [] as $zeile) {
+            $teile = explode(';', $zeile);
+
+            if (\count($teile) < 4 || 'Zeitpunkt' === $teile[0]) {
+                continue;
+            }
+
+            $saetze[] = ['zeit' => (int) strtotime($teile[0]), 'roh' => $teile[0], 'art' => $teile[1], 'erg' => $teile[2]];
+        }
+
+        if (!$saetze) {
+            $io->text('Die Aufzeichnung enthält noch keine Anfragen.');
+
+            return;
+        }
+
+        $von = $saetze[0];
+        $bis = end($saetze);
+        $stunden = max(0.01, ($bis['zeit'] - $von['zeit']) / 3600);
+
+        $arten = [];
+
+        foreach ($saetze as $s) {
+            $schluessel = $s['art'].' '.$s['erg'];
+            $arten[$schluessel] = ($arten[$schluessel] ?? 0) + 1;
+        }
+
+        arsort($arten);
+
+        $zeilen = [];
+
+        foreach ($arten as $was => $anzahl) {
+            $zeilen[] = [$was, $anzahl];
+        }
+
+        $io->text(sprintf('%s bis %s (%.1f Stunden)', $von['roh'], $bis['roh'], $stunden));
+        $io->newLine();
+        $io->table(['Art und Ergebnis', 'Anzahl'], $zeilen);
+
+        // Wettläufe: mehrere Anfragen in derselben Sekunde. Gröber als eine
+        // echte Gleichzeitigkeitsmessung, aber die Aufzeichnung hat nur
+        // Sekundenauflösung — und für die Größenordnung reicht es
+        $proSekunde = [];
+
+        foreach ($saetze as $s) {
+            $proSekunde[$s['roh']][] = $s;
+        }
+
+        $wettlaeufe = 0;
+        $ausWettlauf = 0;
+
+        foreach ($proSekunde as $gruppe) {
+            if (\count($gruppe) < 2) {
+                continue;
+            }
+
+            ++$wettlaeufe;
+
+            foreach ($gruppe as $s) {
+                if ('client_credentials' === $s['art'] && 'ausgestellt' === $s['erg']) {
+                    ++$ausWettlauf;
+                }
+            }
+        }
+
+        $familien = 0;
+
+        foreach ($saetze as $s) {
+            if ('client_credentials' === $s['art'] && 'ausgestellt' === $s['erg']) {
+                ++$familien;
+            }
+        }
+
+        $io->text(sprintf('Anfragen: <info>%d</info> (%.1f je Stunde, hochgerechnet %d am Tag)', \count($saetze), \count($saetze) / $stunden, (int) round(\count($saetze) / $stunden * 24)));
+        $io->text(sprintf('Neue Token-Familien: <info>%d</info>', $familien));
+        $io->text(sprintf('Wettläufe (mehrere Anfragen in derselben Sekunde): <info>%d</info>', $wettlaeufe));
+        $io->text(sprintf('Familien, die daraus entstanden: <info>%d</info> von %d', $ausWettlauf, $familien));
+        $io->newLine();
+
+        if ($ausWettlauf > 0) {
+            $io->text('Ohne Wettläufe wären es '.($familien - $ausWettlauf).' Familien gewesen.');
+            $io->text('Die Dateisperre ab Fassung 1.30.0 zieht genau diese Vorgänge auf einen zusammen.');
+        } else {
+            $io->text('Keine Wettläufe — jede Erneuerung lief für sich.');
+        }
     }
 }
