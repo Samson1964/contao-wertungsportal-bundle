@@ -48,6 +48,25 @@ class OAuth2Client
 	const TOKENSPERRE = 300;
 
 	/**
+	 * cURL-Fehlernummern, bei denen ein zweiter Versuch sinnvoll ist.
+	 *
+	 * Alle bezeichnen einen Abriss der VERBINDUNG, nicht eine Antwort des
+	 * Servers — beim nächsten Versuch geht es meist durch:
+	 *
+	 * 16 CURLE_HTTP2            Fehler im HTTP/2-Rahmenwerk
+	 * 18 CURLE_PARTIAL_FILE     Antwort brach mittendrin ab
+	 * 52 CURLE_GOT_NOTHING      gar keine Antwort erhalten
+	 * 55 CURLE_SEND_ERROR       Senden gescheitert
+	 * 56 CURLE_RECV_ERROR       Empfangen gescheitert
+	 * 92 CURLE_HTTP2_STREAM     einzelner HTTP/2-Strom abgebrochen (CANCEL)
+	 *
+	 * Bewusst NICHT dabei: 28 (Zeitüberschreitung) — dort ist die Wartezeit
+	 * schon voll verbraucht; und 6/7 (Namensauflösung, Verbindungsaufbau) —
+	 * die deuten auf eine echte Störung, kein Zucken einer Leitung.
+	 */
+	const FEHLER_WIEDERHOLBAR = array(16, 18, 52, 55, 56, 92);
+
+	/**
 	 * Tokendaten für die Dauer dieses Prozesses.
 	 *
 	 * Zweite Verteidigungslinie neben der Datei: Läßt sich die Datei nicht
@@ -693,7 +712,7 @@ class OAuth2Client
 	// ─────────────────────────────────────────────
 	//  API-Aufruf mit Bearer Token
 	// ─────────────────────────────────────────────
-	public function callApi(?string $accessToken, string $apiUrl, string $method = 'GET', ?array $body = null): array
+	public function callApi(?string $accessToken, string $apiUrl, string $method = 'GET', ?array $body = null, int $wiederholung = 0): array
 	{
 		$ch = curl_init($apiUrl);
 
@@ -730,7 +749,26 @@ class OAuth2Client
 		$response  = curl_exec($ch);
 		$httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		$curlError = curl_error($ch);
+		$curlNr    = curl_errno($ch);
 		curl_close($ch);
+
+		// Einmal nachfassen, wenn die VERBINDUNG unterwegs abgerissen ist.
+		//
+		// Beobachtet auf dem Livesystem: „HTTP/2 stream 1 was not closed
+		// cleanly: CANCEL (err 8)" — rund jeder 200. Abruf eines Vorladelaufs.
+		// Der Server bricht dabei einen einzelnen Strom der gemeinsam genutzten
+		// HTTP/2-Verbindung ab; der nächste Versuch geht in aller Regel durch.
+		//
+		// Ausdrücklich NICHT wiederholt wird bei Zeitüberschreitung (28): Dort
+		// wurde die Wartezeit bereits voll ausgeschöpft, ein zweiter Versuch
+		// verdoppelte sie nur. Ebenso wenig bei inhaltlichen Fehlern — die
+		// haben keinen cURL-Fehler und kommen hier gar nicht an
+		if($curlError && $wiederholung < 1 && \in_array($curlNr, self::FEHLER_WIEDERHOLBAR, true))
+		{
+			usleep(200000); // 0,2 s, damit der Server Luft holen kann
+
+			return $this->callApi($accessToken, $apiUrl, $method, $body, $wiederholung + 1);
+		}
 
 		if($curlError)
 		{

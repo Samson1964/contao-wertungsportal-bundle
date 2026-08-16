@@ -63,11 +63,15 @@ class TurnierVorlader
 	 * Wert wirkt sich also nur dort voll aus, wo keine Grenze gilt, praktisch
 	 * auf der Kommandozeile.
 	 *
-	 * Bei 13 Terminen je Nacht bedeuten 180 Sekunden bis zu 39 Minuten
+	 * Bei 13 Terminen je Nacht bedeuten 300 Sekunden bis zu 65 Minuten
 	 * Abrufzeit. Das ist Absicht: Die Schnittstellenlast soll möglichst
 	 * vollständig in die Nacht wandern, damit tagsüber niemand mehr wartet.
+	 *
+	 * Zwischen zwei Läufen bleiben damit noch fünf Minuten Ruhe (Takt: alle
+	 * zehn Minuten). Wer den Wert weiter anhebt, sollte den Takt im `interval`
+	 * der services.yml mit vergrößern — sonst überholen sich die Läufe.
 	 */
-	const ZEITBUDGET = 180;
+	const ZEITBUDGET = 300;
 
 	/**
 	 * Zahl aufeinanderfolgender Fehlschläge, nach der ein Lauf abbricht.

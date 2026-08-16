@@ -20,8 +20,8 @@ ausfällt, und der nächste Seitenaufruf frischt ihn ohnehin auf.
 | 3:00 | letzter Lauf der Nacht |
 | 3:10 … 3:50 | die Termine bestehen, arbeiten aber nicht mehr |
 
-Das sind **13 Läufe zu je 180 Sekunden**, zusammen also gut 39 Minuten
-Abrufzeit. Zwischen zwei Läufen liegen rund sieben Minuten Ruhe.
+Das sind **13 Läufe zu je 300 Sekunden**, zusammen also gut 65 Minuten
+Abrufzeit. Zwischen zwei Läufen liegen fünf Minuten Ruhe.
 
 Am nächsten Abend beginnt alles von vorn — mit einem **frischen Abruf der
 Turnierliste** über die letzten 30 Tage, damit die inzwischen dazugekommenen
@@ -96,7 +96,7 @@ Am Ende steht eine Übersicht nach Abrufart, die Laufzeit und der letzte Fehler.
 
 | Schalter | Wirkung |
 |---|---|
-| `--budget=600` (`-b`) | Laufzeit in Sekunden statt der üblichen 180 |
+| `--budget=600` (`-b`) | Laufzeit in Sekunden statt der üblichen 300 |
 | `--alle` (`-a`) | jeden einzelnen Abruf zeigen, nicht nur die Fehlschläge |
 | `--protokoll=DATEI` (`-p`) | alle Fehlschläge zusätzlich in eine Datei schreiben |
 
@@ -169,7 +169,7 @@ Auswertung bleiben außen vor — für sie ist nicht bekannt, welche Bögen es g
 
 ## Zeitbudget
 
-Der Lauf endet nach **180 Sekunden**, auch mitten in einem Durchgang. Was liegen
+Der Lauf endet nach **300 Sekunden**, auch mitten in einem Durchgang. Was liegen
 bleibt, holt der nächste Lauf zehn Minuten später. Gemessen in der
 Testinstallation: **714 Abrufe in einem Lauf** (101 Auswertungen, 97 Ergebnisse,
 516 Karteikarten).
@@ -183,8 +183,8 @@ dazu). Bei einer nicht anhebbaren 30-Sekunden-Grenze bleiben deshalb 13 Sekunden
 Budget, bei 60 Sekunden sind es 43.
 
 Das ist Absicht: Die Last soll möglichst vollständig in die Nacht wandern,
-damit tagsüber niemand mehr wartet. Bei 13 Terminen bedeuten volle 180 Sekunden
-bis zu **39 Minuten Abrufzeit je Nacht**. Wer das enger halten will, verkleinert
+damit tagsüber niemand mehr wartet. Bei 13 Terminen bedeuten volle 300 Sekunden
+bis zu **65 Minuten Abrufzeit je Nacht**. Wer das enger halten will, verkleinert
 `ZEITBUDGET` oder das Fenster im `interval` der `services.yml` (und passt dann
 `STUNDE_ENDE` in der Klasse an).
 
@@ -217,7 +217,7 @@ lässt sich jederzeit über System → Systemwartung leeren, und einzelne Eintr�
 Hat ein Lauf etwas geholt, steht im **Systemlog** eine Zeile:
 
 ```
-Wertungsportal: 714 Turnierabrufe vorgeladen (101× Turnierauswertung, 97× Turnierergebnisse, 516× Karteikarte, 180.2 s von 180 s, cli)
+Wertungsportal: 1202 Turnierabrufe vorgeladen (6× Turnierauswertung, 6× Turnierergebnisse, 1190× Karteikarte, 300.1 s von 300 s, cli)
 ```
 
 **Gezählt wird, was danach wirklich im Zwischenspeicher liegt** — nicht, wie oft
@@ -226,7 +226,7 @@ nur die Versuche zählte, meldete auch dann Vollzug, wenn die Schnittstelle
 durchgehend mit HTTP 403 antwortet. Fehlschläge stehen mit in der Zeile:
 
 ```
-Wertungsportal: 0 Turnierabrufe vorgeladen (5 Fehlschläge, Lauf abgebrochen, 0.4 s von 180 s, cli)
+Wertungsportal: 0 Turnierabrufe vorgeladen (5 Fehlschläge, Lauf abgebrochen, 0.4 s von 300 s, cli)
 ```
 
 Nach **fünf Fehlschlägen hintereinander** bricht der Lauf ab. Antwortet die
@@ -238,7 +238,7 @@ Funktion Daten.
 **Der Grund steht hinter „zuletzt:"** in derselben Zeile:
 
 ```
-Wertungsportal: 0 Turnierabrufe vorgeladen (5 Fehlschläge, Lauf abgebrochen, zuletzt: Turnierauswertung — Token-Anfrage fehlgeschlagen (HTTP 403): Too much access tokens for the requested client-id, 0.6 s von 180 s, cli)
+Wertungsportal: 0 Turnierabrufe vorgeladen (5 Fehlschläge, Lauf abgebrochen, zuletzt: Turnierauswertung — Token-Anfrage fehlgeschlagen (HTTP 403): Too much access tokens for the requested client-id, 0.6 s von 300 s, cli)
 ```
 
 Ohne ihn ist die Meldung wertlos. Am 11.08.2026 stand dort anderthalb Tage lang
@@ -369,7 +369,7 @@ php vendor/bin/contao-console contao:cron
 Dann kann in den Contao-Einstellungen unter *Cron* zusätzlich „Cronjobs über
 die Website ausführen" abgeschaltet werden (`disableCron`), damit nicht beides
 nebeneinander läuft. Auf der Kommandozeile gilt außerdem keine Laufzeitgrenze —
-der Vorlader bekommt dort seine vollen 180 Sekunden.
+der Vorlader bekommt dort seine vollen 300 Sekunden.
 
 **Nicht** per Curl auf eine URL: Ein solcher Aufruf geht durch den Webserver
 und scheitert an einem aktiven Bot-Schutz (bei Hetzner der Under-Attack-Modus,
@@ -378,7 +378,7 @@ der jede PHP-Adresse mit HTTP 401 beantwortet).
 Damit ein verspäteter Lauf nicht ganz ausfällt, arbeitet die Klasse auch
 außerhalb des Fensters — abgewiesen werden nur die Termine zwischen 3:10 und
 3:50, also genau die nach dem Abschlusslauf. Ein Lauf, der erst um 8 Uhr
-ausgelöst wird, holt seine 180 Sekunden Daten.
+ausgelöst wird, holt seine 300 Sekunden Daten.
 
 ## Technisch
 

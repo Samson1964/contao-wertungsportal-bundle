@@ -1,5 +1,20 @@
 # Wertungsportal Changelog
 
+## Version 1.31.0 (2026-08-16)
+
+* Change: **Zeitbudget des Vorladers auf 300 Sekunden** (vorher 180). Bei 13 Terminen je Nacht
+  sind das bis zu 65 Minuten Abrufzeit; zwischen zwei Läufen bleiben im Zehn-Minuten-Takt noch
+  fünf Minuten Ruhe. Gemessen: **1202 Abrufe in einem Lauf**
+* Fix: **Abgerissene Verbindungen werden einmal wiederholt.** Auf dem Livesystem scheiterte
+  rund jeder 200. Abruf mit „HTTP/2 stream 1 was not closed cleanly: CANCEL (err 8)" — der
+  Server bricht dabei einen einzelnen Strom der gemeinsam genutzten Verbindung ab. Betroffen
+  sind vor allem sehr große Turniere: „DWZ-Restpartien Juli 2024 bis Juni 2026" hat **6000
+  Partien** und kostet allein 60 Abrufe in Folge. Ein zweiter Versuch nach 0,2 Sekunden geht in
+  aller Regel durch — 60 Seiten am Stück ohne einen einzigen Fehlschlag nachgemessen
+* Wiederholt wird nur bei einem Abriss der **Verbindung** (cURL 16, 18, 52, 55, 56, 92),
+  ausdrücklich **nicht** bei Zeitüberschreitung (28): Dort ist die Wartezeit schon voll
+  verbraucht, ein zweiter Versuch verdoppelte sie nur
+
 ## Version 1.30.0 (2026-08-14)
 
 **Der Grund für „Too much access tokens" steht fest — er stand im eigenen Tokenprotokoll.**
