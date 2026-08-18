@@ -65,7 +65,12 @@ und holte jede Nacht den gesamten Bestand neu.
 
 ## Abschalten
 
-Einstellungen → Bereich Wertungsportal → **Nächtliches Vorladen abschalten**.
+Wertungsportal → **Einstellungen** → Gruppe „Nächtliches Vorladen" → **Nächtliches
+Vorladen abschalten**.
+
+Die Einstellungen des Bundles stehen seit Fassung 1.32.0 in einem eigenen
+Backend-Modul der Wertungsportal-Gruppe, nicht mehr unter System →
+Einstellungen. Gespeichert werden sie unverändert in der `localconfig.php`.
 
 ## Von Hand anstoßen
 

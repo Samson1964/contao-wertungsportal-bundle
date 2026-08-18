@@ -1,5 +1,22 @@
 # Wertungsportal Changelog
 
+## Version 1.32.0 (2026-08-16)
+
+* Change: **Der Menüpunkt im Frontend heißt wieder „Spieler"** (statt „Personen"), ebenso die
+  Überschrift der Seite und das Backend-Modul
+* Add: **Eigenes Backend-Modul „Einstellungen"** in der Wertungsportal-Gruppe. Die 41
+  Einstellungen des Bundles stehen dort in **elf aufklappbaren Gruppen** (Anzeige, Seiten,
+  Zugang, Live-Abruf, Zwischenspeicher, Vorladen, E-Mail, Vereinslisten-Schnittstelle, Bremse,
+  Protokolle, Bilder) statt in einem einzigen Block. Unter System → Einstellungen erscheinen
+  sie nicht mehr — dort sind wieder nur die 107 Felder von Contao und den übrigen Bundles
+* **Keine Datenübernahme nötig:** Gespeichert wird weiterhin in `tl_settings`, also in der
+  `localconfig.php`. Es hat sich nur der Ort geändert, an dem man die Werte bearbeitet — jeder
+  Lesezugriff im Code bleibt gültig, und die eigenständigen Download-Skripte finden ihren Token
+  wie bisher
+* Die Palette wird über den **`loadDataContainer`-Hook** gesetzt, nicht in der DCA-Datei: DCAs
+  laden alphabetisch nach Paketnamen, und jedes Bundle hängt seine Felder mit `.=` an. In der
+  DCA-Datei gesetzt, kamen anschließend **80 fremde Felder** wieder dazu
+
 ## Version 1.31.0 (2026-08-16)
 
 * Change: **Zeitbudget des Vorladers auf 300 Sekunden** (vorher 180). Bei 13 Terminen je Nacht

@@ -10,8 +10,9 @@
  * Backendmodule
  */
 $GLOBALS['TL_LANG']['MOD']['wertungsportal'] = array('Wertungsportal', 'Wertungsportal verwalten');
+$GLOBALS['TL_LANG']['MOD']['wp-settings'] = array('Einstellungen', 'Alle Einstellungen des Wertungsportals — gruppiert und ohne die übrigen Contao-Einstellungen');
 $GLOBALS['TL_LANG']['MOD']['wp-clubs'] = array('Vereine', 'Vereine Wertungsportal verwalten');
-$GLOBALS['TL_LANG']['MOD']['wp-persons'] = array('Personen', 'Personen und Mitgliedschaften Wertungsportal verwalten');
+$GLOBALS['TL_LANG']['MOD']['wp-persons'] = array('Spieler', 'Spieler und Mitgliedschaften des Wertungsportals verwalten');
 $GLOBALS['TL_LANG']['MOD']['wp-tournaments'] = array('Turniere', 'Turniere Wertungsportal verwalten');
 $GLOBALS['TL_LANG']['MOD']['wp-elo'] = array('FIDE-Elo', 'FIDE-Elo-Daten für die Anreicherung verwalten');
 $GLOBALS['TL_LANG']['MOD']['wp-stats'] = array('Statistik', 'Abrufe der Schnittstellenfunktionen auswerten');

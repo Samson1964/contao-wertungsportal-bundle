@@ -26,6 +26,16 @@ use Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTournamentsMatch
 
 $GLOBALS['BE_MOD']['wertungsportal'] = array
 (
+	'wp-settings' => array
+	(
+		// Die Einstellungen des Bundles - dieselben Werte wie unter System,
+		// nur hier gruppiert und ohne die uebrigen Contao-Einstellungen.
+		// Gespeichert wird weiterhin in tl_settings (localconfig.php)
+		'tables'         => array
+		(
+			'tl_settings',
+		),
+	),
 	'wp-clubs'    => array
 	(
 		'tables'         => array
@@ -138,6 +148,12 @@ $GLOBALS['TL_HOOKS']['getPageIdFromUrl'][] = array('Schachbulle\ContaoWertungspo
 // Backend-Startseite: Warnung, wenn der Mitgliederdaten-Import überfällig ist
 // (älter als 31 Tage) — Abmeldungen kommen nur über die CSV-Importe an
 $GLOBALS['TL_HOOKS']['getSystemMessages'][] = array('Schachbulle\ContaoWertungsportalBundle\Classes\Systemmeldungen', 'importWarnung');
+
+// Ersetzt im Modul "Einstellungen" die Palette von tl_settings. MUSS ein
+// Hook sein: DCA-Dateien laden alphabetisch nach Paketnamen, fremde Bundles
+// haengen ihre Felder DANACH wieder an (gemessen: 80 fremde Felder).
+// Begruendung ausfuehrlich in Classes/Einstellungen.php
+$GLOBALS['TL_HOOKS']['loadDataContainer'][] = array('Schachbulle\ContaoWertungsportalBundle\Classes\Einstellungen', 'loadDataContainer');
 
 /**
  * Purge jobs / Reinigungsarbeiten

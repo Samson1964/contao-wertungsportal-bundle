@@ -174,7 +174,7 @@ Das Frontend-Modul **Schnittstellen-Registrierung**
 selbst braucht keine Contao-Seite, sie liegt fest unter
 `/wertungsportal-api/vereinsliste` (Route aus `Resources/config/routing.yml`).
 
-### Einstellungen (System → Einstellungen, Bereich Wertungsportal)
+### Einstellungen (Wertungsportal → Einstellungen → „Vereinslisten-Schnittstelle")
 
 | Einstellung | Wirkung |
 |---|---|

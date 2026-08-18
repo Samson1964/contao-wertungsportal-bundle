@@ -10,7 +10,7 @@ Daten, sobald eine Grenze gerissen ist.
 
 ## Einstellen
 
-Einstellungen → Bereich Wertungsportal:
+Wertungsportal → **Einstellungen** → Gruppe „Bremse gegen Massenabfragen":
 
 | Einstellung | Bedeutung |
 |---|---|

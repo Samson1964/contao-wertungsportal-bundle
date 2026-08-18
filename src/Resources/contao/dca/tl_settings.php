@@ -4,9 +4,21 @@ use Contao\StringUtil;
 use Contao\Validator;
 
 /**
- * palettes
+ * Palette der Wertungsportal-Einstellungen.
+ *
+ * Die Felder erscheinen **nicht mehr unter System → Einstellungen**, sondern im
+ * eigenen Backend-Modul „Einstellungen" der Wertungsportal-Gruppe. Gespeichert
+ * wird weiterhin in `tl_settings`, also in der `localconfig.php` — es hat sich
+ * nur der Ort geändert, an dem man sie bearbeitet, nicht der Ort, an dem sie
+ * liegen. Jeder Lesezugriff im Code (`$GLOBALS['TL_CONFIG'][…]`) bleibt damit
+ * unverändert gültig, und die eigenständigen Download-Skripte finden ihren
+ * Token wie bisher. Eine Datenübernahme entfällt.
+ *
+ * Der Grund für den Umzug: 41 Felder in einem einzigen Block waren nicht mehr
+ * zu überblicken. Jetzt sind es elf aufklappbare Gruppen, und die allgemeinen
+ * Contao-Einstellungen sind wieder frei davon.
  */
-$GLOBALS['TL_DCA']['tl_settings']['palettes']['default'] .= ';{wertungsportal_legend:hide},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url,wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband,wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe,wertungsportal_crontoken,wertungsportal_api_aus,wertungsportal_api_timeout,wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_cachezeit_turnierdaten_alt,wertungsportal_cron_aus,wertungsportal_mail_absender,wertungsportal_mail_absendername,wertungsportal_mail_token,wertungsportal_api_abrufe_tag,wertungsportal_api_freigabe,wertungsportal_api_sperren,wertungsportal_limit_minute,wertungsportal_limit_stunde,wertungsportal_limit_tag,wertungsportal_zugriffslog,wertungsportal_debuglog,wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize';
+$GLOBALS['TL_DCA']['tl_settings']['palettes']['wertungsportal'] = '{wertungsportal_anzeige_legend},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url;{wertungsportal_seiten_legend:hide},wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband;{wertungsportal_zugang_legend:hide},wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe,wertungsportal_crontoken;{wertungsportal_abruf_legend:hide},wertungsportal_api_aus,wertungsportal_api_timeout;{wertungsportal_cache_legend:hide},wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_cachezeit_turnierdaten_alt;{wertungsportal_vorladen_legend:hide},wertungsportal_cron_aus;{wertungsportal_mail_legend:hide},wertungsportal_mail_absender,wertungsportal_mail_absendername,wertungsportal_mail_token;{wertungsportal_schnittstelle_legend:hide},wertungsportal_api_abrufe_tag,wertungsportal_api_freigabe,wertungsportal_api_sperren;{wertungsportal_bremse_legend:hide},wertungsportal_limit_minute,wertungsportal_limit_stunde,wertungsportal_limit_tag;{wertungsportal_protokoll_legend:hide},wertungsportal_zugriffslog,wertungsportal_debuglog;{wertungsportal_bilder_legend:hide},wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize';
 
 /**
  * fields

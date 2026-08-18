@@ -8,6 +8,7 @@
  * Back end modules
  */
 $GLOBALS['TL_LANG']['MOD']['wertungsportal'] = array('Rating portal', 'Manage the DSB rating portal');
+$GLOBALS['TL_LANG']['MOD']['wp-settings'] = array('Settings', 'All rating portal settings, grouped and without the other Contao settings');
 $GLOBALS['TL_LANG']['MOD']['wp-clubs'] = array('Clubs', 'Manage rating portal clubs');
 $GLOBALS['TL_LANG']['MOD']['wp-persons'] = array('Persons', 'Manage rating portal persons and memberships');
 $GLOBALS['TL_LANG']['MOD']['wp-tournaments'] = array('Tournaments', 'Manage rating portal tournaments');

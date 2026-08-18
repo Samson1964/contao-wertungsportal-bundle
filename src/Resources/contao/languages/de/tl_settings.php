@@ -5,6 +5,19 @@
  */
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_legend']       = 'Wertungsportal';
 
+// Gruppen der Einstellungen (Backend-Modul Einstellungen)
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_anzeige_legend'] = 'Anzeige im Frontend';
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_seiten_legend'] = 'Seiten der Website';
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_zugang_legend'] = 'Zugang zur Schnittstelle';
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_abruf_legend'] = 'Live-Abruf';
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cache_legend'] = 'Zwischenspeicher';
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_vorladen_legend'] = 'Nächtliches Vorladen';
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_mail_legend'] = 'E-Mail-Versand';
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_schnittstelle_legend'] = 'Vereinslisten-Schnittstelle';
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_bremse_legend'] = 'Bremse gegen Massenabfragen';
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_protokoll_legend'] = 'Protokolle';
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_bilder_legend'] = 'Bilder';
+
 /**
  * Felder
  */
