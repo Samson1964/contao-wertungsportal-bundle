@@ -258,8 +258,16 @@ class Verein extends \Module
 			/*********************************************************
 			 * Ausgabe Kopfdaten und Mitgliederliste
 			*/
+			// Der Name kommt aus dem Backend, sonst aus der Antwort, sonst
+			// bleibt die Kennziffer. NIE unmittelbar auf body.data zugreifen:
+			// Bei einer HTML-Fehlerseite der Schnittstelle steht dort eine
+			// Zeichenkette, und der Zugriff ist in PHP 8 ein TypeError
+			$datenVerein = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::datensaetze($resultVerein);
+
 			if($objClub && $objClub->altname != '') $vereinsname = $objClub->altname;
-			else $vereinsname = $resultVerein['body']['data'][0]['clubName'];
+			elseif(!empty($datenVerein[0]['clubName'])) $vereinsname = $datenVerein[0]['clubName'];
+			elseif($objClub && $objClub->clubName != '') $vereinsname = $objClub->clubName;
+			else $vereinsname = 'Verein '.$zps;
 			$this->Template->listenlink = ($order == 'alpha') ? sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s.html?order=rang\">Rangliste</a>", $zps) : sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s.html?order=alpha\">Alphaliste</a>", $zps);
 			$this->Template->vereinsname = $vereinsname;
 

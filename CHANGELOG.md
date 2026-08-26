@@ -1,5 +1,27 @@
 # Wertungsportal Changelog
 
+## Version 1.32.1 (2026-08-16)
+
+**Behebt einen HTTP 500 auf den Vereins- und Verbandsseiten, während nu nicht erreichbar war.**
+
+* Fix: **`TypeError: Cannot access offset of type string on string`** in `Classes/Verein.php`.
+  nu antwortete mit **HTTP 503 und einer HTML-Seite**; die landete als Zeichenkette in
+  `$result['body']`, und der Zugriff `$result['body']['data'][0]['clubName']` darauf ist in
+  PHP 8 fatal. Statt der Vereinsliste aus dem örtlichen Bestand bekam jeder Besucher eine
+  Fehlerseite. `Classes/Verband.php` hatte dieselbe Stelle — die Prüfung dort stand *hinter*
+  dem Zugriff und griff deshalb nicht
+* Fix: **502, 503 und 504 wecken jetzt die Notreserve.** Bisher tat das nur HTTP-Code 0
+  („keine Antwort"). Diese drei Codes sagen aber „der Dienst ist gerade nicht da" und nicht
+  „diesen Datensatz gibt es nicht" — also genau der Fall, für den der Notbetrieb gebaut wurde.
+  Besucher bekommen damit Zwischenspeicher oder örtlichen Bestand samt Altershinweis. Ein 500
+  bleibt bewusst außen vor: Der kann auch an der Anfrage liegen
+* Add: **`Helper::datensaetze()`** liefert die Datensätze einer Antwort immer als Array — auch
+  wenn `body` eine Zeichenkette, `null` oder gar nicht vorhanden ist. Die beiden Modulstellen
+  gehen jetzt darüber
+* Der Vereinsname fällt gestaffelt zurück: Backend-Alternativname → Antwort der Schnittstelle →
+  Name aus dem örtlichen Vereinsbestand → „Verein <Kennziffer>". Vorher gab es nur die ersten
+  beiden — und ohne Antwort einen Fatal
+
 ## Version 1.32.0 (2026-08-16)
 
 * Change: **Der Menüpunkt im Frontend heißt wieder „Spieler"** (statt „Personen"), ebenso die

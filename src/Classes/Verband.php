@@ -147,7 +147,9 @@ class Verband extends \Module
 				'zps'      => $zps.'00'
 			);
 			$resultVerein = \Schachbulle\ContaoWertungsportalBundle\Helper\API::autoQuery($param); // Abfrage ausführen
-			$verbandsname = $zps == '000' ? 'Deutscher Schachbund' : ($resultVerein['body']['data'] ? $resultVerein['body']['data'][0]['clubName'] : 'Unbekannter Verband');
+			// Wie in Verein.php: body kann eine Zeichenkette sein (HTML-Fehlerseite)
+			$datenVerband = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::datensaetze($resultVerein);
+			$verbandsname = $zps == '000' ? 'Deutscher Schachbund' : (!empty($datenVerband[0]['clubName']) ? $datenVerband[0]['clubName'] : 'Unbekannter Verband');
 
 			/*********************************************************
 			 * Rangliste für das Template aufbereiten

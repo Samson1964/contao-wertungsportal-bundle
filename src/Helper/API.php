@@ -46,6 +46,15 @@ class API
 	const STOERUNGEN_MAX = 10;
 
 	/**
+	 * HTTP-Codes, die eine Stoerung der Schnittstelle bedeuten und deshalb die
+	 * Notreserve wecken - nicht eine Aussage ueber die angefragten Daten.
+	 *
+	 * 502 Bad Gateway, 503 Service Unavailable, 504 Gateway Timeout. Ein 500
+	 * steht bewusst NICHT dabei: Der kann auch an der Anfrage liegen.
+	 */
+	const STOERUNGSCODES = array(502, 503, 504);
+
+	/**
 	 * Grund der zuletzt gescheiterten Verbindung im Klartext.
 	 * @var string
 	 */
@@ -300,6 +309,23 @@ class API
 		if(!empty($result['error']) && (0 === (int) ($result['http_code'] ?? 0) || !empty($result['tokenfehler'])))
 		{
 			self::meldeStoerung($result);
+
+			return self::notdaten($cache, $params, true);
+		}
+
+		// **502, 503 und 504 ebenfalls.** Sie sagen "der Dienst ist gerade
+		// nicht da" und nicht "diesen Datensatz gibt es nicht" - genau der
+		// Fall, fuer den die Notreserve gebaut wurde.
+		//
+		// Gefunden am 16.08.2026: nu antwortete mit 503 und einer HTML-Seite.
+		// Die landete als ZEICHENKETTE in $result['body'], und der Zugriff
+		// $result['body']['data'][0] darauf ist in PHP 8 ein TypeError - also
+		// HTTP 500 statt einer Vereinsliste aus dem oertlichen Bestand.
+		//
+		// Ein 500 bleibt bewusst aussen vor: Der kann auch an der Anfrage liegen
+		if(\in_array((int) ($result['http_code'] ?? 0), self::STOERUNGSCODES, true))
+		{
+			self::meldeStoerung(array('error_message' => 'Die Schnittstelle meldet HTTP '.(int) $result['http_code'].' - Dienst nicht verfuegbar.'));
 
 			return self::notdaten($cache, $params, true);
 		}

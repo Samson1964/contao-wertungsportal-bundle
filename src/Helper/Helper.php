@@ -574,6 +574,30 @@ class Helper extends \Frontend
 	 *
 	 * @return array Alle FIDE-Felder mit Leerwert
 	 */
+	/**
+	 * Liefert die Datensätze einer API-Antwort — immer als Array.
+	 *
+	 * **Warum nötig:** `$result['body']` ist nur bei einer gültigen Antwort ein
+	 * Array. Antwortet die Schnittstelle mit einer HTML-Fehlerseite (etwa
+	 * HTTP 503), steht dort eine ZEICHENKETTE, und ein Zugriff wie
+	 * `$result['body']['data'][0]` ist in PHP 8 ein TypeError — also HTTP 500
+	 * für den Besucher. Genau so ist am 16.08.2026 die Vereinsseite
+	 * ausgefallen, während nu nicht erreichbar war.
+	 *
+	 * Auch die Notreserve aus dem örtlichen Bestand kann leer sein; ein leeres
+	 * Array ist dann die richtige Antwort, kein Fehler.
+	 *
+	 * @param  mixed $result Antwort im Format der Schnittstelle
+	 * @return array         Datensätze, leer wenn keine vorliegen
+	 */
+	public static function datensaetze($result)
+	{
+		if(!is_array($result)) return array();
+		if(!isset($result['body']) || !is_array($result['body'])) return array();
+		if(!isset($result['body']['data']) || !is_array($result['body']['data'])) return array();
+
+		return $result['body']['data'];
+	}
 	public static function leererFIDESatz()
 	{
 		return array('land' => '', 'elo' => '', 'titel' => '', 'eloSchnell' => '', 'eloBlitz' => '');
