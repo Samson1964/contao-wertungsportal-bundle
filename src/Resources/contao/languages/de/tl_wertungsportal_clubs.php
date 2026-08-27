@@ -20,13 +20,13 @@ $GLOBALS['TL_LANG']['tl_wertungsportal_clubs']['state_legend']        = 'Status'
 $GLOBALS['TL_LANG']['tl_wertungsportal_clubs']['publish_legend']      = 'Veröffentlichung';
 
 // Fields
-$GLOBALS['TL_LANG']['tl_wertungsportal_clubs']['clubVkz']          = ['Vereinskennziffer (VKZ)', 'Bitte geben Sie die Vereinskennziffer des Vereins ein.'];
+$GLOBALS['TL_LANG']['tl_wertungsportal_clubs']['clubVkz']          = ['VKZ', 'Bitte geben Sie die Vereinskennziffer des Vereins ein.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_clubs']['clubName']         = ['Vereinsname', 'Bitte geben Sie den Namen des Vereins ein.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_clubs']['altname']          = ['Alternativer Vereinsname', 'Wird statt des offiziellen Vereinsnamens auf der Webseite angezeigt.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_clubs']['federation']       = ['Verband (VKZ)', 'Kennziffer des Verbands, dem der Verein angehört.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_clubs']['parentFederation'] = ['Übergeordneter Verband (VKZ)', 'Kennziffer des übergeordneten Verbands.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_clubs']['addImage']         = ['Vereinslogo anzeigen', 'Dem Verein ein Logo zuweisen.'];
-$GLOBALS['TL_LANG']['tl_wertungsportal_clubs']['singleSRC']        = ['Logodatei', 'Bitte wählen Sie die Logodatei aus.'];
+$GLOBALS['TL_LANG']['tl_wertungsportal_clubs']['singleSRC']        = ['Logo', 'Bitte wählen Sie die Logodatei aus.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_clubs']['info']             = ['Über den Verein', 'Kurzporträt des Vereins für die Vereinsliste.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_clubs']['homepage']         = ['Homepage', 'Internetadresse des Vereins.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_clubs']['state']            = ['Status', 'Löschkennzeichen des Vereins laut DSB-Wertungsportal (Archiv-Status des Stammdaten-Imports).'];

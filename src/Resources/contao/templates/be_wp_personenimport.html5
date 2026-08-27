@@ -1,10 +1,10 @@
-<?php // Backend-Template: Personen-Import aus der Vereinsmitglieder-CSV ?>
+<?php // Backend-Template: Spieler-Import aus der Vereinsmitglieder-CSV ?>
 
 <div id="tl_buttons">
-	<a href="<?= ampersand($this->zurueck) ?>" class="header_back" title="Zurück zur Personenliste" accesskey="b">Zurück</a>
+	<a href="<?= ampersand($this->zurueck) ?>" class="header_back" title="Zurück zur Spielerliste" accesskey="b">Zurück</a>
 </div>
 
-<h2 class="sub_headline">Personen-Import (Vereinsmitglieder-CSV)</h2>
+<h2 class="sub_headline">Spieler-Import (Vereinsmitglieder-CSV)</h2>
 
 <div class="tl_formbody_edit">
 
@@ -19,11 +19,11 @@
 				<li><b>Spielgenehmigungen__Angemeldete_im_Zeitraum__...csv</b> und
 				<b>Spielgenehmigungen__Abgemeldete_im_Zeitraum__...csv</b> &mdash; Genehmigungshistorie
 				(Pflichtspalten: <?= $this->pflichtspaltenGenehmigungen ?>). Vervollst&auml;ndigt
-				Personen (externe Nummer, Name, Geburtsdatum) und legt fehlende Personen an
+				Spieler (externe Nummer, Name, Geburtsdatum) und legt fehlende Spieler an
 				(z.&nbsp;B. Abgemeldete); je Genehmigung werden Verein, Lizenzstatus,
 				Zeitraum und Antragsdaten in den Mitgliedschaften gespeichert.</li>
 			</ul>
-			<p>Personen werden anhand der InterneNr (nuLiga-Personen-ID) angelegt bzw.
+			<p>Spieler werden anhand der InterneNr (nuLiga-Personen-ID) angelegt bzw.
 			aktualisiert; Datum/Uhrzeit aus dem Dateinamen wird als &Auml;nderungszeitpunkt
 			der Datens&auml;tze gesetzt.</p>
 			<p><b>Empfohlene Reihenfolge bei den Spielgenehmigungen: zuerst die
@@ -58,9 +58,9 @@
 		<div class="widget">
 			<table class="tl_listing">
 				<tr><td>Verarbeitete Zeilen:</td><td style="text-align:right"><span id="wpErgZeilen">0</span></td></tr>
-				<tr><td>Neu angelegte Personen:</td><td style="text-align:right"><span id="wpErgNeu">0</span></td></tr>
-				<tr><td>Aktualisierte Personen:</td><td style="text-align:right"><span id="wpErgAktualisiert">0</span></td></tr>
-				<tr><td>Unver&auml;nderte Personen:</td><td style="text-align:right"><span id="wpErgUnveraendert">0</span></td></tr>
+				<tr><td>Neu angelegte Spieler:</td><td style="text-align:right"><span id="wpErgNeu">0</span></td></tr>
+				<tr><td>Aktualisierte Spieler:</td><td style="text-align:right"><span id="wpErgAktualisiert">0</span></td></tr>
+				<tr><td>Unver&auml;nderte Spieler:</td><td style="text-align:right"><span id="wpErgUnveraendert">0</span></td></tr>
 				<tr><td>Neu angelegte Mitgliedschaften:</td><td style="text-align:right"><span id="wpErgMNeu">0</span></td></tr>
 				<tr><td>Aktualisierte Mitgliedschaften:</td><td style="text-align:right"><span id="wpErgMAktualisiert">0</span></td></tr>
 				<tr><td>Unver&auml;nderte Mitgliedschaften:</td><td style="text-align:right"><span id="wpErgMUnveraendert">0</span></td></tr>

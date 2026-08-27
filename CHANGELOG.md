@@ -1,5 +1,27 @@
 # Wertungsportal Changelog
 
+## Version 1.33.0 (2026-08-16)
+
+* Change: **Die Vereinsliste im Backend zeigt jetzt vier Spalten** — VKZ, Vereinsname, Status
+  und das Vereinslogo (auf 16 Pixel gerechnet). „Verband (VKZ)" und „Übergeordneter Verband
+  (VKZ)" sind raus: Sie wiederholten nur die ersten Stellen der Kennziffer und machten die
+  Liste breit, ohne etwas zu zeigen
+* Change: **Abgemeldete Vereine stehen grau** (Löschkennzeichen `DELETE_STATE_TRUE`), passend
+  zur Statusspalte daneben. Wie bei den unveröffentlichten Datensätzen über `:has()` im
+  Backend-CSS — eine Zeilenklasse gibt Contao im Spaltenmodus nicht her
+* Change: **Die Suche greift nur noch auf Vereinsname und VKZ.** Bisher durchsuchte sie
+  dreizehn Felder mit, darunter Anschriften, Sportstätten und Bemerkungen
+* Change: **Drei Filter entfernt** — „Ohne Spielbetrieb", „Reiner Schachverein" und
+  „Verband/Bezirk/Kreis". Status, Verband und Veröffentlicht bleiben
+* Change: Die Feldbeschriftung „Vereinskennziffer (VKZ)" heißt jetzt kurz **„VKZ"**,
+  „Logodatei" heißt **„Logo"**
+* Change: **„Personen" heißt in den sichtbaren Texten „Spieler"** — CSV-Import, Importmaske,
+  Detailansicht und Modulbeschreibungen. Nicht angetastet bleibt „nuLiga-Personen-ID": Sie
+  benennt das Feld der Schnittstelle, und eine abweichende Beschriftung verwirrt mehr, als sie
+  hilft
+* Fix: Der Hilfetext des nächtlichen Vorladens nannte noch 180 Sekunden — seit 1.31.0 sind es
+  300
+
 ## Version 1.32.1 (2026-08-16)
 
 **Behebt einen HTTP 500 auf den Vereins- und Verbandsseiten, während nu nicht erreichbar war.**

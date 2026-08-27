@@ -69,7 +69,7 @@ $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['MALE']   = 'Männlich';
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['FEMALE'] = 'Weiblich';
 
 // Buttons
-$GLOBALS['TL_LANG']['tl_wertungsportal_persons']['importPersons'] = ['CSV-Import', 'Personen aus einer Vereinsmitglieder-CSV-Datei importieren'];
+$GLOBALS['TL_LANG']['tl_wertungsportal_persons']['importPersons'] = ['CSV-Import', 'Spieler aus einer Vereinsmitglieder-CSV-Datei importieren'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['importPhotos']  = ['Bilder übernehmen', 'Spielerbilder aus den DWZ-Spielern (tl_dwz_spi) übernehmen (Match über die externe Nummer)'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['entdoppeln']  = ['Dubletten bereinigen', 'Doppelte Mitgliedschaften zusammenführen (gleiche VKZ, Mitgliedsnummer, Lizenzstatus und gleicher Zeitraum)'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['new']        = ['Neue Person', 'Eine neue Person anlegen'];
@@ -80,4 +80,4 @@ $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['upgrades']    = ['Hochstufunge
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['copy']       = ['Person duplizieren', 'Person ID %s duplizieren'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['delete']     = ['Person löschen', 'Person ID %s löschen'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_persons']['toggle']     = ['Person veröffentlichen/unveröffentlichen', 'Person ID %s veröffentlichen/unveröffentlichen'];
-$GLOBALS['TL_LANG']['tl_wertungsportal_persons']['show']       = ['Personendetails anzeigen', 'Details der Person ID %s anzeigen'];
+$GLOBALS['TL_LANG']['tl_wertungsportal_persons']['show']       = ['Spielerdetails anzeigen', 'Details des Spielers ID %s anzeigen'];

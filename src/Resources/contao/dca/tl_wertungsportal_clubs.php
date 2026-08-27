@@ -35,8 +35,13 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
             'panelLayout' => 'sort,filter;search,limit',
         ],
         'label' => [
-            'fields'      => ['clubVkz', 'clubName', 'federation', 'parentFederation'],
-            'showColumns' => true,
+            // Vier Spalten: Kennziffer, Name, Status, Logo.
+            // Verband und uebergeordneter Verband standen frueher hier — sie
+            // wiederholen nur die ersten Stellen der Kennziffer und machten die
+            // Liste breit, ohne etwas zu zeigen
+            'fields'         => ['clubVkz', 'clubName', 'state', 'singleSRC'],
+            'showColumns'    => true,
+            'label_callback' => ['Schachbulle\ContaoWertungsportalBundle\Classes\Vereineliste', 'zeile'],
         ],
         'global_operations' => [
             'importClubs' => [
@@ -135,7 +140,6 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
         // VKZ des Verbands, dem der Verein angehört
         'federation' => [
             'exclude'   => true,
-            'search'    => true,
             'filter'    => true,
             'inputType' => 'text',
             'eval'      => ['maxlength' => 16, 'tl_class' => 'w50'],
@@ -145,7 +149,6 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
         // VKZ des übergeordneten Verbands
         'parentFederation' => [
             'exclude'   => true,
-            'search'    => true,
             'filter'    => true,
             'inputType' => 'text',
             'eval'      => ['maxlength' => 16, 'tl_class' => 'w50'],
@@ -155,7 +158,6 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
         // Alternativer Vereinsname für die Anzeige (aus tl_dwz_ver übernommen)
         'altname' => [
             'exclude'   => true,
-            'search'    => true,
             'inputType' => 'text',
             'eval'      => ['maxlength' => 255, 'tl_class' => 'w50'],
             'sql'       => "varchar(255) NOT NULL default ''",
@@ -179,7 +181,6 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
         // Über den Verein (aus tl_dwz_ver übernommen)
         'info' => [
             'exclude'   => true,
-            'search'    => true,
             'inputType' => 'textarea',
             'eval'      => ['rte' => 'tinyMCE'],
             'explanation' => 'insertTags',
@@ -189,7 +190,6 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
         // Homepage des Vereins (aus tl_dwz_ver übernommen)
         'homepage' => [
             'exclude'   => true,
-            'search'    => true,
             'inputType' => 'text',
             'eval'      => ['rgxp' => 'url', 'decodeEntities' => true, 'maxlength' => 255, 'tl_class' => 'long clr'],
             'sql'       => "varchar(255) NOT NULL default ''",
@@ -203,7 +203,6 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
         // Kurzname des Vereins
         'kurzname' => [
             'exclude'   => true,
-            'search'    => true,
             'inputType' => 'text',
             'eval'      => ['maxlength' => 32, 'tl_class' => 'w50'],
             'sql'       => "varchar(32) NOT NULL default ''",
@@ -212,7 +211,6 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
         // Druckname des Vereins
         'druckname' => [
             'exclude'   => true,
-            'search'    => true,
             'inputType' => 'text',
             'eval'      => ['maxlength' => 64, 'tl_class' => 'w50'],
             'sql'       => "varchar(64) NOT NULL default ''",
@@ -221,7 +219,6 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
         // Name des Verbands (aus dem CSV, im Gegensatz zur VKZ in federation)
         'verbandName' => [
             'exclude'   => true,
-            'search'    => true,
             'inputType' => 'text',
             'eval'      => ['maxlength' => 64, 'tl_class' => 'w50'],
             'sql'       => "varchar(64) NOT NULL default ''",
@@ -230,7 +227,6 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
         // Name der Region
         'regionName' => [
             'exclude'   => true,
-            'search'    => true,
             'inputType' => 'text',
             'eval'      => ['maxlength' => 64, 'tl_class' => 'w50'],
             'sql'       => "varchar(64) NOT NULL default ''",
@@ -293,14 +289,12 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
         // Kennzeichen aus dem CSV (ja/nein)
         'istVerband' => [
             'exclude'   => true,
-            'filter'    => true,
             'inputType' => 'checkbox',
             'eval'      => ['tl_class' => 'w50 clr'],
             'sql'       => "char(1) NOT NULL default ''",
         ],
         'istReinerSchachverein' => [
             'exclude'   => true,
-            'filter'    => true,
             'inputType' => 'checkbox',
             'eval'      => ['tl_class' => 'w50'],
             'sql'       => "char(1) NOT NULL default ''",
@@ -325,7 +319,6 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
         ],
         'istVereinOhneSpielbetrieb' => [
             'exclude'   => true,
-            'filter'    => true,
             'inputType' => 'checkbox',
             'eval'      => ['tl_class' => 'w50'],
             'sql'       => "char(1) NOT NULL default ''",
@@ -378,7 +371,6 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
         // Vereinsadresse
         'adresseName' => [
             'exclude'   => true,
-            'search'    => true,
             'inputType' => 'text',
             'eval'      => ['maxlength' => 64, 'tl_class' => 'w50'],
             'sql'       => "varchar(64) NOT NULL default ''",
@@ -397,7 +389,6 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
         ],
         'adresseOrt' => [
             'exclude'   => true,
-            'search'    => true,
             'inputType' => 'text',
             'eval'      => ['maxlength' => 64, 'tl_class' => 'w50'],
             'sql'       => "varchar(64) NOT NULL default ''",
@@ -454,7 +445,6 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
         // Sportstätten 1-3
         'sportstaette1Name' => [
             'exclude'   => true,
-            'search'    => true,
             'inputType' => 'text',
             'eval'      => ['maxlength' => 128, 'tl_class' => 'w50'],
             'sql'       => "varchar(128) NOT NULL default ''",
@@ -601,7 +591,6 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_clubs'] = [
         // Bemerkung
         'bemerkung' => [
             'exclude'   => true,
-            'search'    => true,
             'inputType' => 'textarea',
             'eval'      => ['style' => 'height:60px'],
             'sql'       => 'text NULL',

@@ -294,3 +294,19 @@ a.wp-stat-knopf:hover {
 .wp-stat-tabelle tr.wp-stat-aktiv td {
 	background				: #eaf2f8;
 }
+
+/* Abgemeldete Vereine (Loeschkennzeichen der Stammdaten) grau darstellen.
+ * Der Anker kommt aus Classes/Vereineliste: Eine Zeilenklasse gibt Contao
+ * im Spaltenmodus nicht her, ueber :has() geht es trotzdem — dasselbe
+ * Verfahren wie bei den unveroeffentlichten Datensaetzen darueber */
+tr:has(.wp-abgemeldet) td,
+tr:has(.wp-abgemeldet) td a
+{
+	color: gray;
+}
+
+/* Der Anker selbst ist unsichtbar */
+.wp-abgemeldet
+{
+	display: none;
+}
