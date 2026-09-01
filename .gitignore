@@ -15,3 +15,6 @@
 
 # PhpUnit
 /phpunit.xml
+
+# PHPUnit-Ergebnisspeicher (rein oertlich)
+/.phpunit.result.cache

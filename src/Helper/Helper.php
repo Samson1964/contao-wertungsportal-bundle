@@ -574,6 +574,11 @@ class Helper extends \Frontend
 	 *
 	 * @return array Alle FIDE-Felder mit Leerwert
 	 */
+	public static function leererFIDESatz()
+	{
+		return array('land' => '', 'elo' => '', 'titel' => '', 'eloSchnell' => '', 'eloBlitz' => '');
+	}
+
 	/**
 	 * Liefert die Datensätze einer API-Antwort — immer als Array.
 	 *
@@ -597,10 +602,6 @@ class Helper extends \Frontend
 		if(!isset($result['body']['data']) || !is_array($result['body']['data'])) return array();
 
 		return $result['body']['data'];
-	}
-	public static function leererFIDESatz()
-	{
-		return array('land' => '', 'elo' => '', 'titel' => '', 'eloSchnell' => '', 'eloBlitz' => '');
 	}
 
 	/**

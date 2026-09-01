@@ -1235,6 +1235,11 @@ class API
 			'Turnierauswertung',
 			'Turnierergebnisse',
 			'Spielberichtsbogen',
+			// Kein Endpunkt der Schnittstelle, sondern die fertigen Ranglisten
+			// aus Helper\Ranglisten. Sie stehen hier, damit „Cache leeren" in
+			// der Systemwartung und der Elo-Import sie mit wegräumen — sonst
+			// zeigte eine Rangliste nach dem Elo-Import noch die alten Werte
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Ranglisten::CACHE,
 		);
 	}
 

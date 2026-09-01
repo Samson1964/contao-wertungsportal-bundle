@@ -1,5 +1,43 @@
 # Wertungsportal Changelog
 
+## Version 1.34.0 (2026-09-01)
+
+* Add: **Fertige Ranglisten für andere Bundles** — die neue Klasse
+  `Helper\Ranglisten` beantwortet die Frage „wer sind die besten deutschen
+  Spieler dieser Altersklasse?" vollständig: `Ranglisten::dwz()` liefert die
+  DWZ-Liste, `Ranglisten::elo()` die Elo-Liste, `Ranglisten::listentypen()` die
+  zehn benannten Standardlisten (alle, w, u20, u20w, 50+, 50w+, 65+, 65w+, 75+,
+  75w+). Der Aufrufer bekommt geteilte Platzziffern, keine Doppelten, Verein und
+  Verbandskürzel — und muß weder die Schnittstelle noch die Spiegeltabellen
+  kennen. Ausführlich beschrieben in `docs/ranglisten.md`
+* Add: Das Bundle `contao-topwertungszahlen-bundle` kann damit seine eigene
+  Beschaffung über die abgeschaltete DeWIS-SOAP-Schnittstelle aufgeben. Dort
+  wurde für JEDEN Spieler der Trefferliste zusätzlich `tournamentCardForId()`
+  aufgerufen — nur, um dessen Nation zu erfahren
+* Change: `Ranglisten::dwz()` läuft über `API::autoQuery` und erbt damit die
+  dreistufige Auslieferung. Die Liste kommt also auch dann, wenn nu gerade nicht
+  antwortet; das Feld `quelle` sagt, ob sie von der Schnittstelle oder aus dem
+  örtlichen Bestand stammt, `stand` nennt den Zeitpunkt der Daten
+* Change: Der Nationenfilter läßt LEERE Werte durch. Die Nation steht allein in
+  `tl_wertungsportal_persons.nation` und stammt aus dem Import der
+  Vereinsmitglieder-CSV; die Schnittstelle liefert das Feld gar nicht. Wer
+  Leerwerte ausschlösse, verlöre jeden Spieler, dessen Datensatz allein über die
+  Schnittstelle entstanden ist
+* Change: Angefordert wird das Vierfache des Bedarfs, weil die Schnittstelle
+  keinen Nationenfilter kennt; reicht es nicht, wird einmal mit der Obergrenze
+  von 1000 nachgefordert. Der alte Weg über DeWIS brauchte den Faktor 20 — dort
+  wurde gegen die FIDE-Nation geprüft
+* Change: Die fertigen Listen bekommen einen eigenen Zwischenspeicher
+  (`wp_Rangliste`), der mit „Cache leeren" und nach jedem FIDE-Elo-Import
+  mit weggeräumt wird. Cachezeit und Schalter kommen von der Funktion
+  `Verbandsliste`
+* Add: Erste Unit-Tests des Bundles (`tests/`, 17 Prüfungen) für die Regeln, die
+  ohne Datenbank gelten: geteilte Platzziffern, Altersfilter mit beiden
+  `birthyear`-Formaten, Entdoppeln, Nationenfilter, Mitgliedschaftsauswahl,
+  Verbandskürzel
+* Fix: In `Helper.php` stand der Kommentarblock von `leererFIDESatz()` seit
+  1.32.1 über der falschen Funktion — `datensaetze()` war dazwischengerutscht
+
 ## Version 1.33.0 (2026-08-16)
 
 * Change: **Die Vereinsliste im Backend zeigt jetzt vier Spalten** — VKZ, Vereinsname, Status

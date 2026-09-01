@@ -14,5 +14,7 @@ Ersetzt die SOAP-Schnittstelle von DeWIS und kommuniziert mit der REST-Schnittst
   Tag; gebremste Besucher stehen mit Adresse, Browserkennung und Mitglied im Protokoll
 * [Unmögliche Werte protokollieren](docs/auffaellige-werte.md) — Zahlen, die es nach dem
   Regelwerk nicht geben kann, mit Spieler und Turnier festhalten und an nu melden
+* [Ranglisten](docs/ranglisten.md) — fertige Deutschland-Ranglisten nach DWZ und Elo,
+  für andere Bundles abrufbar: Altersklasse, Geschlecht, geteilte Plätze, Verbandskürzel
 
 **Frank Binding**
