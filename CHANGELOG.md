@@ -1,5 +1,34 @@
 # Wertungsportal Changelog
 
+## Version 1.35.0 (2026-09-01)
+
+* Fix: **Der Nationenfilter der Ranglisten ließ Ausländer durch.** Im Livebetrieb
+  standen in den Top-10-Listen des Topwertungszahlen-Bundles Spieler fremder
+  Föderationen — bei den Männern, den Frauen und in den Jugendlisten. Ursache
+  war, daß `Ranglisten::dwz()` nur `tl_wertungsportal_persons.nation` prüfte und
+  einen leeren Wert als deutsch durchgehen ließ. Da das Feld allein aus dem
+  Import der Vereinsmitglieder-CSV stammt und im Livebestand kaum gepflegt ist,
+  fiel praktisch jede Prüfung auf „unbekannt, also behalten"
+* Change: Der Filter fragt jetzt **in drei Stufen**, und die erste bekannte
+  Antwort entscheidet: (1) die Nation der Mitgliederdatei, (2) die
+  FIDE-Föderation — `persons.fideNation`, ersatzweise `country` der Elo-Tabelle
+  über die FIDE-ID, (3) ist beides unbekannt, bleibt die Person in der Liste.
+  Die zweite Stufe greift fast immer: Von den 200 bestbewerteten Spielern der
+  Testinstallation haben **alle** eine FIDE-ID, von den ersten 1000 sind es 99 %
+* Change: Die Reihenfolge der Stufen ist wesentlich und kein Zufall. Wer in der
+  Mitgliederdatei ausdrücklich als deutsch geführt wird, bleibt deutsch — auch
+  wenn er bei der FIDE für einen anderen Verband antritt. Ein „und" statt der
+  Staffel würde genau diese Spieler aus der deutschen Rangliste werfen
+* Change: Das Ausgabefeld `nation` folgt derselben Staffel und ist damit
+  deutlich häufiger gefüllt als bisher. Ausgabe und Filter sagen dadurch
+  dasselbe; vorher blieb das Feld bewußt leer, weil es dem Filter sonst
+  widersprochen hätte
+* Change: `elo()` bleibt unverändert — dort kam die Nation schon immer aus
+  `country` der Elo-Tabelle, der Fehler betraf nur `dwz()`
+* Change: Das Topwertungszahlen-Bundle hat sich seit seiner 1.7.1 mit einer
+  eigenen Nachprüfung beholfen. Sie kann jetzt entfallen; die Prüfung steht da,
+  wo sie hingehört, und niemand muß mehr in die Spiegeltabellen greifen
+
 ## Version 1.34.0 (2026-09-01)
 
 * Add: **Fertige Ranglisten für andere Bundles** — die neue Klasse

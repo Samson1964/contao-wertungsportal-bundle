@@ -4,8 +4,9 @@ Fertige, benannte Ranglisten für Deutschland — nach Altersklasse und
 Geschlecht, mit geteilten Platzziffern, ohne Doppelte, mit Verein und
 Verbandskürzel.
 
-Die Klasse `Schachbulle\ContaoWertungsportalBundle\Helper\Ranglisten` ist ab
-**Version 1.34.0** verfügbar.
+Die Klasse `Schachbulle\ContaoWertungsportalBundle\Helper\Ranglisten` gibt es seit
+**1.34.0**. Wer sie einsetzt, sollte mindestens **1.35.0** verlangen: Erst dort
+filtert der Nationenfilter richtig (siehe unten).
 
 ## Wozu
 
@@ -24,7 +25,7 @@ In der `composer.json` des aufrufenden Bundles:
 
 ```json
 "require": {
-    "schachbulle/contao-wertungsportal-bundle": "^1.34"
+    "schachbulle/contao-wertungsportal-bundle": "^1.35"
 }
 ```
 
@@ -97,7 +98,7 @@ Jede Zeile:
 | `elo_partien` | int | Gewertete Partien |
 | `fide_titel` | string | `GM`, `IM`, `FM` … |
 | `fide_titel_w` | string | `WGM`, `WIM`, `WFM` … |
-| `nation` | string | Nation aus der Mitgliederdatei |
+| `nation` | string | Nation aus der Mitgliederdatei, sonst die FIDE-Föderation |
 | `vkz` | string | Kennziffer der gewählten Mitgliedschaft |
 | `verein` | string | Name des Vereins |
 | `verbandskuerzel` | string | `BER`, `BAY`, `NRW` … |
@@ -209,27 +210,43 @@ die nach der Mitgliedschaftsregel ausgewählte Vereinsangabe: **Eine aktive
 Spielgenehmigung hat Vorrang**, sonst stünde ein Spieler mit seinem Zweitverein
 in der Liste.
 
-### Der Nationenfilter läßt leere Werte durch
+### Der Nationenfilter fragt in drei Stufen
 
-Das ist die wichtigste Regel — und die, die man beim Nachlesen am ehesten für
-einen Fehler hält.
+Die erste bekannte Antwort entscheidet:
 
-Die Nation steht in `tl_wertungsportal_persons.nation` und stammt
-**ausschließlich aus dem Import der Vereinsmitglieder-CSV**; die
-nu-Schnittstelle liefert das Feld gar nicht. Wer Leerwerte ausschlösse, bekäme
-eine Rangliste, in der jeder Spieler fehlt, dessen Datensatz allein über die
-Schnittstelle entstanden ist. Ausgeschlossen wird deshalb nur, wer
-nachweislich eine **andere** Nation trägt.
+1. **Die Nation der Mitgliederdatei** — `tl_wertungsportal_persons.nation`.
+   Die genaueste Angabe, aber sie steht nur für Personen bereit, die über den
+   Import der Vereinsmitglieder-CSV gekommen sind; die nu-Schnittstelle liefert
+   das Feld gar nicht.
+2. **Die FIDE-Föderation** — `persons.fideNation`, ersatzweise `country` der
+   Elo-Tabelle über die FIDE-ID.
+3. **Ist beides unbekannt, bleibt die Person in der Liste.** Ausgeschlossen
+   wird nur, wer nachweislich anderswo geführt wird.
 
-Wie gut der Filter greift, hängt damit unmittelbar davon ab, wie vollständig
-das Feld gepflegt ist. Das läßt sich jederzeit nachsehen:
+**Die Reihenfolge ist wesentlich, nicht beliebig.** Wer in der Mitgliederdatei
+ausdrücklich als deutsch geführt wird, bleibt deutsch, auch wenn er bei der
+FIDE für einen anderen Verband antritt. Ein „und" statt der Staffel würde genau
+diese Spieler aus der deutschen Rangliste werfen.
+
+Die zweite Stufe kam mit 1.35.0 dazu. Vorher gab es nur die erste und die
+dritte — und da `nation` im Livebestand kaum gepflegt ist, fiel praktisch jede
+Prüfung auf „unbekannt, also behalten". In den Top-10-Listen standen dadurch
+Ausländer. Die Stufe greift fast immer: In der Testinstallation haben **alle**
+der 200 bestbewerteten Spieler eine FIDE-ID, von den ersten 1000 sind es 99 %.
+
+Nachsehen, wie es um die erste Stufe steht:
 
 ```sql
 SELECT nation, COUNT(*) FROM tl_wertungsportal_persons GROUP BY nation ORDER BY 2 DESC;
 ```
 
 Steht dort überwiegend ein Leerwert, ist der Personen-Import noch nicht
-gelaufen — die Liste enthält dann auch Ausländer.
+gelaufen — dann trägt die zweite Stufe die Prüfung allein. Bleibt auch die
+Elo-Tabelle leer (kein XML-Import), greift der Filter gar nicht mehr, und die
+Listen enthalten Ausländer.
+
+Das Ausgabefeld `nation` folgt derselben Staffel: erst die Mitgliederdatei,
+sonst die Föderation. So sagt die Ausgabe dasselbe wie der Filter.
 
 ### Es wird mehr angefordert, als gebraucht wird
 
@@ -244,10 +261,13 @@ klein gewählt war; sie kostet dann einen zweiten Abruf. Nachgefordert wird nur,
 wenn die Quelle die angeforderte Menge tatsächlich ausgeschöpft hat — sonst ist
 der Bestand erschöpft und ein zweiter Abruf reine Verschwendung.
 
-Zum Vergleich: Der alte Weg über DeWIS brauchte für 50 Deutsche 1000
-Datensätze, also den Faktor 20. Das lag daran, daß dort gegen die
-**FIDE**-Nation geprüft wurde — wer bei der FIDE unter einer anderen Föderation
-geführt wird, fiel heraus, auch als DSB-Mitglied.
+Zum Vergleich: Der alte Weg über DeWIS forderte vorsorglich 1000 Datensätze
+an. Das war eine Sicherheitsmarge, keine gemessene Notwendigkeit — die
+Schleife brach ab, sobald 50 Deutsche zusammen waren.
+
+Der Nachschlag entfällt, wenn schon der erste Abruf die Obergrenze angefordert
+hat. Bei sehr großem `limit` kann die Liste deshalb kürzer ausfallen als
+gewünscht.
 
 ### Wer nicht in der Liste steht
 

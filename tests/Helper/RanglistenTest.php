@@ -195,21 +195,43 @@ class RanglistenTest extends TestCase
 	}
 
 	/**
-	 * Der Nationenfilter läßt einen LEEREN Wert durch. Das ist die
-	 * entscheidende Regel: Die Nation stammt allein aus dem CSV-Import, und
-	 * ein Ausschluß der Leerwerte ließe die halbe Rangliste verschwinden.
+	 * Der Nationenfilter fragt in drei Stufen, und die erste bekannte Antwort
+	 * entscheidet: Nation der Mitgliederdatei, dann FIDE-Föderation, dann
+	 * „unbekannt, also behalten".
 	 */
-	public function testNationenfilterLaesstLeereWerteDurch(): void
+	public function testNationenfilterStufen(): void
 	{
 		$params = array('nation' => 'GER');
 
+		// Stufe 1: Die Nation der Mitgliederdatei entscheidet allein
 		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array('nation' => 'GER'), $params));
-		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array('nation' => ''), $params));
-		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array(), $params));
 		$this->assertFalse(RanglistenPruefling::passtNationOeffentlich(array('nation' => 'ISR'), $params));
+
+		// Stufe 2: Ohne Nation zählt die Föderation
+		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array('nation' => '', 'foederation' => 'GER'), $params));
+		$this->assertFalse(RanglistenPruefling::passtNationOeffentlich(array('nation' => '', 'foederation' => 'ISR'), $params));
+
+		// Stufe 3: Ist beides unbekannt, bleibt die Person drin
+		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array('nation' => '', 'foederation' => ''), $params));
+		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array(), $params));
+		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array('nation' => '-', 'foederation' => '-'), $params));
 
 		// Ohne Filter paßt jede Nation
 		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array('nation' => 'ISR'), array('nation' => '')));
+	}
+
+	/**
+	 * Die Reihenfolge der Stufen ist wesentlich: Wer in der Mitgliederdatei
+	 * ausdrücklich als deutsch geführt wird, bleibt deutsch — auch wenn er bei
+	 * der FIDE für einen anderen Verband antritt. Ein „Und" statt der Staffel
+	 * würde genau diese Spieler aus der deutschen Rangliste werfen.
+	 */
+	public function testNationSchlaegtFoederation(): void
+	{
+		$params = array('nation' => 'GER');
+
+		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array('nation' => 'GER', 'foederation' => 'AUT'), $params));
+		$this->assertFalse(RanglistenPruefling::passtNationOeffentlich(array('nation' => 'AUT', 'foederation' => 'GER'), $params));
 	}
 
 	/**

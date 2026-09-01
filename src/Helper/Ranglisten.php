@@ -71,19 +71,18 @@ class Ranglisten
 	 * Ausländer heraus — für 50 Deutsche sind also mehr als 50 Zeilen nötig.
 	 * Wer genau `limit` anfordert, bekommt am Ende zu wenige.
 	 *
-	 * Der alte Weg über DeWIS forderte für 50 Deutsche 1000 Datensätze an
-	 * (Faktor 20). Das war dort nötig, weil gegen die FIDE-Nation geprüft
-	 * wurde: Wer bei der FIDE unter einer anderen Föderation geführt wird,
-	 * fiel heraus, auch als DSB-Mitglied. Hier wird gegen die Nation der
-	 * Mitgliederdatei geprüft, und ein leerer Wert zählt als deutsch — die
-	 * Ausbeute ist deshalb ungleich höher. Faktor 4 ist der Kompromiß: genug
-	 * Luft für die Titelträger fremder Nationen an der Spitze, ohne jedesmal
-	 * tausend Datensätze durch die Leitung zu ziehen.
+	 * Der alte Weg über DeWIS forderte für 50 Deutsche vorsorglich 1000
+	 * Datensätze an — eine Sicherheitsmarge, keine gemessene Notwendigkeit: Die
+	 * Schleife brach ab, sobald 50 Deutsche zusammen waren. Faktor 4 ist der
+	 * Kompromiß: genug Luft für die Titelträger fremder Nationen an der Spitze,
+	 * ohne jedesmal tausend Datensätze durch die Leitung zu ziehen.
 	 *
 	 * Reicht es im Einzelfall doch nicht, wird EINMAL mit der Obergrenze
 	 * nachgefordert (siehe `hole()`). Die Liste ist also auch dann vollständig,
 	 * wenn der Faktor zu klein gewählt war — sie kostet dann nur einen zweiten
-	 * Abruf.
+	 * Abruf. Der Nachschlag entfällt nur, wenn schon der erste Abruf die
+	 * Obergrenze angefordert hat; bei sehr großem `limit` kann die Liste
+	 * deshalb kürzer ausfallen als gewünscht.
 	 */
 	const UEBERZUG = 4;
 
@@ -546,7 +545,10 @@ class Ranglisten
 			$zeile['dwz_index']       = (int) ($spieler['index'] ?? 0);
 			$zeile['dwz_formatiert']  = self::dwzFormat($dwz, $zeile['dwz_index']);
 			$zeile['fide_id']         = (int) ($spieler['fideId'] ?? 0);
-			$zeile['nation']          = (string) ($person['nation'] ?? '');
+			// Die Mitgliederdatei zuerst, sonst die Föderation — dieselbe
+			// Reihenfolge, nach der auch gefiltert wurde. Anders stünde in der
+			// Ausgabe ein Wert, der der Liste widerspricht, in der er steht
+			$zeile['nation']          = ($person['nation'] ?? '') !== '' ? (string) $person['nation'] : (string) ($person['foederation'] ?? '');
 			$zeile['vkz']             = $mitglied['vkz'];
 			$zeile['verein']          = $mitglied['verein'];
 			$zeile['verbandskuerzel'] = self::verbandskuerzel($mitglied['vkz']);
@@ -566,10 +568,18 @@ class Ranglisten
 	 * Vereinsmitglieder-CSV. Ohne diesen Schritt gäbe es keinen Nationenfilter
 	 * und keinen Titel in der Ausgabe.
 	 *
+	 * Zusätzlich wird die **Föderation** ermittelt — der Verband, für den ein
+	 * Spieler bei der FIDE antritt. Sie stammt aus `fideNation` der Person und,
+	 * wenn die leer ist, aus `country` der Elo-Tabelle über die FIDE-ID. Damit
+	 * steht auch für Personen eine Nationsangabe bereit, deren Datensatz allein
+	 * über die Schnittstelle entstanden ist — und genau daran scheiterte der
+	 * Nationenfilter bis 1.34.0 (siehe `passtNation()`).
+	 *
 	 * @param array $pkzListe nuLigaPersonId der gesuchten Personen
 	 *
-	 * @return array PKZ => ['nation', 'titel', 'verstorben' (bool),
-	 *               'published' (bool)]; nicht gefundene Personen fehlen
+	 * @return array PKZ => ['nation', 'foederation', 'titel',
+	 *               'verstorben' (bool), 'published' (bool)]; nicht gefundene
+	 *               Personen fehlen
 	 */
 	protected static function personendaten(array $pkzListe): array
 	{
@@ -579,22 +589,47 @@ class Ranglisten
 		if(!count($pkzListe)) return array();
 
 		$daten = array();
+		$offen = array();
 
 		foreach(array_chunk($pkzListe, 500) as $block)
 		{
 			$platzhalter = implode(',', array_fill(0, count($block), '?'));
-			$objPerson = \Contao\Database::getInstance()->prepare("SELECT nuLigaPersonId, nation, titel, verstorben, published FROM tl_wertungsportal_persons WHERE nuLigaPersonId IN ($platzhalter)")
+			$objPerson = \Contao\Database::getInstance()->prepare("SELECT nuLigaPersonId, nation, fideNation, titel, verstorben, published, fideId FROM tl_wertungsportal_persons WHERE nuLigaPersonId IN ($platzhalter)")
 			                                     ->execute($block);
 
 			while($objPerson->next())
 			{
-				$daten[(string) $objPerson->nuLigaPersonId] = array
+				$pkz = (string) $objPerson->nuLigaPersonId;
+
+				$daten[$pkz] = array
 				(
-					'nation'     => (string) $objPerson->nation,
-					'titel'      => (string) $objPerson->titel,
-					'verstorben' => (bool) $objPerson->verstorben,
-					'published'  => (bool) $objPerson->published,
+					'nation'      => (string) $objPerson->nation,
+					'foederation' => (string) $objPerson->fideNation,
+					'titel'       => (string) $objPerson->titel,
+					'verstorben'  => (bool) $objPerson->verstorben,
+					'published'   => (bool) $objPerson->published,
 				);
+
+				// Weder Nation noch Föderation bekannt: Die Elo-Tabelle weiß
+				// es meistens. Gesammelt wird nach FIDE-ID, damit alle in
+				// einem Zug nachgeschlagen werden
+				if($daten[$pkz]['nation'] === '' && $daten[$pkz]['foederation'] === '' && (int) $objPerson->fideId > 0)
+				{
+					$offen[(int) $objPerson->fideId][] = $pkz;
+				}
+			}
+		}
+
+		if(count($offen))
+		{
+			$fide = self::eloDaten(array_keys($offen));
+
+			foreach($offen as $fideId => $kennziffern)
+			{
+				$land = (string) ($fide[$fideId]['country'] ?? '');
+				if($land === '') continue;
+
+				foreach($kennziffern as $pkz) $daten[$pkz]['foederation'] = $land;
 			}
 		}
 
@@ -636,12 +671,9 @@ class Ranglisten
 			$zeilen[$i]['fide_titel']   = (string) $satz['title'];
 			$zeilen[$i]['fide_titel_w'] = (string) $satz['w_title'];
 
-			// Die FIDE-Föderation wird BEWUSST nicht in `nation` übernommen,
-			// auch wenn das Feld leer bleibt: Gefiltert wurde nach der Nation
-			// der Mitgliederdatei, und dort zählt ein Leerwert als deutsch. Ein
-			// nachträglich eingesetztes „ISR" widerspräche der Liste, in der
-			// die Zeile steht. Wer die Föderation braucht, findet sie über
-			// `fide_id` in der Elo-Tabelle
+			// `nation` wird hier NICHT mehr angefaßt: Die Föderation ist schon
+			// beim Filtern eingesetzt worden (siehe personendaten()), Ausgabe
+			// und Filter sagen dadurch dasselbe
 		}
 
 		return $zeilen;
@@ -941,12 +973,27 @@ class Ranglisten
 	/**
 	 * Prüft, ob eine Person zum Nationenfilter paßt.
 	 *
-	 * **Ein leerer Wert paßt immer.** Das ist keine Nachlässigkeit, sondern
-	 * notwendig: Die Nation stammt allein aus dem Import der
-	 * Vereinsmitglieder-CSV, und dort ist das Feld für einen großen Teil des
-	 * Bestands leer. Wer Leerwerte ausschlösse, bekäme eine Rangliste, in der
-	 * die Hälfte der deutschen Spieler fehlt. Ausgeschlossen wird deshalb nur,
-	 * wer nachweislich eine ANDERE Nation trägt.
+	 * Gefragt wird in drei Stufen, und die erste bekannte Antwort entscheidet:
+	 *
+	 * 1. **Die Nation der Mitgliederdatei** (`persons.nation`). Sie ist die
+	 *    genaueste Angabe, steht aber nur für Personen bereit, die über den
+	 *    Import der Vereinsmitglieder-CSV gekommen sind.
+	 * 2. **Die FIDE-Föderation** — `persons.fideNation`, ersatzweise `country`
+	 *    der Elo-Tabelle über die FIDE-ID. Fast jeder Spieler an der Spitze
+	 *    einer Rangliste hat eine FIDE-ID, die Stufe greift also fast immer.
+	 * 3. **Ist beides unbekannt, paßt die Person.** Ausgeschlossen wird nur,
+	 *    wer nachweislich anderswo geführt wird.
+	 *
+	 * **Warum die zweite Stufe da ist:** Bis 1.34.0 gab es nur die erste und
+	 * die dritte. Da `nation` im Livebestand kaum gepflegt ist, fiel praktisch
+	 * jede Prüfung auf „unbekannt, also behalten" — und in den Top-10-Listen
+	 * standen Ausländer. Das Topwertungszahlen-Bundle hat sich daraufhin mit
+	 * einer eigenen Nachprüfung beholfen; genau die steht seit 1.35.0 hier, wo
+	 * sie hingehört. Diesen Weg ist auch die alte DeWIS-Beschaffung gegangen.
+	 *
+	 * Die Umkehrung wäre falsch: Wer in der Mitgliederdatei ausdrücklich als
+	 * deutsch geführt wird, bleibt deutsch, auch wenn er bei der FIDE für einen
+	 * anderen Verband spielt. Deshalb die Reihenfolge und nicht ein Und.
 	 *
 	 * @param array $person Datensatz aus personendaten() (kann leer sein)
 	 * @param array $params Normalisierte Parameter
@@ -958,8 +1005,12 @@ class Ranglisten
 		if($params['nation'] === '') return true;
 
 		$nation = strtoupper(trim((string) ($person['nation'] ?? '')));
+		if($nation !== '' && $nation !== '-') return $nation === $params['nation'];
 
-		return $nation === '' || $nation === '-' || $nation === $params['nation'];
+		$foederation = strtoupper(trim((string) ($person['foederation'] ?? '')));
+		if($foederation !== '' && $foederation !== '-') return $foederation === $params['nation'];
+
+		return true;
 	}
 
 	/**
