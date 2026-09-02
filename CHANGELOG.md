@@ -1,5 +1,26 @@
 # Wertungsportal Changelog
 
+## Version 1.35.1 (2026-09-02)
+
+* Fix: **Der Nationenfilter fragt jetzt zuerst die FIDE-Föderation und erst
+  danach die Nation der Mitgliederdatei.** In 1.35.0 war es umgekehrt, und damit
+  blieb ein ganzer Fall falsch: Georg Meier ist deutscher Staatsangehöriger,
+  tritt bei der FIDE aber für Uruguay an und darf für Deutschland nicht spielen.
+  Die Mitgliederdatei führte ihn als deutsch, also stand er weiterhin in der
+  deutschen Rangliste — Leser, die ihn dort finden, wundern sich zu Recht
+* Change: Eine Rangliste beantwortet die Frage „wer spielt für Deutschland?",
+  nicht „wer hat einen deutschen Paß?". Die neue Reihenfolge stellt das her und
+  bringt die DWZ-Liste außerdem mit der Elo-Liste in Einklang, die schon immer
+  nach `country` der Elo-Tabelle filtert. Die Mitgliederdatei bleibt als zweite
+  Stufe: Ohne FIDE-Eintrag gibt es keine Föderation, und dann ist sie die beste
+  vorhandene Auskunft
+* Fix: Die Föderation wird jetzt auch dann aus der Elo-Tabelle nachgeschlagen,
+  wenn die Nation der Mitgliederdatei bekannt ist. In 1.35.0 unterblieb der
+  Nachschlag in diesem Fall — und da `fideNation` im Bestand fast immer leer ist,
+  wäre die erste Stufe sonst gar nicht zum Tragen gekommen
+* Change: Das Ausgabefeld `nation` folgt derselben Staffel und nennt jetzt die
+  Föderation, sonst die Nation der Mitgliederdatei. Dasselbe in `elo()`
+
 ## Version 1.35.0 (2026-09-01)
 
 * Fix: **Der Nationenfilter der Ranglisten ließ Ausländer durch.** Im Livebetrieb

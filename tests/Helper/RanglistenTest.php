@@ -196,20 +196,20 @@ class RanglistenTest extends TestCase
 
 	/**
 	 * Der Nationenfilter fragt in drei Stufen, und die erste bekannte Antwort
-	 * entscheidet: Nation der Mitgliederdatei, dann FIDE-Föderation, dann
+	 * entscheidet: FIDE-Föderation, dann Nation der Mitgliederdatei, dann
 	 * „unbekannt, also behalten".
 	 */
 	public function testNationenfilterStufen(): void
 	{
 		$params = array('nation' => 'GER');
 
-		// Stufe 1: Die Nation der Mitgliederdatei entscheidet allein
-		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array('nation' => 'GER'), $params));
-		$this->assertFalse(RanglistenPruefling::passtNationOeffentlich(array('nation' => 'ISR'), $params));
+		// Stufe 1: Die Föderation entscheidet allein
+		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array('foederation' => 'GER'), $params));
+		$this->assertFalse(RanglistenPruefling::passtNationOeffentlich(array('foederation' => 'ISR'), $params));
 
-		// Stufe 2: Ohne Nation zählt die Föderation
-		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array('nation' => '', 'foederation' => 'GER'), $params));
-		$this->assertFalse(RanglistenPruefling::passtNationOeffentlich(array('nation' => '', 'foederation' => 'ISR'), $params));
+		// Stufe 2: Ohne Föderation zählt die Mitgliederdatei
+		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array('nation' => 'GER', 'foederation' => ''), $params));
+		$this->assertFalse(RanglistenPruefling::passtNationOeffentlich(array('nation' => 'ISR', 'foederation' => ''), $params));
 
 		// Stufe 3: Ist beides unbekannt, bleibt die Person drin
 		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array('nation' => '', 'foederation' => ''), $params));
@@ -217,21 +217,24 @@ class RanglistenTest extends TestCase
 		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array('nation' => '-', 'foederation' => '-'), $params));
 
 		// Ohne Filter paßt jede Nation
-		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array('nation' => 'ISR'), array('nation' => '')));
+		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array('foederation' => 'ISR'), array('nation' => '')));
 	}
 
 	/**
-	 * Die Reihenfolge der Stufen ist wesentlich: Wer in der Mitgliederdatei
-	 * ausdrücklich als deutsch geführt wird, bleibt deutsch — auch wenn er bei
-	 * der FIDE für einen anderen Verband antritt. Ein „Und" statt der Staffel
-	 * würde genau diese Spieler aus der deutschen Rangliste werfen.
+	 * Die Föderation schlägt die Staatsangehörigkeit — der Fall Georg Meier.
+	 *
+	 * Er ist deutscher Staatsangehöriger, tritt bei der FIDE aber für Uruguay
+	 * an und darf für Deutschland nicht spielen. In einer deutschen Rangliste
+	 * hat er nichts zu suchen, auch wenn die Mitgliederdatei ihn als deutsch
+	 * führt. Umgekehrt gehört hinein, wer für Deutschland antritt, aber einen
+	 * anderen Paß hat.
 	 */
-	public function testNationSchlaegtFoederation(): void
+	public function testFoederationSchlaegtNation(): void
 	{
 		$params = array('nation' => 'GER');
 
-		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array('nation' => 'GER', 'foederation' => 'AUT'), $params));
-		$this->assertFalse(RanglistenPruefling::passtNationOeffentlich(array('nation' => 'AUT', 'foederation' => 'GER'), $params));
+		$this->assertFalse(RanglistenPruefling::passtNationOeffentlich(array('nation' => 'GER', 'foederation' => 'URU'), $params));
+		$this->assertTrue(RanglistenPruefling::passtNationOeffentlich(array('nation' => 'AUT', 'foederation' => 'GER'), $params));
 	}
 
 	/**

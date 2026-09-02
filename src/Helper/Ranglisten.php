@@ -545,10 +545,10 @@ class Ranglisten
 			$zeile['dwz_index']       = (int) ($spieler['index'] ?? 0);
 			$zeile['dwz_formatiert']  = self::dwzFormat($dwz, $zeile['dwz_index']);
 			$zeile['fide_id']         = (int) ($spieler['fideId'] ?? 0);
-			// Die Mitgliederdatei zuerst, sonst die Föderation — dieselbe
+			// Die Föderation zuerst, sonst die Mitgliederdatei — dieselbe
 			// Reihenfolge, nach der auch gefiltert wurde. Anders stünde in der
 			// Ausgabe ein Wert, der der Liste widerspricht, in der er steht
-			$zeile['nation']          = ($person['nation'] ?? '') !== '' ? (string) $person['nation'] : (string) ($person['foederation'] ?? '');
+			$zeile['nation']          = ($person['foederation'] ?? '') !== '' ? (string) $person['foederation'] : (string) ($person['nation'] ?? '');
 			$zeile['vkz']             = $mitglied['vkz'];
 			$zeile['verein']          = $mitglied['verein'];
 			$zeile['verbandskuerzel'] = self::verbandskuerzel($mitglied['vkz']);
@@ -610,10 +610,16 @@ class Ranglisten
 					'published'   => (bool) $objPerson->published,
 				);
 
-				// Weder Nation noch Föderation bekannt: Die Elo-Tabelle weiß
-				// es meistens. Gesammelt wird nach FIDE-ID, damit alle in
-				// einem Zug nachgeschlagen werden
-				if($daten[$pkz]['nation'] === '' && $daten[$pkz]['foederation'] === '' && (int) $objPerson->fideId > 0)
+				// Föderation unbekannt: Die Elo-Tabelle weiß sie meistens.
+				// Gesammelt wird nach FIDE-ID, damit alle in einem Zug
+				// nachgeschlagen werden.
+				//
+				// WICHTIG: Nachgeschlagen wird auch dann, wenn die Nation
+				// bekannt ist. Die Föderation entscheidet vor ihr (siehe
+				// `passtNation()`), und `fideNation` ist im Bestand fast
+				// immer leer — ohne diesen Nachschlag käme die erste Stufe
+				// gar nicht zum Tragen
+				if($daten[$pkz]['foederation'] === '' && (int) $objPerson->fideId > 0)
 				{
 					$offen[(int) $objPerson->fideId][] = $pkz;
 				}
@@ -813,7 +819,9 @@ class Ranglisten
 			$zeile['elo_partien']     = (int) $satz['games'];
 			$zeile['fide_titel']      = (string) $satz['title'];
 			$zeile['fide_titel_w']    = (string) $satz['w_title'];
-			$zeile['nation']          = ($person['nation'] ?? '') !== '' ? $person['nation'] : (string) $satz['country'];
+			// Die Föderation der Elo-Tabelle zuerst: Nach ihr wurde gefiltert,
+			// sie gehört also auch in die Ausgabe
+			$zeile['nation']          = (string) $satz['country'] !== '' ? (string) $satz['country'] : (string) ($person['nation'] ?? '');
 			$zeile['vkz']             = $mitglied['vkz'];
 			$zeile['verein']          = $mitglied['verein'];
 			$zeile['verbandskuerzel'] = self::verbandskuerzel($mitglied['vkz']);
@@ -975,25 +983,31 @@ class Ranglisten
 	 *
 	 * Gefragt wird in drei Stufen, und die erste bekannte Antwort entscheidet:
 	 *
-	 * 1. **Die Nation der Mitgliederdatei** (`persons.nation`). Sie ist die
-	 *    genaueste Angabe, steht aber nur für Personen bereit, die über den
-	 *    Import der Vereinsmitglieder-CSV gekommen sind.
-	 * 2. **Die FIDE-Föderation** — `persons.fideNation`, ersatzweise `country`
-	 *    der Elo-Tabelle über die FIDE-ID. Fast jeder Spieler an der Spitze
-	 *    einer Rangliste hat eine FIDE-ID, die Stufe greift also fast immer.
+	 * 1. **Die FIDE-Föderation** — `persons.fideNation`, ersatzweise `country`
+	 *    der Elo-Tabelle über die FIDE-ID.
+	 * 2. **Die Nation der Mitgliederdatei** (`persons.nation`), wenn keine
+	 *    Föderation bekannt ist.
 	 * 3. **Ist beides unbekannt, paßt die Person.** Ausgeschlossen wird nur,
 	 *    wer nachweislich anderswo geführt wird.
 	 *
-	 * **Warum die zweite Stufe da ist:** Bis 1.34.0 gab es nur die erste und
-	 * die dritte. Da `nation` im Livebestand kaum gepflegt ist, fiel praktisch
-	 * jede Prüfung auf „unbekannt, also behalten" — und in den Top-10-Listen
-	 * standen Ausländer. Das Topwertungszahlen-Bundle hat sich daraufhin mit
-	 * einer eigenen Nachprüfung beholfen; genau die steht seit 1.35.0 hier, wo
-	 * sie hingehört. Diesen Weg ist auch die alte DeWIS-Beschaffung gegangen.
+	 * **Warum die Föderation und nicht die Staatsangehörigkeit zuerst kommt:**
+	 * Eine Rangliste beantwortet die Frage „wer spielt für Deutschland?", nicht
+	 * „wer hat einen deutschen Paß?". Georg Meier ist deutscher
+	 * Staatsangehöriger, tritt bei der FIDE aber für Uruguay an und darf für
+	 * Deutschland nicht spielen — in einer deutschen Rangliste hat er nichts zu
+	 * suchen, und Leser, die ihn dort fänden, würden sich zu Recht wundern. Die
+	 * umgekehrte Reihenfolge stünde außerdem quer zur Elo-Liste, die schon
+	 * immer nach `country` der Elo-Tabelle filtert.
 	 *
-	 * Die Umkehrung wäre falsch: Wer in der Mitgliederdatei ausdrücklich als
-	 * deutsch geführt wird, bleibt deutsch, auch wenn er bei der FIDE für einen
-	 * anderen Verband spielt. Deshalb die Reihenfolge und nicht ein Und.
+	 * Die zweite Stufe bleibt trotzdem nötig: Ohne FIDE-Eintrag gibt es keine
+	 * Föderation, und dann ist die Mitgliederdatei die beste vorhandene
+	 * Auskunft.
+	 *
+	 * **Zur Vorgeschichte:** Bis 1.34.0 gab es nur die Mitgliederdatei und
+	 * „unbekannt, also behalten". Da `nation` im Livebestand kaum gepflegt ist,
+	 * fiel praktisch jede Prüfung auf die dritte Stufe — und in den
+	 * Top-10-Listen standen Ausländer. 1.35.0 nahm die Föderation dazu, aber an
+	 * zweiter Stelle; seit 1.35.1 steht sie vorn, wo sie hingehört.
 	 *
 	 * @param array $person Datensatz aus personendaten() (kann leer sein)
 	 * @param array $params Normalisierte Parameter
@@ -1004,11 +1018,11 @@ class Ranglisten
 	{
 		if($params['nation'] === '') return true;
 
-		$nation = strtoupper(trim((string) ($person['nation'] ?? '')));
-		if($nation !== '' && $nation !== '-') return $nation === $params['nation'];
-
 		$foederation = strtoupper(trim((string) ($person['foederation'] ?? '')));
 		if($foederation !== '' && $foederation !== '-') return $foederation === $params['nation'];
+
+		$nation = strtoupper(trim((string) ($person['nation'] ?? '')));
+		if($nation !== '' && $nation !== '-') return $nation === $params['nation'];
 
 		return true;
 	}

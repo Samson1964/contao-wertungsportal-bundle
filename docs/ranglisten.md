@@ -5,7 +5,7 @@ Geschlecht, mit geteilten Platzziffern, ohne Doppelte, mit Verein und
 Verbandskürzel.
 
 Die Klasse `Schachbulle\ContaoWertungsportalBundle\Helper\Ranglisten` gibt es seit
-**1.34.0**. Wer sie einsetzt, sollte mindestens **1.35.0** verlangen: Erst dort
+**1.34.0**. Wer sie einsetzt, sollte mindestens **1.35.1** verlangen: Erst dort
 filtert der Nationenfilter richtig (siehe unten).
 
 ## Wozu
@@ -25,7 +25,7 @@ In der `composer.json` des aufrufenden Bundles:
 
 ```json
 "require": {
-    "schachbulle/contao-wertungsportal-bundle": "^1.35"
+    "schachbulle/contao-wertungsportal-bundle": "^1.35.1"
 }
 ```
 
@@ -98,7 +98,7 @@ Jede Zeile:
 | `elo_partien` | int | Gewertete Partien |
 | `fide_titel` | string | `GM`, `IM`, `FM` … |
 | `fide_titel_w` | string | `WGM`, `WIM`, `WFM` … |
-| `nation` | string | Nation aus der Mitgliederdatei, sonst die FIDE-Föderation |
+| `nation` | string | FIDE-Föderation, sonst die Nation der Mitgliederdatei |
 | `vkz` | string | Kennziffer der gewählten Mitgliedschaft |
 | `verein` | string | Name des Vereins |
 | `verbandskuerzel` | string | `BER`, `BAY`, `NRW` … |
@@ -214,39 +214,46 @@ in der Liste.
 
 Die erste bekannte Antwort entscheidet:
 
-1. **Die Nation der Mitgliederdatei** — `tl_wertungsportal_persons.nation`.
-   Die genaueste Angabe, aber sie steht nur für Personen bereit, die über den
-   Import der Vereinsmitglieder-CSV gekommen sind; die nu-Schnittstelle liefert
-   das Feld gar nicht.
-2. **Die FIDE-Föderation** — `persons.fideNation`, ersatzweise `country` der
-   Elo-Tabelle über die FIDE-ID.
+1. **Die FIDE-Föderation** — `tl_wertungsportal_persons.fideNation`,
+   ersatzweise `country` der Elo-Tabelle über die FIDE-ID.
+2. **Die Nation der Mitgliederdatei** — `persons.nation`, wenn keine Föderation
+   bekannt ist. Sie steht nur für Personen bereit, die über den Import der
+   Vereinsmitglieder-CSV gekommen sind; die nu-Schnittstelle liefert das Feld
+   gar nicht.
 3. **Ist beides unbekannt, bleibt die Person in der Liste.** Ausgeschlossen
    wird nur, wer nachweislich anderswo geführt wird.
 
-**Die Reihenfolge ist wesentlich, nicht beliebig.** Wer in der Mitgliederdatei
-ausdrücklich als deutsch geführt wird, bleibt deutsch, auch wenn er bei der
-FIDE für einen anderen Verband antritt. Ein „und" statt der Staffel würde genau
-diese Spieler aus der deutschen Rangliste werfen.
+**Warum die Föderation vor der Staatsangehörigkeit kommt.** Eine Rangliste
+beantwortet die Frage „wer spielt für Deutschland?", nicht „wer hat einen
+deutschen Paß?". Georg Meier ist deutscher Staatsangehöriger, tritt bei der
+FIDE aber für Uruguay an und darf für Deutschland nicht spielen — in einer
+deutschen Rangliste hat er nichts zu suchen, und Leser, die ihn dort fänden,
+würden sich zu Recht wundern. Die umgekehrte Reihenfolge stünde außerdem quer
+zur Elo-Liste, die schon immer nach `country` der Elo-Tabelle filtert.
 
-Die zweite Stufe kam mit 1.35.0 dazu. Vorher gab es nur die erste und die
-dritte — und da `nation` im Livebestand kaum gepflegt ist, fiel praktisch jede
-Prüfung auf „unbekannt, also behalten". In den Top-10-Listen standen dadurch
-Ausländer. Die Stufe greift fast immer: In der Testinstallation haben **alle**
-der 200 bestbewerteten Spieler eine FIDE-ID, von den ersten 1000 sind es 99 %.
+Die zweite Stufe bleibt trotzdem nötig: Ohne FIDE-Eintrag gibt es keine
+Föderation, und dann ist die Mitgliederdatei die beste vorhandene Auskunft.
 
-Nachsehen, wie es um die erste Stufe steht:
+Die erste Stufe greift fast immer: In der Testinstallation haben **alle** der
+200 bestbewerteten Spieler eine FIDE-ID, von den ersten 1000 sind es 99 %.
+
+> **Zur Vorgeschichte:** Bis 1.34.0 gab es nur die Mitgliederdatei und
+> „unbekannt, also behalten". Da `nation` im Livebestand kaum gepflegt ist, fiel
+> praktisch jede Prüfung auf die dritte Stufe, und in den Top-10-Listen standen
+> Ausländer. 1.35.0 nahm die Föderation dazu, aber an zweiter Stelle; seit
+> 1.35.1 steht sie vorn.
+
+Nachsehen, ob die erste Stufe überhaupt Daten hat:
 
 ```sql
-SELECT nation, COUNT(*) FROM tl_wertungsportal_persons GROUP BY nation ORDER BY 2 DESC;
+SELECT COUNT(*) FROM tl_wertungsportal_elo;
 ```
 
-Steht dort überwiegend ein Leerwert, ist der Personen-Import noch nicht
-gelaufen — dann trägt die zweite Stufe die Prüfung allein. Bleibt auch die
-Elo-Tabelle leer (kein XML-Import), greift der Filter gar nicht mehr, und die
-Listen enthalten Ausländer.
+Ist die Tabelle leer (kein XML-Import gelaufen) und ist auch `nation` nicht
+gepflegt, greift der Filter gar nicht, und die Listen enthalten Ausländer.
 
-Das Ausgabefeld `nation` folgt derselben Staffel: erst die Mitgliederdatei,
-sonst die Föderation. So sagt die Ausgabe dasselbe wie der Filter.
+Das Ausgabefeld `nation` folgt derselben Staffel: erst die Föderation, sonst
+die Mitgliederdatei. So sagt die Ausgabe dasselbe wie der Filter.
 
 ### Es wird mehr angefordert, als gebraucht wird
 
