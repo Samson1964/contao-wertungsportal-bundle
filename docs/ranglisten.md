@@ -5,7 +5,7 @@ Geschlecht, mit geteilten Platzziffern, ohne Doppelte, mit Verein und
 Verbandskürzel.
 
 Die Klasse `Schachbulle\ContaoWertungsportalBundle\Helper\Ranglisten` gibt es seit
-**1.34.0**. Wer sie einsetzt, sollte mindestens **1.35.1** verlangen: Erst dort
+**1.34.0**. Wer sie einsetzt, sollte mindestens **1.35.2** verlangen: Erst dort
 filtert der Nationenfilter richtig (siehe unten).
 
 ## Wozu
@@ -25,7 +25,7 @@ In der `composer.json` des aufrufenden Bundles:
 
 ```json
 "require": {
-    "schachbulle/contao-wertungsportal-bundle": "^1.35.1"
+    "schachbulle/contao-wertungsportal-bundle": "^1.35.2"
 }
 ```
 
@@ -214,8 +214,9 @@ in der Liste.
 
 Die erste bekannte Antwort entscheidet:
 
-1. **Die FIDE-Föderation** — `tl_wertungsportal_persons.fideNation`,
-   ersatzweise `country` der Elo-Tabelle über die FIDE-ID.
+1. **Die FIDE-Föderation** — `country` aus `tl_wertungsportal_elo`,
+   nachgeschlagen über `persons.fideId`. Der Elo-Bestand wird monatlich neu
+   eingelesen.
 2. **Die Nation der Mitgliederdatei** — `persons.nation`, wenn keine Föderation
    bekannt ist. Sie steht nur für Personen bereit, die über den Import der
    Vereinsmitglieder-CSV gekommen sind; die nu-Schnittstelle liefert das Feld
@@ -231,6 +232,12 @@ deutschen Rangliste hat er nichts zu suchen, und Leser, die ihn dort fänden,
 würden sich zu Recht wundern. Die umgekehrte Reihenfolge stünde außerdem quer
 zur Elo-Liste, die schon immer nach `country` der Elo-Tabelle filtert.
 
+**Warum `persons.fideNation` nicht mitspielt.** Das Feld stammt wie `nation`
+aus dem CSV-Import und wird kaum gepflegt; von den Angaben der Person ist
+allein die FIDE-ID verläßlich. Ein vereinzelt gefüllter, womöglich veralteter
+Wert dürfte den monatlich frisch importierten Elo-Bestand nicht schlagen —
+deshalb wird er gar nicht erst herangezogen.
+
 Die zweite Stufe bleibt trotzdem nötig: Ohne FIDE-Eintrag gibt es keine
 Föderation, und dann ist die Mitgliederdatei die beste vorhandene Auskunft.
 
@@ -240,17 +247,8 @@ Die erste Stufe greift fast immer: In der Testinstallation haben **alle** der
 > **Zur Vorgeschichte:** Bis 1.34.0 gab es nur die Mitgliederdatei und
 > „unbekannt, also behalten". Da `nation` im Livebestand kaum gepflegt ist, fiel
 > praktisch jede Prüfung auf die dritte Stufe, und in den Top-10-Listen standen
-> Ausländer. 1.35.0 nahm die Föderation dazu, aber an zweiter Stelle; seit
-> 1.35.1 steht sie vorn.
-
-Nachsehen, ob die erste Stufe überhaupt Daten hat:
-
-```sql
-SELECT COUNT(*) FROM tl_wertungsportal_elo;
-```
-
-Ist die Tabelle leer (kein XML-Import gelaufen) und ist auch `nation` nicht
-gepflegt, greift der Filter gar nicht, und die Listen enthalten Ausländer.
+> Ausländer. 1.35.0 nahm die Föderation dazu, aber an zweiter Stelle; 1.35.1
+> stellte sie nach vorn; 1.35.2 strich `fideNation` als Quelle.
 
 Das Ausgabefeld `nation` folgt derselben Staffel: erst die Föderation, sonst
 die Mitgliederdatei. So sagt die Ausgabe dasselbe wie der Filter.
@@ -332,10 +330,10 @@ Ist eine Person vorhanden, gewinnt ihre **Schreibweise des Namens** gegenüber
 der FIDE: Dort stehen Umlaute als „ue"/„oe", und Doppelnamen sind zusammen­
 gezogen.
 
-> **Ohne einmaligen XML-Import ist `tl_wertungsportal_elo` leer.** `elo()`
-> liefert dann eine leere Liste, und in `dwz()` bleiben die Felder `elo`,
-> `elo_partien`, `fide_titel` und `fide_titel_w` leer. Der Import läuft im
-> Backend unter *WP | FIDE-Elo → XML-Import*.
+Die Elo-Tabelle ist damit auch für `dwz()` die Grundlage — sie liefert dort
+die Föderation für den Nationenfilter sowie Elo, Partienzahl und die beiden
+Titelfelder. Gefüllt wird sie im Backend unter *WP | FIDE-Elo → XML-Import*,
+auf schachbund.de monatlich.
 
 ## Zwischenspeicher
 

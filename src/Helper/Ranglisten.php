@@ -569,11 +569,17 @@ class Ranglisten
 	 * und keinen Titel in der Ausgabe.
 	 *
 	 * Zusätzlich wird die **Föderation** ermittelt — der Verband, für den ein
-	 * Spieler bei der FIDE antritt. Sie stammt aus `fideNation` der Person und,
-	 * wenn die leer ist, aus `country` der Elo-Tabelle über die FIDE-ID. Damit
-	 * steht auch für Personen eine Nationsangabe bereit, deren Datensatz allein
-	 * über die Schnittstelle entstanden ist — und genau daran scheiterte der
-	 * Nationenfilter bis 1.34.0 (siehe `passtNation()`).
+	 * Spieler bei der FIDE antritt. Sie kommt aus `country` der Elo-Tabelle,
+	 * nachgeschlagen über die FIDE-ID der Person. Damit steht auch für Personen
+	 * eine Nationsangabe bereit, deren Datensatz allein über die Schnittstelle
+	 * entstanden ist — und genau daran scheiterte der Nationenfilter bis 1.34.0
+	 * (siehe `passtNation()`).
+	 *
+	 * **Warum nicht `persons.fideNation`:** Das Feld stammt wie `nation` aus dem
+	 * CSV-Import und wird kaum gepflegt; von den Feldern der Person ist allein
+	 * die FIDE-ID verläßlich. Ein vereinzelt gefüllter, womöglich veralteter
+	 * Wert dürfte den monatlich frisch importierten Elo-Bestand nicht schlagen —
+	 * deshalb wird er gar nicht erst herangezogen.
 	 *
 	 * @param array $pkzListe nuLigaPersonId der gesuchten Personen
 	 *
@@ -594,7 +600,7 @@ class Ranglisten
 		foreach(array_chunk($pkzListe, 500) as $block)
 		{
 			$platzhalter = implode(',', array_fill(0, count($block), '?'));
-			$objPerson = \Contao\Database::getInstance()->prepare("SELECT nuLigaPersonId, nation, fideNation, titel, verstorben, published, fideId FROM tl_wertungsportal_persons WHERE nuLigaPersonId IN ($platzhalter)")
+			$objPerson = \Contao\Database::getInstance()->prepare("SELECT nuLigaPersonId, nation, titel, verstorben, published, fideId FROM tl_wertungsportal_persons WHERE nuLigaPersonId IN ($platzhalter)")
 			                                     ->execute($block);
 
 			while($objPerson->next())
@@ -604,25 +610,15 @@ class Ranglisten
 				$daten[$pkz] = array
 				(
 					'nation'      => (string) $objPerson->nation,
-					'foederation' => (string) $objPerson->fideNation,
+					'foederation' => '',
 					'titel'       => (string) $objPerson->titel,
 					'verstorben'  => (bool) $objPerson->verstorben,
 					'published'   => (bool) $objPerson->published,
 				);
 
-				// Föderation unbekannt: Die Elo-Tabelle weiß sie meistens.
-				// Gesammelt wird nach FIDE-ID, damit alle in einem Zug
-				// nachgeschlagen werden.
-				//
-				// WICHTIG: Nachgeschlagen wird auch dann, wenn die Nation
-				// bekannt ist. Die Föderation entscheidet vor ihr (siehe
-				// `passtNation()`), und `fideNation` ist im Bestand fast
-				// immer leer — ohne diesen Nachschlag käme die erste Stufe
-				// gar nicht zum Tragen
-				if($daten[$pkz]['foederation'] === '' && (int) $objPerson->fideId > 0)
-				{
-					$offen[(int) $objPerson->fideId][] = $pkz;
-				}
+				// Gesammelt wird nach FIDE-ID, damit alle Föderationen in
+				// einem Zug nachgeschlagen werden
+				if((int) $objPerson->fideId > 0) $offen[(int) $objPerson->fideId][] = $pkz;
 			}
 		}
 
@@ -983,8 +979,8 @@ class Ranglisten
 	 *
 	 * Gefragt wird in drei Stufen, und die erste bekannte Antwort entscheidet:
 	 *
-	 * 1. **Die FIDE-Föderation** — `persons.fideNation`, ersatzweise `country`
-	 *    der Elo-Tabelle über die FIDE-ID.
+	 * 1. **Die FIDE-Föderation** — `country` der Elo-Tabelle, über die FIDE-ID
+	 *    der Person nachgeschlagen. Der Bestand wird monatlich neu eingelesen.
 	 * 2. **Die Nation der Mitgliederdatei** (`persons.nation`), wenn keine
 	 *    Föderation bekannt ist.
 	 * 3. **Ist beides unbekannt, paßt die Person.** Ausgeschlossen wird nur,
@@ -1007,7 +1003,10 @@ class Ranglisten
 	 * „unbekannt, also behalten". Da `nation` im Livebestand kaum gepflegt ist,
 	 * fiel praktisch jede Prüfung auf die dritte Stufe — und in den
 	 * Top-10-Listen standen Ausländer. 1.35.0 nahm die Föderation dazu, aber an
-	 * zweiter Stelle; seit 1.35.1 steht sie vorn, wo sie hingehört.
+	 * zweiter Stelle; seit 1.35.1 steht sie vorn, wo sie hingehört. Mit 1.35.2
+	 * kommt sie ausschließlich aus der Elo-Tabelle: `persons.fideNation` wird
+	 * so wenig gepflegt, daß ein vereinzelter Wert dort nur Schaden anrichten
+	 * konnte.
 	 *
 	 * @param array $person Datensatz aus personendaten() (kann leer sein)
 	 * @param array $params Normalisierte Parameter

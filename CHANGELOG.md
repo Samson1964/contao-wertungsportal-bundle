@@ -1,5 +1,19 @@
 # Wertungsportal Changelog
 
+## Version 1.35.2 (2026-09-02)
+
+* Change: **Die Föderation kommt jetzt ausschließlich aus `tl_wertungsportal_elo`**,
+  nachgeschlagen über `persons.fideId`. `persons.fideNation` wird nicht mehr
+  herangezogen: Das Feld stammt wie `nation` aus dem CSV-Import und wird kaum
+  gepflegt — von den Angaben der Person ist allein die FIDE-ID verläßlich
+* Fix: Damit kann ein vereinzelt gefüllter, womöglich veralteter `fideNation`-Wert
+  den monatlich frisch importierten Elo-Bestand nicht mehr schlagen. Genau das
+  wäre in 1.35.1 möglich gewesen und hätte einen Spieler in der falschen Liste
+  gehalten
+* Change: `personendaten()` liest eine Spalte weniger und schlägt die Föderation
+  für jede Person mit FIDE-ID nach, statt die Abfrage von einem leeren
+  `fideNation` abhängig zu machen
+
 ## Version 1.35.1 (2026-09-02)
 
 * Fix: **Der Nationenfilter fragt jetzt zuerst die FIDE-Föderation und erst
