@@ -165,7 +165,7 @@ $GLOBALS['TL_PURGE']['custom']['wertungsportal'] = array
 	'callback' => array('Schachbulle\ContaoWertungsportalBundle\Helper\API', 'purgeCache')
 );
 
-if(TL_MODE == 'BE') 
+if(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::istBackend()) 
 {
 	$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/backend.css';
 }

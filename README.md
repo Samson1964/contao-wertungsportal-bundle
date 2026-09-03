@@ -16,5 +16,11 @@ Ersetzt die SOAP-Schnittstelle von DeWIS und kommuniziert mit der REST-Schnittst
   Regelwerk nicht geben kann, mit Spieler und Turnier festhalten und an nu melden
 * [Ranglisten](docs/ranglisten.md) — fertige Deutschland-Ranglisten nach DWZ und Elo,
   für andere Bundles abrufbar: Altersklasse, Geschlecht, geteilte Plätze, Verbandskürzel
+* [DWZ-Dateien herunterladen und aufbereiten](docs/dwz-dateien.md) — die beiden
+  Konsolenbefehle, die die früheren Cron-Skripte ersetzen (Aufruf beim Hoster umstellen!)
+
+## Voraussetzungen
+
+Contao 4.13 oder 5, PHP 7.4 bis 8.4.
 
 **Frank Binding**

@@ -22,7 +22,7 @@
 
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 
-class Verband extends \Module
+class Verband extends \Contao\Module
 {
 
 	/**
@@ -38,9 +38,9 @@ class Verband extends \Module
 	 */
 	public function generate()
 	{
-		if (TL_MODE == 'BE')
+		if (\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::istBackend())
 		{
-			$objTemplate = new \BackendTemplate('be_wertungsportal');
+			$objTemplate = new \Contao\BackendTemplate('be_wertungsportal');
 
 			$objTemplate->wildcard = '### WERTUNGSPORTAL VERBAND ###';
 			$objTemplate->title = $this->name;
@@ -51,12 +51,12 @@ class Verband extends \Module
 		else
 		{
 			// FE-Modus: URL mit allen möglichen Parametern auflösen
-			\Input::setGet('zps', \Input::get('zps')); // ZPS-Nummer des Verbands
-			\Input::setGet('toplist', \Input::get('toplist')); // Top x bei Toplistenausgabe
-			\Input::setGet('sex', \Input::get('sex')); // Geschlecht bei Toplistenausgabe
-			\Input::setGet('age_from', \Input::get('age_from')); // Alter von bei Toplistenausgabe
-			\Input::setGet('age_to', \Input::get('age_to')); // Alter bis bei Toplistenausgabe
-			\Input::setGet('german', \Input::get('german')); // Nur deutsche Spieler
+			\Contao\Input::setGet('zps', \Contao\Input::get('zps')); // ZPS-Nummer des Verbands
+			\Contao\Input::setGet('toplist', \Contao\Input::get('toplist')); // Top x bei Toplistenausgabe
+			\Contao\Input::setGet('sex', \Contao\Input::get('sex')); // Geschlecht bei Toplistenausgabe
+			\Contao\Input::setGet('age_from', \Contao\Input::get('age_from')); // Alter von bei Toplistenausgabe
+			\Contao\Input::setGet('age_to', \Contao\Input::get('age_to')); // Alter bis bei Toplistenausgabe
+			\Contao\Input::setGet('german', \Contao\Input::get('german')); // Nur deutsche Spieler
 		}
 
 		return parent::generate(); // Weitermachen mit dem Modul
@@ -70,15 +70,15 @@ class Verband extends \Module
 		global $objPage;
 
 		// ZPS-Variable holen
-		$zps = \Input::get('zps');
+		$zps = \Contao\Input::get('zps');
 		if(!$zps) $zps = '000';
 		// Listenvariablen holen und anpassen
-		$toplist = \Input::get('toplist');
+		$toplist = \Contao\Input::get('toplist');
 		if($toplist && $toplist > 1000) $toplist = 1000;
-		$sex = \Input::get('sex');
-		$age_from = \Input::get('age_from');
-		$age_to = \Input::get('age_to');
-		$german = \Input::get('german');
+		$sex = \Contao\Input::get('sex');
+		$age_from = \Contao\Input::get('age_from');
+		$age_to = \Contao\Input::get('age_to');
+		$german = \Contao\Input::get('german');
 
 		$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 		$this->Template->shl = 'h2'; // Standard-Überschriftgröße 2
@@ -130,7 +130,11 @@ class Verband extends \Module
 				'funktion'    => 'Verbandsliste',
 				'cachekey'    => $zps.'-'.$toplist.'-'.$sex.'-'.$age_from.'-'.$age_to.'-'.$german,
 				'zps'         => $zps == '000' ? false : rtrim($zps, '0'), // Führt z.B. bei 100 sonst zu 0 Treffern, weil es keine Spieler mit ZPS 100xx in Baden gibt
-				'limit'       => $german ? $toplist + 500 : $toplist + 50,
+				// (int) vor der Rechnung: $toplist kommt aus den Moduleinstellungen
+				// und ist dort eine Zeichenkette. In PHP 7 rechnete "+" damit
+				// stillschweigend, seit PHP 8 wirft ein nicht numerischer Wert
+				// einen TypeError
+				'limit'       => $german ? (int) $toplist + 500 : (int) $toplist + 50,
 				'alter_von'   => $age_from ? (int)$age_from : '',
 				'alter_bis'   => $age_to == 140 ? '' : (int)$age_to,
 				'geschlecht'  => $sex == 'f' ? 'FEMALE' : ($sex == 'm' ? 'MALE' : ''),
@@ -161,7 +165,7 @@ class Verband extends \Module
 			$titel = $verbandsname.' | Top '.$toplist.(($sex == 'm')?' männlich':(($sex == 'f')?' weiblich':'')).(($age_from) ? ' '.$age_from.' - '.$age_to.' Jahre' : (($age_to == 140) ? '' : ' '.$age_from.' - '.$age_to.' Jahre'));
 			$objPage->pageTitle = $titel;
 
-			$this->Template = new \FrontendTemplate('wertungsportal_verbandsliste');
+			$this->Template = new \Contao\FrontendTemplate('wertungsportal_verbandsliste');
 			$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 			$this->Template->shl = 'h2'; // Standard-Überschriftgröße 2
 			$this->Template->headline = 'DWZ - Verband'; // Standard-Überschrift

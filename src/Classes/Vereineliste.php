@@ -65,15 +65,15 @@ class Vereineliste
 	{
 		try
 		{
-			$objFile = \FilesModel::findByUuid($uuid);
+			$objFile = \Contao\FilesModel::findByUuid($uuid);
 
 			if($objFile === null) return '';
 
-			$wurzel = \System::getContainer()->getParameter('kernel.project_dir');
+			$wurzel = \Contao\System::getContainer()->getParameter('kernel.project_dir');
 
 			if(!is_file($wurzel.'/'.$objFile->path)) return '';
 
-			$bild = \System::getContainer()
+			$bild = \Contao\System::getContainer()
 				->get('contao.image.factory')
 				->create($wurzel.'/'.$objFile->path, array(16, 16, 'box'))
 				->getUrl($wurzel);

@@ -19,12 +19,11 @@
         }
     ],
     "require": {
-        "php": "^7.0 || ^8.0",
-        "contao/core-bundle": "^4",
-        "codefog/contao-haste": "*",
+        "php": "^7.4 || ^8.0",
+        "contao/core-bundle": "^4.13 || ^5.0",
         "schachbulle/contao-helper-bundle": "^1.8.10 || ^2.0",
         "schachbulle/contao-flaggen-bundle": "*",
-        "menatwork/contao-multicolumnwizard-bundle": "^3.6"
+        "menatwork/contao-multicolumnwizard-bundle": "^3.6 || ^4.0"
     },
     "conflict": {
         "contao/core": "*",
@@ -32,7 +31,7 @@
     },
     "require-dev": {
         "contao/manager-plugin": "^2.0",
-        "doctrine/doctrine-cache-bundle": "^1.3"
+        "phpunit/phpunit": "^9.5"
     },
     "extra": {
         "contao-manager-plugin": "Schachbulle\\ContaoWertungsportalBundle\\ContaoManager\\Plugin"

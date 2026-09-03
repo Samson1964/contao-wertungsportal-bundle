@@ -25,7 +25,7 @@
 
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 
-class Bestenliste extends \Module
+class Bestenliste extends \Contao\Module
 {
 
 	/**
@@ -40,9 +40,9 @@ class Bestenliste extends \Module
 	 */
 	public function generate()
 	{
-		if (TL_MODE == 'BE')
+		if (\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::istBackend())
 		{
-			$objTemplate = new \BackendTemplate('be_wertungsportal');
+			$objTemplate = new \Contao\BackendTemplate('be_wertungsportal');
 
 			$objTemplate->wildcard = '### WERTUNGSPORTAL BESTENLISTE ###';
 			$objTemplate->title = $this->name;
@@ -75,7 +75,7 @@ class Bestenliste extends \Module
 		          AND EXISTS (SELECT m.id FROM tl_wertungsportal_persons_memberships m WHERE m.pid = p.id AND m.licenceState = 'ACTIVE' AND m.published = '1')
 		        ORDER BY p.rating DESC, p.`index` DESC, p.lastname, p.firstname";
 
-		$objSpieler = \Database::getInstance()->prepare($sql)
+		$objSpieler = \Contao\Database::getInstance()->prepare($sql)
 		                                      ->limit($anzahl)
 		                                      ->execute();
 
@@ -97,7 +97,7 @@ class Bestenliste extends \Module
 		if(count($ids))
 		{
 			$platzhalter = implode(',', array_fill(0, count($ids), '?'));
-			$objVerein = \Database::getInstance()->prepare("SELECT pid, vkz, clubName FROM tl_wertungsportal_persons_memberships WHERE licenceState = 'ACTIVE' AND published = '1' AND pid IN ($platzhalter) ORDER BY pid, vkz")
+			$objVerein = \Contao\Database::getInstance()->prepare("SELECT pid, vkz, clubName FROM tl_wertungsportal_persons_memberships WHERE licenceState = 'ACTIVE' AND published = '1' AND pid IN ($platzhalter) ORDER BY pid, vkz")
 			                                     ->execute($ids);
 			while($objVerein->next())
 			{

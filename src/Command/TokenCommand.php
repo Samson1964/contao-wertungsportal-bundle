@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Schachbulle\ContaoWertungsportalBundle\Command;
 
-use Contao\CoreBundle\Framework\ContaoFrameworkInterface;
+use Contao\CoreBundle\Framework\ContaoFramework;
 use Schachbulle\ContaoWertungsportalBundle\Helper\OAuth2Client;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -35,11 +35,11 @@ class TokenCommand extends Command
     protected static $defaultName = 'wertungsportal:token';
 
     /**
-     * @var ContaoFrameworkInterface
+     * @var ContaoFramework
      */
     private $framework;
 
-    public function __construct(ContaoFrameworkInterface $framework)
+    public function __construct(ContaoFramework $framework)
     {
         $this->framework = $framework;
 

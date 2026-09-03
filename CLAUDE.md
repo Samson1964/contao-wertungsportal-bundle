@@ -1,6 +1,7 @@
 # contao-wertungsportal-bundle — Projektkontext für Claude
 
-Contao-4.13-Bundle (`schachbulle/contao-wertungsportal-bundle`), das das DWZ-Wertungsportal
+Contao-Bundle fuer **4.13 UND 5** (`schachbulle/contao-wertungsportal-bundle`, PHP 7.4-8.4),
+das das DWZ-Wertungsportal
 des Deutschen Schachbunds (nu/liga.nu-API) in Contao integriert: Frontend-Suchen (Spieler,
 Verein, Verband, Turnier) und lokale Spiegel-Tabellen mit Backend-Verwaltung.
 Nachfolger des alten contao-dewis-bundles; Migrationsstatus siehe TODO.md, Historie siehe CHANGELOG.md.
@@ -251,29 +252,31 @@ heran). Regeln:
 - Deployment: Der User kopiert den Ordner manuell auf den Server; Claude kann per
   Chrome-Erweiterung im eingeloggten Browser testen, aber nichts deployen.
 
-## Download-Skripte (Hoster-Cronjob)
+## DWZ-Dateien: Download und Converter (ab 1.36.0 Konsolenbefehle)
 
-`src/Resources/public/Wertungsportal_Download.php` und `Wertungsportal_Converter.php` sind
-eigenständige Einstiegsskripte (alter Stil: TL_MODE + system/initialize.php), die der Hoster
-per Cronjob über Curl aufruft — unabhängig voneinander, vom User erfolgreich getestet.
-Download archiviert alle 20 LV-Zips datiert nach `files/wertungsportal/`; Converter lädt LV-0,
-reichert spieler.csv mit FIDE-Daten aus tl_dwz_elo an (Elo/Titel/Land ersetzt, Namens-/
-Geschlechts-/Geburtsjahr-Abweichungen nur geloggt), packt je Verband CSV-Zips ins Jahresarchiv,
-kopiert aktuelle Fassungen nach `export/csv/` und pflegt die Dbafs. Nur CSV, keine SQL-Variante.
-Die README.txt in den Verbands-Zips wird per `writeReadme()` angepasst (Überschrift
+`Classes/Downloader.php` (Befehl `wertungsportal:download`) und
+`Classes/Converter.php` (Befehl `wertungsportal:converter`). **Bis 1.35.2 waren das
+eigenstaendige Skripte unter `src/Resources/public/` (TL_MODE + system/initialize.php),
+die der Hoster per Curl ueber eine URL aufgerufen hat — diesen Weg gibt es in Contao 5
+nicht mehr.** Der Klassenrumpf ist unveraendert uebernommen, nur der Einstieg ist neu;
+`docs/dwz-dateien.md` beschreibt die Umstellung des Cronjobs.
+
+Download archiviert alle 20 LV-Zips datiert nach `files/wertungsportal/`; Converter laedt
+LV-0, reichert spieler.csv mit FIDE-Daten aus tl_wertungsportal_elo an (Elo/Titel/Land
+ersetzt, Namens-/Geschlechts-/Geburtsjahr-Abweichungen nur geloggt), packt je Verband
+CSV-Zips ins Jahresarchiv, kopiert aktuelle Fassungen nach `export/csv/` und pflegt die
+Dbafs. Nur CSV, keine SQL-Variante. Beide geben 0 (Erfolg) oder 1 (Fehlschlag) zurueck.
+
+Die README.txt in den Verbands-Zips wird per `writeReadme()` angepasst (Ueberschrift
 "Landesverband: X - Name" aus verbaende.csv + Spieler-/Vereinszahlen des Verbands);
-Vorsicht: Die nu-Dateien sind windows-1252-kodiert, die Anpassung arbeitet bewusst
+**Vorsicht: Die nu-Dateien sind windows-1252-kodiert**, die Anpassung arbeitet bewusst
 byte-basiert ohne Encoding-Konvertierung, CRLF-Zeilenenden bleiben erhalten.
-Beide Skripte sind per Token geschützt: Aufruf nur mit `?key=<wertungsportal_crontoken>`
-(Contao-Einstellungen, Bereich Wertungsportal); ohne konfigurierten Token gesperrt (403).
-Verifiziert am 17.07.2026: ohne/mit falschem Key HTTP 403, mit Key liefen beide Skripte
-komplett durch (der nu-Server lieferte dabei zeitweise abgeschnittene Zips — Anlass für die
-Download-Absicherung). Beide Skripte laden seitdem über `Helper::DownloadDatei()`:
-prüft Curl-Fehler, HTTP-Status 200 und Zip-Konsistenz (CHECKCONS), wiederholt bis zu 3-mal
-(5 s Pause) und löscht defekte Dateien statt sie zu archivieren. Das Download-Skript meldet
-Fehlschläge im Abschlusstext ("Fertig mit x Fehlschlägen"), der Converter bricht bei
-endgültigem Fehlschlag mit FEHLER-Meldung ab. TLS-Verifikation ist weiterhin deaktiviert
-(Bestandsverhalten beibehalten).
+
+Beide laden ueber `Helper::DownloadDatei()`: prueft Curl-Fehler, HTTP-Status 200 und
+Zip-Konsistenz (CHECKCONS), wiederholt bis zu 3-mal (5 s Pause) und loescht defekte
+Dateien statt sie zu archivieren. TLS-Verifikation ist weiterhin deaktiviert
+(Bestandsverhalten beibehalten). Der frueher noetige `?key=`-Token samt Einstellung
+`wertungsportal_crontoken` ist ersatzlos entfallen.
 
 ## Personen-Import (Vereinsmitglieder-CSV)
 

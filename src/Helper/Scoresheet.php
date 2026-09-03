@@ -26,8 +26,8 @@ class Scoresheet
 	{
 		$this->apiTurnierinfo = $Turnierinfo;
 		$this->apiSpielberichtsbogen = $Spielberichtsbogen;
-		$this->idTurnier = \Input::get('code'); // Turniercode
-		$this->idSpieler = \Input::get('id'); // Spieler-ID
+		$this->idTurnier = \Contao\Input::get('code'); // Turniercode
+		$this->idSpieler = \Contao\Input::get('id'); // Spieler-ID
 		
 		$this->compile(); // Weiter mit dieser Funktion
 	}

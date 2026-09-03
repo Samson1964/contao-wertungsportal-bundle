@@ -122,7 +122,7 @@ class Referentenbaum
 
 		try
 		{
-			$objReferenten = \Database::getInstance()->execute("SELECT * FROM tl_wertungsportal_referenten WHERE published = '1' ORDER BY nachname, vorname");
+			$objReferenten = \Contao\Database::getInstance()->execute("SELECT * FROM tl_wertungsportal_referenten WHERE published = '1' ORDER BY nachname, vorname");
 		}
 		catch(\Throwable $e)
 		{
@@ -134,7 +134,7 @@ class Referentenbaum
 		{
 			$person = self::person($objReferenten->row());
 
-			foreach(\StringUtil::deserialize($objReferenten->verbaende, true) as $vkz)
+			foreach(\Contao\StringUtil::deserialize($objReferenten->verbaende, true) as $vkz)
 			{
 				$zuordnung[(string) $vkz][] = $person;
 			}
@@ -168,7 +168,7 @@ class Referentenbaum
 			'plz'      => (string) ($row['plz'] ?? ''),
 			'ort'      => (string) ($row['ort'] ?? ''),
 			'telefon'  => (string) ($row['telefon'] ?? ''),
-			'email'    => $email !== '' ? \StringUtil::encodeEmail('<a href="mailto:'.$email.'">'.$email.'</a>') : '',
+			'email'    => $email !== '' ? \Contao\StringUtil::encodeEmail('<a href="mailto:'.$email.'">'.$email.'</a>') : '',
 		);
 	}
 
@@ -186,7 +186,7 @@ class Referentenbaum
 
 			try
 			{
-				$objVerbaende = \Database::getInstance()->execute("SELECT clubVkz, clubName FROM tl_wertungsportal_clubs WHERE clubVkz LIKE '%00' OR clubVkz IN ('L0001','M0001')");
+				$objVerbaende = \Contao\Database::getInstance()->execute("SELECT clubVkz, clubName FROM tl_wertungsportal_clubs WHERE clubVkz LIKE '%00' OR clubVkz IN ('L0001','M0001')");
 
 				while($objVerbaende->next())
 				{

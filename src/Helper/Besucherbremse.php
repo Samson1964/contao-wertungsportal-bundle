@@ -128,7 +128,7 @@ class Besucherbremse
 	{
 		try
 		{
-			return (string) \Environment::get('ip');
+			return (string) \Contao\Environment::get('ip');
 		}
 		catch(\Throwable $e)
 		{
@@ -145,7 +145,7 @@ class Besucherbremse
 	{
 		try
 		{
-			return (string) \Environment::get('httpUserAgent');
+			return (string) \Contao\Environment::get('httpUserAgent');
 		}
 		catch(\Throwable $e)
 		{
@@ -162,7 +162,7 @@ class Besucherbremse
 	{
 		try
 		{
-			$objUser = \FrontendUser::getInstance();
+			$objUser = \Contao\FrontendUser::getInstance();
 
 			if($objUser === null || !$objUser->id) return array('id' => 0, 'name' => '');
 

@@ -22,7 +22,7 @@ class Turniersuche
 	public function __construct($Ergebnisse)
 	{
 		$this->apiErgebnisse = $Ergebnisse;
-		$this->idTurnier = \Input::get('code'); // Turniercode
+		$this->idTurnier = \Contao\Input::get('code'); // Turniercode
 		
 		$this->compile(); // Weiter mit dieser Funktion
 	}

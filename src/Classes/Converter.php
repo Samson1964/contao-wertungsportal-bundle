@@ -1,30 +1,28 @@
 <?php
 
-/**
- * Contao Open Source CMS, Copyright (C) 2005-2020 Leo Feyer
- */
-
-use Contao\Controller;
+namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 
 /**
- * Initialize the system
+ * Baut aus der Deutschland-Datei des nu-Servers die Verbands-Archive:
+ * laedt LV-0, reichert `spieler.csv` mit den FIDE-Daten aus
+ * tl_wertungsportal_elo an, packt je Landesverband ein CSV-Zip ins
+ * Jahresarchiv, kopiert die aktuellen Fassungen nach `export/csv/` und pflegt
+ * die Dbafs.
+ *
+ * **Herkunft:** Bis 1.35.2 war das ein eigenstaendiges Skript unter
+ * `src/Resources/public/Wertungsportal_Converter.php`, das der Hoster per Curl
+ * ueber eine URL aufgerufen hat. Es band `system/initialize.php` ein — den Weg
+ * gibt es in Contao 5 nicht mehr. Der Klassenrumpf ist unveraendert
+ * uebernommen; angestossen wird er jetzt ueber `wertungsportal:converter`.
+ *
+ * Der frueher noetige Token-Schutz (`?key=`) entfaellt ersatzlos: Ein
+ * Konsolenbefehl ist von aussen nicht erreichbar.
+ *
+ * ACHTUNG bei Aenderungen: Die Dateien des nu-Servers sind windows-1252-kodiert.
+ * `writeReadme()` arbeitet deshalb bewusst byte-basiert ohne
+ * Encoding-Umwandlung, und die CRLF-Zeilenenden bleiben erhalten.
  */
-define('TL_MODE', 'FE');
-define('TL_SCRIPT', 'bundles/contaowertungsportal/Wertungsportal_Converter.php');
-require($_SERVER['DOCUMENT_ROOT'].'/../system/initialize.php');
-
-// Token-Schutz: Aufruf nur mit gültigem Schlüssel erlauben (?key=SCHLÜSSEL).
-// Der Schlüssel wird in den Contao-Einstellungen gepflegt (wertungsportal_crontoken);
-// ohne konfigurierten Schlüssel ist das Skript gesperrt.
-$strCrontoken = (string) ($GLOBALS['TL_CONFIG']['wertungsportal_crontoken'] ?? '');
-
-if($strCrontoken === '' || !hash_equals($strCrontoken, (string) \Contao\Input::get('key')))
-{
-	http_response_code(403);
-	die('Zugriff verweigert');
-}
-
-class Wertungsportal_Converter
+class Converter
 {
 	protected $zielpfad;
 	protected $packpfad;
@@ -42,13 +40,13 @@ class Wertungsportal_Converter
 	 */
 	public function __construct()
 	{
-		$this->zielpfad = substr($_SERVER['DOCUMENT_ROOT'], 0, -3).'files/wertungsportal/downloads/tmp/'; // web-Ordner entfernen und Zielordner anhängen
+		$this->zielpfad = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::projektpfad().'/files/wertungsportal/downloads/tmp/';
 		if(!file_exists($this->zielpfad)) mkdir($this->zielpfad, 0777);
-		$this->packpfad = substr($_SERVER['DOCUMENT_ROOT'], 0, -3).'files/wertungsportal/downloads/raw/'; // web-Ordner entfernen und Zielordner anhängen
+		$this->packpfad = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::projektpfad().'/files/wertungsportal/downloads/raw/';
 		if(!file_exists($this->packpfad)) mkdir($this->packpfad, 0777);
-		$this->archivpfad = substr($_SERVER['DOCUMENT_ROOT'], 0, -3).'files/wertungsportal/downloads/'.date('Y').'/'; // web-Ordner entfernen und Zielordner anhängen
+		$this->archivpfad = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::projektpfad().'/files/wertungsportal/downloads/'.date('Y').'/';
 		if(!file_exists($this->archivpfad)) mkdir($this->archivpfad, 0777);
-		$this->exportpfad = substr($_SERVER['DOCUMENT_ROOT'], 0, -3).'files/wertungsportal/downloads/export/'; // web-Ordner entfernen und Zielordner anhängen
+		$this->exportpfad = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::projektpfad().'/files/wertungsportal/downloads/export/';
 		if(!file_exists($this->exportpfad)) mkdir($this->exportpfad, 0777);
 		$this->suchen = array('Ü', 'Ö', 'Ä', 'ü', 'ö', 'ä', 'ß', 'ú', 'ó', 'á', 'é', 'à', 'ò');
 		$this->ersetzen = array('Ue', 'Oe', 'Ae', 'ue', 'oe', 'ae', 'ss', 'u', 'o', 'a', 'e', 'a', 'o');
@@ -98,7 +96,8 @@ class Wertungsportal_Converter
 		if(!$ergebnis['success'])
 		{
 			echo 'FEHLER: Download fehlgeschlagen ('.$ergebnis['error'].'), Abbruch<br>'."\n";
-			return;
+
+			return 1;
 		}
 
 		if($ergebnis['versuche'] > 1) echo 'OK nach '.$ergebnis['versuche'].' Versuchen<br>'."\n";
@@ -167,7 +166,14 @@ class Wertungsportal_Converter
 		else
 		{
 			echo 'FEHLER: Zip-Archiv konnte nicht entpackt werden<br>'."\n";
+
+			return 1;
 		}
+
+		// Rückgabewert ergänzt beim Herauslösen aus dem alten Skript (wie im
+		// Downloader): 0 heißt durchgelaufen, 1 abgebrochen. Der Konsolenbefehl
+		// braucht ihn, damit ein Cronjob einen Fehlschlag überhaupt bemerkt
+		return 0;
 	}
 
 	public function Packer($verband)
@@ -270,7 +276,7 @@ class Wertungsportal_Converter
 			$this->packpfad.'verbaende.csv',
 			$this->packpfad.'README.txt'
 		);
-		$zip = new ZipArchive;
+		$zip = new \ZipArchive;
 
 		if($verband) 
 		{
@@ -283,7 +289,7 @@ class Wertungsportal_Converter
 			$datei = 'LV-0-csv_'.date('Ymd').'.zip';
 		}
 
-		if($zip->open($ziel,ZipArchive::CREATE))
+		if($zip->open($ziel,\ZipArchive::CREATE))
 		{
 			foreach($files as $file)
 			{
@@ -291,7 +297,7 @@ class Wertungsportal_Converter
 			}
 			$zip->close();
 			// Datei in Dateiverwaltung eintragen
-			$pfad = substr(str_replace(TL_ROOT, '', $csvpfad), 1);
+			$pfad = substr(str_replace(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::projektpfad(), '', $csvpfad), 1);
 			self::writeDbafs($pfad, $datei);
 		}
 
@@ -436,7 +442,7 @@ class Wertungsportal_Converter
 		// Spieler-Array anhand Datenbanktabelle elo modifizieren, Abweichungen bei Name und Geschlecht loggen
 		for($x = 1; $x < count($this->spieler); $x++)
 		{
-			$objPlayer = \Database::getInstance()->prepare("SELECT * FROM tl_wertungsportal_elo WHERE fideid = ?")
+			$objPlayer = \Contao\Database::getInstance()->prepare("SELECT * FROM tl_wertungsportal_elo WHERE fideid = ?")
 			                                     ->execute($this->spieler[$x][13]);
 			$ungleich = array();
 			if($objPlayer->numRows)
@@ -467,7 +473,11 @@ class Wertungsportal_Converter
 		// ==========================
 		// Name vergleichen
 		// ==========================
-		$dsbname = str_replace($this->suchen, $this->ersetzen, utf8_encode($spieler[4]));
+		// mb_convert_encoding statt utf8_encode: Die Funktion ist seit PHP 8.2
+		// abgekündigt und fällt in PHP 9 weg. Der Aufruf hier macht dasselbe —
+		// die Dateien des nu-Servers sind ISO-8859-1/windows-1252-kodiert, der
+		// Vergleichsname aus der Elo-Tabelle ist UTF-8
+		$dsbname = str_replace($this->suchen, $this->ersetzen, mb_convert_encoding($spieler[4], 'UTF-8', 'ISO-8859-1'));
 		$fidename = $objPlayer->surname.','.$objPlayer->prename;
 		// Komma am Ende entfernen
 		if(substr($fidename, -1) == ',') $fidename = substr($fidename, 0, -1);
@@ -527,37 +537,31 @@ class Wertungsportal_Converter
 	 * Generiert den Datensatz in tl_files
 	 * (copied from FormFileUpload.php)
 	 *   
-	 * @param string $strUploadFolder  ohne Prefix TL_ROOT/, ohne Suffix /
+	 * @param string $strUploadFolder  ohne das Wurzelverzeichnis davor und ohne Schrägstrich am Ende
 	 * @param string $filename
 	 */
 	protected function writeDbafs($strUploadFolder, $filename)
 	{
 		// Generate the DB entries
 		$strFile = $strUploadFolder . '/' . $filename;
-		$objFile = \FilesModel::findByPath($strFile);
+		$objFile = \Contao\FilesModel::findByPath($strFile);
 		
 		// Existing file is being replaced (see contao/core#4818)
 		if ($objFile !== null)
 		{
 			$objFile->tstamp = time();
 			$objFile->path   = $strFile;
-			$objFile->hash   = md5_file(TL_ROOT . '/' . $strFile);
+			$objFile->hash   = md5_file(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::projektpfad() . '/' . $strFile);
 			$objFile->save();
 		}
 		else
 		{
-			\Dbafs::addResource($strFile);
+			\Contao\Dbafs::addResource($strFile);
 		}
 		
 		// Update the hash of the target folder
-		\Dbafs::updateFolderHashes($strUploadFolder);
+		\Contao\Dbafs::updateFolderHashes($strUploadFolder);
 		
 	}
 
 }
-
-/**
- * Instantiate controller
- */
-$objSpielerdaten = new Wertungsportal_Converter();
-$objSpielerdaten->run();

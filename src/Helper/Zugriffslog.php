@@ -160,7 +160,7 @@ class Zugriffslog
 
 		try
 		{
-			$container = \System::getContainer();
+			$container = \Contao\System::getContainer();
 			if($container && $container->hasParameter('kernel.project_dir')) $wurzel = (string) $container->getParameter('kernel.project_dir');
 		}
 		catch(\Throwable $e)
@@ -220,7 +220,7 @@ class Zugriffslog
 	{
 		try
 		{
-			$ip = (string) \Environment::get('ip');
+			$ip = (string) \Contao\Environment::get('ip');
 			if($ip !== '') return $ip;
 		}
 		catch(\Throwable $e)

@@ -8,7 +8,7 @@ namespace Schachbulle\ContaoWertungsportalBundle\Classes;
  * Enthält die Listendarstellung, die Zeilen der Zugriffs-Kindtabelle und die
  * globale Operation zum Aufräumen alter Zugriffe.
  */
-class TokenVerwaltung extends \Backend
+class TokenVerwaltung extends \Contao\Backend
 {
 	/**
 	 * Stellt eine Zeile der Schlüsselliste dar.
@@ -26,7 +26,7 @@ class TokenVerwaltung extends \Backend
 
 		$grund = $row['grund'] ? ' ('.$row['grund'].')' : '';
 
-		return '<span style="text-decoration:line-through" title="Gesperrt'.\StringUtil::specialchars($grund).'">'.$label.'</span>';
+		return '<span style="text-decoration:line-through" title="Gesperrt'.\Contao\StringUtil::specialchars($grund).'">'.$label.'</span>';
 	}
 
 	/**
@@ -48,8 +48,8 @@ class TokenVerwaltung extends \Backend
 		if((int) $row['dauer'] > 0) $zusatz[] = $row['dauer'].' ms';
 		$zusatz[] = 'IP '.$row['ip'];
 
-		return '<div class="tl_content_left">'.\Date::parse($format, (int) $row['zeitpunkt']).' Uhr &ndash; '.\StringUtil::specialchars((string) $quelle)
-			.' <span class="wp-meta" style="color:#999">'.\StringUtil::specialchars(implode(', ', $zusatz)).'</span></div>';
+		return '<div class="tl_content_left">'.\Contao\Date::parse($format, (int) $row['zeitpunkt']).' Uhr &ndash; '.\Contao\StringUtil::specialchars((string) $quelle)
+			.' <span class="wp-meta" style="color:#999">'.\Contao\StringUtil::specialchars(implode(', ', $zusatz)).'</span></div>';
 	}
 
 	/**
@@ -60,17 +60,17 @@ class TokenVerwaltung extends \Backend
 	 * nicht mehr — deshalb wird er beim Öffnen der Liste einmal nachgezogen.
 	 * Das ist eine einzige Abfrage und passiert nur im Backend.
 	 *
-	 * @param  \DataContainer $dc
+	 * @param  \Contao\DataContainer $dc
 	 * @return void
 	 */
 	public function zaehlerAktualisieren($dc = null)
 	{
 		// Nur in der Listenansicht, nicht bei jedem Bearbeiten-Aufruf
-		if(\Input::get('act') != '') return;
+		if(\Contao\Input::get('act') != '') return;
 
 		try
 		{
-			\Database::getInstance()->execute("UPDATE tl_wertungsportal_tokens t SET t.zugriffe = (SELECT COUNT(*) FROM tl_wertungsportal_tokens_access a WHERE a.pid = t.id)");
+			\Contao\Database::getInstance()->execute("UPDATE tl_wertungsportal_tokens t SET t.zugriffe = (SELECT COUNT(*) FROM tl_wertungsportal_tokens_access a WHERE a.pid = t.id)");
 		}
 		catch(\Throwable $e)
 		{
@@ -85,19 +85,19 @@ class TokenVerwaltung extends \Backend
 	 * Die Zugriffe enthalten IP-Adressen; sie dauerhaft aufzubewahren wäre
 	 * weder nötig noch zulässig.
 	 *
-	 * @param  \DataContainer $dc
+	 * @param  \Contao\DataContainer $dc
 	 * @return void
 	 */
 	public function aufraeumen($dc = null)
 	{
 		$anzahl = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTokensAccessModel::aufraeumen();
 
-		\Message::addConfirmation(sprintf(
+		\Contao\Message::addConfirmation(sprintf(
 			'%s Zugriffe gelöscht, die älter als %s Tage waren.',
 			$anzahl,
 			\Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTokensAccessModel::AUFBEWAHRUNG
 		));
 
-		$this->redirect(str_replace('&key=aufraeumen', '', \Environment::get('request')));
+		$this->redirect(str_replace('&key=aufraeumen', '', \Contao\Environment::get('request')));
 	}
 }

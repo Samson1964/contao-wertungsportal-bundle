@@ -186,7 +186,7 @@ class Auffaellig
 
 		try
 		{
-			$container = \System::getContainer();
+			$container = \Contao\System::getContainer();
 			if($container && $container->hasParameter('kernel.project_dir')) $wurzel = (string) $container->getParameter('kernel.project_dir');
 		}
 		catch(\Throwable $e)
@@ -225,10 +225,10 @@ class Auffaellig
 
 		try
 		{
-			\System::log(
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog(
 				'Wertungsportal: '.$anzahl.' unmögliche Werte von der Schnittstelle erhalten (negative Zahlen, wo es keine geben kann). Einzelheiten samt Spieler und Turnier in '.basename(self::datei()).' — geeignet als Fehlermeldung an nu.',
 				__METHOD__,
-				\defined('TL_ERROR') ? TL_ERROR : 'ERROR'
+				'ERROR'
 			);
 		}
 		catch(\Throwable $e)

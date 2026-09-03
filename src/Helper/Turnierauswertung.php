@@ -23,7 +23,7 @@ class Turnierauswertung
 	public function __construct($Turnierinfo)
 	{
 		$this->apiTurnierinfo = $Turnierinfo;
-		$this->idTurnier = \Input::get('code'); // Turniercode
+		$this->idTurnier = \Contao\Input::get('code'); // Turniercode
 		
 		$this->compile(); // Weiter mit dieser Funktion
 	}
@@ -87,7 +87,7 @@ class Turnierauswertung
 				if($ratingdiff > 0) $ratingdiff = "+".$ratingdiff;
 
 				// Schlüssel für Sortierung generieren
-				$key = \StringUtil::generateAlias(sprintf('%04d', $t['playerNo']).$t['lastname'].$t['firstname']);
+				$key = \Contao\StringUtil::generateAlias(sprintf('%04d', $t['playerNo']).$t['lastname'].$t['firstname']);
 
 				// FIDE-Daten laden
 				$fide = $t['fideId'] && isset($fideliste[$t['fideId']]) ? $fideliste[$t['fideId']] : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::leererFIDESatz();

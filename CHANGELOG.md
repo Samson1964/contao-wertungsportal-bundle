@@ -1,5 +1,69 @@
 # Wertungsportal Changelog
 
+## Version 1.36.0 (2026-09-02)
+
+**Das Bundle läuft jetzt unter Contao 4.13 UND Contao 5, mit PHP 7.4 bis 8.4.**
+Bisher stand in der `composer.json` `contao/core-bundle: ^4`, und an Dutzenden
+Stellen wurde Code benutzt, den Contao 5 nicht mehr kennt.
+
+> **ACHTUNG beim Deploy: Der Cronjob für die DWZ-Dateien muß umgestellt werden.**
+> Die beiden Skripte `Wertungsportal_Download.php` und
+> `Wertungsportal_Converter.php` sind ersatzlos entfallen; an ihre Stelle treten
+> die Konsolenbefehle `wertungsportal:download` und `wertungsportal:converter`.
+> Bleibt der alte Curl-Aufruf stehen, holt er nur noch eine 404-Seite — und das
+> fällt niemandem auf. Einzelheiten in `docs/dwz-dateien.md`.
+
+* Change: **Die kurzen Klassennamen sind weg** — 290 Stellen in 38 Dateien
+  benutzen jetzt `\Contao\Database`, `\Contao\Input`, `\Contao\System` und so
+  fort. Contao 5 meldet die kurzen Namen (`\Database`, `\Input`) nicht mehr an;
+  jeder Aufruf wäre dort ein schwerer Fehler gewesen
+* Change: `TL_MODE` ist in Contao 5 entfallen. Die sieben Frontend-Module und
+  die `config.php` fragen jetzt `Helper::istBackend()`, das über den
+  ScopeMatcher arbeitet
+* Change: `\System::log()` und `log_message()` gibt es in Contao 5 nicht mehr,
+  ebensowenig die Konstanten `TL_GENERAL`/`TL_ERROR`/`TL_CRON`. An ihre Stelle
+  treten `Helper::systemlog()` (Monolog-Kanal `contao`, schreibt nach `tl_log`)
+  und `Helper::protokoll()` (eigene Datei unter `var/logs`)
+* Change: `TL_ROOT` und `$_SERVER['DOCUMENT_ROOT']` sind durch
+  `Helper::projektpfad()` ersetzt. Der alte Weg schnitt drei Zeichen („web")
+  vom Dokumentenverzeichnis ab — in Contao 5 heißt der Ordner „public", und auf
+  der Kommandozeile gibt es gar keinen DOCUMENT_ROOT
+* Fix: `Controller::generateFrontendUrl()`, die Konstante `FE_USER_LOGGED_IN`
+  und `ContaoFrameworkInterface` sind in Contao 5 gestrichen. Ersetzt durch
+  `PageModel::getFrontendUrl()`, den Token-Prüfer und `ContaoFramework`
+* Fix: `Connection::getSchemaManager()` gibt es in DBAL 4 (Contao 5.7) nicht
+  mehr — die Alias-Migration benutzt jetzt `createSchemaManager()`
+* Fix: Der `_instanceof`-Block in der `services.yml` nannte
+  `ContainerAwareInterface`. Die Schnittstelle ist in Symfony 7 gestrichen, und
+  ein Verweis darauf läßt den Container gar nicht mehr bauen. Der Block war
+  ohnehin wirkungslos: Keine Klasse dieses Bundles setzt eine der beiden
+  Schnittstellen um
+* Fix: `utf8_encode()`/`utf8_decode()` sind seit PHP 8.2 abgekündigt und fallen
+  in PHP 9 weg. `Helper::Turnierkurzname()` kürzt jetzt direkt mit `mb_substr()`
+  — nebenbei richtig für Namen mit Zeichen außerhalb von Latin-1, die der alte
+  Umweg zerstört hätte
+* Fix: **Die Turniersuche „Letzte x Monate" arbeitete mit einer nie gesetzten
+  Variablen** (`$aktzeit`). PHP las sie als `null`, `date()` machte daraus die
+  Jetzt-Zeit und schrieb eine Warnung. Seit PHP 8.1 ist die Übergabe von `null`
+  zusätzlich abgekündigt; in PHP 9 hätte die Suche stillgelegen
+* Fix: `Helper::Punkte()` rechnete `$points * 1`. Bei einem leeren Punktfeld —
+  die Schnittstelle liefert das bei nicht ausgewerteten Turnieren — war das in
+  PHP 7 harmlos, seit PHP 8 wirft es einen TypeError und legt die ganze
+  Turnierausgabe lahm
+* Fix: In `Verband.php` wurde die Zeilenzahl aus den Moduleinstellungen ohne
+  Umwandlung addiert; ein nicht numerischer Wert hätte in PHP 8 einen TypeError
+  geworfen
+* Change: Die Abhängigkeit `codefog/contao-haste` ist gestrichen — sie wurde
+  nirgends benutzt und hätte Contao 5 blockiert. `contao/core-bundle` steht
+  jetzt auf `^4.13 || ^5.0`, MultiColumnWizard auf `^3.6 || ^4.0`; das
+  abgekündigte `doctrine/doctrine-cache-bundle` ist raus
+* Change: Die Einstellung „Cron-Token" ist entfallen. Sie sicherte den
+  öffentlichen Aufruf der beiden Skripte ab, den es nicht mehr gibt
+* Change: Neun alte Kommentarblöcke in `Helper.php` und `API.php` sind auf die
+  Hausform gebracht — einige nannten Parameter, die es gar nicht gibt
+* Add: `docs/dwz-dateien.md` beschreibt die beiden neuen Befehle und die
+  Umstellung des Cronjobs
+
 ## Version 1.35.2 (2026-09-02)
 
 * Change: **Die Föderation kommt jetzt ausschließlich aus `tl_wertungsportal_elo`**,

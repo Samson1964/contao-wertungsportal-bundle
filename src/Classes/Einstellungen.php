@@ -29,7 +29,7 @@ class Einstellungen
 	public function loadDataContainer($strTable)
 	{
 		if('tl_settings' !== $strTable) return;
-		if('wp-settings' !== \Input::get('do')) return;
+		if('wp-settings' !== \Contao\Input::get('do')) return;
 		if(empty($GLOBALS['TL_DCA']['tl_settings']['palettes']['wertungsportal'])) return;
 
 		$GLOBALS['TL_DCA']['tl_settings']['palettes']['default'] = $GLOBALS['TL_DCA']['tl_settings']['palettes']['wertungsportal'];

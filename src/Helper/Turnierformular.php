@@ -51,7 +51,7 @@ class Turnierformular
 
 		// Vorbelegung: Wert der laufenden Suche schlägt das Cookie
 		$zpswahl = $this->gewaehlt('zps');
-		$zpscookie = $zpswahl !== false ? $zpswahl : \Input::cookie('dewis-verband-zps');
+		$zpscookie = $zpswahl !== false ? $zpswahl : \Contao\Input::cookie('dewis-verband-zps');
 
 		// DSB eintragen
 		$opArray = array('<option value="" class="level_0"'.($zpscookie ? '' : ' selected').'><b>0 - Alle Verbände</b></option>');

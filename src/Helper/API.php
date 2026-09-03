@@ -146,8 +146,9 @@ class API
 	}
 
 	/**
-	 * Return the current object instance (Singleton)
-	 * @return BannerCheckHelper
+	 * Liefert die eine Instanz dieser Klasse (Singleton).
+	 *
+	 * @return self
 	 */
 	public static function getInstance()
 	{
@@ -577,7 +578,7 @@ class API
 
 		try
 		{
-			\System::log('Wertungsportal: Kein Zugriff auf die Schnittstelle — '.$meldung, __METHOD__, defined('TL_ERROR') ? TL_ERROR : 'ERROR');
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog('Wertungsportal: Kein Zugriff auf die Schnittstelle — '.$meldung, __METHOD__, 'ERROR');
 		}
 		catch(\Throwable $e)
 		{
@@ -804,7 +805,7 @@ class API
 
 		try
 		{
-			\System::log('Wertungsportal: '.$meldung, __METHOD__, defined('TL_ERROR') ? TL_ERROR : 'ERROR');
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog('Wertungsportal: '.$meldung, __METHOD__, 'ERROR');
 		}
 		catch(\Throwable $x)
 		{
@@ -1075,20 +1076,20 @@ class API
 			{
 
 				case \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseite():
-					if(\Input::get('zps'))
+					if(\Contao\Input::get('zps'))
 					{
-						header('Location:'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseite().'/'.\Input::get('zps').'.html');
+						header('Location:'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseite().'/'.\Contao\Input::get('zps').'.html');
 					}
-					elseif(\Input::get('pkz'))
+					elseif(\Contao\Input::get('pkz'))
 					{
-						header('Location:'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseite().'/'.\Input::get('pkz').'.html');
+						header('Location:'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseite().'/'.\Contao\Input::get('pkz').'.html');
 					}
 					break;
 
 				case \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseite():
-					if(\Input::get('zps'))
+					if(\Contao\Input::get('zps'))
 					{
-						header('Location:'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseite().'/'.\Input::get('zps').'.html');
+						header('Location:'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseite().'/'.\Contao\Input::get('zps').'.html');
 					}
 					break;
 
@@ -1198,7 +1199,7 @@ class API
 		if($fideid)
 		{
 			// FIDE-ID in lokaler Datenbank suchen
-			$objPlayer = \Database::getInstance()->prepare("SELECT * FROM tl_wertungsportal_elo WHERE fideid = ?")
+			$objPlayer = \Contao\Database::getInstance()->prepare("SELECT * FROM tl_wertungsportal_elo WHERE fideid = ?")
 			                                     ->execute($fideid);
 			if($objPlayer->numRows)
 			{
@@ -1548,7 +1549,7 @@ class API
 		{
 			try
 			{
-				$objTurnier = \Database::getInstance()->prepare("SELECT enddate FROM tl_wertungsportal_tournaments WHERE uuid = ?")
+				$objTurnier = \Contao\Database::getInstance()->prepare("SELECT enddate FROM tl_wertungsportal_tournaments WHERE uuid = ?")
 				                                     ->execute($params['turnier']);
 
 				if($objTurnier->numRows && $objTurnier->next()) return (string) $objTurnier->enddate;
@@ -1623,7 +1624,7 @@ class API
 			$cache->eraseAll();
 		}
 
-		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message('Wertungsportal-Cache geleert', 'wertungsportal.log');
+		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll('Wertungsportal-Cache geleert', 'wertungsportal.log');
 	}
 
 	/**

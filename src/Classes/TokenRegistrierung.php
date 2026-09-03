@@ -21,7 +21,7 @@
 
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 
-class TokenRegistrierung extends \Module
+class TokenRegistrierung extends \Contao\Module
 {
 
 	/**
@@ -46,9 +46,9 @@ class TokenRegistrierung extends \Module
 	 */
 	public function generate()
 	{
-		if (TL_MODE == 'BE')
+		if (\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::istBackend())
 		{
-			$objTemplate = new \BackendTemplate('be_wertungsportal');
+			$objTemplate = new \Contao\BackendTemplate('be_wertungsportal');
 
 			$objTemplate->wildcard = '### WERTUNGSPORTAL SCHNITTSTELLEN-REGISTRIERUNG ###';
 			$objTemplate->title = $this->name;
@@ -73,20 +73,20 @@ class TokenRegistrierung extends \Module
 		$formId = 'wp_token_'.$this->id;
 
 		$this->Template->formId = $formId;
-		$this->Template->action = \Environment::get('indexFreeRequest');
+		$this->Template->action = \Contao\Environment::get('indexFreeRequest');
 		$this->Template->adresse = self::schnittstellenUrl();
 		$this->Template->eingaben = array('vkz' => '', 'vorname' => '', 'nachname' => '', 'email' => '');
 		$this->Template->fehler = array();
 		$this->Template->bestaetigung = '';
 
-		if(\Input::post('FORM_SUBMIT') != $formId) return;
+		if(\Contao\Input::post('FORM_SUBMIT') != $formId) return;
 
 		$eingaben = array
 		(
-			'vkz'      => strtoupper(trim((string) \Input::post('vkz'))),
-			'vorname'  => trim((string) \Input::post('vorname')),
-			'nachname' => trim((string) \Input::post('nachname')),
-			'email'    => strtolower(trim((string) \Input::post('email'))),
+			'vkz'      => strtoupper(trim((string) \Contao\Input::post('vkz'))),
+			'vorname'  => trim((string) \Contao\Input::post('vorname')),
+			'nachname' => trim((string) \Contao\Input::post('nachname')),
+			'email'    => strtolower(trim((string) \Contao\Input::post('email'))),
 		);
 
 		$this->Template->eingaben = $eingaben;
@@ -108,7 +108,7 @@ class TokenRegistrierung extends \Module
 		if($neu)
 		{
 			// Herkunft der Anforderung festhalten (Missbrauchserkennung)
-			$objToken->ip = (string) \Environment::get('ip');
+			$objToken->ip = (string) \Contao\Environment::get('ip');
 			$objToken->save();
 		}
 
@@ -126,8 +126,8 @@ class TokenRegistrierung extends \Module
 		}
 
 		$this->Template->bestaetigung = $neu
-			? 'Der Zugangsschlüssel wurde erzeugt und an '.\StringUtil::specialchars($eingaben['email']).' geschickt.'
-			: 'Für diesen Verein und diese E-Mail-Adresse besteht bereits ein Zugangsschlüssel. Er wurde erneut an '.\StringUtil::specialchars($eingaben['email']).' geschickt.';
+			? 'Der Zugangsschlüssel wurde erzeugt und an '.\Contao\StringUtil::specialchars($eingaben['email']).' geschickt.'
+			: 'Für diesen Verein und diese E-Mail-Adresse besteht bereits ein Zugangsschlüssel. Er wurde erneut an '.\Contao\StringUtil::specialchars($eingaben['email']).' geschickt.';
 	}
 
 	/**
@@ -146,7 +146,7 @@ class TokenRegistrierung extends \Module
 
 		// Honigtopf: Ein für Menschen unsichtbares Feld, das nur ausgefüllt
 		// wird, wenn ein Skript blind alle Felder befüllt
-		if(trim((string) \Input::post('wp_homepage')) !== '')
+		if(trim((string) \Contao\Input::post('wp_homepage')) !== '')
 		{
 			return array('Die Anforderung konnte nicht verarbeitet werden.');
 		}
@@ -157,7 +157,7 @@ class TokenRegistrierung extends \Module
 		}
 		elseif(\Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalClubsModel::findByVkz($eingaben['vkz']) === null)
 		{
-			$fehler[] = 'Die Vereinskennziffer '.\StringUtil::specialchars($eingaben['vkz']).' ist unbekannt.';
+			$fehler[] = 'Die Vereinskennziffer '.\Contao\StringUtil::specialchars($eingaben['vkz']).' ist unbekannt.';
 		}
 
 		if($eingaben['vorname'] === '' || $eingaben['nachname'] === '')
@@ -165,7 +165,7 @@ class TokenRegistrierung extends \Module
 			$fehler[] = 'Bitte geben Sie Vor- und Nachnamen an.';
 		}
 
-		if(!\Validator::isEmail($eingaben['email']))
+		if(!\Contao\Validator::isEmail($eingaben['email']))
 		{
 			$fehler[] = 'Bitte geben Sie eine gültige E-Mail-Adresse an.';
 		}
@@ -175,7 +175,7 @@ class TokenRegistrierung extends \Module
 			$seit = time() - 86400;
 
 			if(\Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTokensModel::zaehleRegistrierungen($eingaben['email'], $seit) >= self::ANFORDERUNGEN_JE_TAG
-				|| \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTokensModel::zaehleRegistrierungenIp((string) \Environment::get('ip'), $seit) >= self::ANFORDERUNGEN_JE_TAG)
+				|| \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalTokensModel::zaehleRegistrierungenIp((string) \Contao\Environment::get('ip'), $seit) >= self::ANFORDERUNGEN_JE_TAG)
 			{
 				$fehler[] = 'Es wurden zu viele Schlüssel angefordert. Bitte versuchen Sie es morgen noch einmal.';
 			}
@@ -197,7 +197,7 @@ class TokenRegistrierung extends \Module
 
 		try
 		{
-			$objEmail = new \Email();
+			$objEmail = new \Contao\Email();
 			$objEmail->from = self::absenderadresse();
 			$objEmail->fromName = self::absendername();
 			$objEmail->subject = 'Ihr Zugangsschlüssel für die Vereinslisten-Schnittstelle';
@@ -215,7 +215,7 @@ class TokenRegistrierung extends \Module
 		}
 		catch(\Throwable $e)
 		{
-			\System::log('Zugangsschlüssel konnte nicht verschickt werden: '.$e->getMessage(), __METHOD__, TL_ERROR);
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog('Zugangsschlüssel konnte nicht verschickt werden: '.$e->getMessage(), __METHOD__, 'ERROR');
 
 			return false;
 		}
@@ -237,7 +237,7 @@ class TokenRegistrierung extends \Module
 	{
 		$adresse = trim((string) ($GLOBALS['TL_CONFIG']['wertungsportal_mail_absender'] ?? ''));
 
-		return $adresse !== '' ? $adresse : (string) \Config::get('adminEmail');
+		return $adresse !== '' ? $adresse : (string) \Contao\Config::get('adminEmail');
 	}
 
 	/**
@@ -253,7 +253,7 @@ class TokenRegistrierung extends \Module
 
 		if($name !== '') return $name;
 
-		return (string) \Config::get('websiteTitle') ?: 'Wertungsportal';
+		return (string) \Contao\Config::get('websiteTitle') ?: 'Wertungsportal';
 	}
 
 	/**
@@ -311,7 +311,7 @@ class TokenRegistrierung extends \Module
 
 		try
 		{
-			$objTemplate = new \FrontendTemplate($vorlage);
+			$objTemplate = new \Contao\FrontendTemplate($vorlage);
 
 			foreach($this->mailwerte($objToken, $vereinsname) as $name => $wert)
 			{
@@ -322,7 +322,7 @@ class TokenRegistrierung extends \Module
 		}
 		catch(\Throwable $e)
 		{
-			\System::log('Vorlage der Schlüssel-E-Mail konnte nicht erzeugt werden ('.$vorlage.'): '.$e->getMessage(), __METHOD__, TL_ERROR);
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog('Vorlage der Schlüssel-E-Mail konnte nicht erzeugt werden ('.$vorlage.'): '.$e->getMessage(), __METHOD__, 'ERROR');
 
 			return '';
 		}
@@ -506,7 +506,7 @@ PHPCODE;
 	 */
 	public static function schnittstellenUrl()
 	{
-		return rtrim((string) \Environment::get('base'), '/').'/wertungsportal-api/vereinsliste';
+		return rtrim((string) \Contao\Environment::get('base'), '/').'/wertungsportal-api/vereinsliste';
 	}
 
 }

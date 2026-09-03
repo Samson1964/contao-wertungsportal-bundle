@@ -235,7 +235,7 @@ class Karteikarte
 						// oft nur das Jahr ("Umstufung 2026"), das Stichdatum
 						// steht aber im referenceDate. Fehlt es, bleibt der
 						// Name für sich stehen (keine leere Klammer)
-						'turnier'    => \StringUtil::specialchars((string) ($up['name'] ?? 'DWZ-Umstufung'))
+						'turnier'    => \Contao\StringUtil::specialchars((string) ($up['name'] ?? 'DWZ-Umstufung'))
 						                .(($datum = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::ApiDatum($up['referenceDate'] ?? null, 'Y-m-d', 'd.m.Y', '')) ? ' ('.$datum.')' : ''),
 						'punkte'     => '',
 						'partien'    => '',
@@ -425,7 +425,7 @@ class Karteikarte
 				$geschaetzt = ($serie == 'leistung' && !empty($punkte[$i]['geschaetzt']));
 				$kreis = $geschaetzt ? 'fill="#ffffff" stroke="'.$farbe.'" stroke-width="1.5"' : 'fill="'.$farbe.'"';
 				$nummer = isset($punkte[$i]['nummer']) && $punkte[$i]['nummer'] !== '' ? 'Nr. '.$punkte[$i]['nummer'].': ' : '';
-				$svg .= '<circle cx="'.$xpos($i).'" cy="'.$ypos($punkte[$i][$serie]).'" r="3" '.$kreis.'><title>'.$nummer.\StringUtil::specialchars($punkte[$i]['bezeichnung']).' ('.$punkte[$i]['jahr'].'): '.($serie == 'dwz' ? 'DWZ ' : 'Leistung ').$punkte[$i][$serie].($geschaetzt ? ' (geschätzt)' : '').'</title></circle>';
+				$svg .= '<circle cx="'.$xpos($i).'" cy="'.$ypos($punkte[$i][$serie]).'" r="3" '.$kreis.'><title>'.$nummer.\Contao\StringUtil::specialchars($punkte[$i]['bezeichnung']).' ('.$punkte[$i]['jahr'].'): '.($serie == 'dwz' ? 'DWZ ' : 'Leistung ').$punkte[$i][$serie].($geschaetzt ? ' (geschätzt)' : '').'</title></circle>';
 			}
 		}
 

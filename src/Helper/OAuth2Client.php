@@ -127,7 +127,7 @@ class OAuth2Client
 		$log .= 'clientSecret = '.rawurldecode($this->clientSecret)."\n";
 		$log .= 'tokenEndpoint = '.$this->tokenEndpoint."\n";
 		$log .= 'scope = '.$this->scope;
-		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 	}
 
 	// ─────────────────────────────────────────────
@@ -159,7 +159,7 @@ class OAuth2Client
 
 		try
 		{
-			$container = \System::getContainer();
+			$container = \Contao\System::getContainer();
 			if($container && $container->hasParameter('kernel.project_dir')) $wurzel = (string) $container->getParameter('kernel.project_dir');
 		}
 		catch(\Throwable $e)
@@ -247,7 +247,7 @@ class OAuth2Client
 		{
 			@unlink($this->cacheFile);
 			$log = "🗑️ Token-Cache gelöscht.\n";
-			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 		}
 	}
 
@@ -289,7 +289,7 @@ class OAuth2Client
 	{
 		try
 		{
-			\System::log('Wertungsportal: '.$meldung, __METHOD__, \defined('TL_ERROR') ? TL_ERROR : 'ERROR');
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog('Wertungsportal: '.$meldung, __METHOD__, 'ERROR');
 		}
 		catch(\Throwable $e)
 		{
@@ -363,7 +363,7 @@ class OAuth2Client
 		if($effectiveUrl !== $this->tokenEndpoint)
 		{
 			$log = "ℹ️ Weitergeleitet zu: $effectiveUrl\n";
-			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 		}
 
 		if($curlError)
@@ -437,7 +437,7 @@ class OAuth2Client
 
 		try
 		{
-			$container = \System::getContainer();
+			$container = \Contao\System::getContainer();
 			if($container && $container->hasParameter('kernel.project_dir')) $wurzel = (string) $container->getParameter('kernel.project_dir');
 		}
 		catch(\Throwable $e)
@@ -462,7 +462,7 @@ class OAuth2Client
 	public function fetchNewToken(): array
 	{
 		$log = "🔑 Hole neuen Access Token (client_credentials) ...\n";
-		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 
 		$tokenData = $this->requestToken([
 		    'grant_type'    => 'client_credentials',
@@ -472,7 +472,7 @@ class OAuth2Client
 		]);
 
 		$log = "Neuer Access-Token:\n".print_r($tokenData, true);
-		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 
 		if($tokenData['error'])
 		{
@@ -481,7 +481,7 @@ class OAuth2Client
 
 		$this->saveTokenToCache($tokenData);
 		$log = "✅ Neuer Token erhalten (gültig für {$tokenData['expires_in']} Sekunden).\n";
-		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 		return $tokenData;
 	}
 
@@ -491,7 +491,7 @@ class OAuth2Client
 	public function refreshToken(string $refreshToken): array
 	{
 		$log = "🔄 Erneuere Access Token via Refresh-Token ...\n";
-		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 
 		$tokenData = $this->requestToken([
 			'grant_type'    => 'refresh_token',
@@ -501,7 +501,7 @@ class OAuth2Client
 		]);
 
 		$log = "Neuer Refresh-Token:\n".print_r($tokenData, true);
-		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 
 		if($tokenData['error'])
 		{
@@ -510,7 +510,7 @@ class OAuth2Client
 
 		$this->saveTokenToCache($tokenData);
 		$log = "✅ Token erneuert (gültig für {$tokenData['expires_in']} Sekunden).\n";
-		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 		return $tokenData;
 	}
 
@@ -543,7 +543,7 @@ class OAuth2Client
 			'expires_at'    => time() + $expiresIn,
 		]);
 		$log = "Token gespeichert:\n".print_r($tokenData, true);
-		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 	}
 
 	// ─────────────────────────────────────────────
@@ -564,7 +564,7 @@ class OAuth2Client
 		if($sperre !== null)
 		{
 			$log = "⛔ Tokenabruf ausgesetzt: ".$sperre['error_message']."\n";
-			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 
 			return $sperre;
 		}
@@ -575,9 +575,9 @@ class OAuth2Client
 		if(!empty($cache['access_token']) && isset($cache['expires_at']) && time() < ($cache['expires_at'] - 30))
 		{
 			$log = "ℹ️ Verwende gecachten Access Token.\n";
-			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 			$log = "Gecachter Access-Token:\n".print_r($cache, true);
-			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 			return ['error' => false, 'access_token' => $cache['access_token']];
 		}
 
@@ -634,7 +634,7 @@ class OAuth2Client
 			if(!empty($cache['access_token']) && isset($cache['expires_at']) && time() < ($cache['expires_at'] - 30))
 			{
 				$log = "ℹ️ Ein anderer Vorgang hat inzwischen erneuert.\n";
-				if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+				if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 
 				return ['error' => false, 'access_token' => $cache['access_token']];
 			}
@@ -666,7 +666,7 @@ class OAuth2Client
 			}
 			// Refresh-Token ungültig → Cache leeren und neu starten
 			$log = "⚠️ Refresh fehlgeschlagen ({$tokenData['error_message']}), hole neuen Token ...\n";
-			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 			$this->clearCache();
 		}
 
@@ -835,37 +835,37 @@ class OAuth2Client
 	protected function callApiIntern(string $apiUrl, string $method = 'GET', ?array $body = null): array
 	{
 		$log = 'API-Aufruf: '.$apiUrl."\n";
-		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 
 		// Öffentliche Schnittstellen (alles außer /dwz/persons)
 		// werden ohne Token aufgerufen.
 		if(!$this->requiresToken($apiUrl))
 		{
 			$log = "ℹ️ Öffentlicher Endpunkt (".$apiUrl.") – Aufruf ohne Token.\n";
-			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 			$result = $this->callApi(null, $apiUrl, $method, $body);
 			$log = "Answer REST-API:\n".print_r($result, true);
-			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 			return $result;
 		}
 		else
 		{
 			$log = "ℹ️ Geschützter Endpunkt (".$apiUrl.") – Aufruf mit Token.\n";
-			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 		}
 
 		$tokenResult = $this->getValidToken();
 		if($tokenResult['error'])
 		{
 			$log = "Fehler bei Token-Resultat:\n".print_r($tokenResult, true);
-			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 			return $tokenResult;
 		}
 
-		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message("Request REST-API: ".$apiUrl, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll("Request REST-API: ".$apiUrl, 'wertungsportal_oauth2client.log');
 		$result = $this->callApi($tokenResult['access_token'], $apiUrl, $method, $body);
 		$log = "Answer REST-API:\n".print_r($result, true);
-		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 
 		if($result['error'])
 		{
@@ -876,7 +876,7 @@ class OAuth2Client
 		if($result['http_code'] === 401)
 		{
 			$log = "⚠️ HTTP 401 – Token wird erneuert ...\n";
-			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 
 			// Einmal je Aufruf ins Systemprotokoll, auch ohne Debug-Log: Diese
 			// Erneuerung ist die unauffälligste Art, das Tokenkontingent zu
@@ -918,20 +918,20 @@ class OAuth2Client
 
 			$result = $this->callApi($tokenData['access_token'], $apiUrl, $method, $body);
 			$log = "Answer REST-API:\n".print_r($result, true);
-			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 		}
 
 		if($result['error'])
 		{
 			$log = "❌ Fehler: " . $result['error_message'] . "\n";
-			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 		}
 		else
 		{
 			$log = "📦 API-Antwort (HTTP {$result['http_code']}):\n";
-			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 			$log = json_encode($result['body'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
-			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) log_message($log, 'wertungsportal_oauth2client.log');
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 		}
 
 		return $result;

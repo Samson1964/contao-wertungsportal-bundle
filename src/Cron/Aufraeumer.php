@@ -31,10 +31,10 @@ class Aufraeumer
 
 		try
 		{
-			\System::log(
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog(
 				'Wertungsportal: '.$zeilen.' verwaiste Besucherzähler entfernt ('.$scope.')',
 				__METHOD__,
-				defined('TL_CRON') ? TL_CRON : 'CRON'
+				'CRON'
 			);
 		}
 		catch(\Throwable $e)

@@ -25,7 +25,7 @@ class Turnierergebnisse
 	{
 		$this->apiTurnierinfo = $Turnierinfo;
 		$this->apiErgebnisse = $Ergebnisse;
-		$this->idTurnier = \Input::get('code'); // Turniercode
+		$this->idTurnier = \Contao\Input::get('code'); // Turniercode
 		
 		$this->compile(); // Weiter mit dieser Funktion
 	}
@@ -228,7 +228,7 @@ class Turnierergebnisse
 		}
 
 		$log = print_r($this->daten['Spieler'], true)."\n";
-		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) log_message($log, 'wertungsportal.log');
+		if($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal.log');
 
 	}
 

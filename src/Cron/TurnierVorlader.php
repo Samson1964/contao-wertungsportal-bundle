@@ -353,7 +353,7 @@ class TurnierVorlader
 	{
 		try
 		{
-			$objPersonen = \Database::getInstance()
+			$objPersonen = \Contao\Database::getInstance()
 				->prepare("SELECT nuLigaPersonId FROM tl_wertungsportal_persons WHERE published = '1' AND nuLigaPersonId != '' AND blocked != '1' ORDER BY rating DESC, id");
 			$objPersonen = $objPersonen->execute();
 		}
@@ -475,7 +475,7 @@ class TurnierVorlader
 		{
 			// Ohne Zeitfenster: Vorgeladen wird der GESAMTE örtliche Bestand.
 			// Die Reihenfolge sorgt dafür, daß die lohnenden zuerst drankommen
-			$objTurniere = \Database::getInstance()
+			$objTurniere = \Contao\Database::getInstance()
 				->prepare("SELECT uuid FROM tl_wertungsportal_tournaments WHERE uuid != '' ORDER BY (ratingState = 'RATED') DESC, enddate DESC")
 				->execute();
 		}
@@ -548,7 +548,7 @@ class TurnierVorlader
 
 			try
 			{
-				$objSpieler = \Database::getInstance()
+				$objSpieler = \Contao\Database::getInstance()
 					->prepare("SELECT e.playerUuid FROM tl_wertungsportal_tournaments_evaluation e INNER JOIN tl_wertungsportal_tournaments t ON t.id = e.pid WHERE t.uuid = ? AND e.playerUuid != ''")
 					->execute($uuid);
 			}
@@ -800,10 +800,10 @@ class TurnierVorlader
 
 		try
 		{
-			\System::log(
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog(
 				'Wertungsportal: '.$summe.' Turnierabrufe vorgeladen ('.implode(', ', $teile).', '.round(microtime(true) - $this->start, 1).' s von '.$this->budget.' s, '.$scope.')',
 				__METHOD__,
-				defined('TL_CRON') ? TL_CRON : 'CRON'
+				'CRON'
 			);
 		}
 		catch(\Throwable $e)

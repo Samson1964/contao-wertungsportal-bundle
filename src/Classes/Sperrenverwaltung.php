@@ -8,7 +8,7 @@ namespace Schachbulle\ContaoWertungsportalBundle\Classes;
  * Die Liste zeigt, wer wegen Massenabfragen gebremst wurde. Diese Klasse
  * bereitet die Zeilen auf und räumt alte Einträge weg.
  */
-class Sperrenverwaltung extends \Backend
+class Sperrenverwaltung extends \Contao\Backend
 {
 	/**
 	 * Tage, nach denen ein Eintrag als alt gilt und weggeräumt werden darf.
@@ -36,13 +36,13 @@ class Sperrenverwaltung extends \Backend
 
 		if((int) ($row['memberId'] ?? 0) > 0)
 		{
-			$mitglied = \StringUtil::specialchars((string) $row['memberName']).' <span class="wp-meta">(ID '.(int) $row['memberId'].')</span>';
+			$mitglied = \Contao\StringUtil::specialchars((string) $row['memberName']).' <span class="wp-meta">(ID '.(int) $row['memberId'].')</span>';
 		}
 
 		return array
 		(
-			\Date::parse(\Config::get('datimFormat'), (int) $row['zeitpunkt']),
-			\StringUtil::specialchars((string) $row['ip']),
+			\Contao\Date::parse(\Contao\Config::get('datimFormat'), (int) $row['zeitpunkt']),
+			\Contao\StringUtil::specialchars((string) $row['ip']),
 			$gruende[$row['grund']] ?? $row['grund'],
 			(int) $row['anzahl'].' von '.(int) $row['grenze'],
 			$mitglied,
@@ -62,11 +62,11 @@ class Sperrenverwaltung extends \Backend
 	{
 		$grenze = time() - self::AUFBEWAHRUNG * 86400;
 
-		$objResult = \Database::getInstance()->prepare("DELETE FROM tl_wertungsportal_sperren WHERE zeitpunkt < ?")
+		$objResult = \Contao\Database::getInstance()->prepare("DELETE FROM tl_wertungsportal_sperren WHERE zeitpunkt < ?")
 		                                     ->execute($grenze);
 
-		\Message::addConfirmation($objResult->affectedRows.' Einträge älter als '.self::AUFBEWAHRUNG.' Tage gelöscht.');
+		\Contao\Message::addConfirmation($objResult->affectedRows.' Einträge älter als '.self::AUFBEWAHRUNG.' Tage gelöscht.');
 
-		\Controller::redirect(str_replace('&key=sperrenAufraeumen', '', \Environment::get('request')));
+		\Contao\Controller::redirect(str_replace('&key=sperrenAufraeumen', '', \Contao\Environment::get('request')));
 	}
 }

@@ -226,7 +226,7 @@ class AliasMigration extends AbstractMigration
         // je nach Installation noch mit DBAL 2.13
         $objSchema = method_exists($this->connection, 'createSchemaManager')
             ? $this->connection->createSchemaManager()
-            : $this->connection->getSchemaManager();
+            : $this->connection->createSchemaManager();
 
         if (!$objSchema->tablesExist([$strTabelle])) {
             return false;

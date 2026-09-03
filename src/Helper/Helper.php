@@ -10,7 +10,7 @@
 
 namespace Schachbulle\ContaoWertungsportalBundle\Helper;
 
-class Helper extends \Frontend
+class Helper extends \Contao\Frontend
 {
 	/**
 	 * Current object instance
@@ -294,19 +294,26 @@ class Helper extends \Frontend
 	 */
 	public function __construct()
 	{
-		// Benutzerdaten laden
-		if(FE_USER_LOGGED_IN)
+		// Benutzerdaten laden, wenn im Frontend jemand angemeldet ist.
+		//
+		// Früher stand hier die Konstante FE_USER_LOGGED_IN. Die gibt es in
+		// Contao 5 nicht mehr; der Token-Prüfer beantwortet dieselbe Frage und
+		// ist in 4.13 wie in 5 vorhanden
+		$container = \Contao\System::getContainer();
+
+		if($container !== null && $container->has('contao.security.token_checker') && $container->get('contao.security.token_checker')->hasFrontendUser())
 		{
-			// Frontenduser eingeloggt
-			$this->user = \FrontendUser::getInstance();
+			$this->user = \Contao\FrontendUser::getInstance();
 		}
+
 		parent::__construct();
 	}
 
 
 	/**
-	 * Return the current object instance (Singleton)
-	 * @return BannerCheckHelper
+	 * Liefert die eine Instanz dieser Klasse (Singleton).
+	 *
+	 * @return self
 	 */
 	public static function getInstance()
 	{
@@ -319,14 +326,17 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Liefert den Alias der Spielerseite zurück
-	 * @return         Alias
+	 * Liefert den Alias der Spielerseite zurück, oder — mit $alias = false —
+	 * die erzeugte URL.
+	 *
+	 * @param  bool   $alias true = nur das Alias, false = vollständige URL
+	 * @return string        Leer, wenn die Seite nicht eingestellt ist
 	 */
 	public static function getSpielerseite($alias = true)
 	{
 		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_seite_spieler']))
 		{
-			$pageModel = \PageModel::findByPK($GLOBALS['TL_CONFIG']['wertungsportal_seite_spieler']);
+			$pageModel = \Contao\PageModel::findByPK($GLOBALS['TL_CONFIG']['wertungsportal_seite_spieler']);
 
 			if($pageModel)
 			{
@@ -336,8 +346,10 @@ class Helper extends \Frontend
 				}
 				else
 				{
-					$url = \Controller::generateFrontendUrl($pageModel->row());
-					return $url;
+					// generateFrontendUrl() gibt es in Contao 5 nicht mehr.
+					// PageModel::getFrontendUrl() liefert dasselbe und ist in
+					// 4.13 wie in 5 vorhanden
+					return $pageModel->getFrontendUrl();
 				}
 			}
 		}
@@ -347,14 +359,17 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Liefert den Alias der Turnierseite zurück
-	 * @return         Alias
+	 * Liefert den Alias der Turnierseite zurück, oder — mit $alias = false —
+	 * die erzeugte URL.
+	 *
+	 * @param  bool   $alias true = nur das Alias, false = vollständige URL
+	 * @return string        Leer, wenn die Seite nicht eingestellt ist
 	 */
 	public static function getTurnierseite($alias = true)
 	{
 		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_seite_turnier']))
 		{
-			$pageModel = \PageModel::findByPK($GLOBALS['TL_CONFIG']['wertungsportal_seite_turnier']);
+			$pageModel = \Contao\PageModel::findByPK($GLOBALS['TL_CONFIG']['wertungsportal_seite_turnier']);
 
 			if($pageModel)
 			{
@@ -364,8 +379,10 @@ class Helper extends \Frontend
 				}
 				else
 				{
-					$url = \Controller::generateFrontendUrl($pageModel->row());
-					return $url;
+					// generateFrontendUrl() gibt es in Contao 5 nicht mehr.
+					// PageModel::getFrontendUrl() liefert dasselbe und ist in
+					// 4.13 wie in 5 vorhanden
+					return $pageModel->getFrontendUrl();
 				}
 			}
 		}
@@ -375,14 +392,17 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Liefert den Alias der Vereinseite zurück
-	 * @return         Alias
+	 * Liefert den Alias der Vereinseite zurück, oder — mit $alias = false —
+	 * die erzeugte URL.
+	 *
+	 * @param  bool   $alias true = nur das Alias, false = vollständige URL
+	 * @return string        Leer, wenn die Seite nicht eingestellt ist
 	 */
 	public static function getVereinseite($alias = true)
 	{
 		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_seite_verein']))
 		{
-			$pageModel = \PageModel::findByPK($GLOBALS['TL_CONFIG']['wertungsportal_seite_verein']);
+			$pageModel = \Contao\PageModel::findByPK($GLOBALS['TL_CONFIG']['wertungsportal_seite_verein']);
 
 			if($pageModel)
 			{
@@ -392,8 +412,10 @@ class Helper extends \Frontend
 				}
 				else
 				{
-					$url = \Controller::generateFrontendUrl($pageModel->row());
-					return $url;
+					// generateFrontendUrl() gibt es in Contao 5 nicht mehr.
+					// PageModel::getFrontendUrl() liefert dasselbe und ist in
+					// 4.13 wie in 5 vorhanden
+					return $pageModel->getFrontendUrl();
 				}
 			}
 		}
@@ -403,15 +425,17 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Liefert den Alias der Verbandseite zurück
-	 * @param          alias true = nur das Alias zurückgeben, false = komplette URL zurückgeben
-	 * @return         Alias
+	 * Liefert den Alias der Verbandseite zurück, oder — mit $alias = false —
+	 * die erzeugte URL.
+	 *
+	 * @param  bool   $alias true = nur das Alias, false = vollständige URL
+	 * @return string        Leer, wenn die Seite nicht eingestellt ist
 	 */
 	public static function getVerbandseite($alias = true)
 	{
 		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_seite_verband']))
 		{
-			$pageModel = \PageModel::findByPK($GLOBALS['TL_CONFIG']['wertungsportal_seite_verband']);
+			$pageModel = \Contao\PageModel::findByPK($GLOBALS['TL_CONFIG']['wertungsportal_seite_verband']);
 
 			if($pageModel)
 			{
@@ -421,8 +445,10 @@ class Helper extends \Frontend
 				}
 				else
 				{
-					$url = \Controller::generateFrontendUrl($pageModel->row());
-					return $url;
+					// generateFrontendUrl() gibt es in Contao 5 nicht mehr.
+					// PageModel::getFrontendUrl() liefert dasselbe und ist in
+					// 4.13 wie in 5 vorhanden
+					return $pageModel->getFrontendUrl();
 				}
 			}
 		}
@@ -504,7 +530,7 @@ class Helper extends \Frontend
 
 	public static function getMitglied()
 	{
-		return \FrontendUser::getInstance(); //$this->user;
+		return \Contao\FrontendUser::getInstance(); //$this->user;
 	}
 
 	/**
@@ -641,7 +667,7 @@ class Helper extends \Frontend
 		if($fideid)
 		{
 			// FIDE-ID in lokaler Datenbank suchen
-			$objPlayer = \Database::getInstance()->prepare("SELECT * FROM tl_wertungsportal_elo WHERE fideid = ?")
+			$objPlayer = \Contao\Database::getInstance()->prepare("SELECT * FROM tl_wertungsportal_elo WHERE fideid = ?")
 			                                     ->execute($fideid);
 			if($objPlayer->numRows)
 			{
@@ -673,7 +699,7 @@ class Helper extends \Frontend
 		foreach(array_chunk($fideids, 500) as $chunk)
 		{
 			$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
-			$objPlayer = \Database::getInstance()->prepare("SELECT fideid, country, rating, title, rapid_rating, blitz_rating FROM tl_wertungsportal_elo WHERE fideid IN ($platzhalter)")
+			$objPlayer = \Contao\Database::getInstance()->prepare("SELECT fideid, country, rating, title, rapid_rating, blitz_rating FROM tl_wertungsportal_elo WHERE fideid IN ($platzhalter)")
 			                                     ->execute($chunk);
 			while($objPlayer->next())
 			{
@@ -715,7 +741,7 @@ class Helper extends \Frontend
 		{
 			if(strlen($kand) < 3) continue;
 
-			$objClub = \Database::getInstance()->prepare("SELECT clubName FROM tl_wertungsportal_clubs WHERE clubVkz = ? OR clubVkz = ?")
+			$objClub = \Contao\Database::getInstance()->prepare("SELECT clubName FROM tl_wertungsportal_clubs WHERE clubVkz = ? OR clubVkz = ?")
 			                                   ->limit(1)
 			                                   ->execute($kand, $kand.'00');
 
@@ -753,12 +779,12 @@ class Helper extends \Frontend
 	public static function alleGesperrten()
 	{
 		static $spalteVorhanden = null;
-		if($spalteVorhanden === null) $spalteVorhanden = \Database::getInstance()->fieldExists('blocked', 'tl_wertungsportal_persons');
+		if($spalteVorhanden === null) $spalteVorhanden = \Contao\Database::getInstance()->fieldExists('blocked', 'tl_wertungsportal_persons');
 		if(!$spalteVorhanden) return array();
 
 		$gesperrt = array();
 
-		$objPersonen = \Database::getInstance()->execute("SELECT nuLigaPersonId FROM tl_wertungsportal_persons WHERE blocked = '1' AND nuLigaPersonId != ''");
+		$objPersonen = \Contao\Database::getInstance()->execute("SELECT nuLigaPersonId FROM tl_wertungsportal_persons WHERE blocked = '1' AND nuLigaPersonId != ''");
 
 		while($objPersonen->next())
 		{
@@ -773,7 +799,7 @@ class Helper extends \Frontend
 		// Die Spalte blocked existiert erst nach contao:migrate —
 		// bis dahin gibt es keine Sperren (kein SQL-Fehler im Frontend)
 		static $spalteVorhanden = null;
-		if($spalteVorhanden === null) $spalteVorhanden = \Database::getInstance()->fieldExists('blocked', 'tl_wertungsportal_persons');
+		if($spalteVorhanden === null) $spalteVorhanden = \Contao\Database::getInstance()->fieldExists('blocked', 'tl_wertungsportal_persons');
 		if(!$spalteVorhanden) return array();
 
 		$nuIds = array_values(array_unique(array_filter((array) $nuIds)));
@@ -793,7 +819,7 @@ class Helper extends \Frontend
 			foreach(array_chunk($offen, 500) as $chunk)
 			{
 				$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
-				$objPerson = \Database::getInstance()->prepare("SELECT nuLigaPersonId FROM tl_wertungsportal_persons WHERE blocked = '1' AND nuLigaPersonId IN ($platzhalter)")
+				$objPerson = \Contao\Database::getInstance()->prepare("SELECT nuLigaPersonId FROM tl_wertungsportal_persons WHERE blocked = '1' AND nuLigaPersonId IN ($platzhalter)")
 				                                     ->execute($chunk);
 				while($objPerson->next())
 				{
@@ -830,7 +856,7 @@ class Helper extends \Frontend
 	 */
 	public static function get404($fehler = '')
 	{
-		throw new \CoreBundle\Exception\PageNotFoundException('Page not found: '.\Environment::get('uri'));
+		throw new \Contao\CoreBundle\Exception\PageNotFoundException('Page not found: '.\Contao\Environment::get('uri'));
 	}
 
 	/**
@@ -862,7 +888,7 @@ class Helper extends \Frontend
 		// /vereine/30066.html ausgeliefert, ein relativer Pfad landete dort im
 		// Unterverzeichnis. Dass die Contao-Layouts ein <base> mitgeben, ist
 		// kein Verlass — es lässt sich abschalten
-		return rtrim((string) \Environment::get('path'), '/').'/bundles/contaowertungsportal/images/'.$datei;
+		return rtrim((string) \Contao\Environment::get('path'), '/').'/bundles/contaowertungsportal/images/'.$datei;
 	}
 
 	/**
@@ -883,7 +909,7 @@ class Helper extends \Frontend
 
 		if(empty($wert)) return null;
 
-		$groesse = \StringUtil::deserialize($wert);
+		$groesse = \Contao\StringUtil::deserialize($wert);
 
 		return is_array($groesse) ? $groesse : null;
 	}
@@ -894,13 +920,14 @@ class Helper extends \Frontend
 	// Bundle aufgerufen.
 
 	/**
-	 * Gibt den Status der Karteikartensperre für eine DeWIS-ID zurück
-	 * @param id	ID in DeWIS
-	 * @return		Karteikarte gesperrt true/false
+	 * Gibt den Status der Karteikartensperre einer Person zurück.
+	 *
+	 * @param  int|string $id Kennziffer der Person
+	 * @return bool           true, wenn die Karteikarte gesperrt ist
 	 */
 	public static function Karteisperre($id)
 	{
-		$objCheckUser = \Database::getInstance()->prepare('SELECT dewisCard FROM tl_member WHERE id=?')
+		$objCheckUser = \Contao\Database::getInstance()->prepare('SELECT dewisCard FROM tl_member WHERE id=?')
 		                                        ->execute($id);
 		return $objCheckUser->dewisCard;
 	}
@@ -930,6 +957,163 @@ class Helper extends \Frontend
 		if($vkz === 'L0001' || $vkz === 'M0001') return true;
 
 		return substr($vkz, -2) === '00';
+	}
+
+	/**
+	 * Schreibt eine Zeile ins Systemprotokoll (tl_log).
+	 *
+	 * Ersetzt `\System::log()`, das es in Contao 5 nicht mehr gibt, und die
+	 * Konstanten TL_GENERAL/TL_ERROR, die mit ihm verschwunden sind. Geschrieben
+	 * wird über den Monolog-Kanal `contao`; den gibt es in 4.13 und in 5
+	 * gleichermaßen.
+	 *
+	 * Ein klemmendes Protokoll darf nie den Aufrufer zu Fall bringen — deshalb
+	 * fängt die Methode alles ab und schweigt im Zweifel.
+	 *
+	 * **Fallstrick, hier abgefangen:** `ContaoContext` wirft eine Ausnahme,
+	 * wenn der Methodenname leer ist („The function name in the Contao context
+	 * must not be empty"). Zusammen mit dem try/catch unten hieße das: Die
+	 * Zeile verschwindet stillschweigend. Ein leerer Name wird deshalb durch
+	 * den Bundle-Namen ersetzt, statt den Eintrag zu verlieren.
+	 *
+	 * @param string $text    Meldung
+	 * @param string $methode Herkunft, üblicherweise __METHOD__
+	 * @param string $art     'GENERAL', 'ERROR', 'CRON' … (Konstanten von
+	 *                        ContaoContext); unbekannte Werte werden zu GENERAL
+	 */
+	public static function systemlog($text, $methode = '', $art = 'GENERAL')
+	{
+		try
+		{
+			$container = \Contao\System::getContainer();
+			if($container === null || !$container->has('monolog.logger.contao')) return;
+
+			$methode = trim((string) $methode);
+			if($methode === '') $methode = 'Wertungsportal';
+
+			$kontext = new \Contao\CoreBundle\Monolog\ContaoContext($methode, (string) $art);
+			$logger = $container->get('monolog.logger.contao');
+
+			// ERROR bekommt auch in Monolog die höhere Stufe, damit die Zeile
+			// in einer nach Schweregrad gefilterten Ansicht auftaucht
+			if($art === \Contao\CoreBundle\Monolog\ContaoContext::ERROR) $logger->error((string) $text, array('contao' => $kontext));
+			else $logger->info((string) $text, array('contao' => $kontext));
+		}
+		catch(\Throwable $e)
+		{
+			// Ein klemmendes Protokoll darf keinen Vorgang verhindern
+		}
+	}
+
+	/**
+	 * Hängt eine Zeile an eine eigene Protokolldatei unter `var/logs` an.
+	 *
+	 * Ersetzt `self::protokoll()`, das es in Contao 5 nicht mehr gibt. Absichtlich
+	 * kein Umweg über das Systemprotokoll: Die Meldungen der Schnittstelle sind
+	 * Fließtext für die Fehlersuche und würden in tl_log zwischen hunderten
+	 * Cron-Zeilen untergehen.
+	 *
+	 * @param string $text  Meldung; Zeilenumbrüche bleiben erhalten
+	 * @param string $datei Dateiname unterhalb von `var/logs`
+	 */
+	public static function protokoll($text, $datei)
+	{
+		try
+		{
+			$verzeichnis = self::logverzeichnis();
+			if($verzeichnis === '') return;
+
+			$datei = basename((string) $datei);
+			if($datei === '') return;
+
+			@file_put_contents($verzeichnis.'/'.$datei, '['.date('d.m.Y H:i:s').'] '.$text."\n", FILE_APPEND | LOCK_EX);
+		}
+		catch(\Throwable $e)
+		{
+			// Ein klemmendes Protokoll darf keinen Vorgang verhindern
+		}
+	}
+
+	/**
+	 * Liefert das Wurzelverzeichnis der Contao-Installation.
+	 *
+	 * Ersetzt `TL_ROOT` und `$_SERVER['DOCUMENT_ROOT']`. Die Konstante gibt es
+	 * in Contao 5 nicht mehr, und der DOCUMENT_ROOT steht auf der Kommandozeile
+	 * gar nicht zur Verfügung — beides zusammen machte die alten
+	 * Download-Skripte unbrauchbar.
+	 *
+	 * `TL_ROOT` bleibt als zweiter Weg stehen: Der Aufruf ist mit `defined()`
+	 * abgesichert und hilft in 4.13, wenn der Container noch nicht steht.
+	 *
+	 * @return string Vollständiger Pfad ohne Schrägstrich am Ende,
+	 *                '' wenn er sich nicht ermitteln läßt
+	 */
+	public static function projektpfad()
+	{
+		try
+		{
+			$container = \Contao\System::getContainer();
+
+			if($container && $container->hasParameter('kernel.project_dir'))
+			{
+				return rtrim((string) $container->getParameter('kernel.project_dir'), '/\\');
+			}
+		}
+		catch(\Throwable $e)
+		{
+			// Kein Container: unten weiter
+		}
+
+		if(\defined('TL_ROOT')) return rtrim((string) TL_ROOT, '/\\');
+
+		return '';
+	}
+
+	/**
+	 * Liefert das beschreibbare Protokollverzeichnis der Installation.
+	 *
+	 * @return string Vollständiger Pfad ohne Schrägstrich am Ende,
+	 *                '' wenn kein Verzeichnis nutzbar ist
+	 */
+	public static function logverzeichnis()
+	{
+		$wurzel = self::projektpfad();
+		if($wurzel === '') return '';
+
+		$verzeichnis = $wurzel.'/var/logs';
+
+		if(!is_dir($verzeichnis) && !@mkdir($verzeichnis, 0775, true)) return '';
+		if(!is_writable($verzeichnis)) return '';
+
+		return $verzeichnis;
+	}
+
+	/**
+	 * Prüft, ob die laufende Anfrage zum Backend gehört.
+	 *
+	 * Ersetzt die Konstante `TL_MODE`, die es in Contao 5 nicht mehr gibt. Der
+	 * Weg über den ScopeMatcher kostet deutlich mehr Zeilen als das frühere
+	 * `TL_MODE == 'BE'`, deshalb steht er hier einmal für das ganze Bundle:
+	 * die sieben Frontend-Module brauchen ihn für ihren Backend-Platzhalter,
+	 * die config.php für das Backend-Stilblatt.
+	 *
+	 * @return bool true bei einer Backend-Anfrage. Ohne Container oder ohne
+	 *              laufende Anfrage — auf der Kommandozeile, im Prüfstand —
+	 *              gilt die Anfrage als NICHT im Backend: Dort wird weder ein
+	 *              Platzhalter noch ein Stilblatt gebraucht
+	 */
+	public static function istBackend()
+	{
+		$container = \Contao\System::getContainer();
+
+		if($container === null || !$container->has('request_stack') || !$container->has('contao.routing.scope_matcher'))
+		{
+			return false;
+		}
+
+		$request = $container->get('request_stack')->getCurrentRequest();
+
+		return $request !== null && $container->get('contao.routing.scope_matcher')->isBackendRequest($request);
 	}
 
 	/**
@@ -1015,9 +1199,11 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Gibt die Navigation zurück
-	 * @param 		-
-	 * @return		Array mit den Links
+	 * Baut die vier Menüpunkte des Wertungsportals (Spieler, Vereine,
+	 * Verbände, Turniere) als fertige Listeneinträge.
+	 *
+	 * @return array Vier HTML-Zeilen; Einträge ohne eingestellte Seite
+	 *               zeigen auf einen leeren Verweis
 	 */
 	public static function Navigation()
 	{
@@ -1069,9 +1255,11 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Prüft ob ein Jahr ein Schaltjahr ist und gibt entsprechend die Monatslängen zurück
-	 * @param 		-
-	 * @return		Array mit Anzahl Tage je Monat
+	 * Liefert die Länge jedes Monats eines Jahres — im Schaltjahr mit 29
+	 * Tagen im Februar.
+	 *
+	 * @param  int|string $jahr Jahreszahl, vierstellig
+	 * @return array            Zwölf Werte, beginnend mit dem Januar
 	 */
 	public static function Monatstage($jahr)
 	{
@@ -1171,9 +1359,14 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Ersetzt in einem numerischen Array 0-Werte durch einen Mittelwert der Nachbarwerte
-	 * @param 		Array
-	 * @return		Array
+	 * Ersetzt Nullwerte in einem Zahlenarray durch den Mittelwert der
+	 * benachbarten Werte.
+	 *
+	 * Gebraucht wird das für das DWZ-Diagramm der Karteikarte: Turniere ohne
+	 * gemeldete Leistung hinterlassen dort sonst Löcher in der Kurve.
+	 *
+	 * @param  array $array Zahlenwerte in ihrer zeitlichen Reihenfolge
+	 * @return array         Dieselben Werte, Nullen durch Schätzungen ersetzt
 	 */
 	public static function Mittelwerte($array)
 	{
@@ -1239,13 +1432,25 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Korrigiert die Anzeige der Punkte
-	 * @param       String      $points
-	 * @return      String
+	 * Korrigiert die Anzeige der Punkte: aus „6.0" wird „6", aus „6.5" „6½".
+	 *
+	 * Die Multiplikation mit 1 schneidet die überflüssige Null ab. In PHP 7 war
+	 * sie auch bei einem leeren oder nicht numerischen Wert harmlos (Warnung,
+	 * Ergebnis 0); seit PHP 8 wirft sie dort einen TypeError und brächte damit
+	 * die ganze Turnierausgabe zu Fall. Die Schnittstelle liefert bei nicht
+	 * ausgewerteten Turnieren durchaus leere Punktfelder — deshalb der Riegel
+	 * davor.
+	 *
+	 * @param  mixed $points Punktzahl, üblicherweise als Zeichenkette
+	 * @return string        Anzeigefertige Punktzahl; ein nicht numerischer
+	 *                       Wert kommt unverändert zurück
 	 */
 	public static function Punkte($points)
 	{
-		return ($points == 0.5) ? '½' : str_replace('.5', '½', $points * 1);
+		if($points === null || $points === '') return '';
+		if(!is_numeric($points)) return (string) $points;
+
+		return ($points == 0.5) ? '½' : str_replace('.5', '½', (string) ($points * 1));
 	}
 
 	/**
@@ -1262,9 +1467,11 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Gibt den Erwartungswert in der Form x.xxx zurück
-	 * @param       String      $points
-	 * @return      String
+	 * Gibt den Erwartungswert in der Form x,xxx zurück.
+	 *
+	 * @param  float|false $we Erwartungswert, false wenn keiner vorliegt
+	 * @return string          Zahl mit drei Nachkommastellen und Komma,
+	 *                         leer bei false
 	 */
 	public static function Erwartungswert($we)
 	{
@@ -1273,9 +1480,14 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Gibt von einem Spieler die DWZ plus Index für die Anzeige zurück
-	 * @param       Array      $spieler
-	 * @return      String
+	 * Gibt DWZ und Wertungsindex in der Anzeigeform „1834 -42" zurück.
+	 *
+	 * Die geschützten Leerzeichen halten die Spalten in der Tabelle bündig;
+	 * ein normales Leerzeichen würde beim Umbruch verlorengehen.
+	 *
+	 * @param  int|string $rating      Wertungszahl
+	 * @param  int|string $ratingIndex Wertungsindex
+	 * @return string                  Leer, wenn beide Werte 0 sind
 	 */
 	public static function DWZ($rating, $ratingIndex)
 	{
@@ -1283,30 +1495,34 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Hilfsfunktion:
-	 * Kürzt den Turniernamen auf 60 Zeichen
+	 * Kürzt den Turniernamen auf 60 Zeichen und hängt „ [...]" an.
 	 *
-	 * @return string
+	 * Früher lief die Kürzung über einen Umweg: Der Name wurde nach
+	 * ISO-8859-1 gewandelt, byteweise abgeschnitten und wieder nach UTF-8
+	 * zurückgewandelt — nur damit `substr()` nicht mitten in einem Umlaut
+	 * schneidet. Die dafür benutzten Funktionen `utf8_decode()`/`utf8_encode()`
+	 * sind seit PHP 8.2 abgekündigt und fallen in PHP 9 weg. `mb_substr()`
+	 * schneidet von sich aus nach ZEICHEN und braucht den Umweg nicht; für
+	 * Namen mit Zeichen außerhalb von Latin-1 (etwa polnische oder tschechische
+	 * Turniernamen) ist das Ergebnis obendrein richtig statt zerstört.
+	 *
+	 * @param  string $value Turniername
+	 * @return string        Höchstens 60 Zeichen, bei Kürzung mit „ [...]"
 	 */
 	public static function Turnierkurzname($value)
 	{
-		if(mb_detect_encoding($value,'UTF-8, ISO-8859-1') === 'UTF-8')
-		{
-			# Der Turniername ist in UTF-8 kodiert und muß vor der Kürzung umgewandelt werden
-			$value = utf8_decode($value);
-		}
+		$value = (string) $value;
 
-		// Gekürzten Turniernamen generieren und wieder in UTF-8 umwandeln
-		$neu = (strlen($value) > 60) ? substr($value,0,60).' [...]' : $value;
-		return utf8_encode($neu);
-
+		return (mb_strlen($value) > 60) ? mb_substr($value, 0, 60).' [...]' : $value;
 	}
 
 	/**
-	 * Liefert zu einem Spieler dessen Mitgliedsstatus
-	 * @param $person      Array mit den Spielerdaten
-	 * @param $vkz         Gewünschte VKZ, falls leer wird die 1. Mitgliedschaft zurückgegeben
-	 * @return             String: P oder leer (für A)
+	 * Liefert zu einem Spieler dessen Mitgliedsstatus.
+	 *
+	 * @param  array        $person Spielerdaten mit `memberships`
+	 * @param  string|false $vkz    Gewünschte Vereinskennziffer; ohne Angabe
+	 *                              zählt die erste Mitgliedschaft
+	 * @return string               'P' bei passiver Mitgliedschaft, sonst leer
 	 */
 	public static function getMitgliedsstatus($person, $vkz = false)
 	{
@@ -1323,10 +1539,12 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Liefert zu einem Spieler dessen Mitgliedsnummer
-	 * @param $person      Array mit den Spielerdaten
-	 * @param $vkz         Gewünschte VKZ, falls leer wird die 1. Mitgliedschaft zurückgegeben
-	 * @return             String: P oder leer (für A)
+	 * Liefert zu einem Spieler dessen Mitgliedsnummer im Verein.
+	 *
+	 * @param  array        $person Spielerdaten mit `memberships`
+	 * @param  string|false $vkz    Gewünschte Vereinskennziffer; ohne Angabe
+	 *                              zählt die erste Mitgliedschaft
+	 * @return string               Mitgliedsnummer, leer wenn keine vorliegt
 	 */
 	public static function getMitgliedsnummer($person, $vkz = false)
 	{
@@ -1358,12 +1576,14 @@ class Helper extends \Frontend
 	}
 
 	/**
-	 * Schreibt Werte aus einem Array vom Array in ein neues Array
-	 * @param 		Array
-	 * 				Beispiel:
-	 *				array(array('item'=>1,'val'=>2),array('item'=>3,'val'=>6))
-	 * @param		String ($extract = 'item' oder 'val')
-	 * @return		Array
+	 * Zieht aus einem Array von Arrays eine einzelne Spalte heraus.
+	 *
+	 * Beispiel: `array(array('item'=>1,'val'=>2), array('item'=>3,'val'=>6))`
+	 * ergibt mit $extract = 'val' das Array `array(2, 6)`.
+	 *
+	 * @param  array  $array   Array von Arrays
+	 * @param  string $extract Name des gesuchten Schlüssels
+	 * @return array           Die Werte dieses Schlüssels in ihrer Reihenfolge
 	 */
 	public static function ArrayExtract($array, $extract)
 	{
@@ -1419,14 +1639,14 @@ class Helper extends \Frontend
 			if($notstand !== false)
 			{
 				$quellen[] = ($notstand > 0)
-					? 'zwischengespeicherte Daten vom '.\Date::parse($format, (int) $notstand).' Uhr'
+					? 'zwischengespeicherte Daten vom '.\Contao\Date::parse($format, (int) $notstand).' Uhr'
 					: 'zwischengespeicherte Daten';
 			}
 
 			if($lokalstand !== false)
 			{
 				$quellen[] = ($lokalstand > 0)
-					? 'Daten aus dem örtlichen Datenbestand (letzte Aktualisierung am '.\Date::parse($format, (int) $lokalstand).' Uhr)'
+					? 'Daten aus dem örtlichen Datenbestand (letzte Aktualisierung am '.\Contao\Date::parse($format, (int) $lokalstand).' Uhr)'
 					: 'Daten aus dem örtlichen Datenbestand';
 			}
 
@@ -1466,8 +1686,8 @@ class Helper extends \Frontend
 		// Der Stand ist die wichtigere Angabe: Bei einer Cachezeit von einer
 		// Woche sagt der Erneuerungszeitpunkt wenig darüber, wie alt das ist,
 		// was gerade auf dem Bildschirm steht
-		if($stand > 0) $teile[] = '<b>Stand: '.\Date::parse($format, $stand).'</b>';
-		if($ablauf > 0) $teile[] = '(Nächstes Update: '.\Date::parse($format, $ablauf).')';
+		if($stand > 0) $teile[] = '<b>Stand: '.\Contao\Date::parse($format, $stand).'</b>';
+		if($ablauf > 0) $teile[] = '(Nächstes Update: '.\Contao\Date::parse($format, $ablauf).')';
 
 		return implode(' ', $teile);
 	}
@@ -1557,7 +1777,7 @@ class Helper extends \Frontend
 		$name = trim((string) $name);
 		if($name === '') return '';
 
-		$slug = \System::getContainer()->get('contao.slug');
+		$slug = \Contao\System::getContainer()->get('contao.slug');
 		$teile = array();
 
 		foreach(preg_split('/\s+/', $name) as $teil)
@@ -1601,7 +1821,7 @@ class Helper extends \Frontend
 		if($text === '') return '';
 
 		$optionen = array('validChars' => 'a-z0-9', 'locale' => 'de', 'delimiter' => '-');
-		$container = \System::getContainer();
+		$container = \Contao\System::getContainer();
 
 		if($container->has('contao.slug.generator'))
 		{
@@ -1690,7 +1910,7 @@ class Helper extends \Frontend
 		// Sortiert wird nach den Aliasfeldern, damit der zusammengesetzte Index
 		// (published, lastnameAlias, firstnameAlias) auch die Sortierung
 		// abdeckt und MySQL das Ergebnis nicht nachträglich sortieren muss
-		$objPersonen = \Database::getInstance()->prepare("SELECT p.id, p.nuLigaPersonId, p.firstname, p.lastname, p.rating, p.`index`, p.fideId, p.weekOfLastTournamentEvaluation FROM tl_wertungsportal_persons p WHERE ".implode(' AND ', $bedingungen)." ORDER BY p.lastnameAlias, p.firstnameAlias LIMIT ".((int) $limit * 2))
+		$objPersonen = \Contao\Database::getInstance()->prepare("SELECT p.id, p.nuLigaPersonId, p.firstname, p.lastname, p.rating, p.`index`, p.fideId, p.weekOfLastTournamentEvaluation FROM tl_wertungsportal_persons p WHERE ".implode(' AND ', $bedingungen)." ORDER BY p.lastnameAlias, p.firstnameAlias LIMIT ".((int) $limit * 2))
 		                                       ->execute(...$werte);
 
 		if(!$objPersonen->numRows) return false;
@@ -1724,7 +1944,7 @@ class Helper extends \Frontend
 		// in der Mitgliedschafts-Sortierung nach JJJJMMTT umgestellt
 		$laufend = "(m.spielgenehmigungBis = '' OR CONCAT(SUBSTRING(m.spielgenehmigungBis, 7, 4), SUBSTRING(m.spielgenehmigungBis, 4, 2), SUBSTRING(m.spielgenehmigungBis, 1, 2)) >= ?)";
 
-		$objMitgliedschaften = \Database::getInstance()->prepare("SELECT m.pid, m.vkz, m.clubName, m.licenceState FROM tl_wertungsportal_persons_memberships m WHERE m.pid IN (".implode(',', array_map('intval', array_keys($personen))).") AND m.published = 1 AND ".$laufend." ORDER BY m.licenceState")
+		$objMitgliedschaften = \Contao\Database::getInstance()->prepare("SELECT m.pid, m.vkz, m.clubName, m.licenceState FROM tl_wertungsportal_persons_memberships m WHERE m.pid IN (".implode(',', array_map('intval', array_keys($personen))).") AND m.published = 1 AND ".$laufend." ORDER BY m.licenceState")
 		                                               ->execute(date('Ymd'));
 		while($objMitgliedschaften->next())
 		{
@@ -1819,7 +2039,7 @@ class Helper extends \Frontend
 			$werte[] = addcslashes($zps, '%_\\').'%';
 		}
 
-		$objTurniere = \Database::getInstance()->prepare("SELECT t.uuid, t.label, t.vkz, t.enddate, t.playerCount, t.referentFirstname, t.referentLastname FROM tl_wertungsportal_tournaments t WHERE ".implode(' AND ', $bedingungen)." ORDER BY t.enddate DESC LIMIT ".(int) $limit)
+		$objTurniere = \Contao\Database::getInstance()->prepare("SELECT t.uuid, t.label, t.vkz, t.enddate, t.playerCount, t.referentFirstname, t.referentLastname FROM tl_wertungsportal_tournaments t WHERE ".implode(' AND ', $bedingungen)." ORDER BY t.enddate DESC LIMIT ".(int) $limit)
 		                                       ->execute(...$werte);
 
 		if(!$objTurniere->numRows) return false;

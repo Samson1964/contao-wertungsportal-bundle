@@ -45,6 +45,24 @@ services:
         tags:
             - { name: console.command }
 
+    # Lädt die DWZ-Listen aller Landesverbände: wertungsportal:download.
+    # Ersetzt das frühere Skript Wertungsportal_Download.php, das der Hoster
+    # per Curl über eine URL aufgerufen hat — dieser Weg über
+    # system/initialize.php gibt es in Contao 5 nicht mehr
+    Schachbulle\ContaoWertungsportalBundle\Command\DownloadCommand:
+        arguments:
+            - '@contao.framework'
+        tags:
+            - { name: console.command }
+
+    # Erzeugt die CSV-Archive der Landesverbände: wertungsportal:converter.
+    # Ersetzt das frühere Skript Wertungsportal_Converter.php (siehe oben)
+    Schachbulle\ContaoWertungsportalBundle\Command\ConverterCommand:
+        arguments:
+            - '@contao.framework'
+        tags:
+            - { name: console.command }
+
     # Füllt die Suchalias-Felder des Bestands beim contao:migrate.
     # Ausdrücklich registriert, weil dieses Bundle ohne Autoconfigure arbeitet
     Schachbulle\ContaoWertungsportalBundle\Migration\AliasMigration:
@@ -53,11 +71,12 @@ services:
         tags:
             - { name: contao.migration }
 
-    _instanceof:
-        Contao\CoreBundle\Framework\FrameworkAwareInterface:
-            calls:
-                - ["setFramework", ["@contao.framework"]]
-
-        Symfony\Component\DependencyInjection\ContainerAwareInterface:
-            calls:
-                - ["setContainer", ["@service_container"]]
+    # Hier stand ein _instanceof-Block, der FrameworkAwareInterface und
+    # ContainerAwareInterface bedient hat. Er ist ersatzlos entfallen:
+    #
+    # 1. Keine Klasse dieses Bundles hat je eine der beiden Schnittstellen
+    #    umgesetzt — der Block war von Anfang an wirkungslos.
+    # 2. ContainerAwareInterface gibt es in Symfony 7 nicht mehr, und Contao
+    #    5.7 baut darauf auf. Ein Verweis darauf laesst den Container gar
+    #    nicht mehr bauen: Das Backend antwortet dann mit einem Fehler, ohne
+    #    dass irgendetwas auf dieses Bundle zeigt.

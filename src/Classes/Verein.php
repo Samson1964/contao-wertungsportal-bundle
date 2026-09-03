@@ -22,7 +22,7 @@
 
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 
-class Verein extends \Module
+class Verein extends \Contao\Module
 {
 
 	/**
@@ -38,9 +38,9 @@ class Verein extends \Module
 	 */
 	public function generate()
 	{
-		if (TL_MODE == 'BE')
+		if (\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::istBackend())
 		{
-			$objTemplate = new \BackendTemplate('be_wertungsportal');
+			$objTemplate = new \Contao\BackendTemplate('be_wertungsportal');
 
 			$objTemplate->wildcard = '### WERTUNGSPORTAL VEREIN ###';
 			$objTemplate->title = $this->name;
@@ -51,9 +51,9 @@ class Verein extends \Module
 		else
 		{
 			// FE-Modus: URL mit allen möglichen Parametern auflösen
-			\Input::setGet('zps', \Input::get('zps')); // ZPS-Nummer des Vereins
-			\Input::setGet('search', \Input::get('search')); // Suchbegriff
-			\Input::setGet('order', \Input::get('order')); // Sortierung
+			\Contao\Input::setGet('zps', \Contao\Input::get('zps')); // ZPS-Nummer des Vereins
+			\Contao\Input::setGet('search', \Contao\Input::get('search')); // Suchbegriff
+			\Contao\Input::setGet('order', \Contao\Input::get('order')); // Sortierung
 		}
 
 		return parent::generate(); // Weitermachen mit dem Modul
@@ -67,11 +67,11 @@ class Verein extends \Module
 		global $objPage;
 
 		// Vereinsliste angefordert?
-		$zps = \Input::get('zps');
+		$zps = \Contao\Input::get('zps');
 		// Vereinssuche aktiv?
-		$search = \Input::get('search');
+		$search = \Contao\Input::get('search');
 		// Sortierung festlegen
-		$order = \Input::get('order');
+		$order = \Contao\Input::get('order');
 		$order = ($order == 'alpha') ? 'alpha' : 'rang';
 
 		$this->Template->hl = 'h1'; // Standard-Überschriftgröße
@@ -128,7 +128,7 @@ class Verein extends \Module
 			}
 
 			// Templates füllen
-			$this->Subtemplate = new \FrontendTemplate($this->subTemplate);
+			$this->Subtemplate = new \Contao\FrontendTemplate($this->subTemplate);
 			$this->Subtemplate->daten_vb = $suche->Verbaende;
 			$this->Subtemplate->anzahl_vb = count($suche->Verbaende);
 			$this->Subtemplate->daten_vn = $suche->Vereine;
@@ -163,7 +163,7 @@ class Verein extends \Module
 				$name = $vereine->Name !== '' ? $vereine->Name : 'Verband '.$zps;
 				$titel = 'Vereine im Verband '.$name;
 
-				$this->Subtemplate = new \FrontendTemplate($this->subTemplate);
+				$this->Subtemplate = new \Contao\FrontendTemplate($this->subTemplate);
 				$this->Subtemplate->daten_vb = $vereine->Verbaende;
 				$this->Subtemplate->anzahl_vb = count($vereine->Verbaende);
 				$this->Subtemplate->daten_vn = $vereine->Vereine;
@@ -213,12 +213,12 @@ class Verein extends \Module
 			if($objClub && $objClub->addImage && $objClub->singleSRC !== null)
 			{
 				// Vereinslogo aus dem Backend-Modul Vereine
-				$objFile = \FilesModel::findByPk($objClub->singleSRC);
+				$objFile = \Contao\FilesModel::findByPk($objClub->singleSRC);
 			}
 			elseif(!empty($GLOBALS['TL_CONFIG']['wertungsportal_clubDefaultImage']))
 			{
 				// In den Einstellungen hinterlegtes Standardlogo
-				$objFile = \FilesModel::findByUuid($GLOBALS['TL_CONFIG']['wertungsportal_clubDefaultImage']);
+				$objFile = \Contao\FilesModel::findByUuid($GLOBALS['TL_CONFIG']['wertungsportal_clubDefaultImage']);
 			}
 
 			// Fall-Abfrage eingebaut, weil trotz vorhandenem Bild $objFile = NULL ist
@@ -226,7 +226,7 @@ class Verein extends \Module
 			{
 				$this->Template->addImage = true;
 				// Bild für das Template erstellen (Methode ab Contao 4.10 möglich)
-				$figureBuilder = \System::getContainer()->get('contao.image.studio')->createFigureBuilder();
+				$figureBuilder = \Contao\System::getContainer()->get('contao.image.studio')->createFigureBuilder();
 				$figure = $figureBuilder->fromPath($objFile->path)
 				                        ->setSize(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::bildgroesse('wertungsportal_clubImageSize'))
 				                        ->enableLightbox(true)
@@ -283,7 +283,7 @@ class Verein extends \Module
 			$this->Template->referent = ''; // Wertungsreferent zuweisen
 
 			// Untertemplate initialisieren und füllen
-			$this->Subtemplate = new \FrontendTemplate($this->subTemplate);
+			$this->Subtemplate = new \Contao\FrontendTemplate($this->subTemplate);
 			$this->Subtemplate->daten = $vereinsliste->Daten;
 			$this->Subtemplate->anzahl = $vereinsliste->Anzahl;
 			$this->Template->searchresult = $this->Subtemplate->parse();

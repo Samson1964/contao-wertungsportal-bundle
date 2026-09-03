@@ -21,7 +21,7 @@
 
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 
-class Cacheverwaltung extends \BackendModule
+class Cacheverwaltung extends \Contao\BackendModule
 {
 	/**
 	 * Template
@@ -43,9 +43,9 @@ class Cacheverwaltung extends \BackendModule
 	{
 		$arten = \Schachbulle\ContaoWertungsportalBundle\Helper\Cachesuche::ARTEN;
 
-		$art = (string) \Input::post('art');
-		$wert = trim((string) \Input::post('wert'));
-		$aktion = (string) \Input::post('aktion');
+		$art = (string) \Contao\Input::post('art');
+		$wert = trim((string) \Contao\Input::post('wert'));
+		$aktion = (string) \Contao\Input::post('aktion');
 
 		if(!isset($arten[$art])) $art = 'turnier';
 
@@ -58,7 +58,7 @@ class Cacheverwaltung extends \BackendModule
 		$this->Template->fehler = '';
 		$this->Template->hinweise = self::hinweise();
 
-		if(\Input::post('FORM_SUBMIT') != 'wp_cache') return;
+		if(\Contao\Input::post('FORM_SUBMIT') != 'wp_cache') return;
 
 		if($wert === '')
 		{
@@ -76,7 +76,7 @@ class Cacheverwaltung extends \BackendModule
 
 			$anzahl = count(array_filter(array_column($eintraege, 'geloescht')));
 
-			\System::log('Wertungsportal: '.$anzahl.' Cache-Einträge zu '.$arten[$art].' „'.$wert.'" gelöscht', __METHOD__, defined('TL_GENERAL') ? TL_GENERAL : 'GENERAL');
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog('Wertungsportal: '.$anzahl.' Cache-Einträge zu '.$arten[$art].' „'.$wert.'" gelöscht', __METHOD__, 'GENERAL');
 		}
 		else
 		{
@@ -84,12 +84,12 @@ class Cacheverwaltung extends \BackendModule
 		}
 
 		// Für die Anzeige aufbereiten, damit das Template nichts rechnen muss
-		$format = \Config::get('datimFormat');
+		$format = \Contao\Config::get('datimFormat');
 		$jetzt = time();
 
 		foreach($eintraege as $i => $eintrag)
 		{
-			$eintraege[$i]['gespeichertText'] = $eintrag['gespeichert'] ? \Date::parse($format, $eintrag['gespeichert']) : '–';
+			$eintraege[$i]['gespeichertText'] = $eintrag['gespeichert'] ? \Contao\Date::parse($format, $eintrag['gespeichert']) : '–';
 			$eintraege[$i]['groesseText'] = self::groesse($eintrag['groesse']);
 
 			if($eintrag['ablauf'] < 1)
@@ -101,7 +101,7 @@ class Cacheverwaltung extends \BackendModule
 			else
 			{
 				// ablauf ist bereits der Zeitpunkt des Verfalls, keine Dauer
-				$eintraege[$i]['ablaufText'] = \Date::parse($format, $eintrag['ablauf']);
+				$eintraege[$i]['ablaufText'] = \Contao\Date::parse($format, $eintrag['ablauf']);
 				$eintraege[$i]['abgelaufen'] = ($eintrag['ablauf'] < $jetzt);
 			}
 		}

@@ -55,7 +55,7 @@ class Vereinsliste
 
 				// Schlüssel für Sortierung generieren
 				$z++;
-				$key = ($this->sortierung == 'alpha') ? \StringUtil::generateAlias($mitglied['lastname'].$mitglied['firstname'].$z) : sprintf('%05d-%04d-%s-%03d', 10000 - $mitglied['rating'], 1000 - $mitglied['index'], 'Z', $z);
+				$key = ($this->sortierung == 'alpha') ? \Contao\StringUtil::generateAlias($mitglied['lastname'].$mitglied['firstname'].$z) : sprintf('%05d-%04d-%s-%03d', 10000 - $mitglied['rating'], 1000 - $mitglied['index'], 'Z', $z);
 
 				// Daten zuweisen
 				$liste[$key] = array

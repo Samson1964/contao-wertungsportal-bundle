@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Schachbulle\ContaoWertungsportalBundle\Controller;
 
-use Contao\CoreBundle\Framework\ContaoFrameworkInterface;
+use Contao\CoreBundle\Framework\ContaoFramework;
 use Schachbulle\ContaoWertungsportalBundle\Helper\VereinslisteApi;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -22,7 +22,7 @@ use Symfony\Component\HttpFoundation\Request;
 class VereinslisteController
 {
     /**
-     * @var ContaoFrameworkInterface
+     * @var ContaoFramework
      */
     private $framework;
 
@@ -31,7 +31,7 @@ class VereinslisteController
      * Klasse: So läßt sich der Controller ohne halbe Contao-Installation
      * prüfen, und der Dienst „contao.framework" paßt weiterhin.
      */
-    public function __construct(ContaoFrameworkInterface $framework)
+    public function __construct(ContaoFramework $framework)
     {
         $this->framework = $framework;
     }

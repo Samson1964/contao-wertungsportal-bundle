@@ -39,7 +39,6 @@ $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_tokenURL'] = array('Token-Adr
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_clientID'] = array('Client-ID', 'Client-Identifikationsnummer');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_clientSecret'] = array('Client Secret', 'Geheimes Passwort');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_scopeListe'] = array('Scope (Bereiche)', 'Bereiche eintragen, für die Zugriff gegeben werden soll.');
-$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_crontoken'] = array('Cron-Token', 'Geheimer Schlüssel für die Download-Skripte (Aufruf mit ?key=SCHLÜSSEL). Ohne Eintrag sind die Skripte gesperrt.');
 
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_api_aus'] = array('Live-Abruf abschalten', 'Es wird keine Verbindung zur Schnittstelle mehr aufgebaut; ausgeliefert wird nur noch, was im Zwischenspeicher liegt — auch wenn dessen Gültigkeit abgelaufen ist. Die Ausgaben weisen darauf hin. Für Wartungsfenster und Störungen bei nu.');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_api_timeout'] = array('Wartezeit der Schnittstelle', 'Nach dieser Zeit ohne Antwort wird der Abruf abgebrochen und auf den Zwischenspeicher zurückgegriffen. Ohne Auswahl gilt 30 Sekunden.');

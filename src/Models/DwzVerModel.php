@@ -8,7 +8,7 @@ use Contao\Model;
  * 
  * @property string $hash
  */
-class DwzVerModel extends \Model
+class DwzVerModel extends \Contao\Model
 {
 	protected static $strTable = 'tl_dwz_ver';
 	

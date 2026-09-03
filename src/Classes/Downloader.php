@@ -1,30 +1,25 @@
 <?php
 
-/**
- * Contao Open Source CMS, Copyright (C) 2005-2020 Leo Feyer
- */
-
-use Contao\Controller;
+namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 
 /**
- * Initialize the system
+ * Laedt die zwanzig Landesverbands-Zips der DWZ-Liste vom nu-Server und legt
+ * sie datiert unter `files/wertungsportal/downloads/` ab.
+ *
+ * **Herkunft:** Bis 1.35.2 war das ein eigenstaendiges Skript unter
+ * `src/Resources/public/Wertungsportal_Download.php`, das der Hoster per Curl
+ * ueber eine URL aufgerufen hat. Es band `system/initialize.php` ein — den Weg
+ * gibt es in Contao 5 nicht mehr. Der Klassenrumpf ist unveraendert
+ * uebernommen; angestossen wird er jetzt ueber `wertungsportal:download`.
+ *
+ * Der frueher noetige Token-Schutz (`?key=`) entfaellt ersatzlos: Ein
+ * Konsolenbefehl ist von aussen nicht erreichbar.
+ *
+ * Die Ausgabe geht weiterhin per `echo` heraus; der Konsolenbefehl faengt sie
+ * ab und reicht sie zeilenweise durch, damit der Fortschritt waehrend des
+ * Laufs sichtbar bleibt.
  */
-define('TL_MODE', 'FE');
-define('TL_SCRIPT', 'bundles/contaowertungsportal/Wertungsportal_Download.php');
-require($_SERVER['DOCUMENT_ROOT'].'/../system/initialize.php');
-
-// Token-Schutz: Aufruf nur mit gültigem Schlüssel erlauben (?key=SCHLÜSSEL).
-// Der Schlüssel wird in den Contao-Einstellungen gepflegt (wertungsportal_crontoken);
-// ohne konfigurierten Schlüssel ist das Skript gesperrt.
-$strCrontoken = (string) ($GLOBALS['TL_CONFIG']['wertungsportal_crontoken'] ?? '');
-
-if($strCrontoken === '' || !hash_equals($strCrontoken, (string) \Contao\Input::get('key')))
-{
-	http_response_code(403);
-	die('Zugriff verweigert');
-}
-
-class Wertungsportal_Download
+class Downloader
 {
 	public function run()
 	{
@@ -55,7 +50,7 @@ class Wertungsportal_Download
 		
 		$url = 'https://schachde-apps.liga.nu/dsbwertungsportal/rs/dwz/dwzliste/download/';
 		$datum = date('Ymd');
-		$zielpfad = substr($_SERVER['DOCUMENT_ROOT'], 0, -3).'files/wertungsportal/downloads/'; // web-Ordner entfernen und Zielordner anhängen
+		$zielpfad = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::projektpfad().'/files/wertungsportal/downloads/';
 		$fehlschlaege = 0;
 
 		foreach($links as $link)
@@ -88,12 +83,11 @@ class Wertungsportal_Download
 		{
 			echo 'Fertig';
 		}
+
+		// Rueckgabe ergaenzt beim Herausloesen aus dem alten Skript: Der
+		// Konsolenbefehl braucht sie fuer seinen Rueckgabewert, damit ein
+		// Cronjob einen Fehlschlag ueberhaupt bemerken kann
+		return $fehlschlaege;
 	}
 
 }
-
-/**
- * Instantiate controller
- */
-$objSpielerdaten = new Wertungsportal_Download();
-$objSpielerdaten->run();

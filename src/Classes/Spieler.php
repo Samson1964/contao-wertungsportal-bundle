@@ -22,7 +22,7 @@
 
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 
-class Spieler extends \Module
+class Spieler extends \Contao\Module
 {
 
 	/**
@@ -38,9 +38,9 @@ class Spieler extends \Module
 	 */
 	public function generate()
 	{
-		if (TL_MODE == 'BE')
+		if (\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::istBackend())
 		{
-			$objTemplate = new \BackendTemplate('be_wertungsportal');
+			$objTemplate = new \Contao\BackendTemplate('be_wertungsportal');
 
 			$objTemplate->wildcard = '### WERTUNGSPORTAL SPIELER ###';
 			$objTemplate->title = $this->name;
@@ -51,8 +51,8 @@ class Spieler extends \Module
 		else
 		{
 			// FE-Modus: URL mit allen möglichen Parametern auflösen
-			\Input::setGet('id', \Input::get('id')); // ID
-			\Input::setGet('search', \Input::get('search')); // Suchbegriff
+			\Contao\Input::setGet('id', \Contao\Input::get('id')); // ID
+			\Contao\Input::setGet('search', \Contao\Input::get('search')); // Suchbegriff
 		}
 
 		return parent::generate(); // Weitermachen mit dem Modul
@@ -65,8 +65,8 @@ class Spieler extends \Module
 	{
 		global $objPage;
 
-		$id = \Input::get('id'); // Spielerkartei angefordert?
-		$search = \Input::get('search'); // Spielersuche aktiv?
+		$id = \Contao\Input::get('id'); // Spielerkartei angefordert?
+		$search = \Contao\Input::get('search'); // Spielersuche aktiv?
 
 		// Template vorbelegen
 		$this->Template->hl = 'h1'; // Standard-Überschriftgröße
@@ -213,13 +213,13 @@ class Spieler extends \Module
 				if($objPerson && $objPerson->addImage && $objPerson->singleSRC !== null)
 				{
 					// Spielerbild aus dem Backend-Modul Personen
-					$objFile = \FilesModel::findByPk($objPerson->singleSRC);
+					$objFile = \Contao\FilesModel::findByPk($objPerson->singleSRC);
 				}
 
 				if(!$objFile && !empty($GLOBALS['TL_CONFIG']['wertungsportal_playerDefaultImage']))
 				{
 					// In den Einstellungen hinterlegtes Standardbild
-					$objFile = \FilesModel::findByUuid($GLOBALS['TL_CONFIG']['wertungsportal_playerDefaultImage']);
+					$objFile = \Contao\FilesModel::findByUuid($GLOBALS['TL_CONFIG']['wertungsportal_playerDefaultImage']);
 				}
 
 				// Fall-Abfrage eingebaut, weil trotz vorhandenem Bild $objFile = NULL sein kann
@@ -227,7 +227,7 @@ class Spieler extends \Module
 				{
 					$this->Template->addImage = true;
 					// Bild für das Template erstellen (Methode ab Contao 4.10 möglich)
-					$figureBuilder = \System::getContainer()->get('contao.image.studio')->createFigureBuilder();
+					$figureBuilder = \Contao\System::getContainer()->get('contao.image.studio')->createFigureBuilder();
 					$figure = $figureBuilder->fromPath($objFile->path)
 					                        ->setSize(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::bildgroesse('wertungsportal_playerImageSize'))
 					                        ->enableLightbox(true)
@@ -269,7 +269,7 @@ class Spieler extends \Module
 		}
 
 		// Untertemplate initialisieren und füllen
-		$this->Subtemplate = new \FrontendTemplate($this->subTemplate);
+		$this->Subtemplate = new \Contao\FrontendTemplate($this->subTemplate);
 		$this->Subtemplate->daten = isset($daten) ? $daten : false;
 		$this->Subtemplate->anzahl = isset($daten) ? count($daten) : 0;
 		$this->Subtemplate->lokal = isset($lokaleSuche) ? $lokaleSuche : false;

@@ -26,7 +26,7 @@
 
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 
-class Statistik extends \BackendModule
+class Statistik extends \Contao\BackendModule
 {
 	/**
 	 * Template
@@ -67,14 +67,14 @@ class Statistik extends \BackendModule
 
 	protected function compile()
 	{
-		$funktion = (string) \Input::get('funktion');
+		$funktion = (string) \Contao\Input::get('funktion');
 
-		$zeitraum = (int) \Input::get('zeitraum');
+		$zeitraum = (int) \Contao\Input::get('zeitraum');
 		if(!array_key_exists($zeitraum, self::zeitraeume())) $zeitraum = 90;
 
 		// Ende des Zeitraums: frei verschiebbar, aber nie in der Zukunft
 		$heute = date('Y-m-d');
-		$ende = (string) \Input::get('ende');
+		$ende = (string) \Contao\Input::get('ende');
 
 		if(!preg_match('/^\d{4}-\d{2}-\d{2}$/', $ende) || $ende > $heute) $ende = $heute;
 
@@ -82,7 +82,7 @@ class Statistik extends \BackendModule
 		$von = date('Y-m-d', strtotime($bis.' -'.($zeitraum - 1).' days'));
 
 		// Raster: ohne ausdrückliche Wahl passend zur Länge des Zeitraums
-		$raster = \Input::get('raster');
+		$raster = \Contao\Input::get('raster');
 
 		if(!in_array($raster, array('tag', 'woche', 'monat'), true))
 		{
@@ -205,7 +205,7 @@ class Statistik extends \BackendModule
 		 * keine URLs zusammensetzen muss)
 		*/
 
-		$basisUrl = \Backend::addToUrl('', true, array('raster', 'zeitraum', 'funktion', 'ende'));
+		$basisUrl = \Contao\Backend::addToUrl('', true, array('raster', 'zeitraum', 'funktion', 'ende'));
 
 		// Ein Schritt entspricht der Länge des gewählten Zeitraums
 		$zurueck = date('Y-m-d', strtotime($bis.' -'.$zeitraum.' days'));
@@ -277,8 +277,8 @@ class Statistik extends \BackendModule
 		$this->Template->zeitraeume = self::zeitraeume();
 		$this->Template->funktion = $funktion;
 		$this->Template->endpunkt = $funktion !== '' ? $endpunkte[$funktion] : '';
-		$this->Template->von = \Date::parse(\Config::get('dateFormat'), strtotime($von));
-		$this->Template->bis = \Date::parse(\Config::get('dateFormat'), strtotime($bis));
+		$this->Template->von = \Contao\Date::parse(\Contao\Config::get('dateFormat'), strtotime($von));
+		$this->Template->bis = \Contao\Date::parse(\Contao\Config::get('dateFormat'), strtotime($bis));
 		$this->Template->ende = $bis;
 		$this->Template->erster = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalStatsModel::ersterTag();
 		$this->Template->hatDaten = ($gesamt['gesamt'] > 0);
@@ -309,8 +309,8 @@ class Statistik extends \BackendModule
 
 		// Adresse des Schlüssel-Moduls. Über den Router statt von Hand, weil
 		// der Backend-Pfad je nach Installation abweichen kann
-		$backend = \System::getContainer()->get('router')->generate('contao_backend');
-		$format = \Config::get('datimFormat');
+		$backend = \Contao\System::getContainer()->get('router')->generate('contao_backend');
+		$format = \Contao\Config::get('datimFormat');
 
 		$gesamt = array('anzahl' => 0, 'erfolge' => 0);
 
@@ -319,7 +319,7 @@ class Statistik extends \BackendModule
 			$gesamt['anzahl'] += $zeile['anzahl'];
 			$gesamt['erfolge'] += $zeile['erfolge'];
 
-			$zeilen[$i]['letzterText'] = $zeile['letzter'] ? \Date::parse($format, $zeile['letzter']) : '';
+			$zeilen[$i]['letzterText'] = $zeile['letzter'] ? \Contao\Date::parse($format, $zeile['letzter']) : '';
 
 			// Der Schlüssel gehört nicht vollständig auf den Bildschirm —
 			// die ersten Zeichen genügen, um ihn wiederzuerkennen. Zu einem
@@ -341,7 +341,7 @@ class Statistik extends \BackendModule
 
 		foreach($abweisungen as $i => $eintrag)
 		{
-			$abweisungen[$i]['letzterText'] = $eintrag['letzter'] ? \Date::parse($format, $eintrag['letzter']) : '';
+			$abweisungen[$i]['letzterText'] = $eintrag['letzter'] ? \Contao\Date::parse($format, $eintrag['letzter']) : '';
 
 			$texte = array();
 			foreach($eintrag['gruende'] as $grund) $texte[] = $gruende[$grund] ?? $grund;

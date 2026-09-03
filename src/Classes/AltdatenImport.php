@@ -25,7 +25,7 @@
 
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 
-class AltdatenImport extends \Backend
+class AltdatenImport extends \Contao\Backend
 {
 	/**
 	 * Globale Operation unter Vereine (key=importDwzVer):
@@ -57,7 +57,7 @@ class AltdatenImport extends \Backend
 
 		// Quelldatensätze mit übernehmbaren Inhalten laden (VKZ => Datensatz)
 		$arrQuelle = array();
-		$objQuelle = \Database::getInstance()->execute("SELECT zpsver, name, status, altname, homepage, info, addImage, singleSRC FROM tl_dwz_ver WHERE altname != '' OR homepage != '' OR (info IS NOT NULL AND info != '') OR (addImage = '1' AND singleSRC IS NOT NULL)");
+		$objQuelle = \Contao\Database::getInstance()->execute("SELECT zpsver, name, status, altname, homepage, info, addImage, singleSRC FROM tl_dwz_ver WHERE altname != '' OR homepage != '' OR (info IS NOT NULL AND info != '') OR (addImage = '1' AND singleSRC IS NOT NULL)");
 
 		while($objQuelle->next())
 		{
@@ -69,7 +69,7 @@ class AltdatenImport extends \Backend
 		foreach(array_chunk(array_keys($arrQuelle), 500) as $chunk)
 		{
 			$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
-			$objZiel = \Database::getInstance()->prepare("SELECT id, clubVkz, altname, homepage, info, addImage FROM tl_wertungsportal_clubs WHERE clubVkz IN ($platzhalter)")
+			$objZiel = \Contao\Database::getInstance()->prepare("SELECT id, clubVkz, altname, homepage, info, addImage FROM tl_wertungsportal_clubs WHERE clubVkz IN ($platzhalter)")
 			                                   ->execute($chunk);
 			while($objZiel->next())
 			{
@@ -101,7 +101,7 @@ class AltdatenImport extends \Backend
 					$set['singleSRC'] = $alt['singleSRC'];
 				}
 
-				\Database::getInstance()->prepare("INSERT INTO tl_wertungsportal_clubs %s")
+				\Contao\Database::getInstance()->prepare("INSERT INTO tl_wertungsportal_clubs %s")
 				                        ->set($set)
 				                        ->execute();
 				$angelegt++;
@@ -124,7 +124,7 @@ class AltdatenImport extends \Backend
 			if($set)
 			{
 				$set['tstamp'] = time();
-				\Database::getInstance()->prepare("UPDATE tl_wertungsportal_clubs %s WHERE id=?")
+				\Contao\Database::getInstance()->prepare("UPDATE tl_wertungsportal_clubs %s WHERE id=?")
 				                        ->set($set)
 				                        ->execute($ziel['id']);
 				$aktualisiert++;
@@ -185,7 +185,7 @@ class AltdatenImport extends \Backend
 
 		// Quellspieler mit Bild laden (dewisID => Datensatz)
 		$arrQuelle = array();
-		$objQuelle = \Database::getInstance()->execute("SELECT dewisID, vorname, nachname, geburtstag, fideID, addImage, singleSRC FROM tl_dwz_spi WHERE addImage = '1' AND singleSRC IS NOT NULL AND dewisID > 0");
+		$objQuelle = \Contao\Database::getInstance()->execute("SELECT dewisID, vorname, nachname, geburtstag, fideID, addImage, singleSRC FROM tl_dwz_spi WHERE addImage = '1' AND singleSRC IS NOT NULL AND dewisID > 0");
 
 		while($objQuelle->next())
 		{
@@ -197,7 +197,7 @@ class AltdatenImport extends \Backend
 		foreach(array_chunk(array_keys($arrQuelle), 500) as $chunk)
 		{
 			$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
-			$objZiel = \Database::getInstance()->prepare("SELECT id, externeNr, addImage FROM tl_wertungsportal_persons WHERE externeNr IN ($platzhalter)")
+			$objZiel = \Contao\Database::getInstance()->prepare("SELECT id, externeNr, addImage FROM tl_wertungsportal_persons WHERE externeNr IN ($platzhalter)")
 			                                   ->execute($chunk);
 			while($objZiel->next())
 			{
@@ -218,7 +218,7 @@ class AltdatenImport extends \Backend
 		foreach(array_chunk(array_values(array_unique($arrFideIds)), 500) as $chunk)
 		{
 			$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
-			$objZiel = \Database::getInstance()->prepare("SELECT id, fideId, addImage FROM tl_wertungsportal_persons WHERE fideId > 0 AND fideId IN ($platzhalter)")
+			$objZiel = \Contao\Database::getInstance()->prepare("SELECT id, fideId, addImage FROM tl_wertungsportal_persons WHERE fideId > 0 AND fideId IN ($platzhalter)")
 			                                   ->execute($chunk);
 			while($objZiel->next())
 			{
@@ -253,7 +253,7 @@ class AltdatenImport extends \Backend
 		foreach(array_chunk(array_keys($arrRestNachnamen), 500) as $chunk)
 		{
 			$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
-			$objZiel = \Database::getInstance()->prepare("SELECT id, lastname, firstname, birthyear, addImage FROM tl_wertungsportal_persons WHERE lastname IN ($platzhalter)")
+			$objZiel = \Contao\Database::getInstance()->prepare("SELECT id, lastname, firstname, birthyear, addImage FROM tl_wertungsportal_persons WHERE lastname IN ($platzhalter)")
 			                                   ->execute($chunk);
 			while($objZiel->next())
 			{
@@ -296,7 +296,7 @@ class AltdatenImport extends \Backend
 		// Nicht zugeordnete Spieler ins Contao-System-Log schreiben
 		if(count($nichtZugeordnet))
 		{
-			\System::log('Spielerbild-Übernahme: '.count($nichtZugeordnet).' Spieler aus tl_dwz_spi keiner Person zugeordnet (kein Treffer über externe Nummer, FIDE-ID oder Name): '.implode('; ', $nichtZugeordnet), __METHOD__, TL_GENERAL);
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog('Spielerbild-Übernahme: '.count($nichtZugeordnet).' Spieler aus tl_dwz_spi keiner Person zugeordnet (kein Treffer über externe Nummer, FIDE-ID oder Name): '.implode('; ', $nichtZugeordnet), __METHOD__, 'GENERAL');
 		}
 
 		$zeilen = array
@@ -349,7 +349,7 @@ class AltdatenImport extends \Backend
 		// Aufräumen im System-Log vermerken (Nachvollziehbarkeit)
 		if($ergebnis['entfernt'] > 0)
 		{
-			\System::log('Wertungsportal: '.$ergebnis['entfernt'].' doppelte Mitgliedschaften entfernt', __METHOD__, TL_GENERAL);
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog('Wertungsportal: '.$ergebnis['entfernt'].' doppelte Mitgliedschaften entfernt', __METHOD__, 'GENERAL');
 		}
 
 		return $this->ergebnis('Doppelte Mitgliedschaften bereinigen', $zeilen, 'entdoppeln');
@@ -372,7 +372,7 @@ class AltdatenImport extends \Backend
 			return;
 		}
 
-		\Database::getInstance()->prepare("UPDATE tl_wertungsportal_persons %s WHERE id=?")
+		\Contao\Database::getInstance()->prepare("UPDATE tl_wertungsportal_persons %s WHERE id=?")
 		                        ->set(array('addImage' => '1', 'singleSRC' => $singleSRC, 'tstamp' => time()))
 		                        ->execute($ziel['id']);
 		$zaehlerNeu++;
@@ -448,7 +448,7 @@ class AltdatenImport extends \Backend
 	{
 		try
 		{
-			return \Database::getInstance()->tableExists($tabelle);
+			return \Contao\Database::getInstance()->tableExists($tabelle);
 		}
 		catch(\Throwable $e)
 		{
@@ -458,10 +458,10 @@ class AltdatenImport extends \Backend
 
 	protected function ergebnis($headline, $zeilen, $key)
 	{
-		$objTemplate = new \BackendTemplate('be_wp_altdaten');
+		$objTemplate = new \Contao\BackendTemplate('be_wp_altdaten');
 		$objTemplate->headline = $headline;
 		$objTemplate->zeilen = $zeilen;
-		$objTemplate->zurueck = str_replace('&key='.$key, '', \Environment::get('request'));
+		$objTemplate->zurueck = str_replace('&key='.$key, '', \Contao\Environment::get('request'));
 
 		return $objTemplate->parse();
 	}

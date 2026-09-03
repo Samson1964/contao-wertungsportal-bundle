@@ -27,7 +27,7 @@
 
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 
-class VereineImport extends \Backend
+class VereineImport extends \Contao\Backend
 {
 	/**
 	 * Pflichtspalten der CSV-Datei (Zuordnung erfolgt über die Kopfzeile)
@@ -48,13 +48,13 @@ class VereineImport extends \Backend
 	public function run($dc)
 	{
 		// AJAX-Aktionen beantworten (werfen eine ResponseException)
-		$aktion = \Input::post('wpVereineAktion');
+		$aktion = \Contao\Input::post('wpVereineAktion');
 		if($aktion == 'upload') $this->ajaxUpload();
 		if($aktion == 'import') $this->ajaxImport();
 
 		// Importseite rendern
-		$objTemplate = new \BackendTemplate('be_wp_vereineimport');
-		$objTemplate->zurueck = str_replace('&key=importClubs', '', \Environment::get('request'));
+		$objTemplate = new \Contao\BackendTemplate('be_wp_vereineimport');
+		$objTemplate->zurueck = str_replace('&key=importClubs', '', \Contao\Environment::get('request'));
 		$objTemplate->pflichtspalten = implode(', ', self::PFLICHTSPALTEN);
 
 		return $objTemplate->parse();
@@ -65,7 +65,7 @@ class VereineImport extends \Backend
 	 */
 	protected function tempDatei()
 	{
-		return TL_ROOT . '/system/tmp/wp-vereineimport-' . \BackendUser::getInstance()->id . '.csv';
+		return \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::projektpfad() . '/system/tmp/wp-vereineimport-' . \Contao\BackendUser::getInstance()->id . '.csv';
 	}
 
 	/**
@@ -73,7 +73,7 @@ class VereineImport extends \Backend
 	 */
 	protected function ajaxUpload()
 	{
-		$offset = (int) \Input::post('offset');
+		$offset = (int) \Contao\Input::post('offset');
 		$ziel = $this->tempDatei();
 
 		if(!isset($_FILES['chunk']) || $_FILES['chunk']['error'] !== UPLOAD_ERR_OK)
@@ -106,11 +106,11 @@ class VereineImport extends \Backend
 	 */
 	protected function ajaxImport()
 	{
-		$offset = (int) \Input::post('offset');
+		$offset = (int) \Contao\Input::post('offset');
 		$datei = $this->tempDatei();
 
 		// tstamp aus dem Dateinamen (JJJJMMTTHHIISS), Fallback aktuelle Zeit
-		$tstamp = PersonenImport::tstampAusDateiname((string) \Input::post('dateiname'));
+		$tstamp = PersonenImport::tstampAusDateiname((string) \Contao\Input::post('dateiname'));
 
 		if(!file_exists($datei))
 		{

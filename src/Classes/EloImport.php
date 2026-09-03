@@ -29,7 +29,7 @@
 
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 
-class EloImport extends \Backend
+class EloImport extends \Contao\Backend
 {
 	/**
 	 * Spieler-Blöcke pro Import-Schritt
@@ -50,13 +50,13 @@ class EloImport extends \Backend
 	public function run($dc)
 	{
 		// AJAX-Aktionen beantworten (werfen eine ResponseException)
-		$aktion = \Input::post('wpEloAktion');
+		$aktion = \Contao\Input::post('wpEloAktion');
 		if($aktion == 'upload') $this->ajaxUpload();
 		if($aktion == 'import') $this->ajaxImport();
 
 		// Importseite rendern
-		$objTemplate = new \BackendTemplate('be_wp_eloimport');
-		$objTemplate->zurueck = str_replace('&key=importElo', '', \Environment::get('request'));
+		$objTemplate = new \Contao\BackendTemplate('be_wp_eloimport');
+		$objTemplate->zurueck = str_replace('&key=importElo', '', \Contao\Environment::get('request'));
 
 		return $objTemplate->parse();
 	}
@@ -66,7 +66,7 @@ class EloImport extends \Backend
 	 */
 	protected function tempDatei()
 	{
-		return TL_ROOT . '/system/tmp/wp-eloimport-' . \BackendUser::getInstance()->id . '.xml';
+		return \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::projektpfad() . '/system/tmp/wp-eloimport-' . \Contao\BackendUser::getInstance()->id . '.xml';
 	}
 
 	/**
@@ -74,7 +74,7 @@ class EloImport extends \Backend
 	 */
 	protected function ajaxUpload()
 	{
-		$offset = (int) \Input::post('offset');
+		$offset = (int) \Contao\Input::post('offset');
 		$ziel = $this->tempDatei();
 
 		if(!isset($_FILES['chunk']) || $_FILES['chunk']['error'] !== UPLOAD_ERR_OK)
@@ -107,13 +107,13 @@ class EloImport extends \Backend
 	 */
 	protected function ajaxImport()
 	{
-		$offset = (int) \Input::post('offset');
+		$offset = (int) \Contao\Input::post('offset');
 		$datei = $this->tempDatei();
 
 		// Listendatum des Importlaufs: wird vom Client einmalig beim Start
 		// erzeugt und mit jedem Schritt mitgeschickt, damit alle Datensätze
 		// des Laufs dasselbe elodate/tstamp bekommen
-		$elodate = (int) \Input::post('elodate');
+		$elodate = (int) \Contao\Input::post('elodate');
 		if(!$elodate) $elodate = time();
 
 		if(!file_exists($datei))
@@ -315,7 +315,7 @@ class EloImport extends \Backend
 		if(!count($arrSpieler)) return $ergebnis;
 
 		$felder = array_keys(reset($arrSpieler)); // fideid, elodate, surname, ...
-		$objDatabase = \Database::getInstance();
+		$objDatabase = \Contao\Database::getInstance();
 
 		// Bestand blockweise per FIDE-ID laden
 		$arrBestand = array();

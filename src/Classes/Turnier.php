@@ -23,7 +23,7 @@
 
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 
-class Turnier extends \Module
+class Turnier extends \Contao\Module
 {
 
 	/**
@@ -39,9 +39,9 @@ class Turnier extends \Module
 	 */
 	public function generate()
 	{
-		if (TL_MODE == 'BE')
+		if (\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::istBackend())
 		{
-			$objTemplate = new \BackendTemplate('be_wertungsportal');
+			$objTemplate = new \Contao\BackendTemplate('be_wertungsportal');
 
 			$objTemplate->wildcard = '### WERTUNGSPORTAL TURNIER ###';
 			$objTemplate->title = $this->name;
@@ -52,8 +52,8 @@ class Turnier extends \Module
 		else
 		{
 			// FE-Modus: URL mit allen möglichen Parametern auflösen
-			\Input::setGet('code', \Input::get('code')); // Turniercode
-			\Input::setGet('id', \Input::get('id')); // ID des Spielers
+			\Contao\Input::setGet('code', \Contao\Input::get('code')); // Turniercode
+			\Contao\Input::setGet('id', \Contao\Input::get('id')); // ID des Spielers
 		}
 
 		return parent::generate(); // Weitermachen mit dem Modul
@@ -66,17 +66,17 @@ class Turnier extends \Module
 	{
 		global $objPage;
 
-		$search = \Input::get('search'); // Turniersuche aktiv?
-		$turniercode = str_replace(' ','+',\Input::get('code')); // Turniercode, Leerzeichen durch + ersetzen, da der Browser aus + Leerzeichen macht
-		$id = \Input::get('id'); // Spieler-ID
-		$view = \Input::get('view'); // View
+		$search = \Contao\Input::get('search'); // Turniersuche aktiv?
+		$turniercode = str_replace(' ','+',\Contao\Input::get('code')); // Turniercode, Leerzeichen durch + ersetzen, da der Browser aus + Leerzeichen macht
+		$id = \Contao\Input::get('id'); // Spieler-ID
+		$view = \Contao\Input::get('view'); // View
 
 		// GET-Parameter nur bei aktiviertem Debug-Log protokollieren
 		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']))
 		{
 			$log = "GET-Parameter Turnier-Klasse\n";
 			$log .= print_r($_GET, true)."\n";
-			log_message($log, 'wertungsportal_oauth2client.log');
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 		}
 
 		$this->Template->hl = 'h1'; // Standard-Überschriftgröße
@@ -91,22 +91,30 @@ class Turnier extends \Module
 			*/
 
 			// Übergebenen ZPS-Parameter korrigieren: dreistellig und Großschreibung
-			$zps = \Input::get('zps');
+			$zps = \Contao\Input::get('zps');
 
 			// ZPS-Cookie setzen
-			setcookie('dewis-verband-zps', rtrim(\Input::get('zps'),0), time()+8640000, '/');
+			setcookie('dewis-verband-zps', rtrim(\Contao\Input::get('zps'),0), time()+8640000, '/');
 
 			// GET-Parameter korrigieren
-			$last_months = 0 + (int)\Input::get('last_months');
-			$from_year = sprintf('%04d',\Input::get('from_year'));
-			$to_year = sprintf('%04d',\Input::get('to_year'));
-			$from_month = sprintf('%02d',\Input::get('from_month'));
-			$to_month = sprintf('%02d',\Input::get('to_month'));
+			$last_months = 0 + (int)\Contao\Input::get('last_months');
+			$from_year = sprintf('%04d',\Contao\Input::get('from_year'));
+			$to_year = sprintf('%04d',\Contao\Input::get('to_year'));
+			$from_month = sprintf('%02d',\Contao\Input::get('from_month'));
+			$to_month = sprintf('%02d',\Contao\Input::get('to_month'));
 			($from_year < 2011) ? $from_year = 2011 : '';
 
 			// Zeitraum anpassen, wenn "Letzte x Monate" gewählt wurde
 			if($last_months > 0 && $last_months < 13)
 			{
+				// $aktzeit war nie gesetzt (Altfehler): PHP hat die Variable
+				// als null gelesen, date() daraus die aktuelle Zeit gemacht und
+				// nur eine Warnung protokolliert. Ab PHP 8.1 ist die Übergabe
+				// von null an date() zusätzlich abgekündigt, in PHP 9 wird sie
+				// zum Fehler — dann läge die Turniersuche mit „Letzte x Monate"
+				// still. Die Absicht war offensichtlich die Jetzt-Zeit
+				$aktzeit = time();
+
 				$last_months--; // Wegen aktuellem Monat 1 abziehen
 				$from_year = date('Y', strtotime('-'.$last_months.' months', mktime(0,0,0,date("n",$aktzeit),1,date("Y",$aktzeit))));
 				$from_month = date('m', strtotime('-'.$last_months.' months', mktime(0,0,0,date("n",$aktzeit),1,date("Y",$aktzeit))));
@@ -123,11 +131,11 @@ class Turnier extends \Module
 			$param = array
 			(
 				'funktion'  => 'Turnierliste',
-				'cachekey'  => strtolower(\Input::get('keyword')).'-'.$zps.'-'.$periode['von'].'-'.$periode['bis'],
+				'cachekey'  => strtolower(\Contao\Input::get('keyword')).'-'.$zps.'-'.$periode['von'].'-'.$periode['bis'],
 				'von'       => $periode['von'],
 				'bis'       => $periode['bis'],
 				'zps'       => $zps,
-				'suche'     => strtolower(\Input::get('keyword')),
+				'suche'     => strtolower(\Contao\Input::get('keyword')),
 			);
 			$resultArr = \Schachbulle\ContaoWertungsportalBundle\Helper\API::autoQuery($param); // Abfrage ausführen
 
@@ -154,7 +162,7 @@ class Turnier extends \Module
 			$title = 'Ergebnis für den Zeitraum '.$from_month.'/'.$from_year.' bis '.$to_month.'/'.$to_year;
 			$objPage->pageTitle = $title;
 
-			$this->Template = new \FrontendTemplate('wertungsportal_turniersuche');
+			$this->Template = new \Contao\FrontendTemplate('wertungsportal_turniersuche');
 			$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 			$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
 			$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
@@ -176,12 +184,12 @@ class Turnier extends \Module
 				array
 				(
 					'zps'          => $zps,
-					'keyword'      => \Input::get('keyword'),
+					'keyword'      => \Contao\Input::get('keyword'),
 					'from_month'   => $from_month,
 					'from_year'    => $from_year,
 					'to_month'     => $to_month,
 					'to_year'      => $to_year,
-					'last_months'  => \Input::get('last_months'),
+					'last_months'  => \Contao\Input::get('last_months'),
 				)
 			);
 
@@ -237,7 +245,7 @@ class Turnier extends \Module
 			{
 				$objPage->pageTitle = 'Spielberichtsbogen';
 
-				$this->Template = new \FrontendTemplate('wertungsportal_spielberichtsbogen');
+				$this->Template = new \Contao\FrontendTemplate('wertungsportal_spielberichtsbogen');
 				$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 				$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
 				$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
@@ -265,7 +273,7 @@ class Turnier extends \Module
 
 			$objPage->pageTitle = 'Turnier '.$scoresheet->Turniername.' | Spielbericht '.$scoresheet->Spieler['Name'];
 
-			$this->Template = new \FrontendTemplate('wertungsportal_spielberichtsbogen');
+			$this->Template = new \Contao\FrontendTemplate('wertungsportal_spielberichtsbogen');
 			$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 			$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
 			$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
@@ -331,7 +339,7 @@ class Turnier extends \Module
 
 			$objPage->pageTitle = 'Ergebnisse '.$ergebnisse->Turniername;
 
-			$this->Template = new \FrontendTemplate('wertungsportal_turnierergebnisse');
+			$this->Template = new \Contao\FrontendTemplate('wertungsportal_turnierergebnisse');
 			$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 			$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
 			$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
@@ -350,8 +358,8 @@ class Turnier extends \Module
 			$param = array
 			(
 				'funktion'  => 'Turnierauswertung',
-				'cachekey'  => \Input::get('code'),
-				'turnier'   => \Input::get('code')
+				'cachekey'  => \Contao\Input::get('code'),
+				'turnier'   => \Contao\Input::get('code')
 			);
 			$resultTur = \Schachbulle\ContaoWertungsportalBundle\Helper\API::autoQuery($param); // Abfrage ausführen
 
@@ -384,7 +392,7 @@ class Turnier extends \Module
 
 			$objPage->pageTitle = 'DWZ-Auswertung '.$auswertung->Turniername;
 
-			$this->Template = new \FrontendTemplate('wertungsportal_turnierauswertung');
+			$this->Template = new \Contao\FrontendTemplate('wertungsportal_turnierauswertung');
 			$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 			$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
 			$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
@@ -429,7 +437,7 @@ class Turnier extends \Module
 
 		$objPage->pageTitle = $strSubHeadline;
 
-		$this->Template = new \FrontendTemplate($strTemplate);
+		$this->Template = new \Contao\FrontendTemplate($strTemplate);
 		$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 		$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
 		$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben

@@ -10,7 +10,7 @@
 
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 
-class Referentenliste extends \Module
+class Referentenliste extends \Contao\Module
 {
 	/**
 	 * Template
@@ -25,9 +25,9 @@ class Referentenliste extends \Module
 	 */
 	public function generate()
 	{
-		if(TL_MODE == 'BE')
+		if(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::istBackend())
 		{
-			$objTemplate = new \BackendTemplate('be_wertungsportal');
+			$objTemplate = new \Contao\BackendTemplate('be_wertungsportal');
 
 			$objTemplate->wildcard = '### WERTUNGSPORTAL REFERENTEN ###';
 			$objTemplate->title = $this->name;

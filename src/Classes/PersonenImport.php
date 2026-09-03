@@ -23,7 +23,7 @@
 
 namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 
-class PersonenImport extends \Backend
+class PersonenImport extends \Contao\Backend
 {
 	/**
 	 * Pflichtspalten der Vereinsmitglieder-CSV (Zuordnung über die Kopfzeile)
@@ -49,13 +49,13 @@ class PersonenImport extends \Backend
 	public function run($dc)
 	{
 		// AJAX-Aktionen beantworten (werfen eine ResponseException)
-		$aktion = \Input::post('wpImportAktion');
+		$aktion = \Contao\Input::post('wpImportAktion');
 		if($aktion == 'upload') $this->ajaxUpload();
 		if($aktion == 'import') $this->ajaxImport();
 
 		// Importseite rendern
-		$objTemplate = new \BackendTemplate('be_wp_personenimport');
-		$objTemplate->zurueck = str_replace('&key=importPersons', '', \Environment::get('request'));
+		$objTemplate = new \Contao\BackendTemplate('be_wp_personenimport');
+		$objTemplate->zurueck = str_replace('&key=importPersons', '', \Contao\Environment::get('request'));
 		$objTemplate->pflichtspalten = implode(', ', self::PFLICHTSPALTEN);
 		$objTemplate->pflichtspaltenGenehmigungen = implode(', ', self::PFLICHTSPALTEN_GENEHMIGUNGEN);
 
@@ -87,7 +87,7 @@ class PersonenImport extends \Backend
 	 */
 	protected function tempDatei()
 	{
-		return TL_ROOT . '/system/tmp/wp-personenimport-' . \BackendUser::getInstance()->id . '.csv';
+		return \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::projektpfad() . '/system/tmp/wp-personenimport-' . \Contao\BackendUser::getInstance()->id . '.csv';
 	}
 
 	/**
@@ -95,7 +95,7 @@ class PersonenImport extends \Backend
 	 */
 	protected function ajaxUpload()
 	{
-		$offset = (int) \Input::post('offset');
+		$offset = (int) \Contao\Input::post('offset');
 		$ziel = $this->tempDatei();
 
 		if(!isset($_FILES['chunk']) || $_FILES['chunk']['error'] !== UPLOAD_ERR_OK)
@@ -128,19 +128,19 @@ class PersonenImport extends \Backend
 	 */
 	protected function ajaxImport()
 	{
-		$offset = (int) \Input::post('offset');
+		$offset = (int) \Contao\Input::post('offset');
 		$datei = $this->tempDatei();
 
 		// tstamp der importierten Datensätze: Datum und Uhrzeit aus dem
 		// Original-Dateinamen (JJJJMMTTHHIISS), Fallback aktuelle Zeit.
 		// Die Importdaten haben höhere Priorität und überschreiben
 		// Bestandsdaten auch dann, wenn deren tstamp jünger ist.
-		$tstamp = self::tstampAusDateiname((string) \Input::post('dateiname'));
+		$tstamp = self::tstampAusDateiname((string) \Contao\Input::post('dateiname'));
 
 		// Dateityp: explizite Auswahl des Benutzers oder automatische
 		// Erkennung aus dem Dateinamen (Fallback Vereinsmitglieder)
-		$typ = (string) \Input::post('typ');
-		if($typ == '' || $typ == 'auto') $typ = self::typAusDateiname((string) \Input::post('dateiname'));
+		$typ = (string) \Contao\Input::post('typ');
+		if($typ == '' || $typ == 'auto') $typ = self::typAusDateiname((string) \Contao\Input::post('dateiname'));
 		if($typ == '') $typ = 'mitglieder';
 		$genehmigungen = ($typ == 'anmeldungen' || $typ == 'abmeldungen');
 
@@ -273,7 +273,7 @@ class PersonenImport extends \Backend
 		// überfällig ist — und die temporäre Datei aufräumen
 		if($fertig)
 		{
-			\Config::persist('wertungsportal_personimport', $tstamp ?: time());
+			\Contao\Config::persist('wertungsportal_personimport', $tstamp ?: time());
 			$GLOBALS['TL_CONFIG']['wertungsportal_personimport'] = $tstamp ?: time();
 			if(file_exists($datei)) unlink($datei);
 		}

@@ -67,7 +67,7 @@ class Lokal
 		{
 			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog']))
 			{
-				log_message('Örtliche Abfrage ('.($params['funktion'] ?? '?').') fehlgeschlagen: '.$e->getMessage(), 'wertungsportal_oauth2client.log');
+				\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll('Örtliche Abfrage ('.($params['funktion'] ?? '?').') fehlgeschlagen: '.$e->getMessage(), 'wertungsportal_oauth2client.log');
 			}
 
 			return false;
@@ -175,7 +175,7 @@ class Lokal
 	 */
 	protected static function clubs($bedingungen, $werte)
 	{
-		$objClubs = \Database::getInstance()->prepare("SELECT c.tstamp, c.clubVkz, c.clubName, c.federation, c.parentFederation, c.state FROM tl_wertungsportal_clubs c WHERE ".implode(' AND ', $bedingungen)." ORDER BY c.clubVkz LIMIT ".self::MAX_ZEILEN * 5)
+		$objClubs = \Contao\Database::getInstance()->prepare("SELECT c.tstamp, c.clubVkz, c.clubName, c.federation, c.parentFederation, c.state FROM tl_wertungsportal_clubs c WHERE ".implode(' AND ', $bedingungen)." ORDER BY c.clubVkz LIMIT ".self::MAX_ZEILEN * 5)
 		                                   ->execute(...$werte);
 
 		if(!$objClubs->numRows) return null;
@@ -233,7 +233,7 @@ class Lokal
 		$id = trim((string) ($params['id'] ?? ''));
 		if($id === '') return null;
 
-		$objPerson = \Database::getInstance()->prepare("SELECT id, tstamp, uuid, nuLigaPersonId, firstname, lastname, birthyear, gender, fideId, rating, `index`, weekOfLastTournamentEvaluation FROM tl_wertungsportal_persons WHERE published = '1' AND nuLigaPersonId = ?")
+		$objPerson = \Contao\Database::getInstance()->prepare("SELECT id, tstamp, uuid, nuLigaPersonId, firstname, lastname, birthyear, gender, fideId, rating, `index`, weekOfLastTournamentEvaluation FROM tl_wertungsportal_persons WHERE published = '1' AND nuLigaPersonId = ?")
 		                                    ->execute($id);
 
 		// next() ausdrücklich: row() lädt die erste Zeile zwar von selbst nach,
@@ -261,7 +261,7 @@ class Lokal
 		$id = trim((string) ($params['id'] ?? ''));
 		if($id === '') return null;
 
-		$db = \Database::getInstance();
+		$db = \Contao\Database::getInstance();
 
 		$objPerson = $db->prepare("SELECT id, tstamp, uuid, nuLigaPersonId, firstname, lastname, birthyear, gender, fideId, rating, `index`, weekOfLastTournamentEvaluation FROM tl_wertungsportal_persons WHERE published = '1' AND nuLigaPersonId = ?")
 		                ->execute($id);
@@ -351,7 +351,7 @@ class Lokal
 		     . " WHERE p.published = '1' AND p.verstorben != '1' AND p.blocked != '1' AND m.vkz = ?"
 		     . " ORDER BY p.lastnameAlias, p.firstnameAlias LIMIT ".self::MAX_ZEILEN;
 
-		$objPersonen = \Database::getInstance()->prepare($sql)->execute(date('Ymd'), $zps);
+		$objPersonen = \Contao\Database::getInstance()->prepare($sql)->execute(date('Ymd'), $zps);
 
 		return self::personenAusAbfrage($objPersonen);
 	}
@@ -429,7 +429,7 @@ class Lokal
 		     . " WHERE ".implode(' AND ', $bedingungen)
 		     . " ORDER BY p.rating DESC LIMIT ".$limit;
 
-		$ergebnis = self::personenAusAbfrage(\Database::getInstance()->prepare($sql)->execute(...$werte));
+		$ergebnis = self::personenAusAbfrage(\Contao\Database::getInstance()->prepare($sql)->execute(...$werte));
 
 		if($ergebnis === null) return null;
 
@@ -501,7 +501,7 @@ class Lokal
 		$ids = array_values(array_unique(array_map('intval', (array) $ids)));
 		if(!count($ids)) return array('daten' => array(), 'stand' => 0);
 
-		$objMitglied = \Database::getInstance()->prepare("SELECT m.pid, m.tstamp, m.vkz, m.memberNo, m.clubName, m.licenceState, m.regionName, m.federationName FROM tl_wertungsportal_persons_memberships m WHERE m.pid IN (".implode(',', $ids).") AND m.published = '1' AND ".self::laufendeGenehmigung()." ORDER BY m.licenceState")
+		$objMitglied = \Contao\Database::getInstance()->prepare("SELECT m.pid, m.tstamp, m.vkz, m.memberNo, m.clubName, m.licenceState, m.regionName, m.federationName FROM tl_wertungsportal_persons_memberships m WHERE m.pid IN (".implode(',', $ids).") AND m.published = '1' AND ".self::laufendeGenehmigung()." ORDER BY m.licenceState")
 		                                      ->execute(date('Ymd'));
 
 		$daten = array();
@@ -580,7 +580,7 @@ class Lokal
 		$turnier = self::turnierZeile((string) ($params['turnier'] ?? ''));
 		if($turnier === null) return null;
 
-		$objSpieler = \Database::getInstance()->prepare("SELECT * FROM tl_wertungsportal_tournaments_evaluation WHERE pid = ? AND published = '1' ORDER BY playerNo LIMIT ".self::MAX_ZEILEN)
+		$objSpieler = \Contao\Database::getInstance()->prepare("SELECT * FROM tl_wertungsportal_tournaments_evaluation WHERE pid = ? AND published = '1' ORDER BY playerNo LIMIT ".self::MAX_ZEILEN)
 		                                     ->execute((int) $turnier['id']);
 
 		if(!$objSpieler->numRows) return null;
@@ -656,7 +656,7 @@ class Lokal
 	 */
 	protected static function partien($pid, $spielerUuid = '')
 	{
-		$db = \Database::getInstance();
+		$db = \Contao\Database::getInstance();
 
 		$bedingungen = array('pid = ?', "published = '1'");
 		$werte = array($pid);
@@ -759,7 +759,7 @@ class Lokal
 		$uuid = trim((string) $uuid);
 		if($uuid === '') return null;
 
-		$objTurnier = \Database::getInstance()->prepare("SELECT * FROM tl_wertungsportal_tournaments WHERE uuid = ? AND published = '1'")
+		$objTurnier = \Contao\Database::getInstance()->prepare("SELECT * FROM tl_wertungsportal_tournaments WHERE uuid = ? AND published = '1'")
 		                                     ->execute($uuid);
 
 		return ($objTurnier->numRows && $objTurnier->next()) ? $objTurnier->row() : null;
@@ -900,7 +900,7 @@ class Lokal
 		if(!count($ids)) return 0;
 
 		$platzhalter = implode(',', array_fill(0, count($ids), '?'));
-		$objStand = \Database::getInstance()->prepare("SELECT MAX(tstamp) AS stand FROM tl_wertungsportal_persons WHERE nuLigaPersonId IN ($platzhalter)")
+		$objStand = \Contao\Database::getInstance()->prepare("SELECT MAX(tstamp) AS stand FROM tl_wertungsportal_persons WHERE nuLigaPersonId IN ($platzhalter)")
 		                                   ->execute(array_values($ids));
 
 		return (int) $objStand->stand;
@@ -918,7 +918,7 @@ class Lokal
 		if(!count($uuids)) return 0;
 
 		$platzhalter = implode(',', array_fill(0, count($uuids), '?'));
-		$objStand = \Database::getInstance()->prepare("SELECT MAX(tstamp) AS stand FROM tl_wertungsportal_tournaments WHERE uuid IN ($platzhalter)")
+		$objStand = \Contao\Database::getInstance()->prepare("SELECT MAX(tstamp) AS stand FROM tl_wertungsportal_tournaments WHERE uuid IN ($platzhalter)")
 		                                   ->execute(array_values($uuids));
 
 		return (int) $objStand->stand;
