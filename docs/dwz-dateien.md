@@ -85,6 +85,34 @@ Fertig
 
 Bei einem Lauf über zwanzig Dateien ist damit zu sehen, wo er steht.
 
+## Zwei Fassungen je Verband: CSV und DOS
+
+Der Converter legt jedes Verbandsarchiv **zweimal** ab — einmal in der
+Kodierung, die nu liefert (windows-1252), und einmal in der DOS-Codepage 850:
+
+```
+files/wertungsportal/downloads/<Jahr>/
+├── csv/LV-0-csv_JJJJMMTT.zip     DSB, CSV
+├── dos/LV-0-dos_JJJJMMTT.zip     DSB, DOS
+├── lv3/LV-3-csv_JJJJMMTT.zip     Berlin, CSV
+└── lv3/LV-3-dos_JJJJMMTT.zip     Berlin, DOS
+```
+
+Die jeweils aktuellen Fassungen liegen zusätzlich unter
+`export/csv/LV-x-csv.zip` und `export/dos/LV-x-dos.zip` — genau die Aufteilung,
+die der frühere DeWIS-Server hatte.
+
+**Inhalt und Spaltenaufbau sind identisch.** Der einzige Unterschied ist der
+Zeichensatz: Ältere Schachprogramme unter DOS lesen die Dateien direkt ein und
+erwarten dort die Codepage 850. In der Kodierung der nu-Dateien stünde bei
+ihnen statt „Müller" ein „MĂźller". Auch die Dateinamen im Archiv bleiben
+gleich (`spieler.csv`, `vereine.csv`, `verbaende.csv`, `README.txt`); sie sind
+ohnehin schon 8.3-tauglich.
+
+Umgewandelt wird mit `iconv` und dem Zusatz `//TRANSLIT`: Für ein Zeichen, das
+die Codepage 850 nicht kennt, schreibt es eine lesbare Entsprechung statt eines
+Fragezeichens.
+
 ## Was der Converter voraussetzt
 
 Der Converter ersetzt in `spieler.csv` Elo, Titel und Land durch die Werte aus

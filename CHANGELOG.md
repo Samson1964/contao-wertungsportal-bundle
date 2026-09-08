@@ -1,5 +1,30 @@
 # Wertungsportal Changelog
 
+## Version 1.37.0 (2026-09-02)
+
+* Add: **Die Verbandsarchive gibt es jetzt zusätzlich im DOS-Format.** Neben
+  `LV-x-csv_JJJJMMTT.zip` legt der Converter ein `LV-x-dos_JJJJMMTT.zip` ab —
+  gleicher Inhalt, gleicher Spaltenaufbau, gleiche Dateinamen im Archiv, aber
+  in die Codepage 850 umgewandelt. Ältere Schachprogramme unter DOS lesen die
+  Dateien direkt ein und erwarten dort diesen Zeichensatz; in der Kodierung der
+  nu-Dateien stünde bei ihnen statt „Müller" ein „MĂźller"
+* Add: Die aktuellen Fassungen landen unter `export/dos/LV-x-dos.zip` neben
+  `export/csv/` — genau die Aufteilung, die der frühere DeWIS-Server hatte.
+  Im Jahresarchiv liegt die DOS-Fassung eines Landesverbands im selben Ordner
+  wie die CSV-Fassung, die des DSB in einem eigenen Ordner `dos/`
+* Change: Umgewandelt wird mit `iconv` und `//TRANSLIT`, nicht mit
+  `mb_convert_encoding`: Für ein Zeichen, das die Codepage 850 nicht kennt,
+  schreibt es eine lesbare Entsprechung statt eines Fragezeichens
+* Change: **Das Sterbedatum erscheint erst, wenn die Person als verstorben
+  gekennzeichnet ist.** „Verstorben an" ist aus der Hauptpalette in eine
+  Unterpalette gewandert; die Checkbox schickt beim Umschalten ab, das Feld
+  taucht also sofort auf. Bisher stand bei jeder Person ein leeres Datumsfeld
+  im Formular
+* Fix: Die Zwischenfassungen der DOS-Umwandlung werden über `try/finally`
+  weggeräumt. Ohne das bliebe bei einem Fehler im Packen oder beim Eintrag in
+  die Dateiverwaltung Müll im Packverzeichnis liegen — und der nächste Lauf
+  packte ihn womöglich mit ein
+
 ## Version 1.36.0 (2026-09-02)
 
 **Das Bundle läuft jetzt unter Contao 4.13 UND Contao 5, mit PHP 7.4 bis 8.4.**

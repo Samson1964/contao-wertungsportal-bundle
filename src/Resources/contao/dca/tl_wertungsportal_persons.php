@@ -137,14 +137,18 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_persons'] = [
 
     // Palettes
     'palettes' => [
-        '__selector__' => ['addImage', 'blocked'],
-        'default' => '{person_legend},anrede,titel,firstname,lastname,geburtsname,birthyear,geburtsort,gender,geschlechtSpielbetrieb,verstorben,verstorbenAm;{dwz_legend},rating,index,weekOfLastTournamentEvaluation;{nation_legend},nation,fideNation;{adresse_legend:hide},strasse,plz,ort,land,email1,email2,telPrivat,telMobil,telGeschaeft,faxPrivat,faxGeschaeft;{id_legend},uuid,nuLigaPersonId,externeNr,fideId;{datenschutz_legend:hide},datenschutzDatum,datenschutzBenutzer,datenschutzInfoDatum,datenschutzInfoBenutzer;{image_legend:hide},addImage;{ban_legend:hide},blocked;{publish_legend},published',
+        '__selector__' => ['addImage', 'blocked', 'verstorben'],
+        'default' => '{person_legend},anrede,titel,firstname,lastname,geburtsname,birthyear,geburtsort,gender,geschlechtSpielbetrieb,verstorben;{dwz_legend},rating,index,weekOfLastTournamentEvaluation;{nation_legend},nation,fideNation;{adresse_legend:hide},strasse,plz,ort,land,email1,email2,telPrivat,telMobil,telGeschaeft,faxPrivat,faxGeschaeft;{id_legend},uuid,nuLigaPersonId,externeNr,fideId;{datenschutz_legend:hide},datenschutzDatum,datenschutzBenutzer,datenschutzInfoDatum,datenschutzInfoBenutzer;{image_legend:hide},addImage;{ban_legend:hide},blocked;{publish_legend},published',
     ],
 
     // Subpalettes
     'subpalettes' => [
         'addImage' => 'singleSRC',
         'blocked'  => 'grund,melder',
+        // Das Sterbedatum hat nur Sinn, wenn die Person als verstorben
+        // gekennzeichnet ist — sonst steht dauerhaft ein leeres Pflichtfeld
+        // im Formular herum
+        'verstorben' => 'verstorbenAm',
     ],
 
     // Fields
@@ -320,7 +324,9 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_persons'] = [
             'exclude'   => true,
             'filter'    => true,
             'inputType' => 'checkbox',
-            'eval'      => ['tl_class' => 'w50'],
+            // submitOnChange: ohne das erscheint die Unterpalette mit dem
+            // Sterbedatum erst nach dem Speichern
+            'eval'      => ['submitOnChange' => true, 'tl_class' => 'w50 clr'],
             'sql'       => "char(1) NOT NULL default ''",
         ],
 

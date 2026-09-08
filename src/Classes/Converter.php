@@ -138,25 +138,49 @@ class Converter
 			unlink($this->packpfad.'verbaende.csv');
 			unlink($this->packpfad.'README.txt');
 			
-			// Kopien der Dateien im Exportverzeichnis anlegen
+			// Kopien der Dateien im Exportverzeichnis anlegen — je Format ein
+			// eigener Ordner, so wie es der DeWIS-Server gehalten hat
 			$csvpfad = $this->exportpfad.'csv/';
 			if(!file_exists($csvpfad)) mkdir($csvpfad, 0777);
+			$dospfad = $this->exportpfad.'dos/';
+			if(!file_exists($dospfad)) mkdir($dospfad, 0777);
+
 			foreach($this->archive as $item)
 			{
 				// Pfade anlegen
 				if($item['verband'])
 				{
-					// Mitgliedsverband
-					$quelle = $this->archivpfad.'lv'.strtolower($item['verband']).'/LV-'.$item['verband'].'-csv_'.date('Ymd').'.zip';
-					$ziel = $csvpfad.'LV-'.$item['verband'].'-csv.zip';
-					echo "Kopiere $quelle => $ziel<br>";
-					copy($quelle, $ziel);
+					// Mitgliedsverband: CSV und DOS liegen im selben Jahresordner
+					$ordner = $this->archivpfad.'lv'.strtolower($item['verband']).'/';
+					$kopien = array
+					(
+						array($ordner.'LV-'.$item['verband'].'-csv_'.date('Ymd').'.zip', $csvpfad.'LV-'.$item['verband'].'-csv.zip'),
+						array($ordner.'LV-'.$item['verband'].'-dos_'.date('Ymd').'.zip', $dospfad.'LV-'.$item['verband'].'-dos.zip'),
+					);
 				}
 				else
 				{
-					// $verband ist leer, also DSB
-					$quelle = $this->archivpfad.'csv/LV-0-csv_'.date('Ymd').'.zip';
-					$ziel = $csvpfad.'LV-0-csv.zip';
+					// $verband ist leer, also DSB — dort trennt schon das
+					// Jahresarchiv nach Format
+					$kopien = array
+					(
+						array($this->archivpfad.'csv/LV-0-csv_'.date('Ymd').'.zip', $csvpfad.'LV-0-csv.zip'),
+						array($this->archivpfad.'dos/LV-0-dos_'.date('Ymd').'.zip', $dospfad.'LV-0-dos.zip'),
+					);
+				}
+
+				foreach($kopien as $kopie)
+				{
+					list($quelle, $ziel) = $kopie;
+
+					// Fehlt eine Fassung, wird sie übersprungen statt eine
+					// alte Kopie stehenzulassen oder abzubrechen
+					if(!is_file($quelle))
+					{
+						echo "FEHLT: $quelle<br>\n";
+						continue;
+					}
+
 					echo "Kopiere $quelle => $ziel<br>";
 					copy($quelle, $ziel);
 				}
@@ -301,6 +325,107 @@ class Converter
 			self::writeDbafs($pfad, $datei);
 		}
 
+		// Dieselben Dateien noch einmal in der DOS-Codepage
+		self::packeDos($verband, $files);
+	}
+
+	/**
+	 * Packt dieselben Dateien ein zweites Mal — umgewandelt in die
+	 * DOS-Codepage 850.
+	 *
+	 * **Wozu das gut ist:** Ältere Schachprogramme unter DOS lesen die Dateien
+	 * direkt ein und erwarten dort die Codepage 850. In der Kodierung der
+	 * nu-Dateien (windows-1252) stünde bei ihnen statt „Müller" ein „MĂźller".
+	 * Der DeWIS-Server hat solche Archive früher unter `export/dos/` angeboten;
+	 * diese Fassung stellt sie wieder her.
+	 *
+	 * Inhalt und Spaltenaufbau sind mit der CSV-Fassung identisch — der einzige
+	 * Unterschied ist der Zeichensatz. Auch die Dateinamen IM Archiv bleiben
+	 * gleich (spieler.csv, vereine.csv, verbaende.csv, README.txt); sie sind
+	 * ohnehin schon 8.3-tauglich.
+	 *
+	 * **Ablageort:** Für einen Landesverband liegt das Archiv im selben Ordner
+	 * wie die CSV-Fassung (`lv<x>/`), für den DSB in einem eigenen Ordner `dos/`
+	 * neben `csv/` — genauso, wie es der DeWIS-Server gehalten hat.
+	 *
+	 * Umgewandelt wird mit `iconv` und nicht mit `mb_convert_encoding`:
+	 * `//TRANSLIT` schreibt für ein Zeichen, das die Codepage 850 nicht kennt,
+	 * eine lesbare Entsprechung statt eines Fragezeichens.
+	 *
+	 * @param string $verband Kennbuchstabe des Landesverbands, leer für den DSB
+	 * @param array  $files   Vollständige Pfade der zu packenden Dateien
+	 *                        (windows-1252, so wie nu sie liefert)
+	 */
+	public function packeDos($verband, $files)
+	{
+		// Zielordner festlegen
+		if($verband)
+		{
+			$dospfad = $this->archivpfad.'lv'.strtolower($verband).'/';
+			$datei = 'LV-'.$verband.'-dos_'.date('Ymd').'.zip';
+		}
+		else
+		{
+			$dospfad = $this->archivpfad.'dos/';
+			$datei = 'LV-0-dos_'.date('Ymd').'.zip';
+		}
+
+		if(!file_exists($dospfad)) mkdir($dospfad, 0777, true);
+
+		// Umgewandelte Zwischenfassungen anlegen. Sie bekommen die Endung
+		// .dos, damit sie nicht mit den CSV-Dateien im selben Verzeichnis
+		// kollidieren; im Archiv stehen sie dann wieder unter ihrem
+		// ursprünglichen Namen
+		$umgewandelt = array();
+
+		foreach($files as $file)
+		{
+			if(!is_file($file)) continue;
+
+			$inhalt = file_get_contents($file);
+			$dos = @iconv('CP1252', 'CP850//TRANSLIT', (string) $inhalt);
+
+			// Scheitert die Umwandlung (etwa bei einem Byte, das in
+			// windows-1252 gar nicht vorkommt), wird der Inhalt unverändert
+			// übernommen. Ein unvollständiges Archiv wäre schlimmer als eines
+			// mit einer falsch dargestellten Zeile
+			if($dos === false) $dos = $inhalt;
+
+			$ziel = $file.'.dos';
+			file_put_contents($ziel, $dos);
+			$umgewandelt[$ziel] = basename($file);
+		}
+
+		if(!count($umgewandelt)) return;
+
+		// try/finally, damit die Zwischenfassungen auch dann verschwinden,
+		// wenn beim Packen oder beim Eintrag in die Dateiverwaltung etwas
+		// schiefgeht — sonst bliebe bei jedem Lauf Müll im Packverzeichnis
+		// liegen, und der nächste Lauf packte ihn womöglich mit ein
+		try
+		{
+			$zip = new \ZipArchive;
+
+			if($zip->open($dospfad.$datei, \ZipArchive::CREATE))
+			{
+				foreach($umgewandelt as $quelle => $name)
+				{
+					$zip->addFile(realpath($quelle), $name);
+				}
+				$zip->close();
+
+				// Datei in Dateiverwaltung eintragen
+				$pfad = substr(str_replace(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::projektpfad(), '', $dospfad), 1);
+				self::writeDbafs($pfad, $datei);
+			}
+		}
+		finally
+		{
+			foreach(array_keys($umgewandelt) as $quelle)
+			{
+				@unlink($quelle);
+			}
+		}
 	}
 
 	/**
