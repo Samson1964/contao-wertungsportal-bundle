@@ -63,6 +63,15 @@ services:
         tags:
             - { name: console.command }
 
+    # Erzeugt die Hintergrunddateien für Swiss-Chess aus der Deutschland-Datei:
+    # wertungsportal:swisschess. Läuft sinnvollerweise NACH dem Converter,
+    # weil er dessen export/csv/LV-0-csv.zip benutzt
+    Schachbulle\ContaoWertungsportalBundle\Command\SwissChessCommand:
+        arguments:
+            - '@contao.framework'
+        tags:
+            - { name: console.command }
+
     # Füllt die Suchalias-Felder des Bestands beim contao:migrate.
     # Ausdrücklich registriert, weil dieses Bundle ohne Autoconfigure arbeitet
     Schachbulle\ContaoWertungsportalBundle\Migration\AliasMigration:

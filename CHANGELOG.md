@@ -1,5 +1,26 @@
 # Wertungsportal Changelog
 
+## Version 1.38.0 (2026-09-09)
+
+* Add: **Hintergrunddateien für Swiss-Chess** — der neue Befehl
+  `wertungsportal:swisschess` erzeugt aus der Deutschland-Datei (LV-0-csv) das
+  Dateipaar LST/SWX, und zwar in beiden Fassungen: für **Swiss-Chess ab 10.0**
+  (alle Felder im Klartext, Spielerkennung ist die nuLiga-ID) und für **ältere
+  Fassungen** (Zahlenfelder binär kodiert). Abgelegt wird gepackt im
+  Jahresarchiv neben den CSV- und DOS-Paketen:
+  `JJJJ/swiss10/dsb-swiss10_JJJJMMTT.zip` und `JJJJ/swiss/dsb-swiss_JJJJMMTT.zip`.
+  Beschrieben in `docs/swiss-chess.md`
+* Add: `Classes\SwissChess` mit der Formatkenntnis — Zahlenkodierung,
+  Indexformel, Feldaufbau, Codepage. Das Format ist nirgends dokumentiert und
+  wurde aus den beiden Originaldateien des DSB abgeleitet (16.08.2023 und
+  02.09.2026, zusammen 3,2 Millionen Datensätze)
+* Add: 12 Unit-Tests für die beiden tragenden Regeln — die Zahlenkodierung mit
+  echten Beispielen aus der Originaldatei und die Indexformel an allen
+  Grenzfällen
+* Change: Der Ordner `SwissChess-Dateien/` mit den Referenzdateien des DSB
+  steht jetzt in der `.gitignore`. Er ist mehrere hundert MB groß und dient nur
+  zum Nachschlagen
+
 ## Version 1.37.0 (2026-09-02)
 
 * Add: **Die Verbandsarchive gibt es jetzt zusätzlich im DOS-Format.** Neben

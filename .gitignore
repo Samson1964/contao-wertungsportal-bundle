@@ -18,3 +18,6 @@
 
 # PHPUnit-Ergebnisspeicher (rein oertlich)
 /.phpunit.result.cache
+
+# Referenzdateien von Swiss-Chess (mehrere hundert MB, nur zum Nachschlagen)
+/SwissChess-Dateien/

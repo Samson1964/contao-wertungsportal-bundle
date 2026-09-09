@@ -18,6 +18,8 @@ Ersetzt die SOAP-Schnittstelle von DeWIS und kommuniziert mit der REST-Schnittst
   für andere Bundles abrufbar: Altersklasse, Geschlecht, geteilte Plätze, Verbandskürzel
 * [DWZ-Dateien herunterladen und aufbereiten](docs/dwz-dateien.md) — die beiden
   Konsolenbefehle, die die früheren Cron-Skripte ersetzen (Aufruf beim Hoster umstellen!)
+* [Hintergrunddateien für Swiss-Chess](docs/swiss-chess.md) — LST und SWX aus der
+  DWZ-Liste erzeugen, für Swiss-Chess 10 und für ältere Fassungen
 
 ## Voraussetzungen
 
