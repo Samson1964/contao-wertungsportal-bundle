@@ -26,6 +26,15 @@ use Symfony\Component\Console\Output\OutputInterface;
  * (Zahlenfelder binär kodiert). Jedes Archiv enthält das Dateipaar LST und
  * SWX.
  *
+ * Von beiden wandert eine Kopie unter festem Namen ins Exportverzeichnis:
+ *
+ *     files/wertungsportal/downloads/export/swiss10/dsb-swiss10.zip
+ *     files/wertungsportal/downloads/export/swiss/dsb-swiss.zip
+ *
+ * Das ist dieselbe Aufteilung, die der Converter für `export/csv/` und
+ * `export/dos/` benutzt: Der Downloadlink auf der Website darf sich nicht
+ * jeden Monat ändern.
+ *
  * Ohne Angabe wird die aktuelle `export/csv/LV-0-csv.zip` benutzt, die
  * `wertungsportal:converter` erzeugt hat. Mit `--quelle` läßt sich statt
  * dessen ein bereits entpacktes Verzeichnis angeben — praktisch, um eine
@@ -81,12 +90,17 @@ class SwissChessCommand extends Command
                 "Legt zwei Archive im Jahresarchiv ab:\n".
                 "  JJJJ/swiss10/dsb-swiss10_JJJJMMTT.zip   Swiss-Chess ab 10.0\n".
                 "  JJJJ/swiss/dsb-swiss_JJJJMMTT.zip       ältere Fassungen\n\n".
-                "Jedes Archiv enthält das Dateipaar LST und SWX.\n\n".
+                "Jedes Archiv enthält das Dateipaar LST und SWX. Eine Kopie unter\n".
+                "festem Namen liegt zusätzlich in export/swiss10/ und export/swiss/.\n\n".
                 "Ohne --quelle wird export/csv/LV-0-csv.zip entpackt; die Datei\n".
                 "erzeugt der Befehl wertungsportal:converter.\n\n".
-                "Enthalten sind nur die DSB-Mitglieder. Die Originaldateien des DSB\n".
-                "führen zusätzlich alle weltweit von der FIDE erfaßten Spieler sowie\n".
-                "Schnell- und Blitzwertungen; beides steht nicht in der LV-0-csv."
+                "Die Sätze der DSB-Mitglieder stammen aus dieser CSV, ihre FIDE-Angaben\n".
+                "(Schnell- und Blitzwertung, Partien, Titel) aus tl_wertungsportal_elo.\n".
+                "Aus derselben Tabelle kommen alle weltweit von der FIDE geführten\n".
+                "Spieler als zusätzliche Sätze — ohne sie hätte die Datei statt knapp\n".
+                "zwei Millionen nur rund hunderttausend Einträge.\n\n".
+                "Ist die Tabelle leer (XML-Import noch nie gelaufen), entstehen die\n".
+                "Dateien trotzdem, dann eben nur mit den DSB-Mitgliedern."
             );
     }
 
@@ -139,7 +153,10 @@ class SwissChessCommand extends Command
                     static function (string $t) use ($output): void { $output->writeln('  '.$t); }
                 );
 
-                $output->writeln(sprintf('  %d Datensätze, %d übersprungen', $erg['saetze'], $erg['uebersprungen']));
+                $output->writeln(sprintf(
+                    '  %d Datensätze (%d DSB, %d FIDE), %d übersprungen',
+                    $erg['saetze'], $erg['dsb'], $erg['fide'], $erg['uebersprungen']
+                ));
 
                 $ziel = $this->packe(
                     [$erg['lst'], $erg['swx']],
@@ -149,6 +166,12 @@ class SwissChessCommand extends Command
                 );
 
                 $output->writeln(sprintf('  <comment>%s</comment> (%s)', $ziel, $this->groesse($ziel)));
+
+                $kopie = $this->exportiere($ziel, $wurzel, $ordner, $praefix.'.zip');
+
+                if ($kopie !== '') {
+                    $output->writeln(sprintf('  <comment>%s</comment>', $kopie));
+                }
             }
         } catch (\Throwable $e) {
             $output->writeln('<error>'.$e->getMessage().'</error>');
@@ -198,22 +221,87 @@ class SwissChessCommand extends Command
 
         $zip->close();
 
-        // Eintrag in die Dateiverwaltung, damit das Archiv im Backend und in
-        // den Downloadlisten auftaucht — dasselbe macht der Converter mit
-        // seinen CSV-Paketen
-        $relativ = ltrim(str_replace(str_replace('\\', '/', $wurzel), '', str_replace('\\', '/', $ziel)), '/');
+        $this->dbafs($ziel, $wurzel);
+
+        return $ziel;
+    }
+
+    /**
+     * Legt eine Kopie des Archivs unter festem Namen im Exportverzeichnis ab.
+     *
+     * Der Downloadlink auf der Website zeigt auf diese Kopie: Er soll gleich
+     * bleiben, während das datierte Archiv daneben die Historie führt. Genau
+     * so hält es der Converter mit `export/csv/` und `export/dos/`.
+     *
+     * Das Exportverzeichnis liegt neben dem Jahresarchiv, wird also aus dem
+     * übergebenen Archivpfad abgeleitet. Wer den Befehl mit `--ziel` in ein
+     * Prüfverzeichnis lenkt, bekommt die Kopie folglich auch dort und nicht
+     * im echten Downloadbereich.
+     *
+     * @param string $archivdatei Vollständiger Pfad des datierten Archivs
+     * @param string $wurzel      Wurzelverzeichnis der Installation
+     * @param string $ordner      Unterordner im Export, `swiss` oder `swiss10`
+     * @param string $name        Fester Dateiname der Kopie
+     *
+     * @return string Pfad der Kopie, oder leer wenn sie nicht angelegt werden
+     *                konnte — der Lauf gilt deswegen nicht als gescheitert,
+     *                das datierte Archiv steht ja
+     */
+    protected function exportiere(string $archivdatei, string $wurzel, string $ordner, string $name): string
+    {
+        // Das Jahresarchiv liegt in downloads/JJJJ/<ordner>, der Export in
+        // downloads/export/<ordner> — also zwei Ebenen hoch und wieder runter
+        $export = \dirname($archivdatei, 3).'/export/'.$ordner;
+
+        if (!is_dir($export) && !@mkdir($export, 0777, true)) {
+            return '';
+        }
+
+        $ziel = $export.'/'.$name;
+
+        if (!@copy($archivdatei, $ziel)) {
+            return '';
+        }
+
+        $this->dbafs($ziel, $wurzel);
+
+        return $ziel;
+    }
+
+    /**
+     * Trägt eine Datei in die Dateiverwaltung ein oder frischt ihren Eintrag
+     * auf.
+     *
+     * Beim Ersetzen einer gleichnamigen Datei genügt `addResource()` nicht —
+     * der Eintrag besteht ja schon, aber seine Prüfsumme zeigt auf den alten
+     * Inhalt. Das betrifft die Exportkopien, die jeden Monat überschrieben
+     * werden.
+     *
+     * @param string $datei  Vollständiger Pfad der Datei
+     * @param string $wurzel Wurzelverzeichnis der Installation
+     *
+     * @return void
+     */
+    protected function dbafs(string $datei, string $wurzel): void
+    {
+        $relativ = ltrim(str_replace(str_replace('\\', '/', $wurzel), '', str_replace('\\', '/', $datei)), '/');
 
         try {
-            if (\Contao\FilesModel::findByPath($relativ) === null) {
+            $objDatei = \Contao\FilesModel::findByPath($relativ);
+
+            if ($objDatei === null) {
                 \Contao\Dbafs::addResource($relativ);
+            } else {
+                $objDatei->tstamp = time();
+                $objDatei->hash = (string) md5_file($datei);
+                $objDatei->save();
             }
+
             \Contao\Dbafs::updateFolderHashes(\dirname($relativ));
         } catch (\Throwable $e) {
             // Ohne Dateiverwaltung ist das Archiv trotzdem brauchbar — etwa
             // wenn der Befehl mit --ziel außerhalb von files/ geschrieben hat
         }
-
-        return $ziel;
     }
 
     /**

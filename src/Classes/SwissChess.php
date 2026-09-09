@@ -134,14 +134,19 @@ class SwissChess
 	 * @param string $name     Dateiname ohne Endung, üblich ist `fdsbJJMMTT`
 	 * @param callable|null $melder Wird je Fortschrittsmeldung mit einem Text
 	 *                              aufgerufen; ohne Angabe bleibt es still
+	 * @param bool $mitFide Die Sätze um die FIDE-Angaben aus
+	 *                      tl_wertungsportal_elo anreichern und alle dort
+	 *                      geführten Spieler zusätzlich aufnehmen. Ohne
+	 *                      Contao-Datenbank bleibt es bei den DSB-Mitgliedern
 	 *
 	 * @return array ['lst' => Pfad, 'swx' => Pfad, 'saetze' => Anzahl,
+	 *                'dsb' => Anzahl, 'fide' => Anzahl,
 	 *                'uebersprungen' => Anzahl]
 	 *
 	 * @throws \RuntimeException wenn die Quelldateien fehlen oder die
 	 *                           Kopfzeile der CSV nicht paßt
 	 */
-	public function erzeuge($quelle, $ziel, $fassung, $name, $melder = null)
+	public function erzeuge($quelle, $ziel, $fassung, $name, $melder = null, $mitFide = true)
 	{
 		$quelle = rtrim(str_replace('\\', '/', $quelle), '/');
 		$ziel = rtrim(str_replace('\\', '/', $ziel), '/');
@@ -154,79 +159,73 @@ class SwissChess
 		if (!is_dir($ziel) && !@mkdir($ziel, 0777, true)) throw new \RuntimeException('Zielverzeichnis nicht anlegbar: '.$ziel);
 
 		$this->setzeFassung($fassung);
+		$this->eimerVorbereiten($ziel.'/.eimer-'.getmypid());
 
-		$this->melde($melder, 'Lese vereine.csv');
-		$this->ladeVereine($vereinsdatei);
+		try
+		{
+			$this->melde($melder, 'Lese vereine.csv');
+			$this->ladeVereine($vereinsdatei);
 
-		$this->melde($melder, 'Lese spieler.csv');
-		$saetze = $this->ladeSpieler($spielerdatei, $fassung);
-		$uebersprungen = 0;
+			$this->melde($melder, 'Lese spieler.csv');
+			$saetze = $this->ladeSpieler($spielerdatei, $fassung);
 
-		// Sortieren ist Pflicht: Der Index verweist auf zusammenhängende
-		// Bereiche je Namensanfang.
-		//
-		// Sortiert wird ZUERST nach der Satznummer des Index und erst danach
-		// nach dem Namen. Eine reine Namenssortierung reicht nicht: Ein Umlaut
-		// an zweiter Stelle -- "Bäcker" -- steht in CP850 hinter dem "z" und
-		// landete damit hinter allen "Bz"-Namen. Der Eimer für "B + kein
-		// Buchstabe" wäre zerrissen und sein Bereich im Index unbrauchbar;
-		// genau das ist beim ersten Versuch passiert
-		$this->melde($melder, 'Sortiere '.count($saetze).' Datensätze');
-		usort($saetze, static function ($a, $b) {
-			$ea = self::eimer($a['name']);
-			$eb = self::eimer($b['name']);
+			// FIDE-Angaben der DSB-Mitglieder in einem Zug nachladen, damit
+			// nicht je Spieler eine Abfrage läuft
+			$fide = array();
 
-			if ($ea !== $eb) return ($ea ?? 999) <=> ($eb ?? 999);
-
-			$v = strcasecmp($a['name'], $b['name']);
-
-			// Zweiter Schluessel BEWUSST nicht die fertige Zeile: Die sieht in
-			// beiden Fassungen verschieden aus, und die Dateien haetten dann
-			// bei Namensgleichheit eine unterschiedliche Reihenfolge
-			return $v !== 0 ? $v : strcmp($a['schluessel'], $b['schluessel']);
-		});
-
-		// LST schreiben und dabei die Eimer des Index mitzählen
-		$lstPfad = $ziel.'/'.$name.'.LST';
-		$this->melde($melder, 'Schreibe '.basename($lstPfad));
-
-		$fp = fopen($lstPfad, 'wb');
-		if ($fp === false) throw new \RuntimeException('Kann '.$lstPfad.' nicht schreiben');
-
-		$eimer = array();
-		$pos = 0;
-
-		foreach ($saetze as $satz) {
-			$e = self::eimer($satz['name']);
-
-			if ($e === null) {
-				// Namen, die nicht mit A..Z beginnen, kann der Index nicht
-				// führen. Sie kämen in keiner Suche vor und bleiben deshalb weg
-				$uebersprungen++;
-				continue;
+			if ($mitFide)
+			{
+				$this->melde($melder, 'Lade die FIDE-Angaben der Mitglieder');
+				$fide = $this->fideDatenFuer(array_column($saetze, 'fideId'));
 			}
 
-			if (!isset($eimer[$e])) $eimer[$e] = array('offset' => $pos, 'anzahl' => 0);
-			$eimer[$e]['anzahl']++;
+			$this->melde($melder, 'Verteile '.count($saetze).' Mitgliedschaften auf die Eimer');
+			$dsb = 0;
+			$uebersprungen = 0;
+			$bekannt = array();
 
-			fwrite($fp, $satz['zeile']);
-			$pos += strlen($satz['zeile']);
+			foreach ($saetze as $satz)
+			{
+				if ($satz['fideId'] > 0) $bekannt[$satz['fideId']] = true;
+
+				$zeile = $this->baueZeile($satz['csv'], $fide[$satz['fideId']] ?? null);
+
+				if ($this->inEimer($satz['name'], $satz['schluessel'], $zeile)) $dsb++;
+				else $uebersprungen++;
+			}
+
+			// Alle weiteren FIDE-Spieler anhängen — die ohne DSB-Mitgliedschaft
+			$fideSaetze = 0;
+
+			if ($mitFide)
+			{
+				$this->melde($melder, 'Nehme die übrigen FIDE-Spieler auf');
+				$fideSaetze = $this->fideSpielerVerteilen($bekannt, $uebersprungen);
+			}
+
+			// Eimer der Reihe nach in die LST schreiben
+			$lstPfad = $ziel.'/'.$name.'.LST';
+			$this->melde($melder, 'Schreibe '.basename($lstPfad));
+			$eimer = $this->eimerZusammenfuehren($lstPfad);
+
+			$swxPfad = $ziel.'/'.$name.'.SWX';
+			$this->melde($melder, 'Schreibe '.basename($swxPfad));
+			$this->schreibeIndex($swxPfad, $eimer, (int) filesize($lstPfad));
+
+			return array
+			(
+				'lst'           => $lstPfad,
+				'swx'           => $swxPfad,
+				'saetze'        => $dsb + $fideSaetze,
+				'dsb'           => $dsb,
+				'fide'          => $fideSaetze,
+				'uebersprungen' => $uebersprungen,
+			);
 		}
-
-		fclose($fp);
-
-		// SWX schreiben
-		$swxPfad = $ziel.'/'.$name.'.SWX';
-		$this->melde($melder, 'Schreibe '.basename($swxPfad));
-		$this->schreibeIndex($swxPfad, $eimer, $pos);
-
-		return array
-		(
-			'lst'           => $lstPfad,
-			'swx'           => $swxPfad,
-			'saetze'        => count($saetze) - $uebersprungen,
-			'uebersprungen' => $uebersprungen,
-		);
+		finally
+		{
+			$this->eimerAufraeumen();
+		}
 	}
 
 	/**
@@ -289,7 +288,8 @@ class SwissChess
 				// nuLiga-Kennung und Vereinskennziffer machen die Mitgliedschaft
 				// eindeutig und sind in beiden Fassungen dieselben
 				'schluessel' => (string) $z[self::CSV_ID].'|'.(string) $z[self::CSV_ZPS],
-				'zeile'     => $this->baueZeile($z, $fassung),
+				'fideId'    => (int) $z[self::CSV_FIDEID],
+				'csv'       => $z,
 			);
 		}
 
@@ -336,7 +336,7 @@ class SwissChess
 	 *
 	 * @return string Zeile in CP850 mit CRLF am Ende
 	 */
-	protected function baueZeile(array $z, $fassung)
+	protected function baueZeile(array $z, array $fide = null)
 	{
 		$zps = (string) $z[self::CSV_ZPS];
 		$titel = strtoupper(trim((string) $z[self::CSV_TITEL]));
@@ -371,12 +371,157 @@ class SwissChess
 		$f[13] = $f[9];
 		$f[14] = $this->text((string) $z[self::CSV_STATUS]);
 
-		// Die Felder 15 bis 27 tragen die FIDE-Angaben und stehen in
-		// Anführungszeichen. Aus der CSV lassen sich nur der Frauentitel und
-		// die Standard-Elo füllen; Schnell- und Blitzwertung, Partienzahlen,
-		// K-Faktoren und Kennzeichen liefert sie nicht
-		$f[15] = in_array($titel, self::FRAUENTITEL, true) ? $titel : '';
-		$f[19] = $elo;
+		// Die Felder 15 bis 27 tragen die FIDE-Angaben. Aus der CSV allein
+		// ließen sich nur der Frauentitel und die Standard-Elo füllen; mit
+		// einem Satz aus tl_wertungsportal_elo kommen Schnell- und
+		// Blitzwertung, Partienzahlen und Kennzeichen dazu
+		if ($fide !== null)
+		{
+			$this->setzeFideFelder($f, $fide);
+
+			// Der Frauentitel steht nur in der Elo-Tabelle: Die CSV hat eine
+			// einzige Titelspalte, in der bei einer Spielerin mit offenem
+			// Titel dieser steht
+			if ($f[5] === '' && $fide['title'] !== '') $f[5] = self::TITELCODE[$fide['title']] ?? '';
+		}
+		elseif ($fideId !== '')
+		{
+			// Ohne Satz in der Elo-Tabelle bleibt nur, was die CSV hergibt.
+			// Ein Spieler ohne FIDE-Kennung bekommt gar nichts — in der
+			// Originaldatei sind bei allen 57.369 solchen Sätzen die Felder
+			// 15 bis 27 ausnahmslos leer
+			$f[15] = in_array($titel, self::FRAUENTITEL, true) ? $titel : '';
+			$f[19] = $elo;
+		}
+
+		return $this->schlussFelder($f);
+	}
+
+	/**
+	 * Baut die Zeile eines Spielers, der nur bei der FIDE geführt wird.
+	 *
+	 * Solche Sätze machen den Löwenanteil der Datei aus — in der
+	 * Originaldatei des DSB sind es 1.873.566 von 1.973.816. Sie haben weder
+	 * Verein noch DWZ, weder nuLiga-Kennung noch Mitgliedsnummer; alle
+	 * Vereinsfelder bleiben leer.
+	 *
+	 * @param array $e Zeile aus tl_wertungsportal_elo
+	 *
+	 * @return string Zeile in CP850 mit CRLF am Ende
+	 */
+	protected function baueFideZeile(array $e)
+	{
+		$f = array_fill(0, self::FELDER, '');
+
+		$f[0]  = $this->text($this->fideName($e));
+		$f[2]  = $this->text((string) $e['country']);
+		$f[3]  = $this->zahl($this->ziffern((string) $e['rating']));
+		$f[5]  = self::TITELCODE[(string) $e['title']] ?? '';
+		$f[6]  = $this->zahl($this->ziffern((string) $e['birthday']));
+		$f[8]  = $this->zahl($this->ziffern((string) $e['fideid']));
+		// Die Elo-Tabelle führt das Geschlecht als M/F, die Datei als M/W
+		$f[10] = ((string) $e['sex'] === 'F') ? 'W' : (string) $e['sex'];
+
+		$this->setzeFideFelder($f, $e);
+
+		return $this->schlussFelder($f);
+	}
+
+	/**
+	 * Trägt die FIDE-Angaben in die Felder 15 bis 27 ein.
+	 *
+	 * Die Aufteilung ist aus der Originaldatei abgelesen und entspricht genau
+	 * den dreizehn Angaben, die das FIDE-XML je Spieler außer der Kennung
+	 * führt:
+	 *
+	 *     15 Frauentitel      16 Amtstitel        17 Kennzeichen
+	 *     18 Arena-Titel      19 Elo              20 Partien
+	 *     21 K-Faktor         22 Schnell-Elo      23 Schnell-Partien
+	 *     24 Schnell-K        25 Blitz-Elo        26 Blitz-Partien
+	 *     27 wie Feld 26
+	 *
+	 * **Feld 27 ist kein Blitz-K-Faktor.** In allen 1.973.816 Sätzen der
+	 * Originaldatei steht dort dasselbe wie in Feld 26 — der Erzeuger des DSB
+	 * schreibt die Blitzpartien schlicht zweimal. Nachgebaut wird das so, wie
+	 * es die Datei tut.
+	 *
+	 * **Die K-Faktoren (21 und 24) bleiben leer, solange eine Wertung
+	 * vorliegt.** Das FIDE-XML führt sie, der Import dieses Bundles legt sie
+	 * aber nicht ab — tl_wertungsportal_elo hat keine Spalte dafür. Sie zu
+	 * schätzen ginge nicht: Über 2400 wäre es immer 10, darunter hängt der
+	 * Wert an der Zahl der bisher gewerteten Partien über die ganze Laufbahn,
+	 * und die steht nirgends. Siehe `kFaktor()`.
+	 *
+	 * @param array $f Felder der Zeile, wird verändert
+	 * @param array $e Zeile aus tl_wertungsportal_elo
+	 *
+	 * @return void
+	 */
+	protected function setzeFideFelder(array &$f, array $e)
+	{
+		$f[15] = $this->text((string) $e['w_title']);
+		// Schiedsrichter- und Trainertitel: NA, FA, IA, FT und so fort
+		$f[16] = $this->text((string) $e['o_title']);
+		$f[17] = $this->text((string) $e['flag']);
+		// Titel der FIDE Online Arena (AGM, AIM, AFM, ACM) — ein eigenes Feld,
+		// nicht etwa ein Ersatz für den Amtstitel
+		$f[18] = $this->text((string) $e['foa_title']);
+
+		$f[19] = $this->ziffern((string) $e['rating']);
+		$f[20] = $this->ziffern((string) $e['games']);
+
+		$f[22] = $this->ziffern((string) $e['rapid_rating']);
+		$f[23] = $this->ziffern((string) $e['rapid_games']);
+
+		$f[25] = $this->ziffern((string) $e['blitz_rating']);
+		$f[26] = $this->ziffern((string) $e['blitz_games']);
+		$f[27] = $f[26];
+	}
+
+	/**
+	 * Liefert den Inhalt eines K-Faktor-Feldes.
+	 *
+	 * Ohne Wertung trägt die Originaldatei dort eine „0" ein — das ist
+	 * ausgezählt: In allen 1.346.756 Sätzen mit FIDE-Kennung und ohne
+	 * Standardwertung steht genau diese Null, ohne eine einzige Ausnahme.
+	 * Liegt eine Wertung vor, steht im Original der echte Faktor (10, 20 oder
+	 * 40); den kennt dieses Bundle nicht, deshalb bleibt das Feld dann leer.
+	 *
+	 * Ein geratener Wert wäre schlimmer als keiner: Swiss-Chess rechnet damit
+	 * Wertungsänderungen aus. Wie man ihn richtig bekommt, steht in der
+	 * TODO.md — es braucht drei Spalten in tl_wertungsportal_elo und eine
+	 * Erweiterung des XML-Imports.
+	 *
+	 * @param string $wertung Inhalt des zugehörigen Wertungsfeldes
+	 *
+	 * @return string „0" ohne Wertung, sonst leer
+	 */
+	protected function kFaktor($wertung)
+	{
+		return $wertung === '' ? '0' : '';
+	}
+
+	/**
+	 * Setzt die Anführungszeichen um die Felder 15 bis 27 und hängt das
+	 * Schlußfeld an.
+	 *
+	 * Hier fallen auch die beiden K-Faktor-Felder an: Sie hängen daran, ob
+	 * überhaupt eine Wertung vorliegt, und lassen sich deshalb erst setzen,
+	 * wenn alle übrigen Felder stehen.
+	 *
+	 * @param array $f Felder der Zeile
+	 *
+	 * @return string Fertige Zeile mit CRLF
+	 */
+	protected function schlussFelder(array $f)
+	{
+		// Ohne FIDE-Kennung bleibt der ganze Block leer, mit Kennung tragen
+		// die K-Felder mindestens die Null
+		if ($f[8] !== '')
+		{
+			$f[21] = $this->kFaktor($f[19]);
+			$f[24] = $this->kFaktor($f[22]);
+		}
 
 		for ($i = 15; $i <= 27; $i++)
 		{
@@ -387,6 +532,26 @@ class SwissChess
 		$f[28] = '"';
 
 		return implode(';', $f)."\r\n";
+	}
+
+	/**
+	 * Setzt den Namen eines FIDE-Spielers in der Form „Nachname,Vorname"
+	 * zusammen.
+	 *
+	 * Der Import hat den Namen der FIDE am Komma getrennt. Wer keinen Vornamen
+	 * hat — bei der FIDE nicht selten —, behält nur den Nachnamen, ohne
+	 * nachlaufendes Komma.
+	 *
+	 * @param array $e Zeile aus tl_wertungsportal_elo
+	 *
+	 * @return string Name
+	 */
+	protected function fideName(array $e)
+	{
+		$nach = trim((string) $e['surname']);
+		$vor = trim((string) $e['prename']);
+
+		return $vor !== '' ? $nach.','.$vor : $nach;
 	}
 
 	/**
@@ -659,6 +824,277 @@ class SwissChess
 	protected function melde($melder, $text)
 	{
 		if (is_callable($melder)) $melder($text);
+	}
+
+	// ─────────────────────────────────────────────
+	//  Eimer: die Sätze werden erst getrennt gesammelt und zuletzt der
+	//  Reihe nach zusammengeführt
+	// ─────────────────────────────────────────────
+
+	/**
+	 * Arbeitsverzeichnis der Eimerdateien.
+	 *
+	 * @var string
+	 */
+	protected $eimerpfad = '';
+
+	/**
+	 * Sammelpuffer je Eimer, damit nicht für jeden Satz eine Datei geöffnet
+	 * werden muß.
+	 *
+	 * @var array
+	 */
+	protected $puffer = array();
+
+	/**
+	 * Legt das Arbeitsverzeichnis für die Eimerdateien an.
+	 *
+	 * **Warum überhaupt Eimer:** Mit den FIDE-Spielern zusammen sind es rund
+	 * zwei Millionen Sätze. Alle im Speicher zu halten und dann zu sortieren
+	 * kostet mehrere Gigabyte. Statt dessen wandert jeder Satz sofort in die
+	 * Datei seines Eimers; am Ende wird jeder Eimer einzeln sortiert und
+	 * angehängt. Der größte Eimer bestimmt den Speicherbedarf, nicht die
+	 * ganze Datei — und die Reihenfolge der Eimer ist genau die, die der Index
+	 * braucht.
+	 *
+	 * @param string $verzeichnis Pfad des Arbeitsverzeichnisses
+	 *
+	 * @return void
+	 *
+	 * @throws \RuntimeException wenn sich das Verzeichnis nicht anlegen läßt
+	 */
+	protected function eimerVorbereiten($verzeichnis)
+	{
+		$this->eimerAufraeumen();
+
+		if (!is_dir($verzeichnis) && !@mkdir($verzeichnis, 0777, true))
+		{
+			throw new \RuntimeException('Arbeitsverzeichnis nicht anlegbar: '.$verzeichnis);
+		}
+
+		$this->eimerpfad = $verzeichnis;
+		$this->puffer = array();
+	}
+
+	/**
+	 * Legt eine Zeile in ihren Eimer.
+	 *
+	 * @param string $name       Name für die Eimerbestimmung
+	 * @param string $schluessel Zweiter Sortierschlüssel bei Namensgleichheit
+	 * @param string $zeile      Fertige Zeile mit CRLF
+	 *
+	 * @return bool false, wenn der Name nicht mit A..Z beginnt — solche Sätze
+	 *              kann der Index nicht führen und sie bleiben weg
+	 */
+	protected function inEimer($name, $schluessel, $zeile)
+	{
+		$e = self::eimer($name);
+
+		if ($e === null) return false;
+
+		// Der Sortierschlüssel wandert mit in die Datei und wird beim
+		// Zusammenführen wieder abgeschnitten
+		$this->puffer[$e][] = strtolower($name)."\t".$schluessel."\t".$zeile;
+
+		if (count($this->puffer[$e]) >= 5000) $this->pufferLeeren($e);
+
+		return true;
+	}
+
+	/**
+	 * Schreibt den Puffer eines Eimers in seine Datei.
+	 *
+	 * @param int $e Eimernummer
+	 *
+	 * @return void
+	 */
+	protected function pufferLeeren($e)
+	{
+		if (empty($this->puffer[$e])) return;
+
+		file_put_contents($this->eimerpfad.'/'.$e, implode('', $this->puffer[$e]), FILE_APPEND);
+		$this->puffer[$e] = array();
+	}
+
+	/**
+	 * Führt die Eimer der Reihe nach zu einer LST zusammen.
+	 *
+	 * Innerhalb eines Eimers wird nach dem Namen sortiert, bei Gleichheit nach
+	 * dem zweiten Schlüssel. So sieht die Reihenfolge in beiden Fassungen
+	 * gleich aus.
+	 *
+	 * @param string $lstPfad Ziel
+	 *
+	 * @return array Eimernummer => ['offset' => int, 'anzahl' => int]
+	 *
+	 * @throws \RuntimeException wenn die Zieldatei nicht schreibbar ist
+	 */
+	protected function eimerZusammenfuehren($lstPfad)
+	{
+		foreach (array_keys($this->puffer) as $e)
+		{
+			$this->pufferLeeren($e);
+		}
+
+		$fp = fopen($lstPfad, 'wb');
+		if ($fp === false) throw new \RuntimeException('Kann '.$lstPfad.' nicht schreiben');
+
+		$eimer = array();
+		$pos = 0;
+
+		for ($e = 0; $e < self::INDEXSAETZE - 1; $e++)
+		{
+			$datei = $this->eimerpfad.'/'.$e;
+			if (!is_file($datei)) continue;
+
+			$zeilen = explode("\r\n", (string) file_get_contents($datei));
+			// Der letzte Eintrag ist leer, weil jede Zeile mit CRLF endet
+			array_pop($zeilen);
+
+			sort($zeilen, SORT_STRING);
+
+			$eimer[$e] = array('offset' => $pos, 'anzahl' => count($zeilen));
+
+			foreach ($zeilen as $zeile)
+			{
+				// Sortierpräfix (Name + Tabulator + Schlüssel + Tabulator)
+				// wieder abschneiden
+				$roh = substr($zeile, strpos($zeile, "\t", strpos($zeile, "\t") + 1) + 1)."\r\n";
+				fwrite($fp, $roh);
+				$pos += strlen($roh);
+			}
+
+			@unlink($datei);
+		}
+
+		fclose($fp);
+
+		return $eimer;
+	}
+
+	/**
+	 * Löscht das Arbeitsverzeichnis samt Eimerdateien.
+	 *
+	 * @return void
+	 */
+	protected function eimerAufraeumen()
+	{
+		if ($this->eimerpfad === '' || !is_dir($this->eimerpfad)) return;
+
+		foreach ((array) glob($this->eimerpfad.'/*') as $datei)
+		{
+			@unlink($datei);
+		}
+
+		@rmdir($this->eimerpfad);
+		$this->eimerpfad = '';
+		$this->puffer = array();
+	}
+
+	// ─────────────────────────────────────────────
+	//  FIDE-Bestand aus tl_wertungsportal_elo
+	// ─────────────────────────────────────────────
+
+	/**
+	 * Spalten, die aus der Elo-Tabelle gebraucht werden.
+	 */
+	const ELO_FELDER = 'fideid, surname, prename, country, sex, title, w_title, o_title, foa_title, rating, games, flag, rapid_rating, rapid_games, blitz_rating, blitz_games, birthday';
+
+	/**
+	 * Lädt die FIDE-Angaben zu einer Liste von Kennungen.
+	 *
+	 * @param array $fideIds FIDE-Kennungen der DSB-Mitglieder
+	 *
+	 * @return array FIDE-Kennung => Zeile; leer, wenn keine Datenbank
+	 *               erreichbar ist
+	 */
+	protected function fideDatenFuer(array $fideIds)
+	{
+		$verbindung = $this->verbindung();
+		if ($verbindung === null) return array();
+
+		$fideIds = array_values(array_unique(array_filter(array_map('intval', $fideIds))));
+		if (!count($fideIds)) return array();
+
+		$daten = array();
+
+		foreach (array_chunk($fideIds, 1000) as $block)
+		{
+			$sql = 'SELECT '.self::ELO_FELDER.' FROM tl_wertungsportal_elo WHERE fideid IN ('.implode(',', $block).')';
+
+			foreach ($verbindung->iterateAssociative($sql) as $zeile)
+			{
+				$daten[(int) $zeile['fideid']] = $zeile;
+			}
+		}
+
+		return $daten;
+	}
+
+	/**
+	 * Verteilt alle FIDE-Spieler auf die Eimer, die nicht schon als
+	 * DSB-Mitglied darin stehen.
+	 *
+	 * Gelesen wird über `iterateAssociative` und NICHT über die
+	 * Contao-Datenbankklasse: Deren Ergebnisobjekt behält jede gelesene Zeile
+	 * im Speicher, was bei knapp zwei Millionen Sätzen das Skript sprengt.
+	 *
+	 * @param array $bekannt       FIDE-Kennungen, die schon als DSB-Satz
+	 *                             geschrieben wurden
+	 * @param int   $uebersprungen Wird um die Sätze erhöht, deren Name nicht
+	 *                             mit A..Z beginnt
+	 *
+	 * @return int Anzahl der aufgenommenen FIDE-Spieler
+	 */
+	protected function fideSpielerVerteilen(array $bekannt, &$uebersprungen)
+	{
+		$verbindung = $this->verbindung();
+		if ($verbindung === null) return 0;
+
+		$anzahl = 0;
+		$sql = 'SELECT '.self::ELO_FELDER." FROM tl_wertungsportal_elo WHERE published = '1'";
+
+		foreach ($verbindung->iterateAssociative($sql) as $zeile)
+		{
+			if (isset($bekannt[(int) $zeile['fideid']])) continue;
+
+			$name = $this->fideName($zeile);
+			if ($name === '') continue;
+
+			if ($this->inEimer($name, (string) $zeile['fideid'], $this->baueFideZeile($zeile))) $anzahl++;
+			else $uebersprungen++;
+		}
+
+		return $anzahl;
+	}
+
+	/**
+	 * Liefert die Datenbankverbindung, wenn eine erreichbar ist.
+	 *
+	 * Ohne Contao — etwa im Prüfstand — gibt es keine; der Erzeuger arbeitet
+	 * dann allein mit der CSV.
+	 *
+	 * @return \Doctrine\DBAL\Connection|null
+	 */
+	protected function verbindung()
+	{
+		try
+		{
+			$container = \Contao\System::getContainer();
+
+			if ($container === null || !$container->has('database_connection')) return null;
+
+			$verbindung = $container->get('database_connection');
+
+			// Fehlt die Tabelle, ist der FIDE-Import noch nie gelaufen
+			$vorhanden = $verbindung->fetchOne("SHOW TABLES LIKE 'tl_wertungsportal_elo'");
+
+			return $vorhanden ? $verbindung : null;
+		}
+		catch (\Throwable $e)
+		{
+			return null;
+		}
 	}
 
 	/**

@@ -1,5 +1,44 @@
 # Wertungsportal Changelog
 
+## Version 1.39.0 (2026-09-09)
+
+* Add: **Die Swiss-Chess-Dateien enthalten jetzt alle FIDE-Spieler.**
+  `Classes\SwissChess` reichert die DSB-Mitglieder aus `tl_wertungsportal_elo`
+  um ihre FIDE-Angaben an (Schnell- und Blitzwertung, Partienzahlen, Frauen-,
+  Amts- und Arena-Titel, Kennzeichen) und nimmt alle übrigen weltweit von der
+  FIDE geführten Spieler als eigene Sätze auf. Aus rund 100.000 Zeilen werden
+  damit knapp zwei Millionen — genau wie in den Originaldateien des DSB. Ist
+  die Elo-Tabelle leer, entstehen die Dateien wie bisher nur mit den
+  DSB-Mitgliedern
+* Add: Kopien beider Archive unter festem Namen in
+  `export/swiss10/dsb-swiss10.zip` und `export/swiss/dsb-swiss.zip`, analog zu
+  `export/csv/` und `export/dos/` — der Downloadlink auf der Website bleibt
+  damit gleich. Beim Überschreiben wird der bestehende Dbafs-Eintrag samt
+  Prüfsumme aufgefrischt statt ein zweiter angelegt
+* Add: 7 weitere Unit-Tests für die neu belegten Formatregeln (36 Tests
+  gesamt)
+* Fix: **Feld 16 und Feld 18 der LST sind zwei verschiedene Felder.** In 16
+  steht der Schiedsrichter-/Trainertitel, in 18 der Arena-Titel der FIDE
+  Online Arena (AGM, AIM, AFM, ACM); bisher rückte der Arena-Titel ersatzweise
+  in Feld 16 nach. Betroffen waren 18.352 Sätze
+* Fix: Feld 27 ist **kein** Blitz-K-Faktor, sondern eine Wiederholung von Feld
+  26 (Blitzpartien) — so steht es in allen 1.973.816 Sätzen der Originaldatei
+* Fix: Die K-Faktor-Felder 21 und 24 tragen ohne zugehörige Wertung eine „0",
+  wie im Original; ohne FIDE-Kennung bleiben alle Felder 15 bis 27 leer
+* Change: Die knapp zwei Millionen Sätze werden über **Eimerdateien** sortiert
+  statt im Speicher, und die Elo-Tabelle wird über `iterateAssociative()`
+  gelesen — anders wäre der Lauf nicht durchzubringen
+* Change: `docs/swiss-chess.md` um die neuen Quellen, die Feldtabelle 15–27
+  und die Nachweise erweitert
+
+  Nachweis: Die Elo-Tabelle einer Prüfinstallation wurde mit allen 1.913.201
+  FIDE-Kennungen der Originaldatei vom 02.09.2026 befüllt und die erzeugte
+  Datei danach Feld für Feld dagegen gehalten: **1.916.405 von 1.916.407
+  Sätzen** stimmen in den Feldern 15–27 überein (die beiden Ausreißer sind die
+  einzigen vierstelligen Arena-Titel, die `foa_title` als `varchar(3)` kürzt).
+  Der Index belegt genau dieselben 616 der 702 Eimer wie das Original.
+  Offen bleibt allein der K-Faktor selbst — siehe `TODO.md`
+
 ## Version 1.38.0 (2026-09-09)
 
 * Add: **Hintergrunddateien für Swiss-Chess** — der neue Befehl

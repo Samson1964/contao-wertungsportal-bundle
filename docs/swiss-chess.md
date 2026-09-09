@@ -20,34 +20,78 @@ Jedes Archiv enthält das Dateipaar `fdsbJJMMTT.LST` und `.SWX`; die Dateien
 der alten Fassung tragen ein „a" am Namensende, damit sie sich nicht
 überschreiben, wenn jemand beide Archive in denselben Ordner entpackt.
 
-Die Archive werden in die Dateiverwaltung eingetragen und tauchen damit im
-Backend auf — genauso wie die CSV-Pakete des Converters.
+Von beiden Archiven wandert zusätzlich eine Kopie **unter festem Namen** ins
+Exportverzeichnis:
+
+```
+files/wertungsportal/downloads/export/
+├── swiss10/dsb-swiss10.zip
+└── swiss/dsb-swiss.zip
+```
+
+Das ist dieselbe Aufteilung, die der Converter für `export/csv/` und
+`export/dos/` benutzt: Der Downloadlink auf der Website soll sich nicht jeden
+Monat ändern, während das datierte Archiv daneben die Historie führt.
+
+Alle vier Dateien werden in die Dateiverwaltung eingetragen und tauchen damit
+im Backend auf. Bei den Exportkopien wird der bestehende Eintrag samt
+Prüfsumme aufgefrischt statt ein zweiter angelegt — sonst zeigte Contao nach
+dem Überschreiben weiter auf den alten Inhalt.
 
 Quelle ist die `export/csv/LV-0-csv.zip`, die `wertungsportal:converter`
 erzeugt. Mit `--quelle` läßt sich statt dessen ein bereits entpacktes
 Verzeichnis angeben, mit `--ziel` das Archivverzeichnis.
 
-## Was in den Dateien steht — und was nicht
+## Was in den Dateien steht
 
-Enthalten sind **alle DSB-Mitglieder, eine Zeile je Mitgliedschaft**. Wer in
-zwei Vereinen gemeldet ist, steht zweimal in der Liste, jeweils mit seinem
-Verein — genau so halten es die Originaldateien des DSB.
+Die Dateien kommen aus **zwei Quellen**:
 
-> **Zwei Unterschiede zu den Originaldateien des DSB.** Erstens führen jene
-> zusätzlich **alle weltweit von der FIDE erfaßten Spieler**, auch die ohne
-> DSB-Mitgliedschaft. Zweitens enthalten sie **Schnell- und Blitzwertungen,
-> Partienzahlen, K-Faktoren und die FIDE-Kennzeichen**. Beides steht nicht in
-> der LV-0-csv; die hier erzeugten Dateien haben diese Felder leer.
->
-> Der Bestand für beides liegt im Bundle bereit (`tl_wertungsportal_elo`, aus
-> dem monatlichen FIDE-XML-Import). Wer die Dateien vollständig haben will,
-> müßte den Erzeuger daran anschließen — das ist bewußt nicht geschehen,
-> weil die Aufgabe „aus der LV-0-csv" lautete.
+* die **`spieler.csv`** der LV-0-csv liefert die DSB-Mitglieder, eine Zeile je
+  Mitgliedschaft. Wer in zwei Vereinen gemeldet ist, steht zweimal in der
+  Liste, jeweils mit seinem Verein — genau so halten es die Originaldateien
+  des DSB;
+* **`tl_wertungsportal_elo`** (aus dem monatlichen FIDE-XML-Import) liefert
+  zweierlei: die FIDE-Angaben der Mitglieder — Schnell- und Blitzwertung,
+  Partienzahlen, Frauen-, Amts- und Arena-Titel, Kennzeichen — **und alle
+  übrigen weltweit von der FIDE geführten Spieler als eigene Sätze**.
 
-Ebenfalls nicht ableitbar: der **Frauentitel**. Die CSV hat nur eine
-Titelspalte; bei einer Spielerin mit offenem Titel (etwa GM) steht dort „GM",
-und daß sie zusätzlich WGM führt, geht daraus nicht hervor. Betroffen sind 88
-von 100.000 Sätzen.
+Der zweite Teil macht den Löwenanteil aus. In der Originaldatei des DSB vom
+02.09.2026 stehen 1.973.816 Sätze: 100.250 DSB-Mitgliedschaften und 1.873.566
+reine FIDE-Spieler, von denen 1.334.966 nicht einmal eine Standardwertung
+haben. Ein reiner FIDE-Satz hat weder Verein noch DWZ, weder Spieler- noch
+Mitgliedsnummer, keine Vereinskennziffer und keinen Status.
+
+> **Ist die Elo-Tabelle leer** — der XML-Import also noch nie gelaufen —,
+> entstehen die Dateien trotzdem, dann eben nur mit den DSB-Mitgliedern und
+> ohne die FIDE-Felder. Der Erzeuger prüft das selbst und arbeitet ohne
+> Datenbank allein mit der CSV.
+
+Weil dabei knapp zwei Millionen Sätze zu sortieren sind, laufen sie nicht
+über den Speicher, sondern über **Eimerdateien**: Jeder der 702 Namenseimer
+bekommt eine eigene Datei im Arbeitsverzeichnis, am Ende werden sie der Reihe
+nach aneinandergehängt. Aus demselben Grund liest der Erzeuger die Elo-Tabelle
+über `iterateAssociative()` und nicht über die Contao-Datenbankklasse — deren
+Ergebnisobjekt behält jede gelesene Zeile.
+
+### Was nicht drinsteht: die K-Faktoren
+
+Die Felder 21 und 24 tragen im Original den K-Faktor (10, 20 oder 40). Das
+FIDE-XML führt ihn, `tl_wertungsportal_elo` hat aber keine Spalte dafür — er
+bleibt hier leer, sofern eine Wertung vorliegt. Ohne Wertung steht wie im
+Original eine „0".
+
+Geschätzt wird nichts. Über 2400 wäre der Faktor immer 10 — das ist an allen
+3.060 Sätzen der Originaldatei nachgezählt —, darunter hängt er an der Zahl
+der über die ganze Laufbahn gewerteten Partien, und die steht nirgends. Eine
+Nachrechnung nach den bekannten Regeln trifft nur 59 % der Sätze; ein
+falscher Faktor ginge in Swiss-Chess direkt in die Berechnung von
+Wertungsänderungen ein. Ein leeres Feld ist an dieser Stelle unbedenklich:
+Die Originaldatei selbst läßt es bei allen 57.369 Sätzen ohne FIDE-Kennung
+leer.
+
+Nachzuholen wäre das über drei Spalten `k`, `rapid_k` und `blitz_k` in
+`tl_wertungsportal_elo` plus drei Zeilen in `Classes/EloImport.php`; siehe
+`TODO.md`.
 
 ## Aufbau der LST
 
@@ -77,14 +121,37 @@ Zeichensatz **DOS-Codepage 850**.
 **Titelcode (Feld 5):** GM=1, IM=2, FM=3, CM=4, WGM=6, WIM=7, WFM=8, WCM=9.
 Die 5 kommt im ganzen Bestand nicht vor.
 
-**Felder 15–27:** 15 Frauentitel, 16 Schiedsrichter-/Trainertitel (NA, FA, IA,
-FT, FS …), 17 Kennzeichen (`i` inaktiv, `w` weiblich), 19/20/21 Standard-Elo /
-Partien / K-Faktor, 22/23/24 dasselbe für Schnellschach, 25/26/27 für Blitz.
-Aus der CSV gefüllt werden nur 15 und 19.
+**Felder 15–27** stehen in Anführungszeichen und entsprechen genau den
+dreizehn Angaben, die das FIDE-XML je Spieler außer der Kennung führt. Quelle
+ist `tl_wertungsportal_elo`:
 
-**Zwei Formatregeln**, aus der Originaldatei abgelesen: Name und Vereinsname
+| Feld | Inhalt | Spalte |
+| --- | --- | --- |
+| 15 | Frauentitel (WGM, WIM, WFM, WCM) | `w_title` |
+| 16 | Schiedsrichter-/Trainertitel (NA, SI, FA, IA, FT …) | `o_title` |
+| 17 | Kennzeichen (`i` inaktiv, `w` weiblich, `wi`) | `flag` |
+| 18 | Arena-Titel der FIDE Online Arena (AGM, AIM, AFM, ACM) | `foa_title` |
+| 19 / 20 / 21 | Standard-Elo / Partien / K-Faktor | `rating`, `games`, — |
+| 22 / 23 / 24 | dasselbe für Schnellschach | `rapid_rating`, `rapid_games`, — |
+| 25 / 26 | Blitz-Elo / Partien | `blitz_rating`, `blitz_games` |
+| 27 | **Wiederholung von Feld 26** | — |
+
+Zwei Punkte daran sind leicht falsch zu raten:
+
+* **Feld 16 und Feld 18 sind zwei verschiedene Felder.** Der Arena-Titel
+  rückt nicht in Feld 16 nach, wenn kein Amtstitel vorliegt; beide kommen
+  auch gleichzeitig vor.
+* **Feld 27 ist kein Blitz-K-Faktor**, sondern eine Wiederholung der
+  Blitzpartien. In allen 1.973.816 Sätzen der Originaldatei stehen in Feld 26
+  und 27 dieselben Zeichen — ohne eine einzige Ausnahme.
+
+Hat ein Satz **keine FIDE-Kennung**, bleiben alle dreizehn Felder leer; so
+halten es alle 57.369 solchen Sätze der Originaldatei.
+
+**Drei Formatregeln**, aus der Originaldatei abgelesen: Name und Vereinsname
 sind auf **40 Zeichen** gekürzt und enthalten **keine Anführungszeichen**; eine
-„0" bei Elo oder DWZ wird zum leeren Feld.
+„0" bei Elo oder DWZ wird zum leeren Feld; die Nation steht **nur** bei
+Spielern mit FIDE-Eintrag.
 
 ## Die alte Fassung: binär kodierte Zahlen
 
@@ -147,8 +214,15 @@ Eine reine Namenssortierung reicht nicht: Ein Umlaut an zweiter Stelle —
 „Bz"-Namen. Der Eimer für „B + kein Buchstabe" wäre zerrissen und sein Bereich
 im Index unbrauchbar.
 
+Sortiert wird nicht im Speicher: Jeder Eimer bekommt während des Laufs eine
+eigene Datei im Arbeitsverzeichnis, in die seine Zeilen geschrieben werden;
+zum Schluß werden die 702 Dateien der Reihe nach aneinandergehängt und
+gelöscht. Bei knapp zwei Millionen Sätzen ginge es anders nicht. Das Aufräumen
+steht in einem `finally` — bricht der Lauf ab, bleibt kein Arbeitsverzeichnis
+liegen.
+
 Namen, die nicht mit A–Z beginnen, kann der Index nicht führen; sie bleiben
-weg (in der aktuellen Datei 152 von 100.370).
+weg (in der aktuellen Datei 152 von 100.370 Mitgliedschaften).
 
 ## Woher das Format stammt
 
@@ -163,8 +237,22 @@ Datensätze) und gegengeprüft:
   an jedem Offset in der LST nachgesehen wurde, welcher Name dort beginnt.
 * **Feldbedeutung:** durch Verknüpfung von 99.990 Sätzen der Originaldatei mit
   ihrer Zeile in der spieler.csv.
+* **FIDE-Felder:** Die Elo-Tabelle einer Prüfinstallation wurde mit allen
+  1.913.201 FIDE-Kennungen der Originaldatei befüllt — aus der Datei selbst
+  zurückgerechnet — und das Ergebnis danach Feld für Feld dagegen gehalten.
+  **1.916.405 von 1.916.407 Sätzen stimmen in den Feldern 15–27 überein**,
+  abgesehen von den K-Faktoren. Die zwei Ausreißer sind die einzigen
+  vierstelligen Arena-Titel des Bestands (`AAFM`, `AAIM`); die Spalte
+  `foa_title` ist drei Zeichen breit und kürzt sie.
+* **Index:** Die erzeugte SWX belegt genau dieselben 616 der 702 Eimer wie das
+  Original, mit identischem Kopfsatz.
 
-Die erzeugten Dateien sind gegen die Originaldatei vom 02.09.2026 abgeglichen.
-Alle verbleibenden Abweichungen erklären sich aus der Woche, die zwischen den
-beiden Datenständen liegt — Vereinswechsel, neue FIDE-Kennungen, geänderte
-DWZ. Der Prüfstand steht unter `tests/`.
+Die erzeugten Dateien sind insgesamt gegen die Originaldatei vom 02.09.2026
+abgeglichen. Alle verbleibenden Abweichungen erklären sich aus der Woche, die
+zwischen den beiden Datenständen liegt — Vereinswechsel, neue FIDE-Kennungen,
+geänderte DWZ.
+
+Die Unit-Tests stehen unter `tests/Classes/SwissChessTest.php` und laufen ohne
+weitere Dateien. Die Skripte, mit denen die Nachweise oben geführt wurden,
+liegen in `SwissChess-Dateien/pruefstand/` samt Anleitung — nicht versioniert,
+weil sie die Originaldateien des DSB daneben brauchen.
