@@ -70,10 +70,14 @@ class Verbandsrangliste
 				// Blacklist-Personen nicht anzeigen
 				if(!empty($spieler['nuLigaPersonId']) && isset($blacklist[$spieler['nuLigaPersonId']])) continue;
 
-				// Auf nichtexistierende Variablen prüfen, die aber benötigt werden:
+				// Auf nichtexistierende Variablen prüfen, die aber benötigt werden.
+				// Die nu-Schnittstelle läßt Felder einfach weg, statt sie leer
+				// zu liefern; `gender` fehlte im Livebetrieb bei einzelnen
+				// Spielern und füllte das Protokoll mit „Undefined array key"
 				if(!array_key_exists('fideId', $spieler)) $spieler['fideId'] = false;
 				if(!array_key_exists('rating', $spieler)) $spieler['rating'] = false;
 				if(!array_key_exists('index', $spieler)) $spieler['index'] = false;
+				if(!array_key_exists('gender', $spieler)) $spieler['gender'] = '';
 
 				// FIDE-Daten aus Tabelle tl_wertungsportal_elo holen
 				$fide = $spieler['fideId'] && isset($fideliste[$spieler['fideId']]) ? $fideliste[$spieler['fideId']] : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::leererFIDESatz();
@@ -123,12 +127,17 @@ class Verbandsrangliste
 					'Mglnr'       => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getMitgliedsnummer($spieler, $this->zps),
 					'Status'      => $mitgliedschaft['status'],
 					'Spielername' => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Spielername($spieler),
-					'Geschlecht'  => $spieler['gender'] == 'MALE' ? 'M' : ($spieler['gender'] == 'FEMALE' ? 'W' : strtoupper($spieler['gender'])),
+					'Geschlecht'  => $spieler['gender'] == 'MALE' ? 'M' : ($spieler['gender'] == 'FEMALE' ? 'W' : strtoupper((string) $spieler['gender'])),
 					'KW'          => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Kalenderwoche($spieler),
 					'DWZ'         => $spieler['rating'].' - '.$spieler['index'],
 					'Elo'         => $fide_elo ? $fide_elo : '-',
 					'FIDE-Titel'  => $fide_titel,
-					'FIDE-Nation' => '{{flagge::'.$fide_nation.'}}',
+					// Das Insert-Tag nur mit einem echten Länderkürzel erzeugen.
+					// Ohne FIDE-Eintrag ist die Nation leer oder ein „-"; daraus
+					// entstand `{{flagge::}}`, und Contao schrieb für jede solche
+					// Zeile ein „Unknown insert tag" ins Protokoll — der mit
+					// Abstand häufigste Eintrag dort
+					'FIDE-Nation' => $this->flagge($fide_nation),
 					'Verein'      => $mitgliedschaft['verein'],
 				);
 				if($platz == $this->toplist) break; // Abbruch wenn Limit erreicht
@@ -136,6 +145,32 @@ class Verbandsrangliste
 		}
 
 		$this->daten['Rangliste'] = $rangliste;
+	}
+
+	/**
+	 * Baut das Insert-Tag für die Länderflagge — oder gar nichts.
+	 *
+	 * **Warum es diese Methode gibt:** Ein Spieler ohne FIDE-Eintrag hat keine
+	 * Nation; das Feld ist dann leer oder trägt ein „-". Bis Fassung 1.40.0
+	 * entstand daraus `{{flagge::}}`, und Contao schrieb für jede solche Zeile
+	 * ein „Unknown insert tag" ins Systemprotokoll. Auf den Verbandsseiten mit
+	 * hunderten Spielern war das der häufigste Eintrag überhaupt und verdeckte
+	 * die Meldungen, auf die es ankommt.
+	 *
+	 * Ein Länderkürzel der FIDE hat immer drei Buchstaben (GER, NOR, IND).
+	 * Alles andere gilt als „keine Nation" und ergibt eine leere Zelle — eine
+	 * Ersatzflagge wäre eine Behauptung, die die Daten nicht hergeben.
+	 *
+	 * @param  string $nation Länderkürzel aus tl_wertungsportal_elo
+	 * @return string Insert-Tag, oder leerer Text
+	 */
+	protected function flagge($nation)
+	{
+		$nation = strtoupper(trim((string) $nation));
+
+		if(strlen($nation) !== 3 || !ctype_alpha($nation)) return '';
+
+		return '{{flagge::'.$nation.'}}';
 	}
 
 	// ─────────────────────────────────────────────

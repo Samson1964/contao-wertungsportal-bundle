@@ -578,7 +578,7 @@ class API
 
 		try
 		{
-			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog('Wertungsportal: Kein Zugriff auf die Schnittstelle — '.$meldung, __METHOD__, 'ERROR');
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog('Wertungsportal: Kein Zugriff auf die Schnittstelle: '.$meldung, __METHOD__, 'ERROR');
 		}
 		catch(\Throwable $e)
 		{

@@ -1,5 +1,39 @@
 # Wertungsportal Changelog
 
+## Version 1.41.0 (2026-09-10)
+
+* Fix: **Jeder auffällige Wert steht jetzt genau einmal im Protokoll.** Der
+  Vorlader läuft jede Nacht über dieselben Turniere, und die Dublettenliste galt
+  nur je Seitenaufruf — im August 2026 standen 21 Fälle als 45 Zeilen in
+  `wertungsportal-auffaellig-2026-08.log`. Die Monatsdatei ist jetzt ihr eigener
+  Merkzettel: Sie wird beim ersten Befund eines Abrufs gelesen, es braucht weder
+  Tabelle noch zweite Datei, und mit dem Monatswechsel fängt die Zählung von
+  selbst neu an. Zum Schlüssel gehört der Wert, damit ein **geänderter** Wert am
+  selben Spieler wieder auffällt
+* Fix: Die Zusammenfassung im Systemprotokoll zählt nur noch **neue** Befunde —
+  vorher meldete sie Nacht für Nacht dieselbe Zahl
+* Fix: **`{{flagge::}}` ohne Länderkürzel** (Verbandsranglisten). Ein Spieler
+  ohne FIDE-Eintrag hat keine Nation; das ergab ein Insert-Tag mit leerem
+  Argument, und Contao schrieb für jede solche Zeile ein „Unknown insert tag"
+  ins Systemprotokoll — auf Verbandsseiten mit hunderten Spielern der häufigste
+  Eintrag überhaupt. Neue Methode `Verbandsrangliste::flagge()` erzeugt das Tag
+  nur für ein echtes dreistelliges Kürzel, sonst bleibt die Zelle leer
+* Fix: **`Undefined array key "gender"`** in `Helper/Verbandsrangliste.php`. Die
+  nu-Schnittstelle läßt das Feld bei einzelnen Spielern weg; es steht jetzt in
+  demselben Guard-Block wie `fideId`, `rating` und `index`
+* Change: Typografische Zeichen aus den Protokollmeldungen genommen (Gedankenstrich,
+  deutsche Anführungszeichen). Sie erschienen im Log als `â€"` — ein
+  Protokoll wird von vielen Werkzeugen gelesen, und Typografie ist dort ein
+  Risiko ohne Nutzen. Umlaute bleiben
+* Change: `Helper\Auffaellig` ruft `datei()` über `static::` auf, damit sich das
+  Ziel im Prüfstand umlenken läßt
+* Add: 13 neue Unit-Tests (54 Tests gesamt) — Dublettenprüfung über mehrere
+  Abrufe, geänderter Wert, Spieler ohne nuLiga-Kennung, Flaggenausgabe
+
+  Geprüft: Ein Prüfstand mit den **echten 21 Fällen** des August-Protokolls über
+  fünf simulierte Nächte — 21 Zeilen statt 105, Zähler bei null, Umlautnamen
+  unversehrt, Rika Scholz mit beiden Turnieren
+
 ## Version 1.40.0 (2026-09-10)
 
 * Fix: **`wertungsportal:swisschess` brach auf dem Livesystem ab.** nu hat der

@@ -76,7 +76,7 @@ class Cacheverwaltung extends \Contao\BackendModule
 
 			$anzahl = count(array_filter(array_column($eintraege, 'geloescht')));
 
-			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog('Wertungsportal: '.$anzahl.' Cache-Einträge zu '.$arten[$art].' „'.$wert.'" gelöscht', __METHOD__, 'GENERAL');
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog('Wertungsportal: '.$anzahl.' Cache-Einträge zu '.$arten[$art].' "'.$wert.'" gelöscht', __METHOD__, 'GENERAL');
 		}
 		else
 		{

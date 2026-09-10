@@ -17,8 +17,16 @@ namespace Schachbulle\ContaoWertungsportalBundle\Helper;
  * Geschrieben wird in eine eigene Datei je Monat unter `var/logs`, nicht ins
  * Systemprotokoll: Dort wäre der Befund zwischen Hunderten Cron-Zeilen nicht
  * mehr zu finden, und die Datei läßt sich unverändert an nu weiterreichen.
- * Eine Zusammenfassung je Seitenaufruf geht zusätzlich ins Systemprotokoll,
- * damit die Sache überhaupt auffällt.
+ * Eine Zusammenfassung geht zusätzlich ins Systemprotokoll, damit die Sache
+ * überhaupt auffällt.
+ *
+ * **Jeder Fall steht genau einmal darin.** Der Vorlader läuft jede Nacht über
+ * dieselben Turniere; ohne Dublettenprüfung wuchs die Datei mit jedem Lauf um
+ * dieselben Zeilen — im August 2026 waren es 45 für 21 Fälle. Die Datei ist
+ * dabei ihr eigener Merkzettel: Sie wird beim ersten Befund eines Abrufs
+ * eingelesen, es braucht weder Tabelle noch zweite Datei, und mit dem
+ * Monatswechsel fängt die Zählung von selbst neu an. Zum Schlüssel gehört der
+ * Wert, damit ein GEÄNDERTER Wert am selben Spieler wieder auffällt.
  */
 class Auffaellig
 {
@@ -44,16 +52,27 @@ class Auffaellig
 	);
 
 	/**
-	 * Bereits gemeldete Befunde dieses Seitenaufrufs.
+	 * Befunde, die schon festgehalten sind — sowohl die dieses Seitenaufrufs
+	 * als auch die, die bereits in der Monatsdatei stehen.
 	 *
-	 * Derselbe Spieler kommt in einem Abgleich mehrfach vorbei (Auswertung,
-	 * Turnierhistorie, Partien). Ohne diese Liste stünde er ebenso oft in der
-	 * Datei.
+	 * `null` heißt „Datei noch nicht gelesen"; sie wird erst beim ersten
+	 * Befund geöffnet, damit ein Abgleich ohne Auffälligkeiten sie gar nicht
+	 * anfaßt.
+	 *
+	 * **Wozu:** Derselbe Spieler kommt in einem Abgleich mehrfach vorbei
+	 * (Auswertung, Turnierhistorie, Partien), und der Vorlader läuft jede
+	 * Nacht über dieselben Turniere. Ohne diese Liste stünde jeder Befund nach
+	 * einer Woche siebenmal in der Datei, und wer sie an nu weiterreicht,
+	 * müßte erst aufräumen. Im August 2026 waren es 45 Zeilen für 21 Fälle.
+	 *
+	 * @var array|null
 	 */
-	protected static $gemeldet = array();
+	protected static $bekannt = null;
 
 	/**
-	 * Zahl der Befunde dieses Seitenaufrufs, für die Zusammenfassung.
+	 * Zahl der NEU festgehaltenen Befunde dieses Seitenaufrufs, für die
+	 * Zusammenfassung. Wiederholungen zählen nicht mit — sonst meldete das
+	 * Systemprotokoll Nacht für Nacht dieselbe Zahl.
 	 */
 	protected static $anzahl = 0;
 
@@ -111,11 +130,16 @@ class Auffaellig
 	protected static function melde($satz, $turnier, $feld, $bezeichnung, $wert, $herkunft)
 	{
 		$person = (string) ($satz['nuLigaPersonId'] ?? ($satz['playerUuid'] ?? ''));
-		$schluessel = $turnier.'|'.$person.'|'.$feld.'|'.$wert;
+		$schluessel = self::schluessel($turnier, $person, $feld, $wert);
 
-		if(isset(self::$gemeldet[$schluessel])) return;
+		// Steht der Fall schon in der Monatsdatei oder kam er in diesem Abruf
+		// bereits vorbei, braucht es weder eine zweite Zeile noch eine neue
+		// Meldung im Systemprotokoll
+		self::bekannteLaden();
 
-		self::$gemeldet[$schluessel] = true;
+		if(isset(self::$bekannt[$schluessel])) return;
+
+		self::$bekannt[$schluessel] = true;
 		++self::$anzahl;
 
 		$zeile = array
@@ -139,6 +163,76 @@ class Auffaellig
 	}
 
 	/**
+	 * Bildet den Schlüssel, unter dem ein Befund als „schon bekannt" gilt.
+	 *
+	 * Turnier, Person, Feld und Wert zusammen. Der Wert gehört dazu, damit ein
+	 * geänderter Wert am selben Spieler wieder auffällt — korrigiert nu die
+	 * Auswertung nur zur Hälfte, soll das nicht untergehen.
+	 *
+	 * @param  string $turnier UUID des Turniers
+	 * @param  string $person  nuLiga-Kennung oder Spieler-UUID
+	 * @param  string $feld    Feldname der Schnittstelle
+	 * @param  mixed  $wert    Der beanstandete Wert
+	 * @return string Schlüssel
+	 */
+	protected static function schluessel($turnier, $person, $feld, $wert)
+	{
+		return $turnier.'|'.$person.'|'.$feld.'|'.$wert;
+	}
+
+	/**
+	 * Liest die Befunde ein, die in der Monatsdatei schon stehen.
+	 *
+	 * Die Datei ist damit ihr eigener Merkzettel — es braucht weder eine
+	 * Tabelle noch eine zweite Datei, und mit dem Monatswechsel fängt die
+	 * Zählung von selbst neu an.
+	 *
+	 * Aus der Spalte „Feld" wird der Schnittstellenname wieder herausgelöst;
+	 * dort steht er in Klammern hinter der deutschen Bezeichnung, etwa
+	 * `Turnierleistung (tournamentPerformance)`.
+	 *
+	 * Läßt sich die Datei nicht lesen, bleibt die Liste leer: Lieber eine
+	 * Zeile zuviel als ein verlorener Befund.
+	 *
+	 * @return void
+	 */
+	protected static function bekannteLaden()
+	{
+		if(self::$bekannt !== null) return;
+
+		self::$bekannt = array();
+
+		try
+		{
+			$datei = static::datei();
+
+			if($datei === '' || !is_file($datei)) return;
+
+			$fp = @fopen($datei, 'r');
+
+			if($fp === false) return;
+
+			while(($zeile = fgetcsv($fp, 0, ';')) !== false)
+			{
+				// Kopfzeile und alles, was zu kurz ist, übergehen
+				if(count($zeile) < 8 || $zeile[0] === 'Zeitpunkt') continue;
+
+				$feld = (string) $zeile[6];
+
+				if(preg_match('/\(([^)]+)\)\s*$/', $feld, $treffer)) $feld = $treffer[1];
+
+				self::$bekannt[self::schluessel((string) $zeile[2], (string) $zeile[3], $feld, (string) $zeile[7])] = true;
+			}
+
+			fclose($fp);
+		}
+		catch(\Throwable $e)
+		{
+			// Ohne Merkzettel wird höchstens doppelt protokolliert
+		}
+	}
+
+	/**
 	 * Hängt eine Zeile an die Monatsdatei an und legt sie samt Kopfzeile an,
 	 * wenn es sie noch nicht gibt.
 	 *
@@ -149,7 +243,7 @@ class Auffaellig
 	{
 		try
 		{
-			$datei = self::datei();
+			$datei = static::datei();
 
 			if($datei === '') return;
 
@@ -226,7 +320,7 @@ class Auffaellig
 		try
 		{
 			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog(
-				'Wertungsportal: '.$anzahl.' unmögliche Werte von der Schnittstelle erhalten (negative Zahlen, wo es keine geben kann). Einzelheiten samt Spieler und Turnier in '.basename(self::datei()).' — geeignet als Fehlermeldung an nu.',
+				'Wertungsportal: '.$anzahl.' neue unmögliche Werte von der Schnittstelle erhalten (negative Zahlen, wo es keine geben kann). Einzelheiten samt Spieler und Turnier in '.basename(static::datei()).' — geeignet als Fehlermeldung an nu. Bereits festgehaltene Fälle werden nicht erneut gemeldet.',
 				__METHOD__,
 				'ERROR'
 			);

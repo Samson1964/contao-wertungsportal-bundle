@@ -241,7 +241,7 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_persons_tournaments'] = [
             'sql'       => "double NOT NULL default 0",
         ],
         // Vorzeichenbehaftet — Begründung siehe tl_wertungsportal_tournaments_evaluation:
-        // Eine Turnierleistung kann rechnerisch unter null liegen
+        // nu liefert negative Turnierleistungen, obwohl es sie nicht geben darf
         'tournamentPerformance' => [
             'exclude'   => true,
             'inputType' => 'text',
