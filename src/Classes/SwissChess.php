@@ -27,11 +27,14 @@ namespace Schachbulle\ContaoWertungsportalBundle\Classes;
  * Namensauflösung an 112.824 Spielern, die Indexformel an allen 702
  * Einträgen beider SWX-Dateien. Einzelheiten in `docs/swiss-chess.md`.
  *
- * **Was diese Dateien NICHT enthalten:** Die Originaldateien des DSB führen
- * zusätzlich alle weltweit von der FIDE erfaßten Spieler und deren Schnell-
- * und Blitzwertungen. Beides steht nicht in der LV-0-csv; die hier erzeugten
- * Dateien umfassen deshalb nur die DSB-Mitglieder, und von den FIDE-Angaben
- * nur das, was die CSV hergibt (Elo, Titel, Kennung, Land).
+ * **Woher die Daten kommen:** Die DSB-Mitglieder stehen in der `spieler.csv`
+ * der LV-0-csv, ihre FIDE-Angaben und alle übrigen weltweit von der FIDE
+ * geführten Spieler in `tl_wertungsportal_elo`. Ist die Tabelle leer, entsteht
+ * die Datei allein aus der CSV — dann eben nur mit den Mitgliedern.
+ *
+ * **Der einzige Wert, der nirgends steht, ist der K-Faktor** (Felder 21 und
+ * 24). Das FIDE-XML führt ihn, der Import dieses Bundles legt ihn nicht ab;
+ * geschätzt wird er nicht. Einzelheiten in `docs/swiss-chess.md`.
  */
 class SwissChess
 {
@@ -94,28 +97,48 @@ class SwissChess
 	const FRAUENTITEL = array('WGM', 'WIM', 'WFM', 'WCM');
 
 	/**
-	 * Spaltennummern der spieler.csv. Gelesen wird über diese Konstanten und
-	 * nicht über die Kopfzeile: Die Datei kommt unverändert von nu, und eine
-	 * verschobene Spalte soll auffallen statt stillschweigend falsche Dateien
-	 * zu erzeugen (siehe pruefeKopfzeile()).
+	 * Spalten der spieler.csv, die gebraucht werden: eigener Schlüssel =>
+	 * Überschrift in der Kopfzeile.
+	 *
+	 * **Gelesen wird über die Namen, nicht über feste Spaltennummern.** Am
+	 * 10.09.2026 hat nu drei Spalten angehängt, und der Erzeuger brach ab,
+	 * weil er die Kopfzeile Zeichen für Zeichen verglich. Über die Namen ist
+	 * das gleichgültig: Angehängte oder umgestellte Spalten stören nicht,
+	 * eine fehlende fällt weiterhin sofort auf (siehe `spaltenZuordnen()`).
+	 *
+	 * Fehlt eine dieser Spalten, bricht der Lauf ab. Eine stillschweigend
+	 * verrutschte Zuordnung wäre schlimmer als gar keine Datei: Sie stünde
+	 * erst im Turniersaal in Frage.
 	 */
-	const CSV_ID          = 0;
-	const CSV_ZPS         = 1;
-	const CSV_MITGLNR     = 2;
-	const CSV_STATUS      = 3;
-	const CSV_NAME        = 4;
-	const CSV_GESCHLECHT  = 5;
-	const CSV_GEBURTSJAHR = 7;
-	const CSV_DWZ         = 9;
-	const CSV_ELO         = 11;
-	const CSV_TITEL       = 12;
-	const CSV_FIDEID      = 13;
-	const CSV_LAND        = 14;
+	const CSV_PFLICHT = array
+	(
+		'id'          => 'ID',
+		'zps'         => 'ZPS',
+		'mitglnr'     => 'Mitgliedsnummer',
+		'status'      => 'Status',
+		'name'        => 'Name,Vorname',
+		'geschlecht'  => 'Geschlecht',
+		'geburtsjahr' => 'Geburtsjahr',
+		'dwz'         => 'DWZ',
+		'elo'         => 'FIDE-Elozahl',
+		'titel'       => 'FIDE-Titel',
+		'fideid'      => 'FIDE-ID',
+		'land'        => 'FIDE-Land',
+	);
 
 	/**
-	 * Erwartete Kopfzeile der spieler.csv.
+	 * Spalten, die nu seit dem 10.09.2026 zusätzlich liefert.
+	 *
+	 * Sie sind freiwillig: Fehlen sie — etwa beim Nachbau einer älteren
+	 * Fassung —, bleiben die zugehörigen Felder leer oder kommen aus
+	 * `tl_wertungsportal_elo`.
 	 */
-	const CSV_KOPF = 'ID,ZPS,Mitgliedsnummer,Status,"Name,Vorname",Geschlecht,Spielberechtigung,Geburtsjahr,"Letzte Auswertung",DWZ,Index,FIDE-Elozahl,FIDE-Titel,FIDE-ID,FIDE-Land,Vorname,Nachname';
+	const CSV_KUER = array
+	(
+		'frauentitel' => 'FIDE-Frauentitel',
+		'schnellelo'  => 'FIDE-Elozahl-Schnellschach',
+		'blitzelo'    => 'FIDE-Elozahl-Blitz',
+	);
 
 	/**
 	 * Vereinsnamen, aufgeschlüsselt nach ZPS. Wird beim ersten Lauf gefüllt.
@@ -123,6 +146,22 @@ class SwissChess
 	 * @var array
 	 */
 	protected $vereine = array();
+
+	/**
+	 * Spaltennummern der spieler.csv: eigener Schlüssel => Nummer. Gefüllt aus
+	 * der Kopfzeile durch `spaltenZuordnen()`.
+	 *
+	 * @var array
+	 */
+	protected $spalten = array();
+
+	/**
+	 * Zahl der Felder, die eine CSV-Zeile mindestens haben muß, damit alle
+	 * Pflichtspalten darin stehen. Kürzere Zeilen werden übergangen.
+	 *
+	 * @var int
+	 */
+	protected $mindestfelder = 0;
 
 	/**
 	 * Erzeugt ein Dateipaar (LST und SWX) aus einem entpackten LV-0-csv.
@@ -268,18 +307,15 @@ class SwissChess
 	protected function ladeSpieler($datei, $fassung)
 	{
 		$fp = fopen($datei, 'rb');
-		$kopf = fgets($fp);
-		$this->pruefeKopfzeile($kopf);
-		rewind($fp);
-		fgetcsv($fp);
+		$this->spaltenZuordnen(fgetcsv($fp));
 
 		$saetze = array();
-
+		
 		while (($z = fgetcsv($fp)) !== false)
 		{
-			if (count($z) < 15) continue;
+			if (count($z) < $this->mindestfelder) continue;
 
-			$name = trim((string) $z[self::CSV_NAME]);
+			$name = trim($this->wert($z, 'name'));
 			if ($name === '') continue;
 
 			$saetze[] = array
@@ -287,8 +323,8 @@ class SwissChess
 				'name'      => $name,
 				// nuLiga-Kennung und Vereinskennziffer machen die Mitgliedschaft
 				// eindeutig und sind in beiden Fassungen dieselben
-				'schluessel' => (string) $z[self::CSV_ID].'|'.(string) $z[self::CSV_ZPS],
-				'fideId'    => (int) $z[self::CSV_FIDEID],
+				'schluessel' => $this->wert($z, 'id').'|'.$this->wert($z, 'zps'),
+				'fideId'    => (int) $this->wert($z, 'fideid'),
 				'csv'       => $z,
 			);
 		}
@@ -299,57 +335,111 @@ class SwissChess
 	}
 
 	/**
-	 * Prüft, ob die Kopfzeile der spieler.csv noch die erwartete ist.
+	 * Ordnet die gebrauchten Spalten der spieler.csv ihren Nummern zu.
 	 *
-	 * **Warum das sein muß:** Gelesen wird über feste Spaltennummern. Schiebt
-	 * nu eine Spalte ein, entstünden sonst lautlos Dateien, in denen etwa die
-	 * DWZ im Elo-Feld steht — und das fiele erst im Turniersaal auf.
+	 * **Warum über die Namen und nicht über feste Nummern:** Am 10.09.2026 hat
+	 * nu drei Spalten angehängt (Frauentitel, Schnell- und Blitzwertung). Der
+	 * Erzeuger verglich die Kopfzeile bis dahin Zeichen für Zeichen und brach
+	 * ab — auf dem Livesystem mitten im Cronjob. Über die Namen ist eine
+	 * angehängte oder umgestellte Spalte gleichgültig.
 	 *
-	 * @param string|false $kopf Erste Zeile der Datei
+	 * Die Prüfung wird dadurch nicht schwächer, sondern schärfer: Jede
+	 * gebrauchte Spalte muß namentlich dastehen, sonst bricht der Lauf ab. Eine
+	 * stillschweigend verrutschte Zuordnung — die DWZ im Elo-Feld — fiele erst
+	 * im Turniersaal auf.
+	 *
+	 * @param array|false $kopf Kopfzeile, wie `fgetcsv()` sie liefert
 	 *
 	 * @return void
 	 *
-	 * @throws \RuntimeException wenn die Kopfzeile abweicht
+	 * @throws \RuntimeException wenn eine Pflichtspalte fehlt
 	 */
-	protected function pruefeKopfzeile($kopf)
+	protected function spaltenZuordnen($kopf)
 	{
-		$kopf = trim((string) $kopf);
-		// Ein BOM am Dateianfang stört den Vergleich, sonst nichts
-		$kopf = preg_replace('/^\xEF\xBB\xBF/', '', $kopf);
+		if (!is_array($kopf))
+		{
+			throw new \RuntimeException('Die spieler.csv hat keine Kopfzeile.');
+		}
 
-		if ($kopf !== self::CSV_KOPF)
+		// Ein BOM am Dateianfang klebt sonst an der ersten Überschrift
+		$kopf[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $kopf[0]);
+
+		$nummern = array();
+
+		foreach ($kopf as $nummer => $ueberschrift)
+		{
+			$nummern[trim((string) $ueberschrift)] = $nummer;
+		}
+
+		$this->spalten = array();
+		$fehlend = array();
+
+		foreach (self::CSV_PFLICHT as $schluessel => $ueberschrift)
+		{
+			if (!isset($nummern[$ueberschrift])) $fehlend[] = $ueberschrift;
+			else $this->spalten[$schluessel] = $nummern[$ueberschrift];
+		}
+
+		if (count($fehlend))
 		{
 			throw new \RuntimeException(
-				"Die spieler.csv hat eine unerwartete Kopfzeile.\n".
-				"  erwartet: ".self::CSV_KOPF."\n".
-				"  gelesen : ".$kopf."\n".
+				"Der spieler.csv fehlen Spalten: ".implode(', ', $fehlend)."\n".
+				"  gelesen: ".implode(', ', array_keys($nummern))."\n".
 				'Die Spaltenzuordnung muß geprüft werden, bevor Dateien entstehen.'
 			);
 		}
+
+		// Eine Zeile muß mindestens so viele Felder haben, wie die letzte
+		// Pflichtspalte weit hinten steht. Die freiwilligen zählen nicht mit —
+		// sonst fiele eine ältere Datei komplett durch
+		$this->mindestfelder = max($this->spalten) + 1;
+
+		foreach (self::CSV_KUER as $schluessel => $ueberschrift)
+		{
+			if (isset($nummern[$ueberschrift])) $this->spalten[$schluessel] = $nummern[$ueberschrift];
+		}
+	}
+
+	/**
+	 * Liest ein Feld der CSV-Zeile über seinen Spaltenschlüssel.
+	 *
+	 * Eine Spalte, die die Datei nicht führt — die drei freiwilligen —, liefert
+	 * einen leeren Text statt einer Warnung.
+	 *
+	 * @param array  $z           Felder der CSV-Zeile
+	 * @param string $schluessel  Schlüssel aus CSV_PFLICHT oder CSV_KUER
+	 *
+	 * @return string Inhalt der Spalte, oder leer
+	 */
+	protected function wert(array $z, $schluessel)
+	{
+		if (!isset($this->spalten[$schluessel])) return '';
+
+		return (string) ($z[$this->spalten[$schluessel]] ?? '');
 	}
 
 	/**
 	 * Baut aus einer CSV-Zeile die fertige LST-Zeile samt Zeilenende.
 	 *
-	 * @param array  $z       Felder der CSV-Zeile
-	 * @param string $fassung self::FASSUNG_NEU oder self::FASSUNG_ALT
+	 * @param array      $z    Felder der CSV-Zeile
+	 * @param array|null $fide Zeile aus tl_wertungsportal_elo, falls vorhanden
 	 *
 	 * @return string Zeile in CP850 mit CRLF am Ende
 	 */
 	protected function baueZeile(array $z, array $fide = null)
 	{
-		$zps = (string) $z[self::CSV_ZPS];
-		$titel = strtoupper(trim((string) $z[self::CSV_TITEL]));
-		$land = trim((string) $z[self::CSV_LAND]);
+		$zps = $this->wert($z, 'zps');
+		$titel = strtoupper(trim($this->wert($z, 'titel')));
+		$land = trim($this->wert($z, 'land'));
 
-		$fideId = $this->ziffern((string) $z[self::CSV_FIDEID]);
-		$elo = $this->ziffern((string) $z[self::CSV_ELO]);
+		$fideId = $this->ziffern($this->wert($z, 'fideid'));
+		$elo = $this->ziffern($this->wert($z, 'elo'));
 
 		$f = array_fill(0, self::FELDER, '');
 
 		// Name und Vereinsname werden auf 40 Zeichen gekürzt — so hält es die
 		// Originaldatei, in der kein Feld länger ist
-		$f[0]  = $this->text((string) $z[self::CSV_NAME]);
+		$f[0]  = $this->text($this->wert($z, 'name'));
 		$f[1]  = $this->text($this->vereine[$zps] ?? '');
 
 		// Die Nation steht NUR bei Spielern mit FIDE-Eintrag. In der
@@ -358,30 +448,31 @@ class SwissChess
 		$f[2]  = $fideId !== '' ? $this->text($land) : '';
 
 		$f[3]  = $this->zahl($elo);
-		$f[4]  = $this->zahl($this->ziffern((string) $z[self::CSV_DWZ]));
+		$f[4]  = $this->zahl($this->ziffern($this->wert($z, 'dwz')));
 		$f[5]  = self::TITELCODE[$titel] ?? '';
-		$f[6]  = $this->zahl($this->ziffern((string) $z[self::CSV_GEBURTSJAHR]));
-		$f[7]  = $this->text((string) $z[self::CSV_ID]);
+		$f[6]  = $this->zahl($this->ziffern($this->wert($z, 'geburtsjahr')));
+		$f[7]  = $this->text($this->wert($z, 'id'));
 		$f[8]  = $this->zahl($fideId);
-		$f[9]  = $this->zahl($this->ziffern((string) $z[self::CSV_MITGLNR]));
-		$f[10] = $this->text((string) $z[self::CSV_GESCHLECHT]);
+		$f[9]  = $this->zahl($this->ziffern($this->wert($z, 'mitglnr')));
+		$f[10] = $this->text($this->wert($z, 'geschlecht'));
 		$f[11] = $this->text($zps);
 		// Erste Stelle der Kennziffer = Landesverband
 		$f[12] = $zps !== '' ? substr($zps, 0, 1) : '';
 		$f[13] = $f[9];
-		$f[14] = $this->text((string) $z[self::CSV_STATUS]);
+		$f[14] = $this->text($this->wert($z, 'status'));
 
-		// Die Felder 15 bis 27 tragen die FIDE-Angaben. Aus der CSV allein
-		// ließen sich nur der Frauentitel und die Standard-Elo füllen; mit
-		// einem Satz aus tl_wertungsportal_elo kommen Schnell- und
-		// Blitzwertung, Partienzahlen und Kennzeichen dazu
+		// Die Felder 15 bis 27 tragen die FIDE-Angaben. Der vollständige Satz
+		// steht in tl_wertungsportal_elo — nur dort gibt es Partienzahlen,
+		// Kennzeichen sowie Amts- und Arena-Titel. Die CSV führt seit dem
+		// 10.09.2026 immerhin Frauentitel, Schnell- und Blitzwertung; sie
+		// springt ein, wenn zu einem Spieler kein Elo-Satz vorliegt
 		if ($fide !== null)
 		{
 			$this->setzeFideFelder($f, $fide);
 
-			// Der Frauentitel steht nur in der Elo-Tabelle: Die CSV hat eine
-			// einzige Titelspalte, in der bei einer Spielerin mit offenem
-			// Titel dieser steht
+			// Die CSV hat eine einzige Spalte für den offenen Titel: Führt eine
+			// Spielerin einen solchen, steht dort dieser, und der Frauentitel
+			// kommt aus der eigenen Spalte oder der Elo-Tabelle
 			if ($f[5] === '' && $fide['title'] !== '') $f[5] = self::TITELCODE[$fide['title']] ?? '';
 		}
 		elseif ($fideId !== '')
@@ -390,11 +481,39 @@ class SwissChess
 			// Ein Spieler ohne FIDE-Kennung bekommt gar nichts — in der
 			// Originaldatei sind bei allen 57.369 solchen Sätzen die Felder
 			// 15 bis 27 ausnahmslos leer
-			$f[15] = in_array($titel, self::FRAUENTITEL, true) ? $titel : '';
+			// Partienzahlen und Kennzeichen führt die CSV nicht — die Felder
+			// 20, 23, 26 und 27 bleiben leer
+			$f[15] = $this->frauentitel($z, $titel);
 			$f[19] = $elo;
+			$f[22] = $this->ziffern($this->wert($z, 'schnellelo'));
+			$f[25] = $this->ziffern($this->wert($z, 'blitzelo'));
 		}
 
 		return $this->schlussFelder($f);
+	}
+
+	/**
+	 * Ermittelt den Frauentitel für eine CSV-Zeile ohne Satz in der
+	 * Elo-Tabelle.
+	 *
+	 * Seit dem 10.09.2026 führt die spieler.csv eine eigene Spalte dafür — bis
+	 * dahin ließ sich der Titel nur in dem einen Fall erkennen, in dem eine
+	 * Spielerin gar keinen offenen Titel hat und deshalb ihr Frauentitel in
+	 * der allgemeinen Titelspalte steht. Beide Wege bleiben, damit sich auch
+	 * eine ältere Datei noch verarbeiten läßt.
+	 *
+	 * @param array  $z     Felder der CSV-Zeile
+	 * @param string $titel Inhalt der allgemeinen Titelspalte, in Großschrift
+	 *
+	 * @return string Frauentitel (WGM, WIM, WFM, WCM), oder leer
+	 */
+	protected function frauentitel(array $z, $titel)
+	{
+		$eigen = strtoupper(trim($this->wert($z, 'frauentitel')));
+
+		if (in_array($eigen, self::FRAUENTITEL, true)) return $eigen;
+
+		return in_array($titel, self::FRAUENTITEL, true) ? $titel : '';
 	}
 
 	/**

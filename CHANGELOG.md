@@ -1,5 +1,31 @@
 # Wertungsportal Changelog
 
+## Version 1.40.0 (2026-09-10)
+
+* Fix: **`wertungsportal:swisschess` brach auf dem Livesystem ab.** nu hat der
+  `spieler.csv` am 10.09.2026 drei Spalten angehängt; der Erzeuger verglich die
+  Kopfzeile bis dahin Zeichen für Zeichen und brach mitten im Cronjob mit
+  „unerwartete Kopfzeile" ab. Die Spalten werden jetzt über ihre **Namen**
+  zugeordnet — angehängte oder umgestellte Spalten sind damit gleichgültig
+* Change: Die Prüfung wird dadurch nicht schwächer, sondern schärfer: Jede
+  gebrauchte Spalte muß namentlich dastehen, sonst bricht der Lauf ab und nennt
+  die fehlende beim Namen. Eine stillschweigend verrutschte Zuordnung — die DWZ
+  im Elo-Feld — fiele erst im Turniersaal auf
+* Add: **Die drei neuen Spalten werden genutzt.** `FIDE-Frauentitel`,
+  `FIDE-Elozahl-Schnellschach` und `FIDE-Elozahl-Blitz` füllen die Felder 15, 22
+  und 25, wenn zu einem Spieler kein Satz in `tl_wertungsportal_elo` steht —
+  etwa bei einer FIDE-Kennung, die seit dem letzten XML-Import vergeben wurde.
+  Liegt ein Elo-Satz vor, kommt der ganze Block weiterhin von dort; er ist der
+  vollständige FIDE-Datensatz, die CSV führt nur einen Ausschnitt
+* Add: 5 weitere Unit-Tests für die Spaltenzuordnung (41 Tests gesamt) — beide
+  Kopfzeilen, vertauschte Spalten, fehlende Pflichtspalte, BOM, Frauentitel
+
+  Geprüft: Läufe über beide Fassungen der `spieler.csv` (17 und 20 Spalten), mit
+  vertauschter DWZ- und Elo-Spalte und mit fehlender FIDE-ID — 10 Zusicherungen.
+  Dazu die 17 Formatprüfungen gegen die Originaldatei des DSB, jetzt mit
+  gefülltem Frauentitel (99.969 von 99.970 Sätzen stimmen überein), und zwei
+  vollständige Läufe des Befehls über die Konsole der 4.13-Installation
+
 ## Version 1.39.0 (2026-09-09)
 
 * Add: **Die Swiss-Chess-Dateien enthalten jetzt alle FIDE-Spieler.**

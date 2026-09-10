@@ -62,9 +62,27 @@ haben. Ein reiner FIDE-Satz hat weder Verein noch DWZ, weder Spieler- noch
 Mitgliedsnummer, keine Vereinskennziffer und keinen Status.
 
 > **Ist die Elo-Tabelle leer** — der XML-Import also noch nie gelaufen —,
-> entstehen die Dateien trotzdem, dann eben nur mit den DSB-Mitgliedern und
-> ohne die FIDE-Felder. Der Erzeuger prüft das selbst und arbeitet ohne
-> Datenbank allein mit der CSV.
+> entstehen die Dateien trotzdem, dann eben nur mit den DSB-Mitgliedern. Der
+> Erzeuger prüft das selbst und arbeitet ohne Datenbank allein mit der CSV;
+> Frauentitel, Schnell- und Blitzwertung kommen dann aus deren eigenen
+> Spalten.
+
+### Die Spalten der spieler.csv werden über ihre Namen gelesen
+
+**Nicht über feste Nummern.** Am 10.09.2026 hat nu drei Spalten angehängt —
+`FIDE-Frauentitel`, `FIDE-Elozahl-Schnellschach` und `FIDE-Elozahl-Blitz` —,
+und der Erzeuger brach ab: Er verglich die Kopfzeile bis dahin Zeichen für
+Zeichen. Auf dem Livesystem geschah das mitten im Cronjob.
+
+Über die Namen ist eine angehängte oder umgestellte Spalte gleichgültig. Die
+Prüfung wird dadurch nicht schwächer, sondern schärfer: Jede gebrauchte Spalte
+muß namentlich dastehen, sonst bricht der Lauf ab und nennt die fehlende beim
+Namen. Eine stillschweigend verrutschte Zuordnung — die DWZ im Elo-Feld —
+fiele erst im Turniersaal auf, und das ist schlimmer als gar keine Datei.
+
+Pflicht sind zwölf Spalten (`SwissChess::CSV_PFLICHT`); die drei neuen sind
+freiwillig (`CSV_KUER`), damit sich auch eine ältere Datei noch verarbeiten
+läßt.
 
 Weil dabei knapp zwei Millionen Sätze zu sortieren sind, laufen sie nicht
 über den Speicher, sondern über **Eimerdateien**: Jeder der 702 Namenseimer
@@ -125,16 +143,22 @@ Die 5 kommt im ganzen Bestand nicht vor.
 dreizehn Angaben, die das FIDE-XML je Spieler außer der Kennung führt. Quelle
 ist `tl_wertungsportal_elo`:
 
-| Feld | Inhalt | Spalte |
-| --- | --- | --- |
-| 15 | Frauentitel (WGM, WIM, WFM, WCM) | `w_title` |
-| 16 | Schiedsrichter-/Trainertitel (NA, SI, FA, IA, FT …) | `o_title` |
-| 17 | Kennzeichen (`i` inaktiv, `w` weiblich, `wi`) | `flag` |
-| 18 | Arena-Titel der FIDE Online Arena (AGM, AIM, AFM, ACM) | `foa_title` |
-| 19 / 20 / 21 | Standard-Elo / Partien / K-Faktor | `rating`, `games`, — |
-| 22 / 23 / 24 | dasselbe für Schnellschach | `rapid_rating`, `rapid_games`, — |
-| 25 / 26 | Blitz-Elo / Partien | `blitz_rating`, `blitz_games` |
-| 27 | **Wiederholung von Feld 26** | — |
+| Feld | Inhalt | Spalte | Ersatz aus der CSV |
+| --- | --- | --- | --- |
+| 15 | Frauentitel (WGM, WIM, WFM, WCM) | `w_title` | `FIDE-Frauentitel` |
+| 16 | Schiedsrichter-/Trainertitel (NA, SI, FA, IA, FT …) | `o_title` | — |
+| 17 | Kennzeichen (`i` inaktiv, `w` weiblich, `wi`) | `flag` | — |
+| 18 | Arena-Titel der FIDE Online Arena (AGM, AIM, AFM, ACM) | `foa_title` | — |
+| 19 / 20 / 21 | Standard-Elo / Partien / K-Faktor | `rating`, `games`, — | `FIDE-Elozahl` |
+| 22 / 23 / 24 | dasselbe für Schnellschach | `rapid_rating`, `rapid_games`, — | `FIDE-Elozahl-Schnellschach` |
+| 25 / 26 | Blitz-Elo / Partien | `blitz_rating`, `blitz_games` | `FIDE-Elozahl-Blitz` |
+| 27 | **Wiederholung von Feld 26** | — | — |
+
+Die letzte Spalte gilt nur, wenn zu einem Spieler **kein** Satz in der
+Elo-Tabelle steht — etwa bei einer FIDE-Kennung, die seit dem letzten
+XML-Import vergeben wurde. Liegt ein Elo-Satz vor, kommt der ganze Block von
+dort: Er ist der vollständige FIDE-Datensatz, die CSV führt nur einen
+Ausschnitt davon.
 
 Zwei Punkte daran sind leicht falsch zu raten:
 

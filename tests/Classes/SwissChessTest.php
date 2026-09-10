@@ -312,6 +312,116 @@ class SwissChessTest extends TestCase
 		$this->assertSame('""', $felder[21], 'mit Wertung bleibt der Faktor leer');
 		$this->assertSame('"0"', $felder[24], 'ohne Wertung steht die Null');
 	}
+
+	// ─────────────────────────────────────────────
+	//  Spaltenzuordnung der spieler.csv
+	// ─────────────────────────────────────────────
+
+	/**
+	 * Kopfzeile der spieler.csv, wie nu sie bis zum 09.09.2026 lieferte.
+	 */
+	private const KOPF_ALT = array('ID', 'ZPS', 'Mitgliedsnummer', 'Status', 'Name,Vorname',
+		'Geschlecht', 'Spielberechtigung', 'Geburtsjahr', 'Letzte Auswertung', 'DWZ', 'Index',
+		'FIDE-Elozahl', 'FIDE-Titel', 'FIDE-ID', 'FIDE-Land', 'Vorname', 'Nachname');
+
+	/**
+	 * Dieselbe Kopfzeile mit den drei Spalten, die nu seit dem 10.09.2026
+	 * anhängt.
+	 */
+	private const KOPF_NEU = array('ID', 'ZPS', 'Mitgliedsnummer', 'Status', 'Name,Vorname',
+		'Geschlecht', 'Spielberechtigung', 'Geburtsjahr', 'Letzte Auswertung', 'DWZ', 'Index',
+		'FIDE-Elozahl', 'FIDE-Titel', 'FIDE-ID', 'FIDE-Land', 'Vorname', 'Nachname',
+		'FIDE-Frauentitel', 'FIDE-Elozahl-Schnellschach', 'FIDE-Elozahl-Blitz');
+
+	/**
+	 * Beide Kopfzeilen werden angenommen — die alte wie die um drei Spalten
+	 * erweiterte.
+	 *
+	 * Am 10.09.2026 hat nu angehängt, und der Erzeuger brach im Cronjob des
+	 * Livesystems ab, weil er die Kopfzeile Zeichen für Zeichen verglich.
+	 */
+	public function testBeideKopfzeilenWerdenAngenommen(): void
+	{
+		$sc = new SwissChessPruefling();
+
+		$sc->ordne(self::KOPF_ALT);
+		$this->assertSame(13, $sc->spaltenNummer('fideid'), 'alte Kopfzeile');
+		$this->assertSame('', $sc->spaltenSchluessel('frauentitel'), 'die Spalte gibt es dort nicht');
+
+		$sc->ordne(self::KOPF_NEU);
+		$this->assertSame(13, $sc->spaltenNummer('fideid'), 'neue Kopfzeile');
+		$this->assertSame(17, $sc->spaltenNummer('frauentitel'));
+		$this->assertSame(18, $sc->spaltenNummer('schnellelo'));
+		$this->assertSame(19, $sc->spaltenNummer('blitzelo'));
+	}
+
+	/**
+	 * Vertauschte Spalten werden richtig zugeordnet — DWZ bleibt DWZ.
+	 *
+	 * Genau dieser Fall war der Grund für die frühere strenge Prüfung. Über
+	 * die Namen löst er sich von selbst.
+	 */
+	public function testVertauschteSpaltenWerdenRichtigZugeordnet(): void
+	{
+		$kopf = self::KOPF_NEU;
+		[$kopf[9], $kopf[11]] = [$kopf[11], $kopf[9]];
+
+		$sc = new SwissChessPruefling();
+		$sc->ordne($kopf);
+
+		$this->assertSame(11, $sc->spaltenNummer('dwz'), 'DWZ steht jetzt an Position 11');
+		$this->assertSame(9, $sc->spaltenNummer('elo'), 'die Elo an Position 9');
+	}
+
+	/**
+	 * Fehlt eine Pflichtspalte, bricht der Lauf ab und nennt sie beim Namen.
+	 *
+	 * Eine stillschweigend verrutschte Zuordnung wäre schlimmer als gar keine
+	 * Datei — sie fiele erst im Turniersaal auf.
+	 */
+	public function testFehlendePflichtspalteBrichtAb(): void
+	{
+		$kopf = self::KOPF_NEU;
+		$kopf[13] = 'FIDE-Nummer';
+
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessageMatches('/FIDE-ID/');
+
+		(new SwissChessPruefling())->ordne($kopf);
+	}
+
+	/**
+	 * Ein BOM am Dateianfang klebt an der ersten Überschrift und darf die
+	 * Zuordnung nicht verhindern.
+	 */
+	public function testBomStoertNicht(): void
+	{
+		$kopf = self::KOPF_NEU;
+		$kopf[0] = "\xEF\xBB\xBF".$kopf[0];
+
+		$sc = new SwissChessPruefling();
+		$sc->ordne($kopf);
+
+		$this->assertSame(0, $sc->spaltenNummer('id'));
+	}
+
+	/**
+	 * Der Frauentitel kommt aus der eigenen Spalte; fehlt sie, greift der alte
+	 * Weg über die allgemeine Titelspalte.
+	 */
+	public function testFrauentitel(): void
+	{
+		$sc = new SwissChessPruefling();
+
+		$sc->ordne(self::KOPF_NEU);
+		$zeile = array_fill(0, 20, '');
+		$zeile[17] = 'WGM';
+		$this->assertSame('WGM', $sc->holeFrauentitel($zeile, 'GM'), 'eigene Spalte schlägt den offenen Titel');
+		$this->assertSame('', $sc->holeFrauentitel(array_fill(0, 20, ''), 'GM'), 'ein offener Titel ist kein Frauentitel');
+
+		$sc->ordne(self::KOPF_ALT);
+		$this->assertSame('WIM', $sc->holeFrauentitel(array_fill(0, 17, ''), 'WIM'), 'ohne die Spalte zählt die Titelspalte');
+	}
 }
 
 /**
@@ -352,5 +462,46 @@ class SwissChessPruefling extends SwissChess
 	public function schluss(array $f): string
 	{
 		return $this->schlussFelder($f);
+	}
+
+	/**
+	 * @param array $kopf Kopfzeile der spieler.csv
+	 *
+	 * @return void
+	 */
+	public function ordne($kopf): void
+	{
+		$this->spaltenZuordnen($kopf);
+	}
+
+	/**
+	 * @param string $schluessel Spaltenschlüssel
+	 *
+	 * @return int Zugeordnete Spaltennummer, oder -1 wenn nicht vorhanden
+	 */
+	public function spaltenNummer($schluessel): int
+	{
+		return $this->spalten[$schluessel] ?? -1;
+	}
+
+	/**
+	 * @param string $schluessel Spaltenschlüssel
+	 *
+	 * @return string Der Schlüssel selbst, wenn zugeordnet — sonst leer
+	 */
+	public function spaltenSchluessel($schluessel): string
+	{
+		return isset($this->spalten[$schluessel]) ? $schluessel : '';
+	}
+
+	/**
+	 * @param array  $z     Felder der CSV-Zeile
+	 * @param string $titel Inhalt der allgemeinen Titelspalte
+	 *
+	 * @return string Frauentitel
+	 */
+	public function holeFrauentitel(array $z, $titel): string
+	{
+		return $this->frauentitel($z, $titel);
 	}
 }
