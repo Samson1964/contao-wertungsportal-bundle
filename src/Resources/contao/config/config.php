@@ -160,6 +160,24 @@ $GLOBALS['TL_HOOKS']['getSystemMessages'][] = array('Schachbulle\ContaoWertungsp
 // Begruendung ausfuehrlich in Classes/Einstellungen.php
 $GLOBALS['TL_HOOKS']['loadDataContainer'][] = array('Schachbulle\ContaoWertungsportalBundle\Classes\Einstellungen', 'loadDataContainer');
 
+// Insert-Tags mit Wertungsdaten einer Person: {{dwz::NU…}}, {{elo::NU…}},
+// {{ftitel::NU…}} und {{verein::NU…}}, je auch mit cache_ (docs/insert-tags.md).
+//
+// VORNE eingereiht statt angehaengt: Das Helper-Bundle bis 2.x bedient
+// dieselben vier Tags noch selbst ueber die abgeschaltete DeWIS-Schnittstelle
+// und gibt dabei '' zurueck statt false. Liefe sein Hook zuerst, kaeme dieser
+// nie an die Reihe — solange irgendwo noch ein Helper-Bundle 2.x liegt, blieben
+// die Tags leer. Fremde Tags reicht InsertTags::ersetzen() mit false weiter, der
+// Platz vorne nimmt also keinem anderen Tag etwas weg.
+//
+// Der Hook ist seit Contao 5.2 als veraltet markiert und laeuft bis Contao 6;
+// das Attribut AsInsertTag gibt es in Contao 4.13 noch nicht.
+$GLOBALS['TL_HOOKS']['replaceInsertTags'] = array_merge
+(
+	array(array('Schachbulle\ContaoWertungsportalBundle\Classes\InsertTags', 'ersetzen')),
+	$GLOBALS['TL_HOOKS']['replaceInsertTags'] ?? array()
+);
+
 /**
  * Purge jobs / Reinigungsarbeiten
  * Stellt in der Systemwartung das Leeren des Wertungsportal-Caches bereit
@@ -190,6 +208,10 @@ $GLOBALS['TL_CONFIG']['wertungsportal_debuglog'] = 0;
 // Mitgelieferte HTML-Vorlage der Schlüssel-E-Mail. Wer keine HTML-Post will,
 // wählt in den Einstellungen die leere Option — dann geht nur Text hinaus
 $GLOBALS['TL_CONFIG']['wertungsportal_mail_token'] = 'wp_mail_token';
+// Ersetzungen im Vereinsnamen fuer {{verein::…}}. Ein Wert in der
+// localconfig.php — auch einer, den das Helper-Bundle bis 2.x dort abgelegt
+// hat — hat Vorrang: Contao liest sie nach den config.php-Dateien erneut ein
+$GLOBALS['TL_CONFIG']['insert_verein_replaces'] = serialize(\Schachbulle\ContaoWertungsportalBundle\Classes\InsertTags::VEREIN_ERSETZUNGEN);
 
 /**
  * -------------------------------------------------------------------------

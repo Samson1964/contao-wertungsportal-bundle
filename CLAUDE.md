@@ -230,7 +230,31 @@ heran). Regeln:
   Wer INSERT-Spaltenlisten in den Models anfasst, muss die Aliasspalten
   mitführen — sie stehen dort als zusätzliche Positionen im Werte-Tupel.
 
+## Insert-Tags (ab 1.43.0)
+
+`{{dwz::NU…}}`, `{{elo::NU…}}`, `{{ftitel::NU…[::lang]}}`, `{{verein::NU…[::Länge]}}`, je auch
+mit `cache_` — `Classes/InsertTags.php`, Doku `docs/insert-tags.md`. Lagen bis Helper-Bundle 2.x
+dort (mit DeWIS-ID). Wichtig beim Weiterbauen:
+
+- **Datenquelle sind die Spiegeltabellen** (`Lokal::karteikarte()` + `Helper::getFIDEDatenLokal()`),
+  NICHT `API::autoQuery()`: sonst ein nu-Abruf je Person nach Cache-Ablauf, Statistik und
+  Besucherbremse würden mitzählen. Merker je NU-Nummer für den Seitenaufruf.
+- Fremde Tags → `false`, eigene ohne gültige NU-Nummer → `''`. Nur `^NU\d+$`; reine Ziffern
+  (alte DeWIS-IDs) werden absichtlich nicht umgedeutet.
+- Hook **vorne** in `TL_HOOKS['replaceInsertTags']` (array_merge), weil Helper-Bundle 2.x die Tags
+  mit `''` beantwortet und vor diesem Bundle lädt.
+- Einstellung `insert_verein_replaces` (MCW, Schlüssel aus dem Helper-Bundle übernommen),
+  Voreinstellung `InsertTags::VEREIN_ERSETZUNGEN`, ein Test hält die Gleichheit mit 2.0.0 fest.
+- Contao 4.13 merkt sich Tag-Ergebnisse statisch je Aufruf — im Prüfstand vor wiederholten
+  Abfragen desselben Tags `contao.insert_tag.parser->reset()`.
+
 ## Fallstricke / Besonderheiten
+
+- **`Statement::execute()` mit Array-Argument** (`->execute($chunk)`) funktioniert nur in Contao
+  4.13 (dort ausgepackt, mit Deprecation). Contao 5 serialisiert das Array zu EINEM Parameter:
+  `IN (?)` trifft nichts, mehrere Platzhalter scheitern. Immer `->execute(...$chunk)`. In 1.43.0
+  nur `Helper::getBlacklist()` umgestellt (unter Contao 5 war niemand gesperrt); die übrigen
+  Stellen stehen in TODO.md.
 
 - **Identifier**: `nuLigaPersonId` identifiziert eine Person systemweit. Die `playerUuid` in
   Turnier-DTOs gilt NUR innerhalb des jeweiligen Turniers — nie als Personen-UUID speichern!

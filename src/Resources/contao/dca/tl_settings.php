@@ -18,7 +18,7 @@ use Contao\Validator;
  * zu überblicken. Jetzt sind es elf aufklappbare Gruppen, und die allgemeinen
  * Contao-Einstellungen sind wieder frei davon.
  */
-$GLOBALS['TL_DCA']['tl_settings']['palettes']['wertungsportal'] = '{wertungsportal_anzeige_legend},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url;{wertungsportal_seiten_legend:hide},wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband;{wertungsportal_zugang_legend:hide},wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe;{wertungsportal_abruf_legend:hide},wertungsportal_api_aus,wertungsportal_api_timeout;{wertungsportal_cache_legend:hide},wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_cachezeit_turnierdaten_alt;{wertungsportal_vorladen_legend:hide},wertungsportal_cron_aus;{wertungsportal_mail_legend:hide},wertungsportal_mail_absender,wertungsportal_mail_absendername,wertungsportal_mail_token;{wertungsportal_schnittstelle_legend:hide},wertungsportal_api_abrufe_tag,wertungsportal_api_freigabe,wertungsportal_api_sperren;{wertungsportal_bremse_legend:hide},wertungsportal_limit_minute,wertungsportal_limit_stunde,wertungsportal_limit_tag;{wertungsportal_protokoll_legend:hide},wertungsportal_zugriffslog,wertungsportal_debuglog;{wertungsportal_bilder_legend:hide},wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize';
+$GLOBALS['TL_DCA']['tl_settings']['palettes']['wertungsportal'] = '{wertungsportal_anzeige_legend},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url;{wertungsportal_seiten_legend:hide},wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband;{wertungsportal_zugang_legend:hide},wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe;{wertungsportal_abruf_legend:hide},wertungsportal_api_aus,wertungsportal_api_timeout;{wertungsportal_cache_legend:hide},wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_cachezeit_turnierdaten_alt;{wertungsportal_vorladen_legend:hide},wertungsportal_cron_aus;{wertungsportal_mail_legend:hide},wertungsportal_mail_absender,wertungsportal_mail_absendername,wertungsportal_mail_token;{wertungsportal_schnittstelle_legend:hide},wertungsportal_api_abrufe_tag,wertungsportal_api_freigabe,wertungsportal_api_sperren;{wertungsportal_bremse_legend:hide},wertungsportal_limit_minute,wertungsportal_limit_stunde,wertungsportal_limit_tag;{wertungsportal_protokoll_legend:hide},wertungsportal_zugriffslog,wertungsportal_debuglog;{wertungsportal_bilder_legend:hide},wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize;{wertungsportal_inserttags_legend:hide},insert_verein_replaces';
 
 /**
  * fields
@@ -524,5 +524,41 @@ $GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_debuglog'] = array
 	'eval'                    => array
 	(
 		'tl_class'            => 'w50'
+	)
+);
+
+// Ersetzungen im Vereinsnamen für das Insert-Tag {{verein::…}}.
+//
+// Name und Aufbau sind aus dem Helper-Bundle bis 2.x übernommen, das die Tags
+// bis dahin bereitstellte: Ein dort gepflegter Wert steht schon in der
+// localconfig.php und gilt ohne Übernahme weiter. Die Voreinstellung steht in
+// Classes\InsertTags::VEREIN_ERSETZUNGEN (gesetzt in config/config.php).
+// Ist das Helper-Bundle 2.x noch installiert, beschreibt es dasselbe Feld
+// zusätzlich unter System → Einstellungen; beide Stellen bearbeiten denselben
+// Wert.
+//
+// Keine eigene 'buttons'-Liste: Der MultiColumnWizard bringt Neu, Löschen und
+// Verschieben selbst mit, in Contao 4.13 und 5 gleichermaßen.
+$GLOBALS['TL_DCA']['tl_settings']['fields']['insert_verein_replaces'] = array
+(
+	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['insert_verein_replaces'],
+	'inputType'               => 'multiColumnWizard',
+	'eval'                    => array
+	(
+		'tl_class'            => 'clr',
+		'buttonPos'           => 'middle',
+		'columnFields'        => array
+		(
+			'search' => array
+			(
+				'label'       => &$GLOBALS['TL_LANG']['tl_settings']['insert_verein_search'],
+				'inputType'   => 'text',
+			),
+			'replace' => array
+			(
+				'label'       => &$GLOBALS['TL_LANG']['tl_settings']['insert_verein_replace'],
+				'inputType'   => 'text',
+			),
+		)
 	)
 );

@@ -1,5 +1,46 @@
 # Wertungsportal Changelog
 
+## Version 1.43.0 (2026-09-14)
+
+* Add: **Insert-Tags mit Wertungsdaten:** `{{dwz::NU…}}` (DWZ als Zahl),
+  `{{elo::NU…}}` (Elo als Verweis auf das FIDE-Profil), `{{ftitel::NU…}}` (FIDE-Titel,
+  mit `::lang` ausgeschrieben) und `{{verein::NU…}}` (Vereinsname, mit `::30` auf 30
+  Zeichen gekürzt), je auch mit dem Präfix `cache_`. Die Tags lagen bis Helper-Bundle
+  2.x dort, erwarteten die DeWIS-ID und fragten die abgeschaltete DeWIS-Schnittstelle
+  ab; hier erwarten sie die NU-Nummer. **Ein Tag mit einer alten DeWIS-ID bleibt
+  leer** — die Seiten müssen umgestellt werden, die Suchabfragen dafür stehen in
+  `docs/insert-tags.md`
+* Add: Die Werte kommen aus den Spiegeltabellen (DWZ, Verein) und der Elo-Tabelle
+  (Elo, Titel), nicht von der Schnittstelle: kein Abruf bei nu, keine Zählung in
+  Abrufstatistik, Zugriffs-Log und Besucherbremse. Jede Person wird je Seitenaufruf
+  einmal gelesen; 40 Personen mit je vier Tags brauchten 22 bis 27 ms
+* Add: Gesperrte, unbekannte und unveröffentlichte Personen, Werte ohne NU-Nummer und
+  Fehler ergeben eine leere Ausgabe; fremde Tags gehen unverändert an die übrigen
+  Hooks weiter. Vereinsname und Titel werden für HTML maskiert
+* Add: Einstellung **Ersetzungen im Vereinsnamen** in der neuen Gruppe „Insert-Tags"
+  (deutsch und englisch). Schlüssel und Voreinstellung stammen aus dem Helper-Bundle
+  2.x — ein dort gespeicherter Wert gilt ohne Übernahme weiter. `+` steht für ein
+  Leerzeichen, ersetzt wird ohne Rücksicht auf Groß- und Kleinschreibung, gekürzt erst
+  danach und nach Zeichen. Im Testbestand macht die Voreinstellung 6 von 1.158
+  Vereinsnamen falsch („Schachvereinigung" → „SVigung", „Rochade Eving" →
+  „Rochadeing"); die Doku zeigt, was sich über die Einstellung abfangen lässt
+* Change: Der Hook der Tags steht vor allen anderen `replaceInsertTags`-Hooks, damit
+  ein noch installiertes Helper-Bundle 2.x die Tags nicht mit einer leeren Ausgabe
+  abfängt. Die `composer.json` erlaubt jetzt auch das Helper-Bundle 3.x
+* Change: `Lokal::karteikarte()` ist öffentlich — die Tags lesen die Person darüber;
+  die Methode hat keine Seiteneffekte
+* Fix: **Unter Contao 5 war niemand gesperrt.** `Helper::getBlacklist()` übergab die
+  Nummern als Array an `Statement::execute()`. Contao 4.13 packt ein solches Array
+  aus, Contao 5 macht daraus einen einzigen serialisierten Parameter: Eine Nummer
+  traf nichts, mehrere Nummern ließen die Abfrage mit „Invalid parameter number"
+  scheitern (in Contao 5.7.7 nachgestellt). Das betraf alle Ausgaben mit
+  Sperrprüfung, nicht nur die neuen Tags. Unter Contao 4.13 ändert sich nichts
+
+  Geprüft mit 27 neuen Unit-Tests (108 insgesamt) und einem Prüfstand in Contao
+  4.13.58 und 5.7.7 unter PHP 8.4: alle Tags über den Insert-Tag-Parser des Kerns
+  gegen Testzeilen und den echten Bestand, Hook-Reihenfolge, Voreinstellung, eigene
+  Ersetzungen, Besucherbremse und das Einstellungsformular in beiden Sprachen
+
 ## Version 1.42.1 (2026-09-14)
 
 * Fix: **Layout des Rohdaten-Moduls.** Der Formularkasten endete über den Feldern,

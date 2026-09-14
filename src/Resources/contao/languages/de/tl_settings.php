@@ -17,6 +17,7 @@ $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_schnittstelle_legend'] = 'Ver
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_bremse_legend'] = 'Bremse gegen Massenabfragen';
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_protokoll_legend'] = 'Protokolle';
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_bilder_legend'] = 'Bilder';
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_inserttags_legend'] = 'Insert-Tags';
 
 /**
  * Felder
@@ -107,3 +108,8 @@ $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_debuglog'] = array('Debug-Log
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_limit_minute'] = array('Höchstabrufe je Minute', 'Wie viele Wertungsportal-Seiten ein Besucher (eine IP-Adresse) je Minute abrufen darf. Gezählt wird je Seitenaufruf, nicht je Schnittstellenabfrage. Leer oder 0 schaltet diese Grenze ab.');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_limit_stunde'] = array('Höchstabrufe je Stunde', 'Dasselbe für eine Stunde. Ein Mensch kommt selten über einige Dutzend; ein Bot, der einen Verband abklappert, sofort über tausend.');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_limit_tag'] = array('Höchstabrufe je Tag', 'Dasselbe für einen Tag. Wer eine Grenze reißt, bekommt bis zum Ende des jeweiligen Zeitfensters einen Hinweis statt Daten; der Vorfall steht mit IP-Adresse, Browserkennung und — falls angemeldet — Mitgliedskennung unter „Sperren".');
+
+// Insert-Tag verein: Ersetzungen im Vereinsnamen (Schlüssel wie im Helper-Bundle bis 2.x)
+$GLOBALS['TL_LANG']['tl_settings']['insert_verein_replaces'] = array('Ersetzungen im Vereinsnamen', 'Gilt für das Insert-Tag verein. Die Zeilen werden von oben nach unten angewandt, ohne Rücksicht auf Groß- und Kleinschreibung; gekürzt wird erst danach. Ein Begriff trifft auch mitten im Wort — längere Begriffe gehören deshalb vor kürzere, die in ihnen stecken (Schachvereinigung vor Schachverein). Näheres in docs/insert-tags.md.');
+$GLOBALS['TL_LANG']['tl_settings']['insert_verein_search'] = array('Suchen nach', 'Leerzeichen am Anfang oder Ende bitte als + angeben');
+$GLOBALS['TL_LANG']['tl_settings']['insert_verein_replace'] = array('Ersetzen durch', 'Leerzeichen am Anfang oder Ende bitte als + angeben');

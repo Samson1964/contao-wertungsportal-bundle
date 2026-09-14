@@ -225,10 +225,18 @@ class Lokal
 	 * Die Antwort ist FLACH — die Personenfelder stehen direkt unter body,
 	 * die Mitgliedschaften als Unterarray.
 	 *
+	 * Öffentlich seit 1.43.0, weil die Insert-Tags ({{dwz::…}} usw., siehe
+	 * Classes\InsertTags) genau diese Sicht auf eine Person brauchen: DWZ,
+	 * FIDE-ID und die laufenden Mitgliedschaften, ACTIVE zuerst. Die Methode
+	 * hat keine Seiteneffekte — anders als abfrage(), das den Stand für den
+	 * Hinweis „aus dem örtlichen Bestand" vormerkt und FIDE-Daten anreichert.
+	 *
 	 * @param  array $params  id = nu-ID der Person
-	 * @return array|null
+	 * @return array|null     ['body' => Person samt memberships, 'stand' => ts];
+	 *                        null, wenn es keine veröffentlichte Person mit
+	 *                        dieser Nummer gibt
 	 */
-	protected static function karteikarte($params)
+	public static function karteikarte($params)
 	{
 		$id = trim((string) ($params['id'] ?? ''));
 		if($id === '') return null;

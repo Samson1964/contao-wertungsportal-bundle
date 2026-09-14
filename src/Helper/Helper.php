@@ -794,6 +794,24 @@ class Helper extends \Contao\Frontend
 		return $gesperrt;
 	}
 
+	/**
+	 * Ermittelt, welche der übergebenen nu-Nummern gesperrt sind.
+	 *
+	 * Nachgefragt werden nur Nummern, die in diesem Seitenaufruf noch nicht
+	 * geprüft wurden; das Ergebnis bleibt im Request-Cache. Listen, Karteikarte
+	 * und Insert-Tags derselben Seite teilen sich so die Abfragen. Abgefragt
+	 * wird in Blöcken zu 500 Nummern.
+	 *
+	 * Die Nummern gehen AUSGEPACKT an execute() (`...$chunk`). Contao 4.13 hat
+	 * ein einzelnes Array noch selbst ausgepackt, Contao 5 serialisiert es zu
+	 * einem einzigen Parameter. Bis 1.42.1 war unter Contao 5 dadurch niemand
+	 * gesperrt — gefunden mit dem Prüfstand der Insert-Tags in Contao 5.7.
+	 *
+	 * @param  array|string $nuIds nu-Nummern; leere Werte zählen nicht
+	 * @return array               nu-Nummer => true für jede gesperrte Nummer
+	 *                             der Anfrage; leer, solange die Spalte blocked
+	 *                             fehlt (vor contao:migrate)
+	 */
 	public static function getBlacklist($nuIds)
 	{
 		// Die Spalte blocked existiert erst nach contao:migrate —
@@ -820,7 +838,7 @@ class Helper extends \Contao\Frontend
 			{
 				$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
 				$objPerson = \Contao\Database::getInstance()->prepare("SELECT nuLigaPersonId FROM tl_wertungsportal_persons WHERE blocked = '1' AND nuLigaPersonId IN ($platzhalter)")
-				                                     ->execute($chunk);
+				                                     ->execute(...$chunk);
 				while($objPerson->next())
 				{
 					self::$blacklistCache[(string) $objPerson->nuLigaPersonId] = true;

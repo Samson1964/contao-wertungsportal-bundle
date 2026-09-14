@@ -4,6 +4,8 @@ Ersetzt die SOAP-Schnittstelle von DeWIS und kommuniziert mit der REST-Schnittst
 
 ## Dokumentation
 
+* [Insert-Tags mit Wertungsdaten](docs/insert-tags.md) — `{{dwz::…}}`, `{{elo::…}}`,
+  `{{ftitel::…}}` und `{{verein::…}}` mit der NU-Nummer (früher Helper-Bundle mit DeWIS-ID)
 * [Vereinslisten-Schnittstelle](docs/vereinslisten-api.md) — Mitgliederlisten als
   JSON für Vereinswebsites: Abruf, Zugangsschlüssel, Verwaltung und Sperren
 * [Zwischenspeicher gezielt leeren](docs/zwischenspeicher.md) — Backend-Modul, das
