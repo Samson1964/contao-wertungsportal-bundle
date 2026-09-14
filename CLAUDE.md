@@ -252,6 +252,28 @@ dort (mit DeWIS-ID). Wichtig beim Weiterbauen:
 - Contao 4.13 merkt sich Tag-Ergebnisse statisch je Aufruf — im Prüfstand vor wiederholten
   Abfragen desselben Tags `contao.insert_tag.parser->reset()`.
 
+## Swiss-Chess-Hintergrunddateien (ab 1.38.0, Index und Zeichensatz korrigiert in 1.43.3)
+
+`wertungsportal:swisschess` → `Classes/SwissChess.php`, Doku `docs/swiss-chess.md`. Das Format ist
+nirgends beschrieben. Maßstab ist die Datei, die der Swiss-Chess-Programmierer am 09.09.2026 selbst
+erzeugt hat (`SwissChess-Dateien/fdsb260909/`), mit dem LV-0-csv vom selben Tag daneben
+(`dsb260909/`); beides nicht versioniert, die Meßskripte liegen in `SwissChess-Dateien/pruefstand/`.
+Wer an Index, Eimern, Sortierung oder Zeichensatz etwas ändert, mißt dagegen nach.
+
+- **SWX-Satz 701 ist keine Anzahl**, sondern LST-Größe + Kennung der Fassung (`KENNUNG_NEU` =
+  0x01000000, `KENNUNG_ALT` = 0). Bis 1.43.2 stand dort ein Zähler, und ein Anwender bekam mit beiden
+  Fassungen leere Felder für Elo, DWZ und Geburtsjahr.
+- Satz 1..700: Offset + Satzzahl des **vorigen belegten** Eimers − 1, leere Eimer (0, 0). Eimer 701
+  („Zz") hat keinen eigenen Satz, gehört aber in die LST.
+- Eimer und Reihenfolge entstehen aus Feld 0 **in CP437**: `suchschluessel()` (`UMSCHRIFT`,
+  `SCHNITT`) und `sortierschluessel()` (zusätzlich SZ=SS und `TIEF` mit der Marke 0x1F, die über dem
+  Tabulator der Eimerdateien liegen muß). Die Regeln sind Zeichen für Zeichen ausgemessen und wirken
+  willkürlich — Ç, à, ç, í, ñ trennen, é, á, ó, ú werden Buchstaben. Nicht glätten: Mit ihnen
+  weichen 13 von 1.976.362 Nachbarpaaren ab, keines mit einem Mitglied.
+- Text nur über `text()` → `nachCp437()` (feste Tabelle; `iconv`-TRANSLIT hängt an der Bibliothek
+  des Servers). Die Zahlenfelder der alten Fassung sind Bytes und dürfen durch keine Wandlung.
+- Alte Fassung: DWZ ohne Wert = kodierte „0000" (`nn`), Feld 7 leer, Feld 13 im Klartext.
+
 ## Fallstricke / Besonderheiten
 
 - **`Statement::execute()` mit Array-Argument** (`->execute($chunk)`) funktioniert nur in Contao

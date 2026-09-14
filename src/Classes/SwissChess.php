@@ -9,7 +9,7 @@ namespace Schachbulle\ContaoWertungsportalBundle\Classes;
  * Swiss-Chess liest die Spielerdaten aus einem Dateipaar:
  *
  * * **LST** — ein Datensatz je Zeile, Felder durch Semikolon getrennt,
- *   Zeilenende CRLF, Zeichensatz DOS-Codepage 850.
+ *   Zeilenende CRLF, Zeichensatz DOS-Codepage 437.
  * * **SWX** — ein Index über den Namensanfang, damit das Programm nicht die
  *   ganze Liste durchsuchen muß.
  *
@@ -25,7 +25,10 @@ namespace Schachbulle\ContaoWertungsportalBundle\Classes;
  * 02.09.2026, zusammen 3,2 Millionen Datensätze) und gegengeprüft: Die
  * Zahlenkodierung ist an 4.494.303 Feldern nachgerechnet, die
  * Namensauflösung an 112.824 Spielern, die Indexformel an allen 702
- * Einträgen beider SWX-Dateien. Einzelheiten in `docs/swiss-chess.md`.
+ * Einträgen beider SWX-Dateien. Index, Eimer, Sortierung und Zeichensatz sind
+ * seit 1.43.3 zusätzlich an der Datei ausgemessen, die der Swiss-Chess-
+ * Programmierer am 09.09.2026 selbst erzeugt hat. Einzelheiten in
+ * `docs/swiss-chess.md`.
  *
  * **Woher die Daten kommen:** Die DSB-Mitglieder stehen in der `spieler.csv`
  * der LV-0-csv, ihre FIDE-Angaben und alle übrigen weltweit von der FIDE
@@ -65,6 +68,143 @@ class SwissChess
 	 * derselbe Wert; er ist keine Anzahl, sondern eine Kennung.
 	 */
 	const INDEXKOPF = 0xFFFFFE44;
+
+	/**
+	 * Zählerwert des Schlußsatzes (Satz 701) der SWX in der neuen Fassung.
+	 *
+	 * Satz 701 trägt die Dateigröße der LST und dazu **keine Anzahl, sondern
+	 * die Kennung der Fassung**: 0x01000000 in den beiden Dateien von 2026 (der
+	 * des DSB vom 02.09. und der des Swiss-Chess-Programmierers vom 09.09.), 0
+	 * in der alten Datei des DSB vom 16.08.2023. Eine Anzahl wäre in beiden
+	 * Fällen etwas anderes (489 bzw. 374 für den letzten Eimer).
+	 *
+	 * Bis 1.43.2 stand hier die Satzzahl des letzten Eimers minus eins — weder
+	 * die eine noch die andere Kennung. Ein Anwender bekam mit beiden Fassungen
+	 * Name und Verein, aber leere Felder für Elo, DWZ und Geburtsjahr.
+	 */
+	const KENNUNG_NEU = 0x01000000;
+
+	/**
+	 * Zählerwert des Schlußsatzes in der alten Fassung, siehe KENNUNG_NEU.
+	 */
+	const KENNUNG_ALT = 0;
+
+	/**
+	 * Rangfolge bei gleichem Sortierschlüssel: reine FIDE-Sätze stehen vor den
+	 * DSB-Mitgliedschaften, danach gilt die Reihenfolge des Einlesens. So hält
+	 * es die Datei des Programmierers (4.411 zu 85 Gleichständen).
+	 */
+	const GRUPPE_FIDE = '0';
+
+	/**
+	 * Rangfolge der DSB-Mitgliedschaften bei gleichem Sortierschlüssel.
+	 */
+	const GRUPPE_DSB = '1';
+
+	/**
+	 * Umschrift der Sonderzeichen (CP437) für Eimer und Sortierung.
+	 *
+	 * Aus der Datei des Swiss-Chess-Programmierers vom 09.09.2026 ausgemessen,
+	 * Zeichen für Zeichen an allen Nachbarpaaren, in denen es vorkommt:
+	 * Umlaute und ß werden ausgeschrieben („Böttcher" steht im Eimer „Bo",
+	 * „Özdemir" in „Oe", „Aßmann" in „As"). Zum Grundbuchstaben werden é, â, ë,
+	 * ï, Å, ô, á, ó und ú. **Nicht** umgeschrieben, sondern wie ein Leerzeichen
+	 * behandelt werden Ç, à, ç, í und ñ — „Çelik" steht im Eimer „El". É und ò
+	 * stehen beim Sortieren vor dem Leerzeichen (siehe TIEF). Für è und ì gibt
+	 * die Datei keinen Ausschlag; sie zählen wie alle übrigen Zeichen ohne
+	 * Eintrag als Trenner.
+	 *
+	 * Zeichen außerhalb von CP437 kommen gar nicht erst an: nachCp437()
+	 * schreibt sie beim Erzeugen der Zeile um („Ó" → „O").
+	 */
+	const UMSCHRIFT = array
+	(
+		"\x84" => 'AE', "\x8E" => 'AE', "\x94" => 'OE', "\x99" => 'OE', "\x81" => 'UE', "\x9A" => 'UE', "\xE1" => 'SS',
+		"\x82" => 'E', "\x89" => 'E', "\x83" => 'A', "\x8F" => 'A', "\xA0" => 'A',
+		"\x8B" => 'I', "\x93" => 'O', "\xA2" => 'O', "\xA3" => 'U',
+	);
+
+	/**
+	 * Ab hier zählt ein Name für Eimer und Sortierung nicht mehr: an der ersten
+	 * Ziffer und an einer Klammer, die ein Wort beginnt.
+	 *
+	 * Beim Programmierer steht „Muster 2016" wie „Muster" und „Muster (PER)"
+	 * wie „Muster"; eine Klammer mitten im Wort — nach dem Muster von
+	 * „Kumar(Jharkhand)" — trennt dagegen nur. Schnitte jede Klammer, stünden
+	 * 69 Nachbarpaare seiner Datei in anderer Reihenfolge.
+	 */
+	const SCHNITT = '/(?<![^ ,])\(|[0-9]/';
+
+	/**
+	 * Zeichen, die beim Sortieren vor dem Leerzeichen stehen: `, ? und ' direkt
+	 * an einem Leerzeichen, einem Komma oder am Namensende, dazu É und ò.
+	 *
+	 * Beim Programmierer steht „Muster`,Nicola" vor „Muster,Anna",
+	 * „Muster,Md? Zaki" vor „Muster,Md Adnan" und „In 't Muster" vor „In,Anna";
+	 * mitten im Wort — „D'Avola" — trennen die Zeichen nur. Ohne diese Regel
+	 * stünden 164 Nachbarpaare seiner Datei in anderer Reihenfolge, darunter
+	 * neun mit DSB-Mitgliedern. Für É und ò gibt es je einen eindeutigen Fall.
+	 *
+	 * Ersetzt werden die Zeichen durch das Byte 0x1F. Es liegt unter dem
+	 * Leerzeichen, aber über dem Tabulator, der in den Eimerdateien den
+	 * Schlüssel abschließt — so bleibt „Muster" vor „Muster`,Nicola".
+	 */
+	const TIEF = '/[`?\'](?=[ ,]|$)|(?<=[ ,])[`?\']|[\x90\x95]/';
+
+	/**
+	 * Zeichen in UTF-8 => ihre Bytes in CP437, oder ein Ersatz aus ASCII für
+	 * Zeichen, die CP437 nicht kennt.
+	 *
+	 * Swiss-Chess erwartet die Namen in der Codepage 437. In der Datei des
+	 * Programmierers vom 09.09.2026 steht kein Byte, das in CP437 und CP850
+	 * Verschiedenes bedeutet; Zeichen, die CP437 nicht kennt, schreibt er in
+	 * ASCII um („Ó" → „O", „ý" → „y", „š" → „s", „’" und „´" → „'"). Mit dieser
+	 * Tabelle stimmen die Namen aller 100.370 Mitgliedschaften aus dem LV-0-csv
+	 * vom selben Tag mit seinen überein, bis auf einen, der schon in den Daten
+	 * anders lautet. Bis 1.43.2 ging die Wandlung nach CP850: „´" stand dort als
+	 * 0xEF, und das ist in CP437 „∩".
+	 *
+	 * Bewußt eine feste Tabelle statt `iconv(…//TRANSLIT)`: Deren Ergebnis hängt
+	 * an der Bibliothek des Servers. Unter glibc zählt die Sprachumgebung (im
+	 * C-Locale wird aus „Ó" ein „?"), libiconv macht aus „Ó" ein „'O". Zeichen,
+	 * die weder hier noch in CP437 stehen, fallen weg.
+	 */
+	const ZEICHEN_CP437 = array
+	(
+		// In CP437 vorhanden
+		'Ç' => "\x80", 'ü' => "\x81", 'é' => "\x82", 'â' => "\x83", 'ä' => "\x84", 'à' => "\x85", 'å' => "\x86", 'ç' => "\x87",
+		'ê' => "\x88", 'ë' => "\x89", 'è' => "\x8A", 'ï' => "\x8B", 'î' => "\x8C", 'ì' => "\x8D", 'Ä' => "\x8E", 'Å' => "\x8F",
+		'É' => "\x90", 'æ' => "\x91", 'Æ' => "\x92", 'ô' => "\x93", 'ö' => "\x94", 'ò' => "\x95", 'û' => "\x96", 'ù' => "\x97",
+		'ÿ' => "\x98", 'Ö' => "\x99", 'Ü' => "\x9A", '¢' => "\x9B", '£' => "\x9C", '¥' => "\x9D", 'ƒ' => "\x9F",
+		'á' => "\xA0", 'í' => "\xA1", 'ó' => "\xA2", 'ú' => "\xA3", 'ñ' => "\xA4", 'Ñ' => "\xA5", 'ª' => "\xA6", 'º' => "\xA7",
+		'¿' => "\xA8", '¬' => "\xAA", '½' => "\xAB", '¼' => "\xAC", '¡' => "\xAD", '«' => "\xAE", '»' => "\xAF",
+		'ß' => "\xE1", 'µ' => "\xE6", '±' => "\xF1", '÷' => "\xF6", '°' => "\xF8", '·' => "\xFA", '²' => "\xFD",
+		// Nicht in CP437: Grundbuchstabe
+		'À' => 'A', 'Á' => 'A', 'Â' => 'A', 'Ã' => 'A', 'ã' => 'a', 'Ā' => 'A', 'ā' => 'a', 'Ă' => 'A', 'ă' => 'a', 'Ą' => 'A', 'ą' => 'a',
+		'Ć' => 'C', 'ć' => 'c', 'Ĉ' => 'C', 'ĉ' => 'c', 'Ċ' => 'C', 'ċ' => 'c', 'Č' => 'C', 'č' => 'c',
+		'Ď' => 'D', 'ď' => 'd', 'Đ' => 'D', 'đ' => 'd', 'Ð' => 'D', 'ð' => 'd',
+		'È' => 'E', 'Ê' => 'E', 'Ë' => 'E', 'Ē' => 'E', 'ē' => 'e', 'Ĕ' => 'E', 'ĕ' => 'e', 'Ė' => 'E', 'ė' => 'e', 'Ę' => 'E', 'ę' => 'e', 'Ě' => 'E', 'ě' => 'e',
+		'Ĝ' => 'G', 'ĝ' => 'g', 'Ğ' => 'G', 'ğ' => 'g', 'Ġ' => 'G', 'ġ' => 'g', 'Ģ' => 'G', 'ģ' => 'g', 'Ĥ' => 'H', 'ĥ' => 'h', 'Ħ' => 'H', 'ħ' => 'h',
+		'Ì' => 'I', 'Í' => 'I', 'Î' => 'I', 'Ï' => 'I', 'Ĩ' => 'I', 'ĩ' => 'i', 'Ī' => 'I', 'ī' => 'i', 'Ĭ' => 'I', 'ĭ' => 'i', 'Į' => 'I', 'į' => 'i', 'İ' => 'I', 'ı' => 'i',
+		'Ĵ' => 'J', 'ĵ' => 'j', 'Ķ' => 'K', 'ķ' => 'k', 'Ĺ' => 'L', 'ĺ' => 'l', 'Ļ' => 'L', 'ļ' => 'l', 'Ľ' => 'L', 'ľ' => 'l', 'Ŀ' => 'L', 'ŀ' => 'l', 'Ł' => 'L', 'ł' => 'l',
+		'Ń' => 'N', 'ń' => 'n', 'Ņ' => 'N', 'ņ' => 'n', 'Ň' => 'N', 'ň' => 'n',
+		'Ò' => 'O', 'Ó' => 'O', 'Ô' => 'O', 'Õ' => 'O', 'õ' => 'o', 'Ø' => 'O', 'ø' => 'o', 'Ō' => 'O', 'ō' => 'o', 'Ŏ' => 'O', 'ŏ' => 'o', 'Ő' => 'O', 'ő' => 'o', 'Œ' => 'OE', 'œ' => 'oe',
+		'Ŕ' => 'R', 'ŕ' => 'r', 'Ŗ' => 'R', 'ŗ' => 'r', 'Ř' => 'R', 'ř' => 'r',
+		'Ś' => 'S', 'ś' => 's', 'Ŝ' => 'S', 'ŝ' => 's', 'Ş' => 'S', 'ş' => 's', 'Š' => 'S', 'š' => 's', 'Ș' => 'S', 'ș' => 's',
+		'Ţ' => 'T', 'ţ' => 't', 'Ť' => 'T', 'ť' => 't', 'Ț' => 'T', 'ț' => 't', 'Þ' => 'TH', 'þ' => 'th',
+		'Ù' => 'U', 'Ú' => 'U', 'Û' => 'U', 'Ũ' => 'U', 'ũ' => 'u', 'Ū' => 'U', 'ū' => 'u', 'Ŭ' => 'U', 'ŭ' => 'u', 'Ů' => 'U', 'ů' => 'u', 'Ű' => 'U', 'ű' => 'u', 'Ų' => 'U', 'ų' => 'u',
+		'Ŵ' => 'W', 'ŵ' => 'w', 'Ý' => 'Y', 'ý' => 'y', 'Ŷ' => 'Y', 'ŷ' => 'y', 'Ÿ' => 'Y',
+		'Ź' => 'Z', 'ź' => 'z', 'Ż' => 'Z', 'ż' => 'z', 'Ž' => 'Z', 'ž' => 'z',
+		// Nicht in CP437: Satzzeichen
+		'’' => "'", '‘' => "'", '‚' => "'", '´' => "'", '“' => '"', '”' => '"', '„' => '"', '–' => '-', '—' => '-', '…' => '...', "\u{00A0}" => ' ',
+	);
+
+	/**
+	 * Merker für nachCp437(): bereits gewandelte Zeichen.
+	 *
+	 * @var array
+	 */
+	protected static $cp437 = array();
 
 	/**
 	 * Hoechstlaenge der Textfelder Name und Verein. In der Originaldatei ist
@@ -229,7 +369,7 @@ class SwissChess
 
 				$zeile = $this->baueZeile($satz['csv'], $fide[$satz['fideId']] ?? null);
 
-				if ($this->inEimer($satz['name'], $satz['schluessel'], $zeile)) $dsb++;
+				if ($this->inEimer(self::GRUPPE_DSB, $zeile)) $dsb++;
 				else $uebersprungen++;
 			}
 
@@ -300,7 +440,8 @@ class SwissChess
 	 * @param string $datei   Pfad zur spieler.csv
 	 * @param string $fassung self::FASSUNG_NEU oder self::FASSUNG_ALT
 	 *
-	 * @return array Liste aus ['name' => Sortiername, 'zeile' => fertige Zeile]
+	 * @return array Liste aus ['fideId' => FIDE-Kennung oder 0,
+	 *               'csv' => Felder der CSV-Zeile]
 	 *
 	 * @throws \RuntimeException bei unerwarteter Kopfzeile
 	 */
@@ -315,17 +456,14 @@ class SwissChess
 		{
 			if (count($z) < $this->mindestfelder) continue;
 
-			$name = trim($this->wert($z, 'name'));
-			if ($name === '') continue;
+			if (trim($this->wert($z, 'name')) === '') continue;
 
+			// Eimer und Sortierschlüssel entstehen erst aus der fertigen Zeile,
+			// aus dem Namen in CP437 (siehe inEimer())
 			$saetze[] = array
 			(
-				'name'      => $name,
-				// nuLiga-Kennung und Vereinskennziffer machen die Mitgliedschaft
-				// eindeutig und sind in beiden Fassungen dieselben
-				'schluessel' => $this->wert($z, 'id').'|'.$this->wert($z, 'zps'),
-				'fideId'    => (int) $this->wert($z, 'fideid'),
-				'csv'       => $z,
+				'fideId' => (int) $this->wert($z, 'fideid'),
+				'csv'    => $z,
 			);
 		}
 
@@ -424,9 +562,9 @@ class SwissChess
 	 * @param array      $z    Felder der CSV-Zeile
 	 * @param array|null $fide Zeile aus tl_wertungsportal_elo, falls vorhanden
 	 *
-	 * @return string Zeile in CP850 mit CRLF am Ende
+	 * @return string Zeile in CP437 mit CRLF am Ende
 	 */
-	protected function baueZeile(array $z, array $fide = null)
+	protected function baueZeile(array $z, ?array $fide = null)
 	{
 		$zps = $this->wert($z, 'zps');
 		$titel = strtoupper(trim($this->wert($z, 'titel')));
@@ -445,20 +583,30 @@ class SwissChess
 		// Die Nation steht NUR bei Spielern mit FIDE-Eintrag. In der
 		// Originaldatei hat kein einziger der 57.369 Sätze ohne FIDE-Kennung
 		// eine Nation — ein pauschales „GER" wäre also falsch
+		// Nennt die CSV trotz FIDE-Kennung kein Land, gilt die Föderation aus der
+		// Elo-Tabelle — so hält es die Datei des Programmierers
+		if ($land === '' && $fide !== null) $land = trim((string) $fide['country']);
+
 		$f[2]  = $fideId !== '' ? $this->text($land) : '';
 
 		$f[3]  = $this->zahl($elo);
-		$f[4]  = $this->zahl($this->ziffern($this->wert($z, 'dwz')));
+		$f[4]  = $this->dwzFeld($this->ziffern($this->wert($z, 'dwz')));
 		$f[5]  = self::TITELCODE[$titel] ?? '';
 		$f[6]  = $this->zahl($this->ziffern($this->wert($z, 'geburtsjahr')));
-		$f[7]  = $this->text($this->wert($z, 'id'));
+		// Die Spielerkennung ist die nuLiga-ID (NU4005017). Die alte Fassung
+		// erwartet hier eine binär kodierte Zahl — die alte PKZ —, und eine
+		// Buchstabenfolge läßt sich so nicht schreiben. Dort bleibt das Feld
+		// deshalb leer, wie schon in der Umwandlung von 1999
+		$f[7]  = $this->fassung === self::FASSUNG_ALT ? '' : $this->text($this->wert($z, 'id'));
 		$f[8]  = $this->zahl($fideId);
 		$f[9]  = $this->zahl($this->ziffern($this->wert($z, 'mitglnr')));
 		$f[10] = $this->text($this->wert($z, 'geschlecht'));
 		$f[11] = $this->text($zps);
 		// Erste Stelle der Kennziffer = Landesverband
 		$f[12] = $zps !== '' ? substr($zps, 0, 1) : '';
-		$f[13] = $f[9];
+		// Feld 13 wiederholt die Mitgliedsnummer — in der alten Datei des DSB
+		// von 2023 im Klartext, obwohl Feld 9 dort binär kodiert ist
+		$f[13] = $this->ziffern($this->wert($z, 'mitglnr'));
 		$f[14] = $this->text($this->wert($z, 'status'));
 
 		// Die Felder 15 bis 27 tragen die FIDE-Angaben. Der vollständige Satz
@@ -526,7 +674,7 @@ class SwissChess
 	 *
 	 * @param array $e Zeile aus tl_wertungsportal_elo
 	 *
-	 * @return string Zeile in CP850 mit CRLF am Ende
+	 * @return string Zeile in CP437 mit CRLF am Ende
 	 */
 	protected function baueFideZeile(array $e)
 	{
@@ -535,6 +683,7 @@ class SwissChess
 		$f[0]  = $this->text($this->fideName($e));
 		$f[2]  = $this->text((string) $e['country']);
 		$f[3]  = $this->zahl($this->ziffern((string) $e['rating']));
+		$f[4]  = $this->dwzFeld('');
 		$f[5]  = self::TITELCODE[(string) $e['title']] ?? '';
 		$f[6]  = $this->zahl($this->ziffern((string) $e['birthday']));
 		$f[8]  = $this->zahl($this->ziffern((string) $e['fideid']));
@@ -692,7 +841,7 @@ class SwissChess
 	}
 
 	/**
-	 * Bereitet ein Textfeld auf: Wandlung nach CP850 und Kürzung auf 40
+	 * Bereitet ein Textfeld auf: Wandlung nach CP437 und Kürzung auf 40
 	 * Zeichen.
 	 *
 	 * **Wichtig:** Nur Textfelder dürfen durch die Kodierwandlung laufen. Die
@@ -701,22 +850,21 @@ class SwissChess
 	 * der ganzen Zeile zerstörte sie. Genau das ist beim ersten Versuch
 	 * passiert — aus 0x82 wurde 0x60, und die Zahl war unlesbar.
 	 *
-	 * Da CP850 ein Einbyte-Zeichensatz ist, entspricht die Kürzung auf 40
+	 * Da CP437 ein Einbyte-Zeichensatz ist, entspricht die Kürzung auf 40
 	 * Bytes genau 40 Zeichen; ein Umlaut kann dabei nicht zerschnitten werden.
 	 *
-	 * @param string $wert Text in windows-1252
+	 * @param string $wert Text in windows-1252 (spieler.csv, vereine.csv) oder
+	 *                     UTF-8 (Elo-Tabelle)
 	 *
-	 * @return string Text in CP850, höchstens 40 Zeichen
+	 * @return string Text in CP437, höchstens 40 Zeichen
 	 */
 	protected function text($wert)
 	{
 		// Anführungszeichen fliegen raus: In der Originaldatei trägt kein
 		// einziger der 300.000 geprüften Vereinsnamen eines. Sie würden auch
-		// die Felder 15 bis 28 nachahmen, die genau daran zu erkennen sind
-		$wert = str_replace('"', '', $wert);
-
-		$raus = @iconv('CP1252', 'CP850//TRANSLIT', $wert);
-		if ($raus === false) $raus = $wert;
+		// die Felder 15 bis 28 nachahmen, die genau daran zu erkennen sind.
+		// Erst nach der Wandlung, die aus „ und “ selbst welche macht
+		$raus = str_replace('"', '', self::nachCp437((string) $wert));
 
 		// rtrim NACH dem Kuerzen: Sonst bliebe bei einem abgeschnittenen
 		// Vereinsnamen ein Leerzeichen am Ende stehen; die Originaldatei hat
@@ -745,6 +893,26 @@ class SwissChess
 		if ($wert === '' || !ctype_digit($wert)) return '';
 
 		return $this->fassung === self::FASSUNG_ALT ? self::verschluessle($wert) : $wert;
+	}
+
+	/**
+	 * Bereitet das DWZ-Feld auf.
+	 *
+	 * Wie zahl(), mit einer Ausnahme in der alten Fassung: Ohne DWZ steht dort
+	 * kein leeres Feld, sondern die kodierte „0000" (die Bytes `nn`). So hält
+	 * es die alte Datei des DSB von 2023 bei allen 1.284.415 Sätzen ohne DWZ,
+	 * und so schrieb es schon die Umwandlung von 1999 — bei der Elo dagegen
+	 * bleibt das Feld dort leer.
+	 *
+	 * @param string $wert Ziffern der DWZ, oder leer
+	 *
+	 * @return string Klartext, Bytefolge oder leer
+	 */
+	protected function dwzFeld($wert)
+	{
+		if ($wert === '' && $this->fassung === self::FASSUNG_ALT) return self::verschluessle('0000');
+
+		return $this->zahl($wert);
 	}
 
 	/**
@@ -824,112 +992,207 @@ class SwissChess
 	/**
 	 * Liefert die Satznummer der Indexdatei zu einem Namen.
 	 *
-	 * Der Index teilt nach den ersten beiden Zeichen auf: 26 Anfangsbuchstaben
-	 * mal 27 Möglichkeiten für das zweite Zeichen (kein Buchstabe, dann a..z).
-	 * Die Formel ist an allen 702 Einträgen beider Originaldateien geprüft.
+	 * Der Index teilt nach den ersten beiden Zeichen des Suchschlüssels auf
+	 * (siehe suchschluessel()): 26 Anfangsbuchstaben mal 27 Möglichkeiten für
+	 * das zweite Zeichen — 0 für „kein Buchstabe", sonst 1..26 für A..Z. Die
+	 * Formel ist an allen 702 Einträgen der Originaldateien geprüft, die
+	 * Umschrift an allen 1.976.362 Sätzen der Datei des Swiss-Chess-
+	 * Programmierers vom 09.09.2026. Abweichend sind dort nur 17 der 20 Namen,
+	 * deren Schlüssel aus einem einzigen Buchstaben besteht („B", „D", „O" …):
+	 * Er stellt sie vor ihren Eimer, ohne sie mitzuzählen; hier gehören sie in
+	 * den Eimer „Buchstabe + kein Buchstabe".
 	 *
-	 * @param string $name Name wie in Feld 0
+	 * Bis 1.43.2 zählte das rohe zweite Byte: „Böttcher" landete im Eimer
+	 * „B + kein Buchstabe" statt in „Bo", und Namen mit Ö, Ü oder Ç am Anfang
+	 * fehlten ganz.
 	 *
-	 * @return int|null Satznummer 0..701, null wenn der Name nicht mit einem
-	 *                  Buchstaben A..Z beginnt
+	 * @param string $name Name wie in Feld 0 (CP437)
+	 *
+	 * @return int|null Satznummer 0..701, null wenn der Name vor dem Schnitt
+	 *                  (SCHNITT) keinen Buchstaben hat
 	 */
 	public static function eimer($name)
 	{
-		if ($name === '') return null;
+		$schluessel = self::suchschluessel($name);
 
-		$erst = ord(strtoupper($name[0])) - 65;
-		if ($erst < 0 || $erst > 25) return null;
+		if ($schluessel === '') return null;
 
-		$zweit = 0;
+		$zweit = (strlen($schluessel) > 1 && $schluessel[1] !== ' ') ? ord($schluessel[1]) - 64 : 0;
 
-		if (strlen($name) > 1)
-		{
-			$c = ord(strtolower($name[1]));
-			if ($c >= 97 && $c <= 122) $zweit = $c - 96;
-		}
+		return (ord($schluessel[0]) - 65) * 27 + $zweit;
+	}
 
-		return $erst * 27 + $zweit;
+	/**
+	 * Bildet den Suchschlüssel eines Namens, aus dem sich der Eimer ergibt.
+	 *
+	 * Die Regeln sind aus der Datei des Swiss-Chess-Programmierers ausgemessen:
+	 *
+	 * * Ab der ersten Ziffer oder einer Klammer, die ein Wort beginnt, zählt
+	 *   nichts mehr (SCHNITT) — Zusätze wie „(PER)" oder „2016" in FIDE-Namen
+	 *   bleiben außen vor.
+	 * * Umlaute und ß werden ausgeschrieben (Ö → OE, ß → SS), Akzente fallen
+	 *   weg (é → E); siehe UMSCHRIFT.
+	 * * Alles andere außer A..Z — Komma, Punkt, Bindestrich, Apostroph, ein
+	 *   unbekanntes Sonderzeichen — trennt nur: Folgen davon werden zu einem
+	 *   Leerzeichen, am Rand fallen sie weg.
+	 * * Groß- und Kleinschreibung spielt keine Rolle.
+	 *
+	 * @param string $name Name wie in Feld 0 (CP437)
+	 *
+	 * @return string Nur A..Z und einzelne Leerzeichen, oder leer
+	 */
+	public static function suchschluessel($name)
+	{
+		$name = preg_split(self::SCHNITT, (string) $name, 2)[0];
+		$name = strtoupper(strtr($name, self::UMSCHRIFT));
+
+		return trim(preg_replace('/[^A-Z]+/', ' ', $name));
+	}
+
+	/**
+	 * Bildet den Schlüssel, nach dem die Sätze innerhalb eines Eimers
+	 * sortiert werden.
+	 *
+	 * Der Suchschlüssel mit zwei Unterschieden: „SZ" zählt wie „SS", und die
+	 * Zeichen aus TIEF stehen vor dem Leerzeichen. Nur so stehen die Namen in
+	 * derselben Reihenfolge wie in der Datei des Programmierers — „Kaszab" vor
+	 * „Kassel", „Muster,Szilvia" vor „Muster,Stefan". Für den Eimer gilt beides
+	 * nicht, „Szabo" bleibt in „Sz".
+	 *
+	 * Gegen die Reihenfolge seiner Datei vom 09.09.2026 bleiben damit 13 von
+	 * 1.976.362 Nachbarpaaren abweichend, keines davon mit einem DSB-Mitglied:
+	 * acht FIDE-Namen, bei denen er „sy" vor „sz" stellt, drei lange Namen, bei
+	 * denen der längere vor seinem Anfangsstück steht, und zwei mit einer Null
+	 * statt eines O. Mit dem Vergleich bis 1.43.2 — kleingeschriebener Name,
+	 * Byte für Byte — wären es 119.582.
+	 *
+	 * @param string $name Name wie in Feld 0 (CP437)
+	 *
+	 * @return string Schlüssel aus A..Z, einzelnen Leerzeichen und dem Byte
+	 *                0x1F für die Zeichen aus TIEF
+	 */
+	public static function sortierschluessel($name)
+	{
+		$name = preg_replace(self::TIEF, "\x1F", (string) $name);
+		$name = preg_split(self::SCHNITT, $name, 2)[0];
+		$name = strtoupper(strtr($name, self::UMSCHRIFT));
+
+		return str_replace('SZ', 'SS', trim(preg_replace('/[^A-Z\x1F]+/', ' ', $name)));
 	}
 
 	/**
 	 * Schreibt die Indexdatei.
 	 *
-	 * Aufbau: 702 Sätze à acht Byte, jeweils zwei vorzeichenlose 32-Bit-Zahlen
-	 * in Intel-Reihenfolge. Der erste Wert ist der Byte-Offset, an dem der
-	 * Eimer in der LST beginnt.
-	 *
-	 * Der zweite Wert gehört — so steht es in beiden Originaldateien — zum
-	 * VORHERGEHENDEN Eimer und ist dessen Datensatzzahl **minus eins**. Diese
-	 * Verschiebung sieht nach einem Eigenheit des ursprünglichen Programms
-	 * aus; sie wird hier unverändert nachgebildet, weil Swiss-Chess sie so
-	 * erwartet.
-	 *
-	 * Der Kopfsatz trägt Offset 0 und eine feste Kennung, der letzte Satz die
-	 * Dateigröße.
-	 *
-	 * @param string $pfad   Ziel
-	 * @param array  $eimer  Satznummer => ['offset' => int, 'anzahl' => int]
+	 * @param string $pfad    Ziel
+	 * @param array  $eimer   Satznummer => ['offset' => int, 'anzahl' => int]
 	 * @param int    $groesse Größe der geschriebenen LST in Bytes
 	 *
 	 * @return void
 	 */
 	protected function schreibeIndex($pfad, array $eimer, $groesse)
 	{
-		// Leere Eimer bekommen den Offset 0 — so hält es die Originaldatei
-		// (dort sind 84 der 700 Sätze leer und tragen alle die 0). Wer den
-		// Offset des Vorgängers einsetzte, ließe den Leser in fremde Daten
-		// greifen; die 0 ist die eindeutige Anzeige „hier ist nichts". Die
-		// belegten Offsets sind dadurch streng steigend, genau wie im Original
-		$offsets = array();
-
-		for ($s = 0; $s < self::INDEXSAETZE - 1; $s++)
-		{
-			$offsets[$s] = isset($eimer[$s]) ? $eimer[$s]['offset'] : 0;
-		}
-
-		$roh = '';
-
-		for ($s = 0; $s < self::INDEXSAETZE; $s++)
-		{
-			if ($s === 0)
-			{
-				$roh .= pack('VV', 0, self::INDEXKOPF);
-				continue;
-			}
-
-			$offset = $s < self::INDEXSAETZE - 1 ? $offsets[$s] : $groesse;
-
-			// Zähler des vorhergehenden Eimers, minus eins
-			$vor = isset($eimer[$s - 1]) ? $eimer[$s - 1]['anzahl'] - 1 : 0;
-			if ($vor < 0) $vor = 0;
-
-			$roh .= pack('VV', $offset, $vor);
-		}
-
-		file_put_contents($pfad, $roh);
+		file_put_contents($pfad, $this->indexInhalt($eimer, $groesse));
 	}
 
 	/**
-	 * Wandelt Text von der Kodierung der nu-Dateien in die DOS-Codepage 850.
+	 * Baut den Inhalt der Indexdatei.
 	 *
-	 * Die spieler.csv kommt in windows-1252, Swiss-Chess erwartet CP850. Für
-	 * alle Zeichen, die in den Originaldateien tatsächlich vorkommen (deutsche
-	 * Umlaute und einige westeuropäische Akzente), sind CP850 und CP437
-	 * byteweise identisch — die Wahl zwischen beiden spielt hier also keine
-	 * Rolle.
+	 * Aufbau: 702 Sätze à acht Byte, jeweils zwei vorzeichenlose 32-Bit-Zahlen
+	 * in Intel-Reihenfolge. Nachgemessen an den Originaldateien des DSB von
+	 * 2023 und vom 02.09.2026 und an der Datei des Swiss-Chess-Programmierers
+	 * vom 09.09.2026:
 	 *
-	 * `//TRANSLIT` sorgt dafür, daß ein Zeichen außerhalb der Codepage eine
-	 * lesbare Entsprechung bekommt statt eines Fragezeichens.
+	 * * **Satz 0** ist der Kopf: Offset 0 und die Kennung 0xFFFFFE44. Eimer 0
+	 *   beginnt damit am Dateianfang.
+	 * * **Satz 1..700** eines belegten Eimers: sein Offset in der LST und die
+	 *   Satzzahl des **vorigen belegten** Eimers minus eins. Die Größe eines
+	 *   Eimers steht also am nächsten belegten Satz.
+	 * * **Leere Eimer** tragen (0, 0).
+	 * * **Satz 701** trägt die Dateigröße und die Kennung der Fassung
+	 *   (KENNUNG_NEU bzw. KENNUNG_ALT), keine Anzahl.
 	 *
-	 * @param string $text Text in windows-1252
+	 * Bis 1.43.2 stand der Zähler im Satz direkt hinter dem Eimer — nach einer
+	 * Lücke also im leeren Satz, und der nächste belegte trug die 0. Satz 701
+	 * trug die Satzzahl des letzten Eimers statt der Kennung.
 	 *
-	 * @return string Text in CP850; bei einem Fehler unverändert
+	 * Eigene Methode, damit sich der Aufbau ohne Dateizugriff prüfen läßt.
+	 *
+	 * @param array $eimer   Satznummer => ['offset' => int, 'anzahl' => int];
+	 *                       ein Eimer 701 („Zz") steht in der LST, bekommt
+	 *                       aber keinen eigenen Indexsatz
+	 * @param int   $groesse Größe der LST in Bytes
+	 *
+	 * @return string Die 5.616 Byte der SWX
 	 */
-	protected function nachCp850($text)
+	protected function indexInhalt(array $eimer, $groesse)
 	{
-		$raus = @iconv('CP1252', 'CP850//TRANSLIT', $text);
+		$roh = pack('VV', 0, self::INDEXKOPF);
+		$vorige = isset($eimer[0]) ? (int) $eimer[0]['anzahl'] : 0;
 
-		return $raus === false ? $text : $raus;
+		for ($s = 1; $s < self::INDEXSAETZE - 1; $s++)
+		{
+			if (!isset($eimer[$s]))
+			{
+				$roh .= pack('VV', 0, 0);
+				continue;
+			}
+
+			$roh .= pack('VV', $eimer[$s]['offset'], max(0, $vorige - 1));
+			$vorige = (int) $eimer[$s]['anzahl'];
+		}
+
+		$kennung = $this->fassung === self::FASSUNG_ALT ? self::KENNUNG_ALT : self::KENNUNG_NEU;
+
+		return $roh.pack('VV', $groesse, $kennung);
+	}
+
+	/**
+	 * Wandelt Text in die DOS-Codepage 437.
+	 *
+	 * Die spieler.csv und die vereine.csv kommen in windows-1252, die Namen der
+	 * Elo-Tabelle in UTF-8 (so legt der XML-Import sie ab). Gültiges UTF-8
+	 * bleibt deshalb UTF-8, alles andere wird als windows-1252 gelesen — ein
+	 * Name in windows-1252 mit Umlaut ist praktisch nie zugleich gültiges
+	 * UTF-8.
+	 *
+	 * Danach geht jedes Zeichen über ZEICHEN_CP437: Was CP437 kennt, bekommt
+	 * sein Byte; was nicht, einen Ersatz („Ó" → „O", „’" → „'"); was in keiner
+	 * Liste steht, fällt weg. Für die deutschen Umlaute, ß und die üblichen
+	 * Akzente sind die Bytes dieselben wie in CP850 — die Wandlung ändert an
+	 * bisherigen Dateien nur die seltenen Zeichen außerhalb von CP437.
+	 *
+	 * @param string $text Text in windows-1252 oder UTF-8
+	 *
+	 * @return string Text in CP437
+	 */
+	public static function nachCp437($text)
+	{
+		$text = (string) $text;
+
+		// Reines ASCII bleibt, wie es ist — bei weitem der häufigste Fall
+		if (!preg_match('/[\x80-\xFF]/', $text)) return $text;
+
+		if (!preg_match('//u', $text)) $text = (string) mb_convert_encoding($text, 'UTF-8', 'Windows-1252');
+
+		$raus = '';
+
+		foreach ((array) preg_split('//u', $text, -1, PREG_SPLIT_NO_EMPTY) as $zeichen)
+		{
+			if (strlen($zeichen) === 1)
+			{
+				$raus .= $zeichen;
+				continue;
+			}
+
+			if (!array_key_exists($zeichen, self::$cp437))
+			{
+				self::$cp437[$zeichen] = array_key_exists($zeichen, self::ZEICHEN_CP437) ? self::ZEICHEN_CP437[$zeichen] : '';
+			}
+
+			$raus .= self::$cp437[$zeichen];
+		}
+
+		return $raus;
 	}
 
 	/**
@@ -966,6 +1229,14 @@ class SwissChess
 	protected $puffer = array();
 
 	/**
+	 * Laufende Nummer der einsortierten Sätze. Sie hält bei gleichem
+	 * Sortierschlüssel die Reihenfolge des Einlesens fest.
+	 *
+	 * @var int
+	 */
+	protected $laufnummer = 0;
+
+	/**
 	 * Legt das Arbeitsverzeichnis für die Eimerdateien an.
 	 *
 	 * **Warum überhaupt Eimer:** Mit den FIDE-Spielern zusammen sind es rund
@@ -993,27 +1264,37 @@ class SwissChess
 
 		$this->eimerpfad = $verzeichnis;
 		$this->puffer = array();
+		$this->laufnummer = 0;
 	}
 
 	/**
 	 * Legt eine Zeile in ihren Eimer.
 	 *
-	 * @param string $name       Name für die Eimerbestimmung
-	 * @param string $schluessel Zweiter Sortierschlüssel bei Namensgleichheit
-	 * @param string $zeile      Fertige Zeile mit CRLF
+	 * Eimer und Sortierschlüssel kommen aus Feld 0 der fertigen Zeile — aus
+	 * dem Namen in CP437 und gekürzt, genau wie er in der Datei steht. Die
+	 * Umschrift der Sonderzeichen setzt diese Kodierung voraus; die spieler.csv
+	 * kommt in windows-1252, die Elo-Tabelle in UTF-8.
 	 *
-	 * @return bool false, wenn der Name nicht mit A..Z beginnt — solche Sätze
-	 *              kann der Index nicht führen und sie bleiben weg
+	 * @param string $gruppe GRUPPE_FIDE oder GRUPPE_DSB: Rangfolge bei gleichem
+	 *                       Sortierschlüssel
+	 * @param string $zeile  Fertige Zeile mit CRLF
+	 *
+	 * @return bool false, wenn der Name vor dem Schnitt (SCHNITT) keinen
+	 *              Buchstaben hat — solche Sätze kann der Index nicht führen
+	 *              und sie bleiben weg
 	 */
-	protected function inEimer($name, $schluessel, $zeile)
+	protected function inEimer($gruppe, $zeile)
 	{
+		$name = substr($zeile, 0, (int) strpos($zeile, ';'));
 		$e = self::eimer($name);
 
 		if ($e === null) return false;
 
 		// Der Sortierschlüssel wandert mit in die Datei und wird beim
-		// Zusammenführen wieder abgeschnitten
-		$this->puffer[$e][] = strtolower($name)."\t".$schluessel."\t".$zeile;
+		// Zusammenführen wieder abgeschnitten. Die laufende Nummer hält bei
+		// gleichem Schlüssel die Reihenfolge des Einlesens fest — sort() ist
+		// nicht stabil
+		$this->puffer[$e][] = self::sortierschluessel($name)."\t".$gruppe.sprintf('%08d', $this->laufnummer++)."\t".$zeile;
 
 		if (count($this->puffer[$e]) >= 5000) $this->pufferLeeren($e);
 
@@ -1038,9 +1319,14 @@ class SwissChess
 	/**
 	 * Führt die Eimer der Reihe nach zu einer LST zusammen.
 	 *
-	 * Innerhalb eines Eimers wird nach dem Namen sortiert, bei Gleichheit nach
-	 * dem zweiten Schlüssel. So sieht die Reihenfolge in beiden Fassungen
-	 * gleich aus.
+	 * Innerhalb eines Eimers wird nach dem Sortierschlüssel sortiert, bei
+	 * Gleichheit stehen reine FIDE-Sätze vor den Mitgliedschaften und sonst in
+	 * der Reihenfolge des Einlesens. So sieht die Reihenfolge in beiden
+	 * Fassungen gleich aus.
+	 *
+	 * Auch Eimer 701 („Zz") wird geschrieben. Er hat keinen eigenen Indexsatz —
+	 * Satz 701 ist der Schlußsatz —, seine Namen stehen deshalb wie in der
+	 * Datei des Programmierers hinter Eimer 700. Bis 1.43.2 fielen sie weg.
 	 *
 	 * @param string $lstPfad Ziel
 	 *
@@ -1061,7 +1347,7 @@ class SwissChess
 		$eimer = array();
 		$pos = 0;
 
-		for ($e = 0; $e < self::INDEXSAETZE - 1; $e++)
+		for ($e = 0; $e < self::INDEXSAETZE; $e++)
 		{
 			$datei = $this->eimerpfad.'/'.$e;
 			if (!is_file($datei)) continue;
@@ -1160,8 +1446,8 @@ class SwissChess
 	 *
 	 * @param array $bekannt       FIDE-Kennungen, die schon als DSB-Satz
 	 *                             geschrieben wurden
-	 * @param int   $uebersprungen Wird um die Sätze erhöht, deren Name nicht
-	 *                             mit A..Z beginnt
+	 * @param int   $uebersprungen Wird um die Sätze erhöht, deren Name vor dem
+	 *                             Schnitt keinen Buchstaben hat
 	 *
 	 * @return int Anzahl der aufgenommenen FIDE-Spieler
 	 */
@@ -1180,7 +1466,7 @@ class SwissChess
 			$name = $this->fideName($zeile);
 			if ($name === '') continue;
 
-			if ($this->inEimer($name, (string) $zeile['fideid'], $this->baueFideZeile($zeile))) $anzahl++;
+			if ($this->inEimer(self::GRUPPE_FIDE, $this->baueFideZeile($zeile))) $anzahl++;
 			else $uebersprungen++;
 		}
 

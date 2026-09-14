@@ -1,5 +1,45 @@
 # Wertungsportal Changelog
 
+## Version 1.43.3 (2026-09-14)
+
+* Fix: **Swiss-Chess übernahm aus den Hintergrunddateien weder Elo noch DWZ noch Geburtsjahr.** Ein
+  Anwender bekam mit beiden Fassungen Name und Verein, aber leere Zahlenfelder. Satz 701 der SWX
+  trägt neben der Größe der LST die Kennung der Fassung — 0x01000000 für Swiss-Chess ab 10, 0 für
+  die alte Fassung —, der Erzeuger schrieb dort die Satzzahl des letzten Eimers. Diese und die
+  folgenden Regeln sind an der Datei gemessen, die der Swiss-Chess-Programmierer am 09.09.2026 selbst
+  erzeugt hat; in Swiss-Chess selbst ließ sich hier nichts prüfen
+* Fix: **Zähler im Index:** Satz 1 bis 700 trägt die Satzzahl des vorigen **belegten** Eimers minus
+  eins, leere Eimer tragen (0, 0). Bis 1.43.2 stand der Zähler im Satz direkt dahinter, nach einer
+  Lücke also im leeren Satz
+* Fix: **Eimer:** Maßgeblich sind die ersten beiden Buchstaben eines Suchschlüssels, in dem Umlaute
+  und ß ausgeschrieben sind und é, á, ó, ú und einige andere zum Grundbuchstaben werden. Bis 1.43.2
+  zählte das rohe zweite Byte: Von den 100.370 Mitgliedschaften des LV-0-csv vom 09.09.2026 standen
+  6.576 im falschen Eimer („Böttcher" in „B + kein Buchstabe" statt in „Bo"), die 150 mit Ö, Ü oder
+  Ç am Anfang fehlten ganz. Namen im Eimer „Zz" fielen ebenfalls weg
+* Fix: **Reihenfolge im Eimer** nach einem ausgemessenen Sortierschlüssel: SZ zählt wie SS, Ziffern
+  und Klammern am Wortanfang schneiden ab, `` ` ``, `?` und `'` am Wortrand stehen vor dem
+  Leerzeichen; bei Gleichstand kommen reine FIDE-Sätze vor den Mitgliedschaften. Gegen die Datei des
+  Programmierers stehen damit 13 von 1.976.362 Nachbarpaaren anders, keines mit einem DSB-Mitglied —
+  mit der Bytesortierung bis 1.43.2 waren es 119.582
+* Fix: **Zeichensatz CP437 statt CP850**, mit fester Umschrift für Zeichen außerhalb von CP437
+  („Ó" → „O", „š" → „s", „’" und „´" → „'"). Der Akut stand bisher als 0xEF in der Datei, in CP437
+  ein „∩". Die Namen reiner FIDE-Spieler kommen aus der Elo-Tabelle in UTF-8 und liefen bisher durch
+  die Wandlung für windows-1252
+* Fix: **Alte Fassung:** DWZ ohne Wert ist die kodierte „0000" (`nn`), Feld 7 bleibt leer — dort
+  stand die nuLiga-ID im Klartext, wo eine kodierte Zahl erwartet wird —, Feld 13 steht im Klartext.
+  So hält es die alte Datei des DSB vom 16.08.2023
+* Change: Nennt die spieler.csv trotz FIDE-Kennung kein Land, kommt die Nation aus der Föderation in
+  `tl_wertungsportal_elo`. Im LV-0-csv vom 09.09.2026 betrifft das 65 Mitgliedschaften; beim
+  Programmierer steht bei allen „GER"
+
+  Geprüft mit 152 Unit-Tests und einem Nachbau gegen die Datei des Programmierers: Seine 1.976.362
+  Zeilen ergeben durch Eimer, Sortierung und Index eine gleich große LST mit 1.970.030 Zeilen an
+  derselben Stelle und 690 von 702 gleichen Indexsätzen (die übrigen zwölf gehen auf 17 Namen aus
+  einem einzigen Buchstaben zurück, die er vor ihren Eimer stellt). Aus dem LV-0-csv vom selben Tag
+  entstehen 100.370 Mitgliedschaften: Name bei 100.369 gleich, DWZ, Geburtsjahr, Spielerkennung,
+  FIDE-Kennung und ZPS bei allen, auch bei allen Namen mit Zeichen außerhalb von CP437. Ob Swiss-Chess
+  die Dateien jetzt liest, muß eine Rückmeldung aus der Praxis zeigen. Doku: `docs/swiss-chess.md`
+
 ## Version 1.43.2 (2026-09-14)
 
 * Change: **Ersetzungen im Vereinsnamen nur noch an Wortgrenzen.** Bis 1.43.0
