@@ -1,5 +1,24 @@
 # Wertungsportal Changelog
 
+## Version 1.42.1 (2026-09-14)
+
+* Fix: **Layout des Rohdaten-Moduls.** Der Formularkasten endete über den Feldern,
+  die Eingabefelder samt Hilfetexten ragten unten heraus, und die rechte Spalte
+  klebte ohne Abstand an der linken. Die Vorlage folgt jetzt dem Markup, das Contao
+  selbst für Formularfelder ausgibt: Jedes Feld trägt `widget` zusätzlich zu `w50`
+  — erst `.widget` gibt die 15 px Rand, mit denen `.w50` rechnet —, der Kasten
+  trägt `cf` und hält damit die fließenden Felder, und die Checkbox neben dem
+  Auswahlfeld sitzt wie im Kern in `widget w50 m12 cbx`
+* Fix: Dasselbe im **Zwischenspeicher**-Modul, das die gleiche Formularstruktur
+  hatte und denselben Fehler zeigte
+
+  Gemessen auf statischen Prüfseiten mit der echten Ausgabe beider Module und der
+  Backend-CSS von Contao 4.13 und 5.7. Vorher war der Kasten 37 px hoch, die Felder
+  ragten bis zu 295 px heraus (auf der Standardseite 19 px über die Box `content`
+  hinaus), die Spaltenlücke betrug 0 px. Nachher liegt alles im Kasten, die Lücke
+  beträgt 30 px, der Rand je 15 px — in beiden Contao-Fassungen gleich, auch bei
+  einem Fenster unter 768 px, wo die Felder untereinander stehen
+
 ## Version 1.42.0 (2026-09-14)
 
 * Add: **Backend-Modul „Rohdaten"** (WP | Rohdaten). Es ruft eine der zwölf

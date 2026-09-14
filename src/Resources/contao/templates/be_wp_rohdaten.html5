@@ -2,6 +2,13 @@
 /**
  * Backend-Template des Moduls „Rohdaten"
  * Ruft eine Funktion der nu-Schnittstelle auf und liefert die Antwort als Datei.
+ *
+ * Die Felder folgen dem Markup, das Contao selbst für Formularfelder ausgibt
+ * (DataContainer::row): Jedes Feld trägt `widget` zusätzlich zu `w50` — nur
+ * `.widget` gibt die 15 px Rand links und rechts, mit denen `.w50` rechnet
+ * (`calc(50% - 30px)`). Der Kasten trägt `cf`, weil `.w50` fließt; ohne das
+ * endet der Kasten über den Feldern und die Hilfetexte ragen heraus. Eine
+ * einzelne Checkbox neben einem Eingabefeld bekommt wie im Kern `m12 cbx`.
  */
 $maske = static function ($text) { return htmlspecialchars((string) $text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); };
 ?>
@@ -23,9 +30,9 @@ $maske = static function ($text) { return htmlspecialchars((string) $text, ENT_Q
 		<input type="hidden" name="REQUEST_TOKEN" value="<?= $maske($this->token) ?>">
 
 		<div class="tl_formbody_edit">
-			<div class="tl_tbox">
+			<div class="tl_tbox cf">
 
-				<div class="w50">
+				<div class="widget w50">
 					<h3><label for="ctrl_funktion">Funktion</label></h3>
 					<select name="funktion" id="ctrl_funktion" class="tl_select" onchange="this.form.submit()">
 						<?php foreach($this->funktionen as $name => $f): ?>
@@ -35,18 +42,17 @@ $maske = static function ($text) { return htmlspecialchars((string) $text, ENT_Q
 					<p class="tl_help tl_tip">Endpunkt: <code><?= $maske($this->endpunkt) ?></code></p>
 				</div>
 
-				<div class="w50">
-					<h3>Ausgabe</h3>
-					<div style="padding-top:4px">
+				<div class="widget w50 m12 cbx">
+					<div class="tl_checkbox_single_container">
 						<input type="checkbox" name="lesbar" id="ctrl_lesbar" value="1" class="tl_checkbox"<?= $this->lesbar ? ' checked' : '' ?>>
-						<label for="ctrl_lesbar">eingerückt (lesbar)</label>
+						<label for="ctrl_lesbar">Eingerückt ausgeben (lesbar)</label>
 					</div>
 					<p class="tl_help tl_tip">Ohne Haken kommen die Bytes unverändert — nur so ist die Datei mit der Antwort von nu identisch.</p>
 				</div>
 
 				<?php foreach($this->felder as $feld): ?>
 					<?php $p = $this->parameter[$feld]; $wert = (string) ($this->eingabe[$feld] ?? ''); ?>
-					<div class="w50">
+					<div class="widget w50">
 						<h3><label for="ctrl_<?= $feld ?>"><?= $maske($p['titel']) ?><?= in_array($feld, $this->pflicht, true) ? '<span class="mandatory">*</span>' : '' ?></label></h3>
 						<?php if($p['art'] === 'auswahl'): ?>
 							<select name="<?= $feld ?>" id="ctrl_<?= $feld ?>" class="tl_select">
@@ -62,7 +68,9 @@ $maske = static function ($text) { return htmlspecialchars((string) $text, ENT_Q
 				<?php endforeach; ?>
 
 				<?php if(!count($this->felder)): ?>
-					<p class="tl_help" style="clear:both;padding-top:8px">Diese Funktion braucht keine Angaben.</p>
+					<div class="widget clr">
+						<p class="tl_help">Diese Funktion braucht keine Angaben.</p>
+					</div>
 				<?php endif; ?>
 
 			</div>

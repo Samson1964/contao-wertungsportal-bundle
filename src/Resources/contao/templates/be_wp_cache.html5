@@ -21,9 +21,9 @@
 		<input type="hidden" name="REQUEST_TOKEN" value="<?= htmlspecialchars(\Contao\System::getContainer()->get('contao.csrf.token_manager')->getDefaultTokenValue(), ENT_QUOTES) ?>">
 
 		<div class="tl_formbody_edit">
-			<div class="tl_tbox">
+			<div class="tl_tbox cf">
 
-				<div class="w50">
+				<div class="widget w50">
 					<h3><label for="ctrl_art">Suchen nach</label></h3>
 					<select name="art" id="ctrl_art" class="tl_select" onchange="this.form.submit()">
 						<?php foreach($this->arten as $wert => $text): ?>
@@ -33,7 +33,7 @@
 					<p class="tl_help tl_tip"><?= $this->hinweise[$this->art] ?? '' ?></p>
 				</div>
 
-				<div class="w50">
+				<div class="widget w50">
 					<h3><label for="ctrl_wert">Wert</label></h3>
 					<input type="text" name="wert" id="ctrl_wert" class="tl_text" value="<?= \Contao\StringUtil::specialchars($this->wert) ?>" autofocus>
 					<p class="tl_help tl_tip">UUID, nu-Nummer oder Vereinskennziffer — je nach Auswahl links.</p>
