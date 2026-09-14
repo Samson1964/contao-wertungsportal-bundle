@@ -186,7 +186,17 @@ class WertungsportalPersonsModel extends Model
      * tatsächlichen Änderungen aktualisiert. Der Veröffentlichungsstatus
      * bestehender Datensätze bleibt unberührt.
      *
-     * @return array UUID => Datensatz-ID (für den Mitgliedschafts-Abgleich)
+     * Alle Werte gehen ausgepackt an execute() (`...$arrChunk`, beim
+     * Batch-INSERT `...array_merge(...$arrChunk)`): Ein einzelnes Array packt
+     * nur Contao 4.13 selbst aus, Contao 5 bindet es als EINEN serialisierten
+     * Parameter. Bis 1.43.0 fand der Abgleich unter Contao 5 deshalb keinen
+     * Bestand oder scheiterte — neue Personen kamen nie an.
+     *
+     * @param array $arrPersons Personen-DTOs der API; Einträge ohne uuid
+     *                          werden übergangen, doppelte UUIDs zählen einmal
+     *
+     * @return array UUID => Datensatz-ID (für den Mitgliedschafts-Abgleich);
+     *               leer, wenn kein verwertbarer Eintrag dabei war
      */
     public static function syncList(array $arrPersons): array
     {
@@ -218,7 +228,7 @@ class WertungsportalPersonsModel extends Model
         foreach (array_chunk(array_keys($arrByUuid), 500) as $arrChunk) {
             $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
             $objRows = $objDatabase->prepare('SELECT id, uuid, nuLigaPersonId, firstname, lastname, firstnameAlias, lastnameAlias, gender, weekOfLastTournamentEvaluation, fideId, rating, `index`, birthyear FROM ' . static::$strTable . ' WHERE uuid IN (' . $strPlaceholders . ')')
-                                   ->execute($arrChunk);
+                                   ->execute(...$arrChunk);
 
             while ($objRows->next()) {
                 $arrExisting[(string) $objRows->uuid] = $objRows->row();
@@ -238,7 +248,7 @@ class WertungsportalPersonsModel extends Model
         foreach (array_chunk(array_keys($arrFallback), 500) as $arrChunk) {
             $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
             $objRows = $objDatabase->prepare('SELECT id, uuid, nuLigaPersonId, firstname, lastname, firstnameAlias, lastnameAlias, gender, weekOfLastTournamentEvaluation, fideId, rating, `index`, birthyear FROM ' . static::$strTable . ' WHERE nuLigaPersonId IN (' . $strPlaceholders . ')')
-                                   ->execute($arrChunk);
+                                   ->execute(...$arrChunk);
 
             while ($objRows->next()) {
                 $strUuid = $arrFallback[(string) $objRows->nuLigaPersonId] ?? '';
@@ -320,7 +330,7 @@ class WertungsportalPersonsModel extends Model
             $strValues = implode(', ', array_fill(0, \count($arrChunk), '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'));
 
             $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (tstamp, uuid, nuLigaPersonId, firstname, lastname, firstnameAlias, lastnameAlias, gender, weekOfLastTournamentEvaluation, fideId, rating, `index`, birthyear, published) VALUES ' . $strValues)
-                        ->execute(array_merge(...$arrChunk));
+                        ->execute(...array_merge(...$arrChunk));
         }
 
         // IDs der neu angelegten Personen nachladen
@@ -328,7 +338,7 @@ class WertungsportalPersonsModel extends Model
             foreach (array_chunk(array_column($arrInsert, 1), 500) as $arrChunk) {
                 $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
                 $objRows = $objDatabase->prepare('SELECT id, uuid FROM ' . static::$strTable . ' WHERE uuid IN (' . $strPlaceholders . ')')
-                                       ->execute($arrChunk);
+                                       ->execute(...$arrChunk);
 
                 while ($objRows->next()) {
                     $arrMap[(string) $objRows->uuid] = (int) $objRows->id;
@@ -345,7 +355,16 @@ class WertungsportalPersonsModel extends Model
      * systemweite nuLigaPersonId; es werden nur die Identitätsfelder
      * übernommen (wie upsertFromPlayerDto, aber als Bulk-Verarbeitung).
      *
-     * @return array nuLigaPersonId => Datensatz-ID
+     * Die Werte gehen ausgepackt an execute() — Begründung bei syncList().
+     * Bis 1.43.0 kamen neue Personen aus Turnierdaten unter Contao 5 deshalb
+     * nie an.
+     *
+     * @param array $arrPlayers Spieler-DTOs; Einträge ohne nuLigaPersonId
+     *                          werden übergangen (die playerUuid gilt nur im
+     *                          Turnier und taugt nicht als Schlüssel)
+     *
+     * @return array nuLigaPersonId => Datensatz-ID; leer, wenn kein
+     *               verwertbarer Eintrag dabei war
      */
     public static function syncFromPlayerDtos(array $arrPlayers): array
     {
@@ -377,7 +396,7 @@ class WertungsportalPersonsModel extends Model
         foreach (array_chunk(array_keys($arrById), 500) as $arrChunk) {
             $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
             $objRows = $objDatabase->prepare('SELECT id, nuLigaPersonId, firstname, lastname, firstnameAlias, lastnameAlias, fideId, birthyear FROM ' . static::$strTable . ' WHERE nuLigaPersonId IN (' . $strPlaceholders . ')')
-                                   ->execute($arrChunk);
+                                   ->execute(...$arrChunk);
 
             while ($objRows->next()) {
                 $arrExisting[(string) $objRows->nuLigaPersonId] = $objRows->row();
@@ -444,7 +463,7 @@ class WertungsportalPersonsModel extends Model
             $strValues = implode(', ', array_fill(0, \count($arrChunk), '(?, ?, ?, ?, ?, ?, ?, ?, ?)'));
 
             $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (tstamp, nuLigaPersonId, firstname, lastname, firstnameAlias, lastnameAlias, fideId, birthyear, published) VALUES ' . $strValues)
-                        ->execute(array_merge(...$arrChunk));
+                        ->execute(...array_merge(...$arrChunk));
         }
 
         // IDs der neu angelegten Personen nachladen
@@ -452,7 +471,7 @@ class WertungsportalPersonsModel extends Model
             foreach (array_chunk(array_column($arrInsert, 1), 500) as $arrChunk) {
                 $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
                 $objRows = $objDatabase->prepare('SELECT id, nuLigaPersonId FROM ' . static::$strTable . ' WHERE nuLigaPersonId IN (' . $strPlaceholders . ')')
-                                       ->execute($arrChunk);
+                                       ->execute(...$arrChunk);
 
                 while ($objRows->next()) {
                     $arrMap[(string) $objRows->nuLigaPersonId] = (int) $objRows->id;
@@ -478,6 +497,13 @@ class WertungsportalPersonsModel extends Model
      * Vereine__Vereinsmitglieder__JJJJMMTTHHIISS) wird der tstamp der
      * geschriebenen Datensätze gesetzt; 0 = aktuelle Zeit.
      *
+     * Die Werte gehen ausgepackt an execute() — Begründung bei syncList().
+     * Bis 1.43.0 scheiterte der CSV-Import unter Contao 5 deshalb schon am
+     * ersten Paket.
+     *
+     * @param array $arrPersons nuLigaPersonId => Feld-Array (siehe oben)
+     * @param int   $intTstamp  tstamp der geschriebenen Datensätze, 0 = jetzt
+     *
      * @return array ['neu' => x, 'aktualisiert' => y, 'unveraendert' => z,
      *                'ids' => [nuLigaPersonId => Datensatz-ID]]
      */
@@ -501,7 +527,7 @@ class WertungsportalPersonsModel extends Model
             // Aliase mitlesen: Ohne die Bestandswerte hielte der Vergleich sie
             // bei jedem Import für geändert
             $objRows = $objDatabase->prepare('SELECT id, nuLigaPersonId, fideId, firstnameAlias, lastnameAlias, ' . $strFields . ' FROM ' . static::$strTable . ' WHERE nuLigaPersonId IN (' . $strPlaceholders . ')')
-                                   ->execute($arrChunk);
+                                   ->execute(...$arrChunk);
 
             while ($objRows->next()) {
                 $arrExisting[(string) $objRows->nuLigaPersonId] = $objRows->row();
@@ -567,7 +593,7 @@ class WertungsportalPersonsModel extends Model
             $strValues = implode(', ', array_fill(0, \count($arrChunk), $strTuple));
 
             $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (' . $strColumns . ') VALUES ' . $strValues)
-                        ->execute(array_merge(...$arrChunk));
+                        ->execute(...array_merge(...$arrChunk));
         }
 
         $arrErgebnis['neu'] = \count($arrInsert);
@@ -577,7 +603,7 @@ class WertungsportalPersonsModel extends Model
             foreach (array_chunk(array_column($arrInsert, 1), 500) as $arrChunk) {
                 $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
                 $objRows = $objDatabase->prepare('SELECT id, nuLigaPersonId FROM ' . static::$strTable . ' WHERE nuLigaPersonId IN (' . $strPlaceholders . ')')
-                                       ->execute($arrChunk);
+                                       ->execute(...$arrChunk);
 
                 while ($objRows->next()) {
                     $arrErgebnis['ids'][(string) $objRows->nuLigaPersonId] = (int) $objRows->id;

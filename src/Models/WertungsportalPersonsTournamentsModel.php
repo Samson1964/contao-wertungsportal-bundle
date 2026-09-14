@@ -153,6 +153,22 @@ class WertungsportalPersonsTournamentsModel extends Model
      * einem Rutsch ab. $arrPersonIds bildet nuLigaPersonId => Personen-ID ab
      * (z. B. aus WertungsportalPersonsModel::syncFromPlayerDtos). Es wird
      * nichts gelöscht (die Quellen sind unvollständige Ausschnitte).
+     * Unmögliche Werte (etwa eine negative Leistung) protokolliert vorher
+     * Helper\Auffaellig.
+     *
+     * Die Werte gehen ausgepackt an execute() (Bestand
+     * `$tournamentUuid, ...$arrChunk`, Batch-INSERT
+     * `...array_merge(...$arrChunk)`): Ein einzelnes Array packt nur
+     * Contao 4.13 selbst aus, Contao 5 bindet es als EINEN serialisierten
+     * Parameter. Bis 1.43.0 scheiterte der Abgleich unter Contao 5 deshalb
+     * schon am Laden des Bestands.
+     *
+     * @param string $tournamentUuid UUID des Turniers; leer = nichts zu tun
+     * @param array  $arrPlayers     Spieler-DTOs des Turniers
+     * @param array  $arrPersonIds   nuLigaPersonId => Personen-ID; Spieler
+     *                               ohne Eintrag werden übergangen
+     *
+     * @return void
      */
     public static function syncEntries(string $tournamentUuid, array $arrPlayers, array $arrPersonIds): void
     {
@@ -195,7 +211,7 @@ class WertungsportalPersonsTournamentsModel extends Model
         foreach (array_chunk(array_keys($arrByPid), 500) as $arrChunk) {
             $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
             $objRows = $objDatabase->prepare('SELECT id, pid, eloPlayer, ' . $strFields . ' FROM ' . static::$strTable . ' WHERE tournamentUuid=? AND pid IN (' . $strPlaceholders . ')')
-                                   ->execute(array_merge([$tournamentUuid], $arrChunk));
+                                   ->execute($tournamentUuid, ...$arrChunk);
 
             while ($objRows->next()) {
                 $arrExisting[(int) $objRows->pid] = $objRows->row();
@@ -246,7 +262,7 @@ class WertungsportalPersonsTournamentsModel extends Model
             $strValues = implode(', ', array_fill(0, \count($arrChunk), $strTuple));
 
             $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (' . $strColumns . ') VALUES ' . $strValues)
-                        ->execute(array_merge(...$arrChunk));
+                        ->execute(...array_merge(...$arrChunk));
         }
     }
 
@@ -254,11 +270,23 @@ class WertungsportalPersonsTournamentsModel extends Model
      * Gleicht die Turnierhistorie einer Person mit dem API-Array "entries"
      * der Abfrage /dwz/persons/{id}/history ab.
      *
-     * Pro Eintrag wird das Unter-Array "tournament" redundanzfrei über
-     * WertungsportalTournamentsModel::upsertByUuid() in die zentrale
-     * Turniertabelle übernommen; hier wird nur die tournamentUuid sowie
-     * das komplette Unter-Array "player" gespeichert. Nicht mehr gemeldete
-     * Einträge werden gelöscht.
+     * Die Unter-Arrays "tournament" gehen gesammelt über
+     * WertungsportalTournamentsModel::syncList() in die zentrale
+     * Turniertabelle; hier werden je Eintrag nur die tournamentUuid und die
+     * Felder des Unter-Arrays "player" gespeichert — neue per Batch-INSERT,
+     * bestehende nur bei Änderungen. Gelöscht wird nichts (Begründung am Ende
+     * der Methode).
+     *
+     * Die Zeilen des Batch-INSERTs gehen ausgepackt an execute()
+     * (`...array_merge(...$arrChunk)`): Contao 5 bindet ein einzelnes Array
+     * als EINEN serialisierten Parameter, der INSERT scheitert dann. Bis
+     * 1.43.0 kamen neue Historieneinträge unter Contao 5 deshalb nie an.
+     *
+     * @param int   $pid     ID der Person in tl_wertungsportal_persons
+     * @param array $entries Einträge der API; Einträge ohne tournament.uuid
+     *                       werden übergangen
+     *
+     * @return void
      */
     public static function syncForPerson(int $pid, array $entries): void
     {
@@ -345,7 +373,7 @@ class WertungsportalPersonsTournamentsModel extends Model
                 $strValues = implode(', ', array_fill(0, \count($arrChunk), $strTuple));
 
                 $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (' . $strColumns . ') VALUES ' . $strValues)
-                            ->execute(array_merge(...$arrChunk));
+                            ->execute(...array_merge(...$arrChunk));
             }
         }
 

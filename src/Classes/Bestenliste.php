@@ -55,7 +55,23 @@ class Bestenliste extends \Contao\Module
 	}
 
 	/**
-	 * Generate the module
+	 * Baut die Bestenliste aus der örtlichen Personentabelle.
+	 *
+	 * Eine Abfrage liefert die besten `dwz_topcount` Spieler (Vorgabe 100),
+	 * mit `dwz_gender = f` nur Spielerinnen. Aufgenommen wird, wer
+	 * veröffentlicht, nicht gesperrt und nicht verstorben ist, als Nation GER
+	 * oder nichts führt und mindestens eine aktive Mitgliedschaft hat. Verein
+	 * und FIDE-Daten werden danach für alle Zeilen gemeinsam nachgeladen —
+	 * je eine Abfrage statt einer je Spieler.
+	 *
+	 * Die Personen-IDs gehen ausgepackt an execute() (`...$ids`): Ein
+	 * einzelnes Array packt nur Contao 4.13 selbst aus, Contao 5 bindet es als
+	 * EINEN serialisierten Parameter. Bis 1.43.0 fehlte unter Contao 5 deshalb
+	 * der Verein (ein Spieler), oder das Nachladen scheiterte (mehrere).
+	 *
+	 * @return void Schreibt die Zeilen nach `$this->Template->liste` (Platz,
+	 *              PKZ, Spielername, DWZ, Elo, FIDE-Titel, Verein als Verweis
+	 *              auf die Vereinsseite); ohne Treffer eine leere Liste
 	 */
 	protected function compile()
 	{
@@ -98,7 +114,7 @@ class Bestenliste extends \Contao\Module
 		{
 			$platzhalter = implode(',', array_fill(0, count($ids), '?'));
 			$objVerein = \Contao\Database::getInstance()->prepare("SELECT pid, vkz, clubName FROM tl_wertungsportal_persons_memberships WHERE licenceState = 'ACTIVE' AND published = '1' AND pid IN ($platzhalter) ORDER BY pid, vkz")
-			                                     ->execute($ids);
+			                                     ->execute(...$ids);
 			while($objVerein->next())
 			{
 				// Erste aktive Mitgliedschaft je Person gewinnt

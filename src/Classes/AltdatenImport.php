@@ -33,8 +33,14 @@ class AltdatenImport extends \Contao\Backend
 	 * Vereine, deren VKZ noch nicht in tl_wertungsportal_clubs existiert,
 	 * werden automatisch mit angelegt (Name und Status aus tl_dwz_ver;
 	 * abgemeldete Vereine erhalten das Löschkennzeichen DELETE_STATE_TRUE).
+	 * Fehlt tl_dwz_ver, bleibt es bei einer Meldung.
 	 *
-	 * @param  object $dc DataContainer
+	 * Die VKZ gehen blockweise und ausgepackt an execute() (`...$chunk`): Ein
+	 * einzelnes Array packt nur Contao 4.13 selbst aus, Contao 5 bindet es als
+	 * EINEN serialisierten Parameter. Bis 1.43.0 fand die Übernahme unter
+	 * Contao 5 deshalb keinen Zielverein (eine VKZ) oder scheiterte (mehrere).
+	 *
+	 * @param  object $dc DataContainer (nicht benutzt)
 	 * @return string     HTML der Ergebnisseite
 	 */
 	public function runVereine($dc)
@@ -70,7 +76,7 @@ class AltdatenImport extends \Contao\Backend
 		{
 			$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
 			$objZiel = \Contao\Database::getInstance()->prepare("SELECT id, clubVkz, altname, homepage, info, addImage FROM tl_wertungsportal_clubs WHERE clubVkz IN ($platzhalter)")
-			                                   ->execute($chunk);
+			                                   ->execute(...$chunk);
 			while($objZiel->next())
 			{
 				$arrZiel[$objZiel->clubVkz] = $objZiel->row();
@@ -160,9 +166,16 @@ class AltdatenImport extends \Contao\Backend
 	 *   3. Nachname + Vorname + Geburtsjahr, aber NUR wenn auf beiden Seiten
 	 *      eindeutig (schützt vor Fehlzuordnung bei Namensgleichheit)
 	 * Wer sich keiner Person zuordnen lässt, wird ins System-Log geschrieben
-	 * und auf der Ergebnisseite aufgelistet.
+	 * und auf der Ergebnisseite aufgelistet. Fehlt tl_dwz_spi, bleibt es bei
+	 * einer Meldung.
 	 *
-	 * @param  object $dc DataContainer
+	 * Nummern, FIDE-IDs und Nachnamen gehen blockweise und ausgepackt an
+	 * execute() (`...$chunk`): Ein einzelnes Array packt nur Contao 4.13
+	 * selbst aus, Contao 5 bindet es als EINEN serialisierten Parameter. Bis
+	 * 1.43.0 fand die Zuordnung unter Contao 5 deshalb nichts (ein Wert) oder
+	 * scheiterte (mehrere).
+	 *
+	 * @param  object $dc DataContainer (nicht benutzt)
 	 * @return string     HTML der Ergebnisseite
 	 */
 	public function runPersonen($dc)
@@ -198,7 +211,7 @@ class AltdatenImport extends \Contao\Backend
 		{
 			$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
 			$objZiel = \Contao\Database::getInstance()->prepare("SELECT id, externeNr, addImage FROM tl_wertungsportal_persons WHERE externeNr IN ($platzhalter)")
-			                                   ->execute($chunk);
+			                                   ->execute(...$chunk);
 			while($objZiel->next())
 			{
 				$arrPerExtern[(string) $objZiel->externeNr] = $objZiel->row();
@@ -219,7 +232,7 @@ class AltdatenImport extends \Contao\Backend
 		{
 			$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
 			$objZiel = \Contao\Database::getInstance()->prepare("SELECT id, fideId, addImage FROM tl_wertungsportal_persons WHERE fideId > 0 AND fideId IN ($platzhalter)")
-			                                   ->execute($chunk);
+			                                   ->execute(...$chunk);
 			while($objZiel->next())
 			{
 				$fid = (int) $objZiel->fideId;
@@ -254,7 +267,7 @@ class AltdatenImport extends \Contao\Backend
 		{
 			$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
 			$objZiel = \Contao\Database::getInstance()->prepare("SELECT id, lastname, firstname, birthyear, addImage FROM tl_wertungsportal_persons WHERE lastname IN ($platzhalter)")
-			                                   ->execute($chunk);
+			                                   ->execute(...$chunk);
 			while($objZiel->next())
 			{
 				$key = self::namensSchluessel($objZiel->lastname, $objZiel->firstname, $objZiel->birthyear);

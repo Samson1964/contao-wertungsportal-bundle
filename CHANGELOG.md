@@ -1,5 +1,39 @@
 # Wertungsportal Changelog
 
+## Version 1.43.1 (2026-09-14)
+
+* Fix: **Unter Contao 5 scheiterten Abgleiche, Importe und Listen an `Statement::execute()`.**
+  An 42 Stellen gingen die Platzhalterwerte als ein einziges Array an `execute()`.
+  Contao 4.13 packt ein solches Array selbst aus, Contao 5 bindet es als einen einzigen
+  serialisierten Parameter: Mit einem Wert traf die Abfrage nichts — bei einer Zahlenspalte
+  sogar die Zeilen mit 0 —, mit mehreren Werten brach sie mit „Invalid parameter number" ab.
+  Betroffen waren unter Contao 5 alle Stapel-INSERTs der Abgleiche (Vereine, Personen,
+  Mitgliedschaften, Turniere, Auswertungen, Partien, Turnierhistorie, Hochstufungen — neue
+  Datensätze kamen nie in den Spiegeltabellen an), die CSV-Importe von Personen,
+  Mitgliedschaften und Vereinen, der Elo-XML-Import, beide Altdaten-Übernahmen, das
+  Entdoppeln der Mitgliedschaften, die DWZ- und Elo-Ranglisten, die Bestenliste, Elo und Titel
+  in den Listen, der Stand des örtlichen Bestands und die Abrufstatistik (Verlauf und
+  Wochen-/Monatssummen blieben leer). Die Werte gehen jetzt ausgepackt an `execute()`
+  (`...$werte`, bei Stapel-INSERTs `...array_merge(...$zeilen)`). Unter Contao 4.13 ändert
+  sich am Ergebnis nichts
+* Fix: **Die Konsolenbefehle hatten unter Contao 5 keinen Namen.** Symfony 7 liest
+  `protected static $defaultName` nicht mehr: Jeder Aufruf von `contao-console` meldete
+  fünfmal „cannot have an empty name", und `wertungsportal:vorladen`, `:token`, `:download`,
+  `:converter` und `:swisschess` waren nicht aufrufbar — auch nicht als Cronjob. Der Name
+  steht jetzt als `command` am Tag in der `services.yml`, das wirkt in Symfony 5.4 und 7.4
+  gleich; `$defaultName` bleibt für Contao 4.13 stehen
+
+  Geprüft mit 137 Unit-Tests, darunter zwei neue Wächter in `tests/Contao5/`: Der eine sucht
+  mit dem PHP-Tokenizer nach `execute()` mit einem einzelnen Array und findet im Stand 1.43.0
+  genau die 42 Stellen, der andere verlangt für jeden Befehl den Namen am Tag. Dazu ein
+  Prüfstand in Contao 4.13.58 und 5.7.7 unter PHP 8.4, der jede Stelle über ihre Methode
+  aufruft, mit mehreren Werten und mit einem (46 Prüfungen, Testzeilen in einer Transaktion,
+  die zurückgerollt wird). Mit dem Code von 1.43.0 bestand 4.13.58 alle 46 (bei 69
+  Abkündigungsmeldungen) und 5.7.7 eine; mit 1.43.1 bestehen beide alle 46, Prüfung für
+  Prüfung mit denselben Ergebnissen und ohne Abkündigung. `cache:clear`, `cache:warmup` und
+  `list wertungsportal` laufen in beiden Fassungen ohne Fehlermeldung und zeigen die fünf
+  Befehle
+
 ## Version 1.43.0 (2026-09-14)
 
 * Add: **Insert-Tags mit Wertungsdaten:** `{{dwz::NU…}}` (DWZ als Zahl),

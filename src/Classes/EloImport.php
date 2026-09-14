@@ -302,12 +302,21 @@ class EloImport extends \Contao\Backend
 
 	/**
 	 * Schreibt ein Spieler-Paket in tl_wertungsportal_elo:
-	 * Bestand wird per fideid geladen, bestehende Datensätze werden nur bei
-	 * Änderungen aktualisiert, neue per Batch-INSERT angelegt (published='1').
+	 * Bestand wird per fideid geladen (in Blöcken zu 500), bestehende
+	 * Datensätze werden nur bei Änderungen aktualisiert, neue per Batch-INSERT
+	 * angelegt (published='1', je 100 Zeilen). Gelöscht wird nichts.
 	 *
-	 * @param  array $arrSpieler fideid => Feld-Array (aus parseSpieler)
+	 * Die Werte gehen ausgepackt an execute() — beim Bestand `...$chunk`, beim
+	 * Batch-INSERT `...array_merge(...$chunk)`. Ein einzelnes Array packt nur
+	 * Contao 4.13 selbst aus, Contao 5 bindet es als EINEN serialisierten
+	 * Parameter: Bis 1.43.0 scheiterte der XML-Import unter Contao 5 deshalb
+	 * schon am ersten Paket.
+	 *
+	 * @param  array $arrSpieler fideid => Feld-Array (aus parseSpieler), alle
+	 *                           Einträge mit denselben Feldern
 	 * @param  int   $elodate    Listendatum = tstamp des Importlaufs
-	 * @return array             ['neu' => x, 'aktualisiert' => y, 'unveraendert' => z]
+	 * @return array             ['neu' => x, 'aktualisiert' => y, 'unveraendert' => z];
+	 *                           alles 0 bei einem leeren Paket
 	 */
 	protected function schreibeSpieler($arrSpieler, $elodate)
 	{
@@ -323,7 +332,7 @@ class EloImport extends \Contao\Backend
 		{
 			$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
 			$objRows = $objDatabase->prepare('SELECT id, ' . implode(', ', $felder) . ' FROM tl_wertungsportal_elo WHERE fideid IN (' . $platzhalter . ')')
-			                       ->execute($chunk);
+			                       ->execute(...$chunk);
 			while($objRows->next())
 			{
 				$arrBestand[(int) $objRows->fideid] = $objRows->row();
@@ -377,7 +386,7 @@ class EloImport extends \Contao\Backend
 		{
 			$werte = implode(', ', array_fill(0, count($chunk), $tupel));
 			$objDatabase->prepare('INSERT INTO tl_wertungsportal_elo (' . $spalten . ') VALUES ' . $werte)
-			            ->execute(array_merge(...$chunk));
+			            ->execute(...array_merge(...$chunk));
 		}
 
 		$ergebnis['neu'] = count($arrInsert);

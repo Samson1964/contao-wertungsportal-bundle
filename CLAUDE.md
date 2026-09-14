@@ -252,9 +252,18 @@ dort (mit DeWIS-ID). Wichtig beim Weiterbauen:
 
 - **`Statement::execute()` mit Array-Argument** (`->execute($chunk)`) funktioniert nur in Contao
   4.13 (dort ausgepackt, mit Deprecation). Contao 5 serialisiert das Array zu EINEM Parameter:
-  `IN (?)` trifft nichts, mehrere Platzhalter scheitern. Immer `->execute(...$chunk)`. In 1.43.0
-  nur `Helper::getBlacklist()` umgestellt (unter Contao 5 war niemand gesperrt); die übrigen
-  Stellen stehen in TODO.md.
+  `IN (?)` trifft nichts (bei Zahlenspalten sogar die Zeilen mit 0), mehrere Platzhalter
+  scheitern. Immer `->execute(...$werte)`, bei Stapel-INSERTs `->execute(...array_merge(...$zeilen))`.
+  Ausgepackt werden nur Listen: Zeichenkettenschlüssel würden unter PHP 8.1+ zu benannten
+  Argumenten (PHP 7.4 bricht ab). Seit 1.43.1 sind alle 42 Stellen umgestellt;
+  `tests/Contao5/ExecuteArgumenteTest.php` schlägt an, sobald wieder ein Array allein übergeben
+  wird (Literal, Array-Funktion, `$x[] = …`, `foreach (array_chunk(…) as $x)`). Ein Array aus
+  einem Methodenaufruf erkennt der Test nicht.
+
+- **Konsolenbefehle** brauchen ihren Namen als `command` am `console.command`-Tag in
+  `services.yml`. Symfony 7 (Contao 5) liest `$defaultName` nicht mehr; ohne Tag-Namen meldet
+  `contao-console` „cannot have an empty name", und der Befehl fehlt. `$defaultName` bleibt für
+  4.13 und muss gleich lauten (`tests/Contao5/KonsolenbefehleTest.php`).
 
 - **Identifier**: `nuLigaPersonId` identifiziert eine Person systemweit. Die `playerUuid` in
   Turnier-DTOs gilt NUR innerhalb des jeweiligen Turniers — nie als Personen-UUID speichern!

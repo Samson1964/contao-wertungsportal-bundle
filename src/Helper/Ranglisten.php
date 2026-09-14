@@ -581,7 +581,14 @@ class Ranglisten
 	 * Wert dürfte den monatlich frisch importierten Elo-Bestand nicht schlagen —
 	 * deshalb wird er gar nicht erst herangezogen.
 	 *
-	 * @param array $pkzListe nuLigaPersonId der gesuchten Personen
+	 * Die Kennziffern gehen ausgepackt an execute() (`...$block`): Ein
+	 * einzelnes Array packt nur Contao 4.13 selbst aus, Contao 5 bindet es als
+	 * EINEN serialisierten Parameter. Bis 1.43.0 fand die Abfrage unter
+	 * Contao 5 deshalb keine Person (eine Kennziffer) oder scheiterte
+	 * (mehrere).
+	 *
+	 * @param array $pkzListe nuLigaPersonId der gesuchten Personen; leere und
+	 *                        doppelte werden aussortiert
 	 *
 	 * @return array PKZ => ['nation', 'foederation', 'titel',
 	 *               'verstorben' (bool), 'published' (bool)]; nicht gefundene
@@ -601,7 +608,7 @@ class Ranglisten
 		{
 			$platzhalter = implode(',', array_fill(0, count($block), '?'));
 			$objPerson = \Contao\Database::getInstance()->prepare("SELECT nuLigaPersonId, nation, titel, verstorben, published, fideId FROM tl_wertungsportal_persons WHERE nuLigaPersonId IN ($platzhalter)")
-			                                     ->execute($block);
+			                                     ->execute(...$block);
 
 			while($objPerson->next())
 			{
@@ -836,7 +843,12 @@ class Ranglisten
 	 * nachgebildet (`memberships` mit `vkz`, `clubName`, `licenceState`), damit
 	 * `mitgliedschaft()` für beide Listen dieselbe Auswahllogik benutzen kann.
 	 *
-	 * @param array $fideIds FIDE-IDs
+	 * Die IDs gehen ausgepackt an execute() (`...$block`): Ein einzelnes Array
+	 * packt nur Contao 4.13 selbst aus, Contao 5 bindet es als EINEN
+	 * serialisierten Parameter. Bis 1.43.0 fand die Abfrage unter Contao 5
+	 * deshalb keine Person (eine ID) oder scheiterte (mehrere).
+	 *
+	 * @param array $fideIds FIDE-IDs; leere und doppelte werden aussortiert
 	 *
 	 * @return array FIDE-ID => ['pkz', 'vorname', 'nachname', 'titel',
 	 *               'nation', 'dwz', 'dwz_index', 'verstorben' (bool),
@@ -859,7 +871,7 @@ class Ranglisten
 			// Aussortiert wird deshalb erst in eloAufbereiten()
 			$platzhalter = implode(',', array_fill(0, count($block), '?'));
 			$objPerson = \Contao\Database::getInstance()->prepare("SELECT p.id, p.nuLigaPersonId, p.fideId, p.firstname, p.lastname, p.titel, p.nation, p.rating, p.`index`, p.verstorben, p.published FROM tl_wertungsportal_persons p WHERE p.fideId IN ($platzhalter)")
-			                                     ->execute($block);
+			                                     ->execute(...$block);
 
 			while($objPerson->next())
 			{
@@ -912,12 +924,16 @@ class Ranglisten
 	}
 
 	/**
-	 * Lädt FIDE-Datensätze zu mehreren FIDE-IDs.
+	 * Lädt FIDE-Datensätze zu mehreren FIDE-IDs, in Blöcken zu 500. Liest nur.
 	 *
-	 * @param array $fideIds FIDE-IDs
+	 * Die IDs gehen wie in personenZuFideIds() ausgepackt an execute(); bis
+	 * 1.43.0 fehlten Elo und Föderation unter Contao 5 deshalb (eine ID), oder
+	 * die Abfrage scheiterte (mehrere).
 	 *
-	 * @return array FIDE-ID => Datenbankzeile (rating, games, title, w_title,
-	 *               country); nicht gefundene IDs fehlen
+	 * @param array $fideIds FIDE-IDs; leere und doppelte werden aussortiert
+	 *
+	 * @return array FIDE-ID => Datenbankzeile (fideid, rating, games, title,
+	 *               w_title, country); nicht gefundene IDs fehlen
 	 */
 	protected static function eloDaten(array $fideIds): array
 	{
@@ -930,7 +946,7 @@ class Ranglisten
 		{
 			$platzhalter = implode(',', array_fill(0, count($block), '?'));
 			$objElo = \Contao\Database::getInstance()->prepare("SELECT fideid, rating, games, title, w_title, country FROM tl_wertungsportal_elo WHERE fideid IN ($platzhalter)")
-			                                  ->execute($block);
+			                                  ->execute(...$block);
 
 			while($objElo->next())
 			{

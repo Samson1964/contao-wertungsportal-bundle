@@ -897,10 +897,17 @@ class Lokal
 	/**
 	 * Ermittelt den jüngsten Zeitstempel zu einer Liste von Personen-DTOs
 	 * (für die Antworten, die über vorhandene Suchfunktionen entstehen und
-	 * den Zeitstempel selbst nicht mitliefern).
+	 * den Zeitstempel selbst nicht mitliefern). Liest nur.
 	 *
-	 * @param  array $personen  DTOs mit nuLigaPersonId
-	 * @return int              Zeitstempel oder 0
+	 * Die Nummern gehen ausgepackt an execute(): Ein einzelnes Array packt nur
+	 * Contao 4.13 selbst aus, Contao 5 bindet es als EINEN serialisierten
+	 * Parameter. Bis 1.43.0 kam unter Contao 5 deshalb 0 heraus (eine Person),
+	 * oder die Abfrage scheiterte (mehrere).
+	 *
+	 * @param  array $personen  DTOs mit nuLigaPersonId; DTOs ohne Nummer zählen
+	 *                          nicht
+	 * @return int              Zeitstempel oder 0, wenn keine der Personen im
+	 *                          örtlichen Bestand steht
 	 */
 	protected static function standDerPersonen($personen)
 	{
@@ -909,16 +916,21 @@ class Lokal
 
 		$platzhalter = implode(',', array_fill(0, count($ids), '?'));
 		$objStand = \Contao\Database::getInstance()->prepare("SELECT MAX(tstamp) AS stand FROM tl_wertungsportal_persons WHERE nuLigaPersonId IN ($platzhalter)")
-		                                   ->execute(array_values($ids));
+		                                   ->execute(...array_values($ids));
 
 		return (int) $objStand->stand;
 	}
 
 	/**
 	 * Ermittelt den jüngsten Zeitstempel zu einer Liste von Turnier-UUIDs.
+	 * Liest nur.
 	 *
-	 * @param  array $uuids
-	 * @return int  Zeitstempel oder 0
+	 * Die UUIDs gehen aus demselben Grund wie in standDerPersonen() ausgepackt
+	 * an execute().
+	 *
+	 * @param  array $uuids  Turnier-UUIDs; leere Werte zählen nicht
+	 * @return int           Zeitstempel oder 0, wenn keines der Turniere im
+	 *                       örtlichen Bestand steht
 	 */
 	protected static function standDerTurniere($uuids)
 	{
@@ -927,7 +939,7 @@ class Lokal
 
 		$platzhalter = implode(',', array_fill(0, count($uuids), '?'));
 		$objStand = \Contao\Database::getInstance()->prepare("SELECT MAX(tstamp) AS stand FROM tl_wertungsportal_tournaments WHERE uuid IN ($platzhalter)")
-		                                   ->execute(array_values($uuids));
+		                                   ->execute(...array_values($uuids));
 
 		return (int) $objStand->stand;
 	}

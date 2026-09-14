@@ -156,6 +156,16 @@ class WertungsportalPersonsMembershipsModel extends Model
      * Über $intTstamp (Datum/Uhrzeit aus dem Dateinamen) wird der tstamp der
      * geschriebenen Datensätze gesetzt; 0 = aktuelle Zeit.
      *
+     * Die Werte gehen ausgepackt an execute() (`...$arrParams` mit je VKZ und
+     * Mitgliedsnummer, beim Batch-INSERT `...array_merge(...$arrChunk)`): Ein
+     * einzelnes Array packt nur Contao 4.13 selbst aus, Contao 5 bindet es als
+     * EINEN serialisierten Parameter. Die Bestandsabfrage hat immer mindestens
+     * zwei Platzhalter — bis 1.43.0 scheiterte der Mitgliedschafts-Import
+     * unter Contao 5 deshalb in jedem Fall.
+     *
+     * @param array $arrMemberships Schlüssel => Eintrag (siehe oben)
+     * @param int   $intTstamp      tstamp der geschriebenen Datensätze, 0 = jetzt
+     *
      * @return array ['neu' => x, 'aktualisiert' => y, 'unveraendert' => z]
      */
     public static function importCsvRows(array $arrMemberships, int $intTstamp = 0): array
@@ -186,7 +196,7 @@ class WertungsportalPersonsMembershipsModel extends Model
 
             $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '(?,?)'));
             $objRows = $objDatabase->prepare('SELECT id, pid, vkz, memberNo, ' . $strFields . ' FROM ' . static::$strTable . ' WHERE (vkz, memberNo) IN (' . $strPlaceholders . ')')
-                                   ->execute($arrParams);
+                                   ->execute(...$arrParams);
 
             while ($objRows->next()) {
                 $arrRow = $objRows->row();
@@ -255,7 +265,7 @@ class WertungsportalPersonsMembershipsModel extends Model
             $strValues = implode(', ', array_fill(0, \count($arrChunk), $strTuple));
 
             $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (' . $strColumns . ') VALUES ' . $strValues)
-                        ->execute(array_merge(...$arrChunk));
+                        ->execute(...array_merge(...$arrChunk));
         }
 
         $arrErgebnis['neu'] = \count($arrInsert);
@@ -283,6 +293,18 @@ class WertungsportalPersonsMembershipsModel extends Model
      * mehreren Mitgliedschaften im selben Verein willkürlich ein historischer
      * Datensatz erwischt und mit den aktuellen Werten überschrieben wurde
      * (verfälschte Zeiträume und Dubletten).
+     *
+     * Die Werte gehen ausgepackt an execute() (`...$arrChunk`, beim
+     * Batch-INSERT `...array_merge(...$arrChunk)`): Ein einzelnes Array packt
+     * nur Contao 4.13 selbst aus, Contao 5 bindet es als EINEN serialisierten
+     * Parameter. Bis 1.43.0 kamen neue Mitgliedschaften unter Contao 5
+     * deshalb nie an.
+     *
+     * @param array $arrByPid Personen-ID => memberships-Array der API;
+     *                        Einträge ohne VKZ werden übergangen
+     *
+     * @return void Schreibt in tl_wertungsportal_persons_memberships und über
+     *              WertungsportalClubsModel::syncList() in tl_wertungsportal_clubs
      */
     public static function syncForPersons(array $arrByPid): void
     {
@@ -346,7 +368,7 @@ class WertungsportalPersonsMembershipsModel extends Model
         foreach (array_chunk(array_keys($arrByPid), 500) as $arrChunk) {
             $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
             $objRows = $objDatabase->prepare("SELECT id, pid, vkz, memberNo, clubName, licenceState, regionName, federationName FROM " . static::$strTable . " WHERE spielgenehmigungBis = '' AND pid IN (" . $strPlaceholders . ')')
-                                   ->execute($arrChunk);
+                                   ->execute(...$arrChunk);
 
             while ($objRows->next()) {
                 $strRowKey = $objRows->pid . '|' . $objRows->vkz;
@@ -402,7 +424,7 @@ class WertungsportalPersonsMembershipsModel extends Model
             $strValues = implode(', ', array_fill(0, \count($arrChunk), '(?, ?, ?, ?, ?, ?, ?, ?, ?)'));
 
             $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (pid, tstamp, vkz, memberNo, clubName, licenceState, regionName, federationName, published) VALUES ' . $strValues)
-                        ->execute(array_merge(...$arrChunk));
+                        ->execute(...array_merge(...$arrChunk));
         }
 
         // KEINE Löschung: Was die API nicht meldet, ist nicht gelöscht,
@@ -423,6 +445,12 @@ class WertungsportalPersonsMembershipsModel extends Model
      * Zusätzlich werden Platzhalter-Mitgliedschaften mit der Nummer 0
      * entfernt, sofern dieselbe Person beim selben Verein eine echte
      * Mitgliedsnummer hat (siehe filtereNullnummern()).
+     *
+     * Arbeitet über die ganze Tabelle und LÖSCHT Datensätze. Die IDs gehen
+     * blockweise und ausgepackt an execute() (`...$arrChunk`): Contao 5 bindet
+     * ein einzelnes Array als EINEN serialisierten Parameter — bis 1.43.0
+     * blieb dort eine einzelne Dublette stehen, mehrere ließen die
+     * Bereinigung scheitern.
      *
      * @return array ['geprueft' => x, 'entfernt' => y, 'ergaenzt' => z, 'nullnummern' => n]
      */
@@ -490,7 +518,7 @@ class WertungsportalPersonsMembershipsModel extends Model
         foreach (array_chunk(array_unique($arrDelete), 500) as $arrChunk) {
             $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
             $objDatabase->prepare('DELETE FROM ' . static::$strTable . ' WHERE id IN (' . $strPlaceholders . ')')
-                        ->execute($arrChunk);
+                        ->execute(...$arrChunk);
         }
 
         $arrErgebnis['entfernt'] = \count(array_unique($arrDelete));

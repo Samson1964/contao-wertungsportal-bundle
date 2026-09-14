@@ -72,6 +72,18 @@ class WertungsportalTournamentsMatchesModel extends Model
      *
      * Es wird bewusst nichts gelöscht, da die Matches-Abfrage paginiert ist
      * und das Scoresheet nur die Partien eines Spielers enthält.
+     *
+     * Die Zeilen des Batch-INSERTs gehen ausgepackt an execute()
+     * (`...array_merge(...$arrChunk)`): Contao 5 bindet ein einzelnes Array
+     * als EINEN serialisierten Parameter, der INSERT scheitert dann. Bis
+     * 1.43.0 kamen neue Partien unter Contao 5 deshalb nie an.
+     *
+     * @param int    $pid            ID des Turniers in tl_wertungsportal_tournaments
+     * @param array  $matches        Match-DTOs; Partien ohne beide Spieler-UUIDs
+     *                               werden übergangen
+     * @param string $tournamentUuid UUID des Turniers, leer = über $pid nachladen
+     *
+     * @return void
      */
     public static function syncForTournament(int $pid, array $matches, string $tournamentUuid = ''): void
     {
@@ -173,7 +185,7 @@ class WertungsportalTournamentsMatchesModel extends Model
             $strValues = implode(', ', array_fill(0, \count($arrChunk), '(?, ?, ?, ?, ?, ?, ?, ?, ?)'));
 
             $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (pid, tstamp, round, whitePlayerUuid, blackPlayerUuid, result, expected, restpartie, published) VALUES ' . $strValues)
-                        ->execute(array_merge(...$arrChunk));
+                        ->execute(...array_merge(...$arrChunk));
         }
     }
 }

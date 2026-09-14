@@ -116,11 +116,20 @@ class WertungsportalStatsModel extends Model
     }
 
     /**
-     * Liefert den Tagesverlauf eines Zeitraums.
+     * Liefert den Tagesverlauf eines Zeitraums: je Tag die Zahl der Abrufe,
+     * getrennt nach Quelle.
      *
+     * Die Werte gehen ausgepackt an execute() (`...$arrWerte`). Ein einzelnes
+     * Array packt nur Contao 4.13 selbst aus; Contao 5 bindet es als EINEN
+     * serialisierten Parameter, die Abfrage scheitert, und der catch fängt es
+     * ab — bis 1.43.0 blieb der Verlauf unter Contao 5 deshalb leer.
+     *
+     * @param string $strVon      erster Tag, JJJJ-MM-TT (einschließlich)
+     * @param string $strBis      letzter Tag, JJJJ-MM-TT (einschließlich)
      * @param string $strFunktion leer = alle Funktionen zusammen
      *
-     * @return array datum => ['api' => x, 'cache' => y, 'lokal' => l, 'vorlader' => v]
+     * @return array datum => ['api' => x, 'cache' => y, 'lokal' => l, 'vorlader' => v];
+     *               leer, wenn nichts gezählt ist oder die Abfrage scheitert
      */
     public static function verlauf(string $strVon, string $strBis, string $strFunktion = ''): array
     {
@@ -137,7 +146,7 @@ class WertungsportalStatsModel extends Model
 
             $objRows = Database::getInstance()
                 ->prepare('SELECT datum, quelle, SUM(anzahl) AS summe FROM ' . static::$strTable . ' WHERE ' . $strWhere . ' GROUP BY datum, quelle ORDER BY datum')
-                ->execute($arrWerte);
+                ->execute(...$arrWerte);
 
             while ($objRows->next()) {
                 $strDatum = (string) $objRows->datum;
@@ -156,11 +165,20 @@ class WertungsportalStatsModel extends Model
     }
 
     /**
-     * Liefert die Summen je Kalenderwoche bzw. Monat eines Zeitraums.
+     * Liefert die Summen je Kalenderwoche bzw. Monat eines Zeitraums,
+     * getrennt nach Quelle.
      *
-     * @param string $strRaster 'woche' oder 'monat'
+     * Die Werte gehen wie in verlauf() ausgepackt an execute(); bis 1.43.0
+     * blieben die Summen unter Contao 5 deshalb leer.
      *
-     * @return array bezeichnung => ['api' => x, 'cache' => y, 'lokal' => l, 'vorlader' => v, 'sortier' => s]
+     * @param string $strVon      erster Tag, JJJJ-MM-TT (einschließlich)
+     * @param string $strBis      letzter Tag, JJJJ-MM-TT (einschließlich)
+     * @param string $strRaster   'woche' (ISO-Kalenderwoche) oder 'monat'
+     * @param string $strFunktion leer = alle Funktionen zusammen
+     *
+     * @return array JJJJWW bzw. JJJJMM => ['api' => x, 'cache' => y, 'lokal' => l,
+     *               'vorlader' => v, 'erster' => erster Tag mit Abrufen];
+     *               leer, wenn nichts gezählt ist oder die Abfrage scheitert
      */
     public static function summenNachRaster(string $strVon, string $strBis, string $strRaster = 'monat', string $strFunktion = ''): array
     {
@@ -182,7 +200,7 @@ class WertungsportalStatsModel extends Model
 
             $objRows = Database::getInstance()
                 ->prepare('SELECT ' . $strGruppe . ' AS gruppe, quelle, SUM(anzahl) AS summe, MIN(datum) AS erster FROM ' . static::$strTable . ' WHERE ' . $strWhere . ' GROUP BY gruppe, quelle ORDER BY gruppe')
-                ->execute($arrWerte);
+                ->execute(...$arrWerte);
 
             while ($objRows->next()) {
                 $strGruppeWert = (string) $objRows->gruppe;

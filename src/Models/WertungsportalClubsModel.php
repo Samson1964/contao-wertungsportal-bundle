@@ -89,6 +89,15 @@ class WertungsportalClubsModel extends Model
      * $intTstamp (Datum aus dem Dateinamen) wird der tstamp der
      * geschriebenen Datensätze gesetzt (0 = aktuelle Zeit).
      *
+     * Die Werte gehen ausgepackt an execute() (`...$arrChunk`, beim
+     * Batch-INSERT `...array_merge(...$arrChunk)`): Ein einzelnes Array packt
+     * nur Contao 4.13 selbst aus, Contao 5 bindet es als EINEN serialisierten
+     * Parameter. Bis 1.43.0 scheiterte der Vereins-Import unter Contao 5
+     * deshalb.
+     *
+     * @param array $arrClubs  clubVkz => Feld-Array (siehe oben)
+     * @param int   $intTstamp tstamp der geschriebenen Datensätze, 0 = jetzt
+     *
      * @return array ['neu' => x, 'aktualisiert' => y, 'unveraendert' => z]
      */
     public static function importCsvRows(array $arrClubs, int $intTstamp = 0): array
@@ -111,7 +120,7 @@ class WertungsportalClubsModel extends Model
             // clubNameAlias mitlesen: Ohne den Bestandswert hielte der
             // Vergleich den Alias bei jedem Lauf für geändert
             $objRows = $objDatabase->prepare('SELECT id, clubVkz, clubNameAlias, ' . $strFields . ' FROM ' . static::$strTable . ' WHERE clubVkz IN (' . $strPlaceholders . ')')
-                                   ->execute($arrChunk);
+                                   ->execute(...$arrChunk);
 
             while ($objRows->next()) {
                 $arrExisting[(string) $objRows->clubVkz] = $objRows->row();
@@ -166,7 +175,7 @@ class WertungsportalClubsModel extends Model
             $strValues = implode(', ', array_fill(0, \count($arrChunk), $strTuple));
 
             $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (' . $strColumns . ') VALUES ' . $strValues)
-                        ->execute(array_merge(...$arrChunk));
+                        ->execute(...array_merge(...$arrChunk));
         }
 
         $arrErgebnis['neu'] = \count($arrInsert);
@@ -307,6 +316,18 @@ class WertungsportalClubsModel extends Model
      * werden gesammelt per Batch-INSERT angelegt und bestehende nur bei
      * tatsächlichen Änderungen aktualisiert. Der Veröffentlichungsstatus
      * bestehender Datensätze bleibt unberührt.
+     *
+     * Die Zeilen des Batch-INSERTs gehen ausgepackt an execute()
+     * (`...array_merge(...$arrChunk)`): Contao 5 bindet ein einzelnes Array
+     * als EINEN serialisierten Parameter, der INSERT scheitert dann mit
+     * „Invalid parameter number". Bis 1.43.0 legte der Abgleich unter
+     * Contao 5 deshalb keinen neuen Verein an.
+     *
+     * @param array $arrClubs Vereins-DTOs der API (clubVkz, clubName,
+     *                        federation, parentFederation, state); Einträge
+     *                        ohne VKZ werden übergangen, doppelte zählen einmal
+     *
+     * @return void
      */
     public static function syncList(array $arrClubs): void
     {
@@ -378,7 +399,7 @@ class WertungsportalClubsModel extends Model
             $strValues = implode(', ', array_fill(0, \count($arrChunk), '(?, ?, ?, ?, ?, ?, ?, ?)'));
 
             $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (tstamp, clubVkz, clubName, clubNameAlias, federation, parentFederation, state, published) VALUES ' . $strValues)
-                        ->execute(array_merge(...$arrChunk));
+                        ->execute(...array_merge(...$arrChunk));
         }
     }
 }

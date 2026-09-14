@@ -209,6 +209,22 @@ class WertungsportalTournamentsEvaluationModel extends Model
      * nicht mehr gemeldete Einträge entfernt (nur für die vollständige
      * Auswertung — Partien/Scoresheet sind unvollständige Ausschnitte).
      * Ist $tournamentUuid leer, wird sie einmalig über das Turnier geladen.
+     *
+     * Die Werte gehen ausgepackt an execute() (Batch-INSERT
+     * `...array_merge(...$arrChunk)`, Löschung `...$arrChunk`): Ein einzelnes
+     * Array packt nur Contao 4.13 selbst aus, Contao 5 bindet es als EINEN
+     * serialisierten Parameter. Bis 1.43.0 legte der Abgleich unter Contao 5
+     * deshalb keine Auswertungszeilen an und löschte keine.
+     *
+     * @param int    $pid            ID des Turniers in tl_wertungsportal_tournaments
+     * @param string $tournamentUuid UUID des Turniers, leer = über $pid nachladen
+     * @param array  $players        Spieler-DTOs; Einträge ohne playerUuid
+     *                               werden übergangen
+     * @param bool   $blnDelete      true = nicht gemeldete Einträge löschen
+     *
+     * @return void Schreibt auch in tl_wertungsportal_persons und
+     *              tl_wertungsportal_persons_tournaments; unmögliche Werte
+     *              protokolliert Helper\Auffaellig
      */
     public static function syncPlayers(int $pid, string $tournamentUuid, array $players, bool $blnDelete = false): void
     {
@@ -308,7 +324,7 @@ class WertungsportalTournamentsEvaluationModel extends Model
             $strValues = implode(', ', array_fill(0, \count($arrChunk), $strTuple));
 
             $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (' . $strColumns . ') VALUES ' . $strValues)
-                        ->execute(array_merge(...$arrChunk));
+                        ->execute(...array_merge(...$arrChunk));
         }
 
         // Nicht mehr gemeldete Auswertungseinträge entfernen
@@ -324,7 +340,7 @@ class WertungsportalTournamentsEvaluationModel extends Model
             foreach (array_chunk($arrDelete, 500) as $arrChunk) {
                 $strPlaceholders = implode(',', array_fill(0, \count($arrChunk), '?'));
                 $objDatabase->prepare('DELETE FROM ' . static::$strTable . ' WHERE id IN (' . $strPlaceholders . ')')
-                            ->execute($arrChunk);
+                            ->execute(...$arrChunk);
             }
         }
     }

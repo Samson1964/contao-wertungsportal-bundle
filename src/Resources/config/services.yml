@@ -30,12 +30,18 @@ services:
     # Nötig, weil contao:cron nur ausführt, was nach Zeitplan fällig ist — und
     # weil der Cronjob selbst schweigt, während dieser Befehl jeden Fehlschlag
     # samt Grund auf der Kommandozeile zeigt.
-    # Ausdrücklich getaggt, weil dieses Bundle ohne Autoconfigure arbeitet
+    # Ausdrücklich getaggt, weil dieses Bundle ohne Autoconfigure arbeitet.
+    #
+    # Den Namen trägt bei allen Befehlen das Tag (command). Symfony 7 liest
+    # $defaultName nicht mehr — unter Contao 5 hatten die Befehle bis 1.43.0
+    # deshalb keinen Namen und waren nicht aufrufbar. Das Attribut wirkt in
+    # Symfony 5.4 genauso; $defaultName bleibt für Contao 4.13 stehen und muss
+    # gleich lauten (tests/Contao5/KonsolenbefehleTest.php)
     Schachbulle\ContaoWertungsportalBundle\Command\VorladenCommand:
         arguments:
             - '@contao.framework'
         tags:
-            - { name: console.command }
+            - { name: console.command, command: 'wertungsportal:vorladen' }
 
     # Zeigt, ob das Zugangstoken richtig zwischengespeichert wird:
     # wertungsportal:token. Fragt von sich aus NICHTS bei nu an
@@ -43,7 +49,7 @@ services:
         arguments:
             - '@contao.framework'
         tags:
-            - { name: console.command }
+            - { name: console.command, command: 'wertungsportal:token' }
 
     # Lädt die DWZ-Listen aller Landesverbände: wertungsportal:download.
     # Ersetzt das frühere Skript Wertungsportal_Download.php, das der Hoster
@@ -53,7 +59,7 @@ services:
         arguments:
             - '@contao.framework'
         tags:
-            - { name: console.command }
+            - { name: console.command, command: 'wertungsportal:download' }
 
     # Erzeugt die CSV-Archive der Landesverbände: wertungsportal:converter.
     # Ersetzt das frühere Skript Wertungsportal_Converter.php (siehe oben)
@@ -61,7 +67,7 @@ services:
         arguments:
             - '@contao.framework'
         tags:
-            - { name: console.command }
+            - { name: console.command, command: 'wertungsportal:converter' }
 
     # Erzeugt die Hintergrunddateien für Swiss-Chess aus der Deutschland-Datei:
     # wertungsportal:swisschess. Läuft sinnvollerweise NACH dem Converter,
@@ -70,7 +76,7 @@ services:
         arguments:
             - '@contao.framework'
         tags:
-            - { name: console.command }
+            - { name: console.command, command: 'wertungsportal:swisschess' }
 
     # Füllt die Suchalias-Felder des Bestands beim contao:migrate.
     # Ausdrücklich registriert, weil dieses Bundle ohne Autoconfigure arbeitet

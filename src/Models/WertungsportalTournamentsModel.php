@@ -141,6 +141,17 @@ class WertungsportalTournamentsModel extends Model
      * gesammelt per Batch-INSERT angelegt und bestehende nur bei
      * tatsächlichen Änderungen aktualisiert. Der Veröffentlichungsstatus
      * bestehender Datensätze bleibt unberührt.
+     *
+     * Die Werte gehen ausgepackt an execute() (`...$arrChunk`, beim
+     * Batch-INSERT `...array_merge(...$arrChunk)`): Ein einzelnes Array packt
+     * nur Contao 4.13 selbst aus, Contao 5 bindet es als EINEN serialisierten
+     * Parameter. Bis 1.43.0 fand der Abgleich unter Contao 5 deshalb keinen
+     * Bestand oder scheiterte — neue Turniere kamen nie an.
+     *
+     * @param array $arrTournaments Turnier-DTOs der API; Einträge ohne uuid
+     *                              werden übergangen, doppelte zählen einmal
+     *
+     * @return void
      */
     public static function syncList(array $arrTournaments): void
     {
@@ -167,7 +178,7 @@ class WertungsportalTournamentsModel extends Model
             // labelAlias mitlesen: Ohne den Bestandswert hielte der Vergleich
             // den Alias bei jedem Sync für geändert
             $objRows = $objDatabase->prepare('SELECT id, uuid, labelAlias, ' . implode(', ', self::API_STRING_FIELDS) . ', ' . implode(', ', self::API_INT_FIELDS) . ' FROM ' . static::$strTable . ' WHERE uuid IN (' . $strPlaceholders . ')')
-                                   ->execute($arrChunk);
+                                   ->execute(...$arrChunk);
 
             while ($objRows->next()) {
                 $arrExisting[(string) $objRows->uuid] = $objRows->row();
@@ -243,7 +254,7 @@ class WertungsportalTournamentsModel extends Model
             $strValues = implode(', ', array_fill(0, \count($arrChunk), $strTuple));
 
             $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (' . $strColumns . ') VALUES ' . $strValues)
-                        ->execute(array_merge(...$arrChunk));
+                        ->execute(...array_merge(...$arrChunk));
         }
     }
 }

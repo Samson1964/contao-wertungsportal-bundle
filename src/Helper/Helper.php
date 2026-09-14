@@ -681,11 +681,20 @@ class Helper extends \Contao\Frontend
 	 * Lädt die FIDE-Daten (Nation, Elo, Titel, Schnell- und Blitz-Elo) für
 	 * mehrere FIDE-IDs in einem Rutsch aus der örtlichen Tabelle
 	 * tl_wertungsportal_elo — vermeidet die Einzelabfrage je Spieler bei
-	 * großen Listen.
+	 * großen Listen. Abgefragt wird in Blöcken zu 500 IDs; die Methode liest
+	 * nur.
 	 *
-	 * @param     array $fideids  FIDE-IDs (leere Werte werden ignoriert)
+	 * Die IDs gehen AUSGEPACKT an execute() (`...$chunk`), wie in
+	 * getBlacklist(): Ein einzelnes Array packt nur Contao 4.13 selbst aus,
+	 * Contao 5 bindet es als EINEN serialisierten Parameter. Bis 1.43.0 fand
+	 * die Abfrage unter Contao 5 deshalb nichts (eine ID) oder scheiterte mit
+	 * einer Ausnahme (mehrere IDs).
+	 *
+	 * @param     array $fideids  FIDE-IDs (leere Werte werden ignoriert,
+	 *                            doppelte zusammengefasst)
 	 * @return    array           FIDE-ID => Feldform wie leererFIDESatz();
-	 *                            unbekannte IDs fehlen im Ergebnis
+	 *                            unbekannte IDs fehlen im Ergebnis, ohne
+	 *                            verwertbare ID ein leeres Array
 	 */
 	public static function getFIDEDatenListe($fideids)
 	{
@@ -700,7 +709,7 @@ class Helper extends \Contao\Frontend
 		{
 			$platzhalter = implode(',', array_fill(0, count($chunk), '?'));
 			$objPlayer = \Contao\Database::getInstance()->prepare("SELECT fideid, country, rating, title, rapid_rating, blitz_rating FROM tl_wertungsportal_elo WHERE fideid IN ($platzhalter)")
-			                                     ->execute($chunk);
+			                                     ->execute(...$chunk);
 			while($objPlayer->next())
 			{
 				$liste[$objPlayer->fideid] = self::fideSatz($objPlayer);

@@ -63,6 +63,17 @@ class WertungsportalPersonsUpgradesModel extends Model
      *
      * Läuft als Bulk (eine Bestandsabfrage, Batch-INSERT) statt mit einer
      * Einzelabfrage je Hochstufung.
+     *
+     * Die Zeilen des Batch-INSERTs gehen ausgepackt an execute()
+     * (`...array_merge(...$arrChunk)`): Contao 5 bindet ein einzelnes Array
+     * als EINEN serialisierten Parameter, der INSERT scheitert dann. Bis
+     * 1.43.0 kamen neue Hochstufungen unter Contao 5 deshalb nie an.
+     *
+     * @param int   $pid      ID der Person in tl_wertungsportal_persons
+     * @param array $upgrades Hochstufungen der API; Einträge ohne Stichtag
+     *                        und Name werden übergangen
+     *
+     * @return void
      */
     public static function syncForPerson(int $pid, array $upgrades): void
     {
@@ -141,7 +152,7 @@ class WertungsportalPersonsUpgradesModel extends Model
                 $strValues = implode(', ', array_fill(0, \count($arrChunk), $strTuple));
 
                 $objDatabase->prepare('INSERT INTO ' . static::$strTable . ' (' . $strColumns . ') VALUES ' . $strValues)
-                            ->execute(array_merge(...$arrChunk));
+                            ->execute(...array_merge(...$arrChunk));
             }
         }
     }

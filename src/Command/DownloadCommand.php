@@ -31,6 +31,12 @@ use Symfony\Component\Console\Output\OutputInterface;
  */
 class DownloadCommand extends Command
 {
+    /**
+     * Name des Befehls, wie ihn Symfony 5.4 (Contao 4.13) beim Erzeugen liest.
+     * Symfony 7 (Contao 5) liest die Eigenschaft nicht mehr; maßgeblich ist
+     * das Attribut command am Tag in services.yml, und beide müssen gleich
+     * lauten (tests/Contao5/KonsolenbefehleTest.php).
+     */
     protected static $defaultName = 'wertungsportal:download';
 
     /**
