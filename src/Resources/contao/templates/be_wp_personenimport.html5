@@ -84,7 +84,7 @@
 (function()
 {
 	var url = <?= json_encode(\Contao\Environment::get('request')) ?>;
-	var token = '<?= REQUEST_TOKEN ?>';
+	var token = <?= json_encode(\Contao\System::getContainer()->get('contao.csrf.token_manager')->getDefaultTokenValue()) ?>;
 	var BLOCK = 2 * 1024 * 1024; // Upload-Blockgröße: 2 MB
 
 	var eingabe = document.getElementById('wpDatei');

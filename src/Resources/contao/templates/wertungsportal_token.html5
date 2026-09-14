@@ -38,7 +38,7 @@ $GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/default.css';
 		<div class="wp-suche">
 			<form action="<?= $this->action ?>" method="post">
 				<input type="hidden" name="FORM_SUBMIT" value="<?= $this->formId ?>">
-				<input type="hidden" name="REQUEST_TOKEN" value="<?= REQUEST_TOKEN ?>">
+				<input type="hidden" name="REQUEST_TOKEN" value="<?= htmlspecialchars(\Contao\System::getContainer()->get('contao.csrf.token_manager')->getDefaultTokenValue(), ENT_QUOTES) ?>">
 
 				<div class="wp-suche-block wp-suche-block--offen">
 

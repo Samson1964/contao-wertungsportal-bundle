@@ -8,6 +8,8 @@ Ersetzt die SOAP-Schnittstelle von DeWIS und kommuniziert mit der REST-Schnittst
   JSON für Vereinswebsites: Abruf, Zugangsschlüssel, Verwaltung und Sperren
 * [Zwischenspeicher gezielt leeren](docs/zwischenspeicher.md) — Backend-Modul, das
   die Cache-Einträge eines einzelnen Turniers, Spielers oder Vereins löscht
+* [Rohdaten der Schnittstelle herunterladen](docs/rohdaten.md) — Backend-Modul, das
+  die unveränderte Antwort einer Schnittstellenfunktion als JSON-Datei liefert
 * [Turnierdaten nachts vorladen](docs/vorladen.md) — Cronjob, der Turnierdaten und
   Karteikarten in den Zwischenspeicher holt, damit nicht der erste Besucher wartet
 * [Massenabfragen bremsen](docs/besucherbremse.md) — Höchstabrufe je Minute, Stunde und

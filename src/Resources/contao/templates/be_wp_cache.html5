@@ -18,7 +18,7 @@
 
 	<form action="<?= \Contao\Environment::get('request') ?>" method="post">
 		<input type="hidden" name="FORM_SUBMIT" value="wp_cache">
-		<input type="hidden" name="REQUEST_TOKEN" value="<?= REQUEST_TOKEN ?>">
+		<input type="hidden" name="REQUEST_TOKEN" value="<?= htmlspecialchars(\Contao\System::getContainer()->get('contao.csrf.token_manager')->getDefaultTokenValue(), ENT_QUOTES) ?>">
 
 		<div class="tl_formbody_edit">
 			<div class="tl_tbox">

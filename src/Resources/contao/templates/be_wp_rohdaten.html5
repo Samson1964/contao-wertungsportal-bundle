@@ -1,0 +1,127 @@
+<?php
+/**
+ * Backend-Template des Moduls „Rohdaten"
+ * Ruft eine Funktion der nu-Schnittstelle auf und liefert die Antwort als Datei.
+ */
+$maske = static function ($text) { return htmlspecialchars((string) $text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); };
+?>
+<div id="tl_buttons"></div>
+
+<h2 class="sub_headline">Rohdaten der Schnittstelle</h2>
+
+<div class="tl_listing_container wp-stat">
+
+	<p class="tl_help" style="margin-bottom:16px">
+		Ruft eine Funktion der nu-Schnittstelle auf und liefert die Antwort als
+		JSON-Datei — so, wie nu sie schickt: ohne Zwischenspeicher, ohne Abgleich
+		mit den Spiegeltabellen und ohne die Ergänzungen, die das Frontend
+		vornimmt. Jeder Abruf wird im Systemprotokoll vermerkt.
+	</p>
+
+	<form action="<?= $maske(\Contao\Environment::get('request')) ?>" method="post">
+		<input type="hidden" name="FORM_SUBMIT" value="wp_rohdaten">
+		<input type="hidden" name="REQUEST_TOKEN" value="<?= $maske($this->token) ?>">
+
+		<div class="tl_formbody_edit">
+			<div class="tl_tbox">
+
+				<div class="w50">
+					<h3><label for="ctrl_funktion">Funktion</label></h3>
+					<select name="funktion" id="ctrl_funktion" class="tl_select" onchange="this.form.submit()">
+						<?php foreach($this->funktionen as $name => $f): ?>
+							<option value="<?= $maske($name) ?>"<?= ($this->funktion === $name) ? ' selected' : '' ?>><?= $maske($f['titel']) ?></option>
+						<?php endforeach; ?>
+					</select>
+					<p class="tl_help tl_tip">Endpunkt: <code><?= $maske($this->endpunkt) ?></code></p>
+				</div>
+
+				<div class="w50">
+					<h3>Ausgabe</h3>
+					<div style="padding-top:4px">
+						<input type="checkbox" name="lesbar" id="ctrl_lesbar" value="1" class="tl_checkbox"<?= $this->lesbar ? ' checked' : '' ?>>
+						<label for="ctrl_lesbar">eingerückt (lesbar)</label>
+					</div>
+					<p class="tl_help tl_tip">Ohne Haken kommen die Bytes unverändert — nur so ist die Datei mit der Antwort von nu identisch.</p>
+				</div>
+
+				<?php foreach($this->felder as $feld): ?>
+					<?php $p = $this->parameter[$feld]; $wert = (string) ($this->eingabe[$feld] ?? ''); ?>
+					<div class="w50">
+						<h3><label for="ctrl_<?= $feld ?>"><?= $maske($p['titel']) ?><?= in_array($feld, $this->pflicht, true) ? '<span class="mandatory">*</span>' : '' ?></label></h3>
+						<?php if($p['art'] === 'auswahl'): ?>
+							<select name="<?= $feld ?>" id="ctrl_<?= $feld ?>" class="tl_select">
+								<?php foreach($p['optionen'] as $option => $text): ?>
+									<option value="<?= $maske($option) ?>"<?= ($wert === (string) $option) ? ' selected' : '' ?>><?= $maske($text) ?></option>
+								<?php endforeach; ?>
+							</select>
+						<?php else: ?>
+							<input type="<?= $p['art'] === 'datum' ? 'date' : 'text' ?>" name="<?= $feld ?>" id="ctrl_<?= $feld ?>" class="tl_text" value="<?= $maske($wert) ?>"<?= isset($p['beispiel']) ? ' placeholder="'.$maske($p['beispiel']).'"' : '' ?>>
+						<?php endif; ?>
+						<p class="tl_help tl_tip"><?= $p['hinweis'] ?></p>
+					</div>
+				<?php endforeach; ?>
+
+				<?php if(!count($this->felder)): ?>
+					<p class="tl_help" style="clear:both;padding-top:8px">Diese Funktion braucht keine Angaben.</p>
+				<?php endif; ?>
+
+			</div>
+		</div>
+
+		<?php if(count($this->fehler)): ?>
+			<div class="tl_error" style="margin-top:12px">
+				<?php foreach($this->fehler as $meldung): ?>
+					<div><?= $maske($meldung) ?></div>
+				<?php endforeach; ?>
+			</div>
+		<?php endif; ?>
+
+		<div class="tl_submit_container">
+			<button type="submit" name="aktion" value="abrufen" class="tl_submit">Abrufen und herunterladen</button>
+		</div>
+	</form>
+
+	<?php if($this->ergebnis): ?>
+		<?php $e = $this->ergebnis; ?>
+
+		<h3 class="wp-stat-ueberschrift">Keine Datei — die Schnittstelle hat nicht mit HTTP 200 geantwortet</h3>
+
+		<div class="wp-stat-scroll">
+		<table class="tl_listing wp-stat-tabelle">
+			<tbody>
+				<tr>
+					<th>HTTP-Status</th>
+					<td><?= $e['http'] ? (int) $e['http'] : 'keine Antwort' ?></td>
+				</tr>
+				<tr>
+					<th>Adresse</th>
+					<td class="wp-stat-pfad"><?= $maske($e['url']) ?></td>
+				</tr>
+				<?php if($e['fehler'] !== ''): ?>
+					<tr>
+						<th>Meldung</th>
+						<td><?= $maske($e['fehler']) ?></td>
+					</tr>
+				<?php endif; ?>
+				<tr>
+					<th>Dauer</th>
+					<td><?= number_format((float) $e['dauer'], 0, ',', '.') ?> ms</td>
+				</tr>
+			</tbody>
+		</table>
+		</div>
+
+		<?php if($e['hinweis'] !== ''): ?>
+			<p class="tl_info" style="margin-top:12px"><?= $maske($e['hinweis']) ?></p>
+		<?php endif; ?>
+
+		<?php if($e['auszug'] !== ''): ?>
+			<h3 class="wp-stat-ueberschrift">Antworttext von nu<?= $e['groesse'] > strlen($e['auszug']) ? ' (Anfang, '.number_format((int) $e['groesse'], 0, ',', '.').' Byte insgesamt)' : '' ?></h3>
+			<div class="wp-stat-scroll">
+				<pre style="white-space:pre-wrap;word-break:break-all;margin:0;padding:8px"><?= $maske($e['auszug']) ?></pre>
+			</div>
+		<?php endif; ?>
+
+	<?php endif; ?>
+
+</div>

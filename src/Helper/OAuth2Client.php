@@ -21,6 +21,20 @@ class OAuth2Client
 	public int $timeout; // Wartezeit je Aufruf in Sekunden
 
 	/**
+	 * Den Antworttext der Schnittstelle unverändert mitliefern.
+	 *
+	 * Ist der Schalter gesetzt, trägt die Antwort von callApi() zusätzlich den
+	 * Schlüssel `roh` mit genau den Bytes, die nu geschickt hat. `body` ist
+	 * dagegen schon dekodiert — daraus lässt sich der Originaltext nicht
+	 * zurückgewinnen (Schreibweise von Zahlen und Sonderzeichen, Leerraum).
+	 *
+	 * Gebraucht wird das nur für den Rohdaten-Download im Backend
+	 * (`Helper\Rohabfrage`). Deshalb ist es ausdrücklich einzuschalten: Bei
+	 * einer großen Antwort hielte sonst jeder Abruf zwei Fassungen im Speicher.
+	 */
+	public bool $rohantwort = false;
+
+	/**
 	 * Dauer des letzten Schnittstellenaufrufs in Millisekunden und die dabei
 	 * gerufene Adresse — Grundlage des Zugriffs-Logs (Helper\Zugriffslog).
 	 * Statisch, weil das Log in API::autoQuery geschrieben wird und dort keine
@@ -775,11 +789,19 @@ class OAuth2Client
 			return ['error' => true, 'error_message' => "cURL-Fehler beim API-Aufruf: $curlError", 'http_code' => 0];
 		}
 
-		return [
+		$antwort = [
 			'error'     => false,
 			'http_code' => $httpCode,
 			'body'      => json_decode($response, true) ?? $response,
 		];
+
+		// Originaltext nur auf Anforderung mitgeben, siehe $rohantwort
+		if($this->rohantwort)
+		{
+			$antwort['roh'] = (string) $response;
+		}
+
+		return $antwort;
 	}
 
 	// ─────────────────────────────────────────────

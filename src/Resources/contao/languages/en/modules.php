@@ -16,6 +16,7 @@ $GLOBALS['TL_LANG']['MOD']['wp-elo'] = array('FIDE Elo', 'Manage FIDE Elo data f
 $GLOBALS['TL_LANG']['MOD']['wp-stats'] = array('Statistics', 'Evaluate the requests of the API functions');
 $GLOBALS['TL_LANG']['MOD']['wp-tokens'] = array('Access keys', 'Manage the keys of the club list interface and their requests');
 $GLOBALS['TL_LANG']['MOD']['wp-cache'] = array('Cache', 'Delete individual entries of a tournament, player or club');
+$GLOBALS['TL_LANG']['MOD']['wp-rohdaten'] = array('Raw data', 'Download the unmodified response of an API function as a file');
 
 /**
  * Front end modules

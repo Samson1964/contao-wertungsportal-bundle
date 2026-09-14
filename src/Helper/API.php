@@ -586,6 +586,99 @@ class API
 		}
 	}
 
+	/**
+	 * Baut die Adresse einer Schnittstellenfunktion: Pfad samt
+	 * Abfragezeichenkette, ohne die Basisadresse.
+	 *
+	 * **Die einzige Stelle, an der diese Adressen entstehen.** `getAPI()` ruft
+	 * sie für das Frontend auf, `Helper\Rohabfrage` für den Rohdaten-Download
+	 * im Backend. Bis Fassung 1.41.0 standen die zwölf Adressen allein im
+	 * Verteiler, mitten zwischen Abruf und Abgleich; ein zweites Werkzeug hätte
+	 * sie nachbauen müssen, und beim nächsten Umbau der Schnittstelle wäre eine
+	 * der beiden Fassungen vergessen worden.
+	 *
+	 * Die Abfrageteile entstehen genau so wie zuvor im Verteiler — mit dem
+	 * abschließenden `&` und mit PHPs Wahrheitsprüfung, nach der ein Alter von
+	 * 0 oder eine VKZ `false` als „nicht angegeben" gelten. Die Prüfungen in
+	 * `tests/Helper/ApiAdresseTest.php` halten jede Adresse fest.
+	 *
+	 * **Neu ist nur, dass Pfadteile kodiert werden** (`rawurlencode`). Für
+	 * gültige Kennungen — NU-Nummern, UUIDs — ändert das nichts. Es verhindert
+	 * aber, dass eine Eingabe wie `../tournaments` aus dem Pfad ausbricht und
+	 * mit dem Zugangstoken des DSB einen anderen Endpunkt anspricht.
+	 *
+	 * @param  array $params Parameter wie bei getAPI(): 'funktion' und je nach
+	 *                       Funktion 'id', 'turnier', 'zps', 'vorname',
+	 *                       'nachname', 'suche', 'von', 'bis', 'limit',
+	 *                       'geschlecht', 'alter_von', 'alter_bis'
+	 *
+	 * @return string|null Adresse, oder null bei unbekannter Funktion
+	 */
+	public static function adresse($params)
+	{
+		// Pfadteil kodiert; ein fehlender Wert ergibt wie bisher einen leeren Teil
+		$pfad = static function($schluessel) use ($params)
+		{
+			return rawurlencode((string) ($params[$schluessel] ?? ''));
+		};
+
+		switch($params['funktion'] ?? '')
+		{
+			case 'Spielerliste': // Spielerliste einer Suche
+				$get = '';
+				$get .= ($params['vorname'] ?? '') ? 'firstname='.rawurlencode((string) $params['vorname']).'&' : '';
+				$get .= ($params['nachname'] ?? '') ? 'lastname='.rawurlencode((string) $params['nachname']).'&' : '';
+				return '/dwz/dwzliste/persons?'.$get;
+
+			case 'Karteikarte': // Karteikarte eines Spielers, id = NU-Nummer
+				return '/dwz/dwzliste/persons/'.$pfad('id');
+
+			case 'Karteikarte_Turniere': // Turnierhistorie eines Spielers, id = NU-Nummer
+				return '/dwz/persons/'.$pfad('id').'/history';
+
+			case 'Spielberichtsbogen': // id = Spieler-UUID IM Turnier (playerUuid), nicht die NU-Nummer
+				return '/dwz/tournaments/'.$pfad('turnier').'/players/'.$pfad('id').'/scoresheet';
+
+			case 'Turnierinfo': // Kopfdaten eines Turniers
+				return '/dwz/tournaments/'.$pfad('turnier');
+
+			case 'Turnierliste': // Turniersuche
+				// nu sucht nach dem Präfix der VKZ, abschließende Nullen fallen weg
+				$zps = rtrim((string) ($params['zps'] ?? ''), '0');
+				$get = '';
+				$get .= ($params['suche'] ?? '') ? 'label='.rawurlencode((string) $params['suche']).'&' : '';
+				$get .= ($params['von'] ?? '') ? 'fromDate='.rawurlencode((string) $params['von']).'&' : '';
+				$get .= ($params['bis'] ?? '') ? 'toDate='.rawurlencode((string) $params['bis']).'&' : '';
+				$get .= $zps ? 'vkz='.rawurlencode($zps).'&' : '';
+				return '/dwz/tournaments?'.$get;
+
+			case 'Turnierauswertung': // DWZ-Auswertung eines Turniers
+				return '/dwz/tournaments/'.$pfad('turnier').'/evaluation';
+
+			case 'Turnierergebnisse': // Partien eines Turniers
+				return '/dwz/tournaments/'.$pfad('turnier').'/matches';
+
+			case 'Vereinsliste': // Mitglieder eines Vereins, zps fünfstellig
+				return '/dwz/dwzliste/persons?'.(($params['zps'] ?? '') ? 'vkz='.rawurlencode((string) $params['zps']) : '');
+
+			case 'Verbandsliste': // Spielerliste eines Verbands, zps ein- bis fünfstellig
+				$get = ($params['zps'] ?? '') ? 'vkz='.rawurlencode((string) $params['zps']).'&' : '';
+				$get .= ($params['limit'] ?? '') ? 'limit='.rawurlencode((string) $params['limit']).'&' : '';
+				$get .= ($params['geschlecht'] ?? '') ? 'gender='.rawurlencode((string) $params['geschlecht']).'&' : '';
+				$get .= ($params['alter_von'] ?? '') ? 'minAge='.rawurlencode((string) $params['alter_von']).'&' : '';
+				$get .= ($params['alter_bis'] ?? '') ? 'maxAge='.rawurlencode((string) $params['alter_bis']).'&' : '';
+				return '/dwz/dwzliste/persons?'.$get;
+
+			case 'Vereinsname': // Vereinsdaten anhand der VKZ
+				return '/dwz/dwzliste/clubs?'.(($params['zps'] ?? '') ? 'vkz='.rawurlencode((string) $params['zps']) : '');
+
+			case 'Verbaende': // alle Vereine und Verbände
+				return '/dwz/dwzliste/clubs';
+		}
+
+		return null;
+	}
+
 	/*********************************************************
 	 * getAPI
 	 * =========
@@ -594,7 +687,7 @@ class API
 	 * Führt den eigentlichen Abruf bei der Schnittstelle aus und gleicht die
 	 * Antwort mit den örtlichen Spiegeltabellen ab.
 	 *
-	 * Der Verteiler baut je Funktion den Endpunkt samt Abfragezeichenkette und
+	 * Die Adresse samt Abfragezeichenkette baut `adresse()`, der Verteiler
 	 * ruft danach den passenden Abgleich (syncPersons, syncClubs, syncTournaments
 	 * …). Seiteneffekte stecken also in den Sync-Methoden: Sie legen Personen,
 	 * Vereine und Turniere an und aktualisieren sie.
@@ -618,114 +711,13 @@ class API
 	public static function getAPI($params)
 	{
 		$client = new \Schachbulle\ContaoWertungsportalBundle\Helper\OAuth2Client();
-		$get = '';
 		$result = null;
+		$adresse = self::adresse($params);
 
 		try
 		{
-
-		switch($params['funktion'] ?? '')
-		{
-			case 'Spielerliste': // Spielerliste einer Suche
-				// vorname = Vorname des Spielers, default = leer
-				// nachname = Nachname des Spielers
-				$get = '';
-				$get .=  ($params['vorname'] ?? '') ? 'firstname='.rawurlencode($params['vorname']).'&' : '';
-				$get .=  ($params['nachname'] ?? '') ? 'lastname='.rawurlencode($params['nachname']).'&' : '';
-				$result = $client->callApiWithRefresh($client->apiBaseUrl . '/dwz/dwzliste/persons?'.$get);
-				self::syncPersons($result); // Abgleich mit tl_wertungsportal_persons
-				break;
-
-			case 'Karteikarte': // Karteikarte eines Spielers nach nu-ID
-				// id = nu-ID des Spielers
-				$result = $client->callApiWithRefresh($client->apiBaseUrl . '/dwz/dwzliste/persons/'.($params['id'] ?? ''));
-				self::syncPersons($result); // Abgleich mit tl_wertungsportal_persons
-				break;
-
-			case 'Karteikarte_Turniere': // Turniere für die Karteikarte eines Spielers
-				// id = nu-ID des Spielers
-				//echo '/dwz/persons/'.$params['id'].'/history';
-				$result = $client->callApiWithRefresh($client->apiBaseUrl . '/dwz/persons/'.($params['id'] ?? '').'/history');
-				self::syncPersonHistory($result); // Abgleich mit tl_wertungsportal_persons, _tournaments, _upgrades und tl_wertungsportal_tournaments
-				break;
-
-			case 'Spielberichtsbogen': // Scoresheet eines Spielers für ein Turnier
-				// id = nu-UUID des Spielers
-				// turnier = UUID des Turniers
-				$result = $client->callApiWithRefresh($client->apiBaseUrl . '/dwz/tournaments/'.($params['turnier'] ?? '').'/players/'.($params['id'] ?? '').'/scoresheet');
-				self::syncScoresheet($result); // Abgleich Turnier, Partien und Spielerdaten mit den Turniertabellen
-				break;
-
-			case 'Turnierinfo': // Kopfdaten eines Turniers laden
-				// turnier = UUID des Turniers
-				$result = $client->callApiWithRefresh($client->apiBaseUrl . '/dwz/tournaments/'.($params['turnier'] ?? ''));
-				self::syncTournaments($result); // Abgleich mit tl_wertungsportal_tournaments
-				break;
-
-			case 'Turnierliste': // Suchergebnisse nach einem Turnier laden
-				// suche = Suche nach Turniername
-				$params['zps'] = rtrim($params['zps'] ?? '', '0'); // nu sucht nach Prefix der ZPS
-				$get = '';
-				$get .=  ($params['suche'] ?? '') ? 'label='.rawurlencode($params['suche']).'&' : '';
-				$get .=  ($params['von'] ?? '') ? 'fromDate='.rawurlencode($params['von']).'&' : '';
-				$get .=  ($params['bis'] ?? '') ? 'toDate='.rawurlencode($params['bis']).'&' : '';
-				$get .=  $params['zps'] ? 'vkz='.rawurlencode($params['zps']).'&' : '';
-				$result = $client->callApiWithRefresh($client->apiBaseUrl . '/dwz/tournaments?'.$get);
-				self::syncTournaments($result); // Abgleich mit tl_wertungsportal_tournaments
-				break;
-
-			case 'Turnierauswertung': // DWZ-Auswertung eines Turniers laden
-				// turnier = UUID des Turniers
-				$result = $client->callApiWithRefresh($client->apiBaseUrl . '/dwz/tournaments/'.($params['turnier'] ?? '').'/evaluation');
-				self::syncTournamentEvaluation($result); // Abgleich mit tl_wertungsportal_tournaments und _evaluation
-				break;
-
-			case 'Turnierergebnisse': // Ergebnisse eines Turniers laden
-				// turnier = UUID des Turniers
-				$result = $client->callApiWithRefresh($client->apiBaseUrl . '/dwz/tournaments/'.($params['turnier'] ?? '').'/matches');
-				self::syncTournamentMatches($result); // Abgleich mit tl_wertungsportal_tournaments_matches (Spielerdaten in _evaluation)
-				break;
-
-			case 'Vereinsliste': // Spielerliste eines Vereins
-				// zps = fünfstellig
-				$get =  ($params['zps'] ?? '') ? 'vkz='.rawurlencode($params['zps']) : '';
-				$result = $client->callApiWithRefresh($client->apiBaseUrl . '/dwz/dwzliste/persons?'.$get);
-				self::syncPersons($result); // Abgleich mit tl_wertungsportal_persons (Vereine über die Mitgliedschaften)
-				break;
-
-			case 'Verbandsliste': // Spielerliste eines Verbands
-				// zps = ein- bis fünfstellig
-				$get =  ($params['zps'] ?? '') ? 'vkz='.rawurlencode($params['zps']).'&' : '';
-				$get .= ($params['limit'] ?? '') ? 'limit='.$params['limit'].'&' : '';
-				$get .= ($params['geschlecht'] ?? '') ? 'gender='.$params['geschlecht'].'&' : '';
-				$get .= ($params['alter_von'] ?? '') ? 'minAge='.$params['alter_von'].'&' : '';
-				$get .= ($params['alter_bis'] ?? '') ? 'maxAge='.$params['alter_bis'].'&' : '';
-				$result = $client->callApiWithRefresh($client->apiBaseUrl . '/dwz/dwzliste/persons?'.$get);
-				self::syncPersons($result); // Abgleich mit tl_wertungsportal_persons
-				break;
-
-			case 'Vereinsname': // Vereinsname anhand der ZPS
-				// zps = fünfstellig
-				$get =  ($params['zps'] ?? '') ? 'vkz='.rawurlencode($params['zps']) : '';
-				$result = $client->callApiWithRefresh($client->apiBaseUrl . '/dwz/dwzliste/clubs?'.$get);
-				// Fehlende Verbände direkt nach dem Abruf ergänzen — hier nur
-				// den angefragten, damit eine Einzelabfrage nicht plötzlich
-				// alle Landesverbände zurückliefert
-				$result = self::BugfixVerbaende($result, $params['zps'] ?? '');
-				self::syncClubs($result); // Abgleich mit tl_wertungsportal_clubs
-				break;
-
-			case 'Verbaende': // Verbände einer ZPS-Struktur laden
-				// zps = fünfstellig
-				$result = $client->callApiWithRefresh($client->apiBaseUrl . '/dwz/dwzliste/clubs');
-				// Ergänzung VOR dem Abgleich: Sonst kennt die lokale Tabelle
-				// die fehlenden Verbände nie (der Sync bekam bisher die
-				// unvollständige Antwort und erst danach wurde ergänzt)
-				$result = self::BugfixVerbaende($result);
-				self::syncClubs($result); // Abgleich mit tl_wertungsportal_clubs
-				break;
-
-			default:
+			if($adresse === null)
+			{
 				// Unbekannte oder fehlende Funktion: Bisher blieb $result hier
 				// unbelegt, der Aufrufer bekam also eine „Undefined variable"-
 				// Meldung und danach die Folgefehler beim Zugriff auf http_code.
@@ -739,8 +731,59 @@ class API
 					'error_message' => 'Unbekannte Abfrage: '.($params['funktion'] ?? '(keine Funktion angegeben)'),
 					'http_code'     => 400
 				);
-		}
+			}
+			else
+			{
+				$result = $client->callApiWithRefresh($client->apiBaseUrl.$adresse);
 
+				// Nach dem Abruf je Funktion mit den Spiegeltabellen abgleichen
+				switch($params['funktion'])
+				{
+					case 'Spielerliste':
+					case 'Karteikarte':
+					case 'Vereinsliste':
+					case 'Verbandsliste':
+						self::syncPersons($result); // Abgleich mit tl_wertungsportal_persons (Vereine über die Mitgliedschaften)
+						break;
+
+					case 'Karteikarte_Turniere':
+						self::syncPersonHistory($result); // Abgleich mit tl_wertungsportal_persons, _tournaments, _upgrades und tl_wertungsportal_tournaments
+						break;
+
+					case 'Spielberichtsbogen':
+						self::syncScoresheet($result); // Abgleich Turnier, Partien und Spielerdaten mit den Turniertabellen
+						break;
+
+					case 'Turnierinfo':
+					case 'Turnierliste':
+						self::syncTournaments($result); // Abgleich mit tl_wertungsportal_tournaments
+						break;
+
+					case 'Turnierauswertung':
+						self::syncTournamentEvaluation($result); // Abgleich mit tl_wertungsportal_tournaments und _evaluation
+						break;
+
+					case 'Turnierergebnisse':
+						self::syncTournamentMatches($result); // Abgleich mit tl_wertungsportal_tournaments_matches (Spielerdaten in _evaluation)
+						break;
+
+					case 'Vereinsname':
+						// Fehlende Verbände direkt nach dem Abruf ergänzen — hier nur
+						// den angefragten, damit eine Einzelabfrage nicht plötzlich
+						// alle Landesverbände zurückliefert
+						$result = self::BugfixVerbaende($result, $params['zps'] ?? '');
+						self::syncClubs($result); // Abgleich mit tl_wertungsportal_clubs
+						break;
+
+					case 'Verbaende':
+						// Ergänzung VOR dem Abgleich: Sonst kennt die lokale Tabelle
+						// die fehlenden Verbände nie (der Sync bekam bisher die
+						// unvollständige Antwort und erst danach wurde ergänzt)
+						$result = self::BugfixVerbaende($result);
+						self::syncClubs($result); // Abgleich mit tl_wertungsportal_clubs
+						break;
+				}
+			}
 		}
 		catch(\Throwable $e)
 		{

@@ -137,6 +137,15 @@ Jeder API-Case in `Helper/API.php::getAPI()` ruft nach `callApiWithRefresh()` ei
 WICHTIG: `autoQuery()` cached (24 h, `wertungsportal_cache`). Bei Cache-Treffer läuft KEIN Sync.
 Fehlgeschlagene Abfragen (HTTP != 200) werden nicht gecached.
 
+**Adressen (ab 1.42.0):** Pfad und Abfragezeichenkette aller zwölf Funktionen baut
+`API::adresse($params)` — die einzige Stelle. `getAPI()` ruft sie und erledigt danach nur
+noch den Abgleich. Die Adressen sind in `tests/Helper/ApiAdresseTest.php` festgehalten, bis
+zum abschließenden `&` und zur Wahrheitsprüfung (Alter 0 = nicht angegeben); Pfadteile werden
+kodiert. Wer eine Funktion ergänzt, trägt sie in `adresse()`, `endpunkte()` und
+`Rohabfrage::FUNKTIONEN` ein — sonst schlägt ein Test fehl. Der Rohdaten-Download
+(`Helper\Rohabfrage`, BE_MOD `wp-rohdaten`, `docs/rohdaten.md`) ruft `callApiWithRefresh()`
+direkt auf: kein Cache, kein Abgleich, kein `BugfixVerbaende()`, keine Statistik.
+
 ## Örtlicher Datenbestand und Zugriffs-Log (ab 1.8.0)
 
 `Helper/Lokal.php` beantwortet alle zwölf API-Funktionen aus den Spiegeltabellen
@@ -240,6 +249,10 @@ heran). Regeln:
   das `preview.php`-Präfix (im veröffentlichten Zustand egal).
 - Nach Änderungen an `src/Resources/public/` auf dem Server `contao:assets:install` nötig,
   nach DCA-/SQL-Änderungen `contao:migrate` bzw. Install-Tool.
+- **`REQUEST_TOKEN`** (Konstante) definiert nur Contao 4.13 — unter Contao 5 bricht jede Vorlage
+  daran ab. Token immer über `contao.csrf.token_manager->getDefaultTokenValue()` holen
+  (HTML-Attribut: `htmlspecialchars()`, JavaScript: `json_encode()`); in 4.13 derselbe Wert.
+  Bis 1.41.0 standen fünf Vorlagen noch auf der Konstante.
 
 ## Testumgebung
 

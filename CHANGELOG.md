@@ -1,5 +1,56 @@
 # Wertungsportal Changelog
 
+## Version 1.42.0 (2026-09-14)
+
+* Add: **Backend-Modul „Rohdaten"** (WP | Rohdaten). Es ruft eine der zwölf
+  Schnittstellenfunktionen auf und liefert die Antwort als JSON-Datei — so, wie
+  nu sie schickt: ohne Zwischenspeicher, ohne Abgleich mit den Spiegeltabellen,
+  ohne die Ergänzungen des Frontends und ohne Zählung in der Abrufstatistik.
+  Anlass: Die Auswertung des 22. Rostocker Schach-Opens und der
+  Spielberichtsbogen eines Teilnehmers wurden in genau der Form gebraucht, in der
+  nu sie ausliefert. Beschrieben in `docs/rohdaten.md`
+* Add: Wahlweise eingerückt (lesbar). Ohne Häkchen kommen die Bytes unverändert —
+  nur diese Fassung ist mit der Antwort von nu identisch. Eingerückt bleiben
+  Struktur und Werte erhalten: `{}` bleibt ein Objekt, `1.0` eine Kommazahl,
+  große Ganzzahlen werden nicht gerundet
+* Add: Antwortet nu nicht mit HTTP 200, erscheinen Status, Adresse, Meldung, ein
+  Hinweis zur wahrscheinlichen Ursache und der Anfang des Antworttexts auf der
+  Seite — statt eine Fehlerseite als „Rohdaten" herunterzuladen. Die Hinweise
+  kennen die Fälle aus dem Betrieb: erschöpftes Tokenkontingent,
+  Spielberichtsbogen mit falscher Kennung, UUID in Großbuchstaben
+* Add: Jeder Abruf steht im Systemprotokoll. Die Datei geht mit
+  `Cache-Control: no-store` an den Browser, weil sie Personendaten enthält
+* Change: **`API::adresse()` baut die Adressen aller zwölf Funktionen** — die
+  einzige Stelle, an der sie entstehen. `getAPI()` ist darauf umgestellt; für das
+  Frontend sind die Adressen unverändert, bis hin zum abschließenden `&`, und mit
+  Tests festgehalten. Neu ist nur, dass Pfadteile kodiert werden: Eine Eingabe wie
+  `../tournaments` bricht nicht mehr aus dem Pfad aus und spricht keinen anderen
+  Endpunkt mit dem Zugangstoken des DSB an
+* Change: `OAuth2Client` liefert den Antworttext auf Anforderung unverändert mit
+  (`$rohantwort`, Schlüssel `roh`). Für die gewöhnlichen Abrufe bleibt er aus,
+  sonst hielte jeder Abruf zwei Fassungen im Speicher
+* Fix: **Fünf Vorlagen waren unter Contao 5 nicht lauffähig** — im Backend
+  Zwischenspeicher, Elo-, Personen- und Vereine-Import, im Frontend das
+  Antragsformular für Zugangsschlüssel der Vereinslisten-Schnittstelle. Sie
+  benutzten die Konstante `REQUEST_TOKEN`, die nur Contao 4.13 noch definiert;
+  unter Contao 5 bricht PHP an dieser Stelle mit einem Fehler ab. Der Token kommt
+  jetzt über `contao.csrf.token_manager->getDefaultTokenValue()`, das es in beiden
+  Generationen gibt und das in 4.13 nachweislich denselben Wert liefert
+* Add: 27 weitere Unit-Tests (81 gesamt) — alle zwölf Adressen, die Kodierung der
+  Pfadteile, ein Abgleich gegen `API::endpunkte()`, Eingabeprüfung, Dateiname und
+  Aufbereitung
+
+  Geprüft in Contao 4.13 mit echten Antworten von nu, ausschließlich über
+  öffentliche Endpunkte und damit ohne Token: 32 Zusicherungen — Formular,
+  Funktionswechsel ohne Abruf, Eingabeprüfung, fehlende Zugangsdaten,
+  abgeschaltete Schnittstelle, Download der Karteikarte **Byte für Byte gleich**
+  mit einem direkten cURL-Abruf, eingerückte Fassung mit denselben Daten, 404 mit
+  Hinweis auf der Seite, kein Tokenabruf, Protokollzeilen, echter Token in beiden
+  Formularen. Gegenprobe zum Frontend-Weg an der Vereinsliste: nu liefert 2.385
+  Einträge, `getAPI()` 2.399 — die 14 Landesverbände aus `BugfixVerbaende()`. In
+  der Rohdatei steht davon keiner. Statisch außerdem PHPStan Stufe 5 gegen die
+  Klassen von Contao 5.7: die beiden neuen Klassen ohne Befund
+
 ## Version 1.41.0 (2026-09-10)
 
 * Fix: **Jeder auffällige Wert steht jetzt genau einmal im Protokoll.** Der
