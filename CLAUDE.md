@@ -245,6 +245,10 @@ dort (mit DeWIS-ID). Wichtig beim Weiterbauen:
   mit `''` beantwortet und vor diesem Bundle lädt.
 - Einstellung `insert_verein_replaces` (MCW, Schlüssel aus dem Helper-Bundle übernommen),
   Voreinstellung `InsertTags::VEREIN_ERSETZUNGEN`, ein Test hält die Gleichheit mit 2.0.0 fest.
+- Ersetzt wird **nur an Wortgrenzen** (`InsertTags::wortgrenzen()`: Unicode-Lookarounds nur an
+  den Rändern, die Wortzeichen sind — nicht `\b`; Ersatz über einen Rückruf, damit `$1`/`\1`
+  wörtlich bleiben). Franks Entscheidung vom 14.09.2026, nachdem `str_ireplace()` in 1.43.0
+  „SVigung" und „Rochadeing" erzeugt hatte. Nicht auf `str_ireplace()` zurückbauen.
 - Contao 4.13 merkt sich Tag-Ergebnisse statisch je Aufruf — im Prüfstand vor wiederholten
   Abfragen desselben Tags `contao.insert_tag.parser->reset()`.
 

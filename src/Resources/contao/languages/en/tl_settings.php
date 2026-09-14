@@ -11,6 +11,6 @@
 
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_inserttags_legend'] = 'Insert tags';
 
-$GLOBALS['TL_LANG']['tl_settings']['insert_verein_replaces'] = array('Replacements in club names', 'Used by the insert tag verein. The rows are applied from top to bottom, case-insensitively; shortening happens afterwards. A term also matches inside a word, so longer terms belong before shorter ones they contain (Schachvereinigung before Schachverein). See docs/insert-tags.md.');
+$GLOBALS['TL_LANG']['tl_settings']['insert_verein_replaces'] = array('Replacements in club names', 'Used by the insert tag verein. The rows are applied from top to bottom, case-insensitively and only at word boundaries: Schachverein matches "Schachverein Tempo" but not "Schachvereinigung". Shortening happens afterwards. See docs/insert-tags.md.');
 $GLOBALS['TL_LANG']['tl_settings']['insert_verein_search'] = array('Search for', 'Enter a leading or trailing space as +');
 $GLOBALS['TL_LANG']['tl_settings']['insert_verein_replace'] = array('Replace with', 'Enter a leading or trailing space as +');

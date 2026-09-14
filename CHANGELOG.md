@@ -1,5 +1,23 @@
 # Wertungsportal Changelog
 
+## Version 1.43.2 (2026-09-14)
+
+* Change: **Ersetzungen im Vereinsnamen nur noch an Wortgrenzen.** Bis 1.43.0
+  ersetzte `{{verein::…}}` — wie zuvor das Helper-Bundle mit `str_ireplace()` — auch
+  mitten im Wort. Im Testbestand (1.152 Vereinsnamen) wurden so acht Namen falsch:
+  fünfmal „Schachvereinigung" → „SVigung", dazu „1. Bayerischer FrauenSV",
+  „BlindenSK Frankfurt" und „SV Rochadeing 25/64". Die Angabe „6 von 1.158" bei
+  1.43.0 war zu niedrig: Die Zählung hatte die Treffer am Wortende übersehen und
+  die Testzeilen des Prüfstands mitgezählt. Jetzt trifft ein Suchbegriff, der mit
+  einem Buchstaben oder einer Ziffer beginnt oder endet, nur, wenn davor bzw.
+  dahinter keiner steht; Leerzeichen, Bindestrich, Klammer und Satzzeichen grenzen
+  ab. Umlaute zählen als Buchstaben, Groß- und Kleinschreibung spielt auch bei
+  ihnen keine Rolle. Die übrigen 412 Änderungen der Voreinstellung bleiben, wie sie
+  waren. Wer „Schachvereinigung" trotzdem kürzen will, trägt eine eigene Zeile ein
+
+  Geprüft mit 138 Unit-Tests und dem Prüfstand in Contao 4.13.58 (53 Prüfungen und
+  der Vergleich über alle 1.152 Vereinsnamen) und 5.7.7 (50 Prüfungen)
+
 ## Version 1.43.1 (2026-09-14)
 
 * Fix: **Unter Contao 5 scheiterten Abgleiche, Importe und Listen an `Statement::execute()`.**

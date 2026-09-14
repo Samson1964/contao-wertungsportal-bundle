@@ -311,20 +311,59 @@ class InsertTagsTest extends TestCase
 	}
 
 	/**
-	 * Die Zeilen wirken nacheinander und auch mitten im Wort. Deshalb gehört
-	 * ein längerer Begriff vor den kürzeren, der in ihm steckt — so steht es
-	 * auch in der Dokumentation.
+	 * Die Zeilen wirken nacheinander, jede auf das Ergebnis der vorigen.
 	 *
 	 * @return void
 	 */
 	public function testReihenfolgeDerErsetzungen(): void
 	{
+		$kette = array
+		(
+			array('search' => 'Schachgemeinschaft', 'replace' => 'SG'),
+			array('search' => 'SG+', 'replace' => 'Spielgemeinschaft+'),
+		);
+
+		$this->assertSame('Spielgemeinschaft Porz', InsertTagsAttrappe::vereinsnameOeffentlich('Schachgemeinschaft Porz', $kette, ''));
+		$this->assertSame('SG Porz', InsertTagsAttrappe::vereinsnameOeffentlich('Schachgemeinschaft Porz', array_reverse($kette), ''));
+	}
+
+	/**
+	 * Ersetzt wird nur an Wortgrenzen. Mit str_ireplace() machte die
+	 * Voreinstellung in 1.43.0 aus „Schachvereinigung" ein „SVigung" und aus
+	 * „Rochade Eving" ein „Rochadeing"; Frank hat daraufhin Wortgrenzen
+	 * entschieden. Neben Leerzeichen grenzen auch Bindestrich, Klammer und
+	 * Satzzeichen ab, Umlaute zählen als Buchstaben.
+	 *
+	 * @return void
+	 */
+	public function testNurAnWortgrenzen(): void
+	{
 		$vorgabe = InsertTags::VEREIN_ERSETZUNGEN;
 
-		$this->assertSame('SVigung Weilerbach', InsertTagsAttrappe::vereinsnameOeffentlich('Schachvereinigung Weilerbach', $vorgabe, ''));
+		// Mitten im Wort bleibt alles stehen
+		$this->assertSame('Schachvereinigung Weilerbach', InsertTagsAttrappe::vereinsnameOeffentlich('Schachvereinigung Weilerbach', $vorgabe, ''));
+		$this->assertSame('SV Rochade Eving 25/64', InsertTagsAttrappe::vereinsnameOeffentlich('SV Rochade Eving 25/64', $vorgabe, ''));
+		$this->assertSame('Kreisschachverein Nord', InsertTagsAttrappe::vereinsnameOeffentlich('Kreisschachverein Nord', $vorgabe, ''));
 
+		// An Wortgrenzen wird ersetzt, auch neben Ziffern, Bindestrich und Klammer
+		$this->assertSame('FC St. Pauli 1910 SAbt', InsertTagsAttrappe::vereinsnameOeffentlich('FC St. Pauli 1910 eV SAbt', $vorgabe, ''));
+		$this->assertSame('Post-SV Leipzig', InsertTagsAttrappe::vereinsnameOeffentlich('Post-Schachverein Leipzig', $vorgabe, ''));
+		$this->assertSame('SF Nord (1920)', InsertTagsAttrappe::vereinsnameOeffentlich('Schachfreunde Nord (1920) e.V.', $vorgabe, ''));
+
+		// Wer den längeren Begriff kürzen will, trägt eine eigene Zeile ein
 		$ergaenzt = array_merge(array(array('search' => 'Schachvereinigung', 'replace' => 'SVg')), $vorgabe);
 		$this->assertSame('SVg Weilerbach', InsertTagsAttrappe::vereinsnameOeffentlich('Schachvereinigung Weilerbach', $ergaenzt, ''));
+
+		// Umlaute sind Buchstaben: „rich" steht in „Zürich" nicht an einer Grenze.
+		// Groß- und Kleinschreibung spielt auch bei Umlauten keine Rolle
+		$eigene = array(array('search' => 'rich', 'replace' => 'X'), array('search' => 'SÜD', 'replace' => 'S'));
+		$this->assertSame('SK Zürich', InsertTagsAttrappe::vereinsnameOeffentlich('SK Zürich', $eigene, ''));
+		$this->assertSame('SF S', InsertTagsAttrappe::vereinsnameOeffentlich('SF Süd', $eigene, ''));
+		$this->assertSame('SF Südwest', InsertTagsAttrappe::vereinsnameOeffentlich('SF Südwest', $eigene, ''));
+
+		// Punkte im Suchbegriff gelten wörtlich, $ und \ im Ersatz ebenso
+		$this->assertSame('SV Werder eaVb', InsertTagsAttrappe::vereinsnameOeffentlich('SV Werder eaVb', $vorgabe, ''));
+		$this->assertSame('$1 \\1 Nord', InsertTagsAttrappe::vereinsnameOeffentlich('SV Nord', array(array('search' => 'SV', 'replace' => '$1 \\1')), ''));
 	}
 
 	/**

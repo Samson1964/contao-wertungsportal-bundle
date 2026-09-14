@@ -426,12 +426,17 @@ class InsertTags
 	 * — ungelöst träfe ein Suchbegriff den Namen nicht, und die Kürzung könnte
 	 * mitten in einer Entität schneiden.
 	 *
-	 * Ersetzt wird mit `str_ireplace()`: Zeile für Zeile von oben nach unten,
-	 * ohne Rücksicht auf Groß- und Kleinschreibung (bei Umlauten nur exakt),
-	 * und auch mitten im Wort. „Schachverein" macht deshalb aus
-	 * „Schachvereinigung" ein „SVigung", wenn keine Zeile für den längeren
-	 * Begriff davor steht. In Suchbegriff und Ersatz steht `+` für ein
-	 * Leerzeichen. Zeilen ohne Suchbegriff werden übersprungen.
+	 * Ersetzt wird Zeile für Zeile von oben nach unten, jede Zeile auf das
+	 * Ergebnis der vorigen, ohne Rücksicht auf Groß- und Kleinschreibung — auch
+	 * bei Umlauten — und **nur an Wortgrenzen** (siehe wortgrenzen()):
+	 * „Schachverein" trifft „Schachverein Tempo", aber nicht
+	 * „Schachvereinigung"; „+eV" trifft „1910 eV", aber nicht „Eving". In 1.43.0
+	 * ersetzte `str_ireplace()` auch mitten im Wort und machte im Testbestand
+	 * sechs Vereinsnamen falsch; Frank hat daraufhin Wortgrenzen entschieden.
+	 *
+	 * In Suchbegriff und Ersatz steht `+` für ein Leerzeichen. Zeilen ohne
+	 * Suchbegriff werden übersprungen. Der Ersatz wird wörtlich eingesetzt —
+	 * `$1` oder `\1` darin sind keine Rückverweise.
 	 *
 	 * Gekürzt wird nach Zeichen, nicht nach Bytes — ein Umlaut zählt einfach
 	 * und wird nie zerschnitten.
@@ -448,18 +453,22 @@ class InsertTags
 	{
 		$name = html_entity_decode((string) $name, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-		$suchen = array();
-		$ersetzen = array();
-
 		foreach((array) $ersetzungen as $zeile)
 		{
 			if(!is_array($zeile) || !isset($zeile['search']) || !is_scalar($zeile['search']) || '' === trim((string) $zeile['search'])) continue;
 
-			$suchen[] = static::ersetzungstext($zeile['search']);
-			$ersetzen[] = static::ersetzungstext(isset($zeile['replace']) && is_scalar($zeile['replace']) ? $zeile['replace'] : '');
-		}
+			$ersatz = static::ersetzungstext(isset($zeile['replace']) && is_scalar($zeile['replace']) ? $zeile['replace'] : '');
 
-		if(count($suchen)) $name = str_ireplace($suchen, $ersetzen, $name);
+			// Über einen Rückruf statt als Ersatzzeichenkette: So bleiben $ und
+			// \ im Ersatz gewöhnliche Zeichen
+			$neu = preg_replace_callback(static::wortgrenzen(static::ersetzungstext($zeile['search'])), static function () use ($ersatz)
+			{
+				return $ersatz;
+			}, $name);
+
+			// null gibt es nur bei ungültigem UTF-8 — dann bleibt der Name stehen
+			if(null !== $neu) $name = $neu;
+		}
 
 		$laenge = trim((string) $laenge);
 
@@ -469,6 +478,38 @@ class InsertTags
 		}
 
 		return $name;
+	}
+
+	/**
+	 * Baut den regulären Ausdruck, der einen Suchbegriff nur an Wortgrenzen
+	 * findet.
+	 *
+	 * Wortzeichen sind Buchstaben samt Umlauten und Akzenten, kombinierende
+	 * Zeichen und Ziffern (Unicode-Klassen L, M und N). Beginnt der Begriff mit
+	 * einem Wortzeichen, darf davor keines stehen; endet er mit einem, darf
+	 * dahinter keines stehen. Beginnt oder endet er mit einem Leerzeichen oder
+	 * Satzzeichen („SABT+", „+e.V."), grenzt dieses Zeichen selbst ab — auf
+	 * dieser Seite wird nichts verlangt.
+	 *
+	 * Bewusst nicht `\b`: Vor einem Begriff, der mit einem Leerzeichen beginnt,
+	 * verlangt `\b` ein Wortzeichen. „+e.V." hinter einer Klammer, etwa in
+	 * „SF Nord (1920) e.V.", würde dann nicht mehr gefunden. Der Begriff selbst
+	 * geht durch `preg_quote()`; Punkte und Klammern darin gelten wörtlich.
+	 *
+	 * @param string $suche Suchbegriff, `+` bereits in Leerzeichen gewandelt
+	 *
+	 * @return string Ausdruck mit den Schaltern i (Groß- und Kleinschreibung
+	 *                egal) und u (UTF-8)
+	 */
+	protected static function wortgrenzen($suche)
+	{
+		$wortzeichen = '[\p{L}\p{M}\p{N}]';
+
+		return '/'
+			.(1 === preg_match('/^'.$wortzeichen.'/u', $suche) ? '(?<!'.$wortzeichen.')' : '')
+			.preg_quote($suche, '/')
+			.(1 === preg_match('/'.$wortzeichen.'\z/u', $suche) ? '(?!'.$wortzeichen.')' : '')
+			.'/iu';
 	}
 
 	/**

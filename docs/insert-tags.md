@@ -80,7 +80,7 @@ letzte FIDE-Import. Wer im Spiegel fehlt, bekommt keine Ausgabe.
 **Was es kostet:** Je Seitenaufruf wird jede Person einmal gelesen — alle Tags
 derselben Person teilen sich eine Sperrprüfung und drei kurze Abfragen. In der
 Testinstallation (Contao 4.13) brauchten 40 Personen mit je vier Tags 22 bis
-27 ms.
+32 ms.
 
 **Besucherbremse, Statistik, Zugriffs-Log:** Die Tags zählen bei keinem davon.
 Die [Besucherbremse](besucherbremse.md) zählt zwar ohnehin nur einmal je
@@ -121,28 +121,39 @@ So wird ersetzt:
 
 1. `+` steht in beiden Spalten für ein Leerzeichen, weil Contao Leerzeichen am
    Rand einer Eingabe abschneidet.
-2. Die Zeilen wirken nacheinander von oben nach unten, ohne Rücksicht auf Groß-
-   und Kleinschreibung (Umlaute nur in genau dieser Schreibweise).
-3. Zeilen ohne Suchbegriff werden übersprungen.
-4. Erst danach wird gekürzt — nach Zeichen, ein Umlaut zählt einfach. Eine
+2. Die Zeilen wirken nacheinander von oben nach unten, jede auf das Ergebnis der
+   vorigen, ohne Rücksicht auf Groß- und Kleinschreibung — auch bei Umlauten.
+3. **Nur an Wortgrenzen:** Beginnt ein Suchbegriff mit einem Buchstaben oder
+   einer Ziffer, darf davor keiner stehen; endet er so, darf dahinter keiner
+   stehen. Leerzeichen, Bindestrich, Klammer und Satzzeichen grenzen ab, Umlaute
+   zählen als Buchstaben. Beginnt oder endet der Suchbegriff selbst mit einem
+   Leerzeichen oder Satzzeichen (`SABT+`, `+e.V.`), wird auf dieser Seite nichts
+   verlangt.
+4. Zeilen ohne Suchbegriff werden übersprungen. Der Ersatz wird wörtlich
+   eingesetzt.
+5. Erst danach wird gekürzt — nach Zeichen, ein Umlaut zählt einfach. Eine
    Länge, die keine ganze Zahl über 0 ist, bleibt ohne Wirkung.
-5. Sonderzeichen werden für HTML maskiert (`&` wird zu `&amp;`).
+6. Sonderzeichen werden für HTML maskiert (`&` wird zu `&amp;`).
 
-### Falle: Treffer mitten im Wort
+Mit der Voreinstellung:
 
-Ein Suchbegriff trifft auch innerhalb eines Wortes. Im Testbestand (Auszug aus
-schachbund.de, 1.158 Vereinsnamen) verändert die Voreinstellung 424 Namen,
-sechs davon falsch:
+| Vereinsname | Ergebnis |
+|---|---|
+| Schachverein Tempo Göttingen e.V. | SV Tempo Göttingen |
+| FC St. Pauli 1910 eV SAbt | FC St. Pauli 1910 SAbt |
+| Post-Schachverein Leipzig | Post-SV Leipzig |
+| Schachvereinigung Weilerbach | *(unverändert)* |
+| 1. Bayerischer Frauenschachverein | *(unverändert)* |
+| SV Rochade Eving 25/64 | *(unverändert)* |
 
-| Vereinsname | Ergebnis | Ursache |
-|---|---|---|
-| Schachvereinigung Weilerbach, dazu vier weitere | SVigung Weilerbach | „Schachverein" steckt in „Schachvereinigung" |
-| SV Rochade Eving 25/64 | SV Rochadeing 25/64 | `+eV` trifft das „ Ev" von „Eving" |
+Wer einen längeren Begriff trotzdem kürzen will, trägt ihn als eigene Zeile ein,
+etwa `Schachvereinigung` → `SVg`.
 
-Den ersten Fall behebt eine Zeile **über** „Schachverein", etwa
-`Schachvereinigung` → `SVg`. Den zweiten fängt die Liste nicht ab: `+eV` trifft
-jedes Wort, das mit „ev" beginnt. Wer das vermeiden will, streicht die Zeile —
-Namen auf „eV" behalten dann den Zusatz.
+**Bis 1.43.0** wurde — wie zuvor im Helper-Bundle — auch mitten im Wort ersetzt.
+Im Testbestand (Auszug aus schachbund.de, 1.152 Vereinsnamen) machte das acht
+Namen falsch: fünfmal „Schachvereinigung" → „SVigung", dazu „1. Bayerischer
+FrauenSV", „BlindenSK Frankfurt" und „SV Rochadeing 25/64". Mit den Wortgrenzen
+ändert die Voreinstellung dort 412 Namen, keinen davon mitten im Wort.
 
 ## Präfix `cache_`
 
@@ -170,9 +181,11 @@ Contao 4.13 noch nicht.
 ## Geprüft
 
 * `tests/Classes/InsertTagsTest.php`: Zerlegung, Langformen, Ersetzung mit `+`,
-  Kürzung mit Umlauten, Maskierung, fremde Tags, gesperrte und unbekannte
-  Personen, Fehler, eine Abfrage je Person
+  Wortgrenzen (auch neben Umlauten, Bindestrich und Klammer), Kürzung mit
+  Umlauten, Maskierung, fremde Tags, gesperrte und unbekannte Personen, Fehler,
+  eine Abfrage je Person
 * in Contao 4.13.58 und 5.7.7 (PHP 8.4) gegen Testzeilen und den echten
   Bestand: Ausgabe aller Tags über den Insert-Tag-Parser des Kerns,
   Hook-Reihenfolge, Voreinstellung, eigene Ersetzungen, Besucherbremse,
-  Einstellungsformular in Deutsch und Englisch
+  Einstellungsformular in Deutsch und Englisch, dazu die Ersetzung über alle
+  1.152 Vereinsnamen des Testbestands im Vergleich mit dem früheren Verfahren
