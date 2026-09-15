@@ -1,5 +1,32 @@
 # Wertungsportal Changelog
 
+## Version 1.44.0 (2026-09-15)
+
+* Change: **DOS-Archive wieder im Format des DeWIS-Servers.** `LV-x-dos_JJJJMMTT.zip` enthält jetzt
+  wie die Vorlage `LV-0-dos_20240627.zip` die Dateien `SPIELER.TXT`, `VEREINE.TXT`, `VERBAENDE.TXT`
+  und `README.TXT`: keine Kopfzeile, Felder durch `|` getrennt, keine Anführungszeichen, Codepage 850,
+  Zeilenende CRLF. `SPIELER.TXT` hat 14 Felder mit der nu-ID an Stelle der MIVIS/DeWIS-Kennung; DWZ und
+  Index stehen in einem Feld (`1802-45`, ohne DWZ `0-0`). `VEREINE.TXT` führt wie die Vorlage nur
+  Vereine — die 181 Verbandseinträge mit einer Kennziffer auf „00", die nu in der vereine.csv
+  mitliefert, fallen weg; L0001 und M0001 bleiben, dort sind Mitglieder gemeldet. Die README zählt wie
+  die Vorlage die Zeilen der Dateien. Von 1.37.0 bis 1.43.3 war die DOS-Fassung eine Kopie der
+  CSV-Dateien in der Codepage 850
+* Change: Die Spalten der CSV-Dateien werden für die DOS-Fassung über ihre Überschriften zugeordnet;
+  fehlt eine, entsteht für diesen Verband kein DOS-Archiv, und der Lauf nennt die Spalte. Zeichen, die
+  CP850 nicht kennt, schreibt eine feste Tabelle um (š → s, ’ → ') statt `iconv(…//TRANSLIT)` — auf
+  dem Server kam bisher dasselbe heraus, das Ergebnis hängt jetzt aber nicht mehr von dessen iconv ab.
+  Ein DOS-Archiv desselben Tages wird ersetzt statt ergänzt
+* Change: **Überschriften der DWZ-Auswertung** in der Turniersuche (Vorlagen
+  `wertungsportal_turnierauswertung` und `wertungsportal_turnier`): Die leere Spalte heißt „SC", „ZPS"
+  heißt „VKZ-MNr." und „E" heißt „K"; „SC", „VKZ-MNr.", „Erg.", „We", „K", „Lstg.", „Niveau" und
+  „DWZ ±" erklären sich per Tooltip. Wer die Vorlagen im Theme überschrieben hat, muß die Änderung dort
+  nachziehen
+
+  Geprüft mit 163 Unit-Tests (neu `DosFormatTest`) und einem Durchlauf von `Converter::Packer()` ohne
+  Contao über das LV-0-csv vom 09.09.2026: 100.370 Zeilen in `SPIELER.TXT` mit je 14 Feldern, alle mit
+  nu-ID und DWZ-Index, die DWZ nirgends steigend, 2.204 Vereine, 218 Verbände, CRLF in jeder Zeile;
+  Landesverband 3 entsprechend. Ein vorhandenes Archiv im bisherigen Aufbau wird vollständig ersetzt
+
 ## Version 1.43.3 (2026-09-14)
 
 * Fix: **Swiss-Chess übernahm aus den Hintergrunddateien weder Elo noch DWZ noch Geburtsjahr.** Ein

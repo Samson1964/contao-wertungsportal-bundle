@@ -21,3 +21,6 @@
 
 # Referenzdateien von Swiss-Chess (mehrere hundert MB, nur zum Nachschlagen)
 /SwissChess-Dateien/
+
+# Vorlagen der DOS-Archive (enthalten Personendaten, nur zum Nachschlagen)
+/DOS-Downloads/

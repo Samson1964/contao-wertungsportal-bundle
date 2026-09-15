@@ -87,8 +87,8 @@ Bei einem Lauf über zwanzig Dateien ist damit zu sehen, wo er steht.
 
 ## Zwei Fassungen je Verband: CSV und DOS
 
-Der Converter legt jedes Verbandsarchiv **zweimal** ab — einmal in der
-Kodierung, die nu liefert (windows-1252), und einmal in der DOS-Codepage 850:
+Der Converter legt jedes Verbandsarchiv **zweimal** ab — einmal so, wie nu es
+liefert (CSV, windows-1252), und einmal im **alten Format des DeWIS-Servers**:
 
 ```
 files/wertungsportal/downloads/<Jahr>/
@@ -102,16 +102,75 @@ Die jeweils aktuellen Fassungen liegen zusätzlich unter
 `export/csv/LV-x-csv.zip` und `export/dos/LV-x-dos.zip` — genau die Aufteilung,
 die der frühere DeWIS-Server hatte.
 
-**Inhalt und Spaltenaufbau sind identisch.** Der einzige Unterschied ist der
-Zeichensatz: Ältere Schachprogramme unter DOS lesen die Dateien direkt ein und
-erwarten dort die Codepage 850. In der Kodierung der nu-Dateien stünde bei
-ihnen statt „Müller" ein „MĂźller". Auch die Dateinamen im Archiv bleiben
-gleich (`spieler.csv`, `vereine.csv`, `verbaende.csv`, `README.txt`); sie sind
-ohnehin schon 8.3-tauglich.
+### Das DOS-Format
 
-Umgewandelt wird mit `iconv` und dem Zusatz `//TRANSLIT`: Für ein Zeichen, das
-die Codepage 850 nicht kennt, schreibt es eine lesbare Entsprechung statt eines
-Fragezeichens.
+Vorlage ist `LV-0-dos_20240627.zip` vom DeWIS-Server. Einziger inhaltlicher
+Unterschied: Im ersten Feld von `SPIELER.TXT` steht die **nu-ID**
+(`NU4005017`) statt der MIVIS/DeWIS-Kennung. Das Archiv enthält vier Dateien:
+
+| Datei | Inhalt |
+| --- | --- |
+| `SPIELER.TXT` | eine Zeile je Mitgliedschaft, absteigend nach DWZ |
+| `VEREINE.TXT` | eine Zeile je Verein |
+| `VERBAENDE.TXT` | eine Zeile je Verband |
+| `README.TXT` | Verband, Stand, Zahlen und Beschreibung der Felder |
+
+Für alle gilt: **keine Kopfzeile**, Felder durch `|` getrennt, keine
+Anführungszeichen, Zeilenende CRLF, Zeichensatz **DOS-Codepage 850**. Die
+Reihenfolge der Zeilen ist die der nu-Dateien.
+
+`SPIELER.TXT` hat 14 Felder, zum Beispiel:
+
+```
+NU4005017|C0505|1043|A|Muster,Max|M||1963|202611|1802-45|1850|FM|4711|GER
+```
+
+| Nr. | Feld | Spalte der spieler.csv |
+| --- | --- | --- |
+| 1 | nu-ID | `ID` |
+| 2 | ZPS-Nummer des Vereins | `ZPS` |
+| 3 | Mitgliedsnummer im Verein | `Mitgliedsnummer` |
+| 4 | Status (A/P) | `Status` |
+| 5 | Name,Vorname | `Name,Vorname` |
+| 6 | Geschlecht (M/W) | `Geschlecht` |
+| 7 | Spielberechtigung | `Spielberechtigung` — von nu derzeit leer |
+| 8 | Geburtsjahr | `Geburtsjahr` |
+| 9 | Woche der letzten Auswertung (JJJJWW) | `Letzte Auswertung` |
+| 10 | DWZ-Index, ohne DWZ **`0-0`** | `DWZ` und `Index` |
+| 11 | FIDE-Elozahl | `FIDE-Elozahl` |
+| 12 | FIDE-Titel | `FIDE-Titel` |
+| 13 | FIDE-ID | `FIDE-ID` |
+| 14 | FIDE-Land | `FIDE-Land` |
+
+`VEREINE.TXT` und `VERBAENDE.TXT` haben je vier Felder: Kennziffer bzw.
+Verbandnummer, Landesverband, übergeordneter Verband, Name.
+
+* **VEREINE.TXT führt nur Vereine.** nu listet in der vereine.csv auch die
+  Verbände mit einer Kennziffer auf „00" (10000 „Badischer Schachverband
+  e.V."); in der Vorlage fehlen sie, hier auch. Keine Mitgliedschaft verweist
+  auf eine davon. L0001 und M0001 (Blinden- und Problemschach) bleiben
+  stehen — dort sind Mitglieder gemeldet.
+* **VERBAENDE.TXT** übernimmt die verbaende.csv unverändert, auch die Wurzel
+  `000` und die mehrfach vergebenen Nummern der württembergischen Bezirke und
+  Kreise (`C01` bis `C06`).
+* **README.TXT** zählt wie die Vorlage die Zeilen von `SPIELER.TXT` und
+  `VEREINE.TXT` („96081 Spieler in 2246 Vereinen" bei 96.081 Zeilen).
+
+Die Spalten der CSV werden **über ihre Überschriften** zugeordnet. Fehlt eine,
+entsteht für diesen Verband kein DOS-Archiv, und der Lauf meldet die fehlende
+Spalte — ein Archiv mit verrutschten Feldern wäre schlimmer.
+
+**Zeichensatz:** Zeichen, die CP850 nicht kennt (`š`, `Š`, `ž`, `’`, `„` …),
+werden vor der Wandlung zu ASCII (`s`, `S`, `z`, `'`, `"`). Das ist dasselbe,
+was `iconv` mit `//TRANSLIT` auf dem Server geschrieben hat, hängt aber nicht
+mehr von dessen Einrichtung ab.
+
+**Bis 1.43.3** war die DOS-Fassung eine Kopie der CSV-Dateien, nur in CP850
+gewandelt — mit Kopfzeile, Kommas, Anführungszeichen und 17 Spalten. So hatte
+Frank es in 1.37.0 entschieden und am 15.09.2026 zurückgenommen.
+
+Umgesetzt ist das Format in `Classes/DosFormat.php`, geprüft in
+`tests/Classes/DosFormatTest.php`.
 
 ## Was der Converter voraussetzt
 

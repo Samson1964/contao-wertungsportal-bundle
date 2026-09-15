@@ -336,8 +336,19 @@ nicht mehr.** Der Klassenrumpf ist unveraendert uebernommen, nur der Einstieg is
 Download archiviert alle 20 LV-Zips datiert nach `files/wertungsportal/`; Converter laedt
 LV-0, reichert spieler.csv mit FIDE-Daten aus tl_wertungsportal_elo an (Elo/Titel/Land
 ersetzt, Namens-/Geschlechts-/Geburtsjahr-Abweichungen nur geloggt), packt je Verband
-CSV-Zips ins Jahresarchiv, kopiert aktuelle Fassungen nach `export/csv/` und pflegt die
-Dbafs. Nur CSV, keine SQL-Variante. Beide geben 0 (Erfolg) oder 1 (Fehlschlag) zurueck.
+CSV- und DOS-Zips ins Jahresarchiv, kopiert aktuelle Fassungen nach `export/csv/` und
+`export/dos/` und pflegt die Dbafs. Keine SQL-Variante. Beide geben 0 (Erfolg) oder 1
+(Fehlschlag) zurueck.
+
+**DOS-Zips seit 1.44.0 im alten DeWIS-Format** (Frank, 15.09.2026; Vorlage und letzter Stand
+im bisherigen Aufbau liegen in `DOS-Downloads/`, gitignored, Personendaten): SPIELER.TXT,
+VEREINE.TXT, VERBAENDE.TXT, README.TXT ohne Kopfzeile, `|`-getrennt, CP850, CRLF; SPIELER.TXT
+mit 14 Feldern, nu-ID vorn, DWZ und Index als `1802-45` (ohne DWZ `0-0`). Aufbau in
+`Classes/DosFormat.php` (Spalten über Überschriften, feste CP850-Ersatztabelle statt
+`//TRANSLIT`), gepackt von `Converter::packeDos()` per `addFromString()` mit OVERWRITE —
+sonst mischt ein zweiter Lauf am Deploy-Tag alte und neue Einträge. VEREINE.TXT ohne
+Verbandseinträge (ZPS auf 00); anders als `Helper::istVerband()` bleiben L0001/M0001 drin,
+dort sind Mitglieder gemeldet. Bis 1.43.3 war das DOS-Zip eine CP850-Kopie der CSV-Dateien.
 
 Die README.txt in den Verbands-Zips wird per `writeReadme()` angepasst (Ueberschrift
 "Landesverband: X - Name" aus verbaende.csv + Spieler-/Vereinszahlen des Verbands);

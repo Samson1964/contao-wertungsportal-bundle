@@ -5,9 +5,10 @@ namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 /**
  * Baut aus der Deutschland-Datei des nu-Servers die Verbands-Archive:
  * laedt LV-0, reichert `spieler.csv` mit den FIDE-Daten aus
- * tl_wertungsportal_elo an, packt je Landesverband ein CSV-Zip ins
- * Jahresarchiv, kopiert die aktuellen Fassungen nach `export/csv/` und pflegt
- * die Dbafs.
+ * tl_wertungsportal_elo an, packt je Landesverband ein CSV-Zip und ein
+ * DOS-Zip im alten Format des DeWIS-Servers (siehe `DosFormat`) ins
+ * Jahresarchiv, kopiert die aktuellen Fassungen nach `export/csv/` und
+ * `export/dos/` und pflegt die Dbafs.
  *
  * **Herkunft:** Bis 1.35.2 war das ein eigenstaendiges Skript unter
  * `src/Resources/public/Wertungsportal_Converter.php`, das der Hoster per Curl
@@ -325,38 +326,46 @@ class Converter
 			self::writeDbafs($pfad, $datei);
 		}
 
-		// Dieselben Dateien noch einmal in der DOS-Codepage
-		self::packeDos($verband, $files);
+		// Dieselben Daten noch einmal im alten DOS-Format des DeWIS-Servers
+		self::packeDos($verband);
 	}
 
 	/**
-	 * Packt dieselben Dateien ein zweites Mal — umgewandelt in die
-	 * DOS-Codepage 850.
+	 * Packt die DOS-Fassung eines Verbandsarchivs — im alten Format des
+	 * DeWIS-Servers.
 	 *
-	 * **Wozu das gut ist:** Ältere Schachprogramme unter DOS lesen die Dateien
-	 * direkt ein und erwarten dort die Codepage 850. In der Kodierung der
-	 * nu-Dateien (windows-1252) stünde bei ihnen statt „Müller" ein „MĂźller".
-	 * Der DeWIS-Server hat solche Archive früher unter `export/dos/` angeboten;
-	 * diese Fassung stellt sie wieder her.
+	 * Grundlage sind die Dateien, die Packer() gerade für diesen Verband ins
+	 * Packverzeichnis geschrieben hat: `spieler.csv`, `vereine.csv`,
+	 * `verbaende.csv` und `README.txt`. Daraus entstehen `SPIELER.TXT`,
+	 * `VEREINE.TXT`, `VERBAENDE.TXT` und `README.TXT` — ohne Kopfzeile, durch
+	 * „|" getrennt, in der Codepage 850, Zeilenende CRLF. Den Aufbau regelt
+	 * `DosFormat`, beschrieben ist er in `docs/dwz-dateien.md`.
 	 *
-	 * Inhalt und Spaltenaufbau sind mit der CSV-Fassung identisch — der einzige
-	 * Unterschied ist der Zeichensatz. Auch die Dateinamen IM Archiv bleiben
-	 * gleich (spieler.csv, vereine.csv, verbaende.csv, README.txt); sie sind
-	 * ohnehin schon 8.3-tauglich.
+	 * **Bis 1.43.3** stand im DOS-Archiv eine Kopie der CSV-Dateien, nur in die
+	 * Codepage 850 gewandelt. Frank hat das am 15.09.2026 zurückgenommen: Wer
+	 * die DOS-Dateien einliest, erwartet das Format des DeWIS-Servers
+	 * (Vorlage `LV-0-dos_20240627.zip`), mit der nu-ID an Stelle der
+	 * MIVIS/DeWIS-Kennung.
+	 *
+	 * Die Dateien entstehen im Speicher und gehen per `addFromString()` ins
+	 * Archiv — es bleiben keine Zwischendateien liegen. Ein schon vorhandenes
+	 * Archiv desselben Tages wird ersetzt (`OVERWRITE`): Sonst lägen nach einem
+	 * zweiten Lauf am Tag des Deploys die alten CSV-Einträge neben den neuen
+	 * Dateien.
 	 *
 	 * **Ablageort:** Für einen Landesverband liegt das Archiv im selben Ordner
 	 * wie die CSV-Fassung (`lv<x>/`), für den DSB in einem eigenen Ordner `dos/`
-	 * neben `csv/` — genauso, wie es der DeWIS-Server gehalten hat.
+	 * neben `csv/` — so, wie es der DeWIS-Server gehalten hat.
 	 *
-	 * Umgewandelt wird mit `iconv` und nicht mit `mb_convert_encoding`:
-	 * `//TRANSLIT` schreibt für ein Zeichen, das die Codepage 850 nicht kennt,
-	 * eine lesbare Entsprechung statt eines Fragezeichens.
+	 * Fehlt in einer CSV-Datei eine gebrauchte Spalte, entsteht für diesen
+	 * Verband kein DOS-Archiv, und die Meldung nennt die Spalte. Ein Archiv mit
+	 * verrutschten Feldern wäre schlimmer als keines.
 	 *
 	 * @param string $verband Kennbuchstabe des Landesverbands, leer für den DSB
-	 * @param array  $files   Vollständige Pfade der zu packenden Dateien
-	 *                        (windows-1252, so wie nu sie liefert)
+	 *
+	 * @return void
 	 */
-	public function packeDos($verband, $files)
+	public function packeDos($verband)
 	{
 		// Zielordner festlegen
 		if($verband)
@@ -372,60 +381,77 @@ class Converter
 
 		if(!file_exists($dospfad)) mkdir($dospfad, 0777, true);
 
-		// Umgewandelte Zwischenfassungen anlegen. Sie bekommen die Endung
-		// .dos, damit sie nicht mit den CSV-Dateien im selben Verzeichnis
-		// kollidieren; im Archiv stehen sie dann wieder unter ihrem
-		// ursprünglichen Namen
-		$umgewandelt = array();
-
-		foreach($files as $file)
-		{
-			if(!is_file($file)) continue;
-
-			$inhalt = file_get_contents($file);
-			$dos = @iconv('CP1252', 'CP850//TRANSLIT', (string) $inhalt);
-
-			// Scheitert die Umwandlung (etwa bei einem Byte, das in
-			// windows-1252 gar nicht vorkommt), wird der Inhalt unverändert
-			// übernommen. Ein unvollständiges Archiv wäre schlimmer als eines
-			// mit einer falsch dargestellten Zeile
-			if($dos === false) $dos = $inhalt;
-
-			$ziel = $file.'.dos';
-			file_put_contents($ziel, $dos);
-			$umgewandelt[$ziel] = basename($file);
-		}
-
-		if(!count($umgewandelt)) return;
-
-		// try/finally, damit die Zwischenfassungen auch dann verschwinden,
-		// wenn beim Packen oder beim Eintrag in die Dateiverwaltung etwas
-		// schiefgeht — sonst bliebe bei jedem Lauf Müll im Packverzeichnis
-		// liegen, und der nächste Lauf packte ihn womöglich mit ein
 		try
 		{
-			$zip = new \ZipArchive;
+			$spielerTxt = DosFormat::spielerTxt(self::leseCsvDatei($this->packpfad.'spieler.csv'));
+			$vereineTxt = DosFormat::vereineTxt(self::leseCsvDatei($this->packpfad.'vereine.csv'));
 
-			if($zip->open($dospfad.$datei, \ZipArchive::CREATE))
-			{
-				foreach($umgewandelt as $quelle => $name)
-				{
-					$zip->addFile(realpath($quelle), $name);
-				}
-				$zip->close();
-
-				// Datei in Dateiverwaltung eintragen
-				$pfad = substr(str_replace(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::projektpfad(), '', $dospfad), 1);
-				self::writeDbafs($pfad, $datei);
-			}
+			// Die README zählt wie die Vorlage die Zeilen der beiden Dateien
+			$inhalt = array
+			(
+				'SPIELER.TXT'   => $spielerTxt,
+				'VEREINE.TXT'   => $vereineTxt,
+				'VERBAENDE.TXT' => DosFormat::verbaendeTxt(self::leseCsvDatei($this->packpfad.'verbaende.csv')),
+				'README.TXT'    => DosFormat::readme((string) @file_get_contents($this->packpfad.'README.txt'), substr_count($spielerTxt, "\r\n"), substr_count($vereineTxt, "\r\n")),
+			);
 		}
-		finally
+		catch(\RuntimeException $e)
 		{
-			foreach(array_keys($umgewandelt) as $quelle)
-			{
-				@unlink($quelle);
-			}
+			echo 'FEHLER: DOS-Archiv fuer Verband '.($verband ? $verband : '0').' nicht erzeugt: '.$e->getMessage()."<br>\n";
+
+			return;
 		}
+
+		$zip = new \ZipArchive;
+
+		// ZipArchive::open() liefert im Fehlerfall eine Zahl, die ebenfalls
+		// als wahr gilt — deshalb der strenge Vergleich
+		if($zip->open($dospfad.$datei, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true)
+		{
+			foreach($inhalt as $name => $daten)
+			{
+				$zip->addFromString($name, $daten);
+			}
+			$zip->close();
+
+			// Datei in Dateiverwaltung eintragen
+			$pfad = substr(str_replace(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::projektpfad(), '', $dospfad), 1);
+			self::writeDbafs($pfad, $datei);
+		}
+		else
+		{
+			echo 'FEHLER: '.$dospfad.$datei." nicht beschreibbar<br>\n";
+		}
+	}
+
+	/**
+	 * Liest eine CSV-Datei vollständig ein.
+	 *
+	 * Anders als readCSV() mit vollem Pfad und ohne Längengrenze je Zeile. Die
+	 * Zeichen für Trenner, Einfassung und Escape sind die Vorgaben von
+	 * `fputcsv()`, mit dem Packer() schreibt; sie werden ausdrücklich
+	 * übergeben, weil PHP 8.4 sonst eine Abkündigung meldet.
+	 *
+	 * @param string $pfad Vollständiger Pfad der Datei
+	 *
+	 * @return array Zeilen samt Kopfzeile, wie `fgetcsv()` sie liefert; leer,
+	 *               wenn die Datei fehlt oder nicht lesbar ist
+	 */
+	protected function leseCsvDatei($pfad)
+	{
+		$zeilen = array();
+		$fp = is_file($pfad) ? fopen($pfad, 'rb') : false;
+
+		if($fp === false) return $zeilen;
+
+		while(($z = fgetcsv($fp, 0, ',', '"', '\\')) !== false)
+		{
+			$zeilen[] = $z;
+		}
+
+		fclose($fp);
+
+		return $zeilen;
 	}
 
 	/**
