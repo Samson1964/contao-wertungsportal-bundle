@@ -15,7 +15,8 @@ use Contao\DataContainer;
 $GLOBALS['TL_DCA']['tl_wertungsportal_stats'] = [
     // Config
     'config' => [
-        'dataContainer'    => 'Table',
+        // Klassenname statt der Kurzform 'Table': Contao 5 kennt sie nicht mehr
+        'dataContainer'    => \Contao\DC_Table::class,
         'closed'           => true,
         'notCreatable'     => true,
         'notCopyable'      => true,

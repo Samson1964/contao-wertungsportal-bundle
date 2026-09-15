@@ -143,7 +143,7 @@ class Bestenliste extends \Contao\Module
 				'DWZ'         => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::DWZ($spieler['rating'], $spieler['index']),
 				'Elo'         => $fide['elo'],
 				'FIDE-Titel'  => $fide['titel'],
-				'Verein'      => $verein ? sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl().'/%s.html">%s</a>', $verein['vkz'], $verein['clubName']) : '',
+				'Verein'      => $verein ? sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">%s</a>', $verein['vkz'], $verein['clubName']) : '',
 			);
 		}
 

@@ -96,13 +96,13 @@ class Karteikarte
 			{
 				$status = substr($mitglied['licenceState'], 0, 1);
 				$zps_nr = sprintf("%s-%04d", $mitglied['vkz'], $mitglied['memberNo']);
-				$verein = sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s.html\">%s</a>", $mitglied['vkz'], $mitglied['clubName']);
+				$verein = sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix()."\">%s</a>", $mitglied['vkz'], $mitglied['clubName']);
 
 				// Direkt übergeordneter Verband: spezifischster lokal existierender
 				// Verband über der Vereins-VKZ (Kreis → Bezirk → Landesverband →
 				// DSB als Fallback). Liefert VKZ und Namen für den Link.
 				$verbandInfo = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerband($mitglied['vkz']);
-				$verband = sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl()."/%s.html\">%s</a>", $verbandInfo['vkz'], $verbandInfo['name']);
+				$verband = sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl()."/%s".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix()."\">%s</a>", $verbandInfo['vkz'], $verbandInfo['name']);
 
 				$sortiert[$status.$zps_nr] = array
 				(
@@ -189,7 +189,7 @@ class Karteikarte
 						'typ'        => 'turnier',
 						'nummer'     => $nummer,
 						'jahr'       => substr($turnier['tournament']['enddate'], 0, 4),
-						'turnier'    => sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl()."/%s/%s.html\" title=\"%s\">%s</a>", $turnier['tournament']['uuid'], $turnier['player']['playerUuid'], $turnier['tournament']['label'], \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Turnierkurzname($turnier['tournament']['label'])),
+						'turnier'    => sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl()."/%s/%s".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix()."\" title=\"%s\">%s</a>", $turnier['tournament']['uuid'], $turnier['player']['playerUuid'], $turnier['tournament']['label'], \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Turnierkurzname($turnier['tournament']['label'])),
 						'punkte'     => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Punkte($turnier['player']['wins']),
 						'partien'    => $turnier['player']['numberOfGames'],
 						'we'         => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Erwartungswert($turnier['player']['winsExpected']),

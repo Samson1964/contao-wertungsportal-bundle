@@ -463,16 +463,73 @@ class Helper extends \Contao\Frontend
 	protected static $seitenUrlCache = array();
 
 	/**
-	 * Liefert die generierte URL der Spielerseite OHNE das URL-Suffix (.html)
-	 * als Basis für Modul-Links zurück. Im Gegensatz zum Alias enthält die
-	 * generierte URL im Vorschaumodus das preview.php-Präfix, so dass Links
-	 * und Formulare die Vorschau nicht mehr verlassen.
+	 * Zwischenspeicher für das URL-Suffix (pro Request), null = noch nicht
+	 * ermittelt
+	 */
+	protected static $urlSuffix = null;
+
+	/**
+	 * Liefert das URL-Suffix der Website, an das die Detailseiten ihre
+	 * Adressen anhängen — meist „.html", je nach Startpunkt aber auch leer.
+	 *
+	 * Bis 1.44.0 stand „.html" fest im Code, an rund 40 Stellen. Auf
+	 * schachbund.de stimmt das; eine Contao-Installation ohne Suffix (die
+	 * Vorgabe seit Contao 5) bekam damit lauter Verweise ins Leere.
+	 *
+	 * Maßgeblich ist die Seite des laufenden Aufrufs (`$objPage`), sonst die
+	 * eingestellte Spielerseite; `loadDetails()` holt das Suffix vom
+	 * Startpunkt und — im alten Routing von Contao 4 — aus dem Parameter
+	 * `contao.url_suffix`. Läßt sich beides nicht lesen, bleibt „.html".
+	 *
+	 * @return string Suffix mit Punkt, oder leer
+	 */
+	public static function urlSuffix()
+	{
+		if(self::$urlSuffix !== null) return self::$urlSuffix;
+
+		$seite = $GLOBALS['objPage'] ?? null;
+
+		if(!$seite instanceof \Contao\PageModel && !empty($GLOBALS['TL_CONFIG']['wertungsportal_seite_spieler']))
+		{
+			$seite = \Contao\PageModel::findByPk($GLOBALS['TL_CONFIG']['wertungsportal_seite_spieler']);
+		}
+
+		self::$urlSuffix = $seite instanceof \Contao\PageModel ? (string) $seite->loadDetails()->urlSuffix : '.html';
+
+		return self::$urlSuffix;
+	}
+
+	/**
+	 * Nimmt einer Seiten-URL das Suffix ab, damit sich Glieder anhängen
+	 * lassen: aus „vereine.html" wird „vereine", aus „vereine" bleibt es.
+	 *
+	 * @param  string $url Generierte URL der Seite
+	 * @return string      URL ohne Suffix
+	 */
+	protected static function ohneSuffix($url)
+	{
+		$suffix = self::urlSuffix();
+
+		if($suffix !== '' && substr($url, -strlen($suffix)) === $suffix)
+		{
+			return substr($url, 0, -strlen($suffix));
+		}
+
+		return $url;
+	}
+
+	/**
+	 * Liefert die generierte URL der Spielerseite OHNE das URL-Suffix als
+	 * Basis für Modul-Links zurück; das Suffix hängt urlSuffix() wieder an. Im
+	 * Gegensatz zum Alias enthält die generierte URL im Vorschaumodus das
+	 * preview.php-Präfix, so dass Links und Formulare die Vorschau nicht mehr
+	 * verlassen.
 	 */
 	public static function getSpielerseiteUrl()
 	{
 		if(!isset(self::$seitenUrlCache['spieler']))
 		{
-			self::$seitenUrlCache['spieler'] = preg_replace('/\.html$/', '', self::getSpielerseite(false));
+			self::$seitenUrlCache['spieler'] = self::ohneSuffix(self::getSpielerseite(false));
 		}
 		return self::$seitenUrlCache['spieler'];
 	}
@@ -484,7 +541,7 @@ class Helper extends \Contao\Frontend
 	{
 		if(!isset(self::$seitenUrlCache['turnier']))
 		{
-			self::$seitenUrlCache['turnier'] = preg_replace('/\.html$/', '', self::getTurnierseite(false));
+			self::$seitenUrlCache['turnier'] = self::ohneSuffix(self::getTurnierseite(false));
 		}
 		return self::$seitenUrlCache['turnier'];
 	}
@@ -496,7 +553,7 @@ class Helper extends \Contao\Frontend
 	{
 		if(!isset(self::$seitenUrlCache['verein']))
 		{
-			self::$seitenUrlCache['verein'] = preg_replace('/\.html$/', '', self::getVereinseite(false));
+			self::$seitenUrlCache['verein'] = self::ohneSuffix(self::getVereinseite(false));
 		}
 		return self::$seitenUrlCache['verein'];
 	}
@@ -508,9 +565,107 @@ class Helper extends \Contao\Frontend
 	{
 		if(!isset(self::$seitenUrlCache['verband']))
 		{
-			self::$seitenUrlCache['verband'] = preg_replace('/\.html$/', '', self::getVerbandseite(false));
+			self::$seitenUrlCache['verband'] = self::ohneSuffix(self::getVerbandseite(false));
 		}
 		return self::$seitenUrlCache['verband'];
+	}
+
+	/**
+	 * Liest einen Parameter der Detailseiten aus der URL — unter Contao 5
+	 * auch aus „auto_item".
+	 *
+	 * Die Detailseiten hängen ihren Wert als einzelnes Glied an die Seite an:
+	 * `spieler/NU4005017.html`, `vereine/10614.html`, `verbaende/300.html`,
+	 * `turniere/<code>.html`. Contao 4.13 macht daraus über den Hook
+	 * `getPageIdFromUrl` (API::getParamsFromUrl) den Parameter, den das Modul
+	 * liest — `id`, `zps` oder `code`. Den Hook gibt es in Contao 5 nicht mehr:
+	 * Dort heißt ein einzelnes Glied immer `auto_item`, und ein Parameter, den
+	 * kein Modul liest, endet auf der Fehlerseite 404 („Unused arguments").
+	 * Bis 1.44.0 war damit unter Contao 5 keine einzige Detailseite erreichbar.
+	 *
+	 * Fehlt der gewünschte Parameter, gilt deshalb `auto_item`; der Wert wird
+	 * unter dem gewünschten Namen gesetzt, damit ihn alle weiteren Zugriffe
+	 * finden. Unter Contao 4.13 ist `auto_item` nach dem Hook nie gesetzt —
+	 * dort ändert sich nichts.
+	 *
+	 * @param  string      $schluessel Name des Parameters (id, zps, code)
+	 * @return string|null             Der Wert, oder null wenn weder er noch
+	 *                                 auto_item in der URL steht
+	 */
+	public static function urlParameter($schluessel)
+	{
+		$wert = \Contao\Input::get($schluessel);
+		if($wert !== null && $wert !== '') return $wert;
+
+		$auto = \Contao\Input::get('auto_item');
+		if($auto === null || $auto === '') return $wert;
+
+		\Contao\Input::setGet($schluessel, $auto);
+
+		return $auto;
+	}
+
+	/**
+	 * Setzt die Parameter der Turnierseite aus den Gliedern der URL — für
+	 * Contao 5.
+	 *
+	 * Die Turnierseite kennt drei Adressformen: `turniere/<code>.html`
+	 * (Auswertung), `turniere/<code>/Ergebnisse.html` (Ergebnisse) und
+	 * `turniere/<code>/<spieler-uuid>.html` (Spielberichtsbogen). Unter
+	 * Contao 4.13 übersetzt sie der Hook getPageIdFromUrl in die Parameter
+	 * `code`, `view` und `id`. Contao 5 liest zwei Glieder als Paar aus
+	 * Schlüssel und Wert: Aus `<code>/Ergebnisse` wird ein Parameter namens
+	 * `<code>` mit dem Wert „Ergebnisse", den kein Modul kennt — Fehlerseite
+	 * 404. Hier werden solche Paare erkannt und übersetzt; das einzelne Glied
+	 * der Auswertung kommt als auto_item (siehe urlParameter()).
+	 *
+	 * Die Adressen bleiben damit in beiden Fassungen dieselben — auch die von
+	 * außen gesetzten Verweise. Übersetzt werden nur Schlüssel in der Form
+	 * einer UUID, wie nu die Turniercodes vergibt.
+	 *
+	 * @return void
+	 */
+	public static function turnierParameterAusUrl()
+	{
+		self::urlParameter('code');
+
+		// getUnusedRouteParameters() gibt es erst in Contao 5, getUnusedGet()
+		// meldet dort bei jedem Aufruf eine Abkündigung. Der Aufruf geht über
+		// den Adapter des Frameworks und die Prüfung über Reflection — beides,
+		// damit PHPStan nicht gegen die gerade geladene Contao-Fassung urteilt
+		$eingabe = \Contao\System::getContainer()->get('contao.framework')->getAdapter(\Contao\Input::class);
+		$offen = (new \ReflectionClass(\Contao\Input::class))->hasMethod('getUnusedRouteParameters') ? $eingabe->getUnusedRouteParameters() : $eingabe->getUnusedGet();
+
+		foreach($offen as $schluessel)
+		{
+			if(!self::istUuid($schluessel)) continue;
+
+			// Der Lesezugriff streicht den Parameter aus der Liste der unbenutzten
+			$wert = (string) \Contao\Input::get($schluessel);
+
+			if($wert === 'Ergebnisse')
+			{
+				\Contao\Input::setGet('code', $schluessel);
+				\Contao\Input::setGet('view', 'results');
+			}
+			elseif(self::istUuid($wert))
+			{
+				\Contao\Input::setGet('code', $schluessel);
+				\Contao\Input::setGet('id', $wert);
+				\Contao\Input::setGet('view', 'results');
+			}
+		}
+	}
+
+	/**
+	 * Prüft, ob ein Wert die Form einer UUID hat (8-4-4-4-12 Hexziffern).
+	 *
+	 * @param  mixed $wert Zu prüfender Wert
+	 * @return bool        true bei einer UUID, false für alles andere
+	 */
+	public static function istUuid($wert)
+	{
+		return is_string($wert) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $wert) === 1;
 	}
 
 	// ─────────────────────────────────────────────
@@ -1246,7 +1401,10 @@ class Helper extends \Contao\Frontend
 	/**
 	 * Liefert die Gewinnerwartung
 	 *
-	 * @return float
+	 * @param  int|string   $dwz       Eigene DWZ
+	 * @param  int|string   $gegnerdwz DWZ des Gegners
+	 * @return string|false            Erwartung mit drei Nachkommastellen,
+	 *                                 false wenn eine der beiden Zahlen fehlt
 	 */
 	public static function Gewinnerwartung($dwz, $gegnerdwz)
 	{
@@ -1260,7 +1418,9 @@ class Helper extends \Contao\Frontend
 	/**
 	 * Funktion Resultat
 	 * Wandelt "WHITE_WINS" u.ä. in "1:0" um
-	 * @return float
+	 *
+	 * @param  string $string Ergebniscode der Schnittstelle
+	 * @return string         Ergebnis als Text; unbekannte Codes unverändert
 	 */
 	public static function Resultat($string)
 	{
@@ -1452,7 +1612,7 @@ class Helper extends \Contao\Frontend
 	 */
 	public static function Spielername($person)
 	{
-		if($person['nuLigaPersonId']) $return = sprintf('<a href="'.self::getSpielerseiteUrl().'/%s.html">%s</a>', $person['nuLigaPersonId'], sprintf('%s, %s', $person['lastname'], $person['firstname']));
+		if($person['nuLigaPersonId']) $return = sprintf('<a href="'.self::getSpielerseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">%s</a>', $person['nuLigaPersonId'], sprintf('%s, %s', $person['lastname'], $person['firstname']));
 		else $return = sprintf('%s', sprintf('%s, %s', $person['lastname'], $person['firstname']));
 
 		return $return;

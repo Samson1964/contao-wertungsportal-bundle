@@ -50,8 +50,10 @@ class Verein extends \Contao\Module
 		}
 		else
 		{
-			// FE-Modus: URL mit allen möglichen Parametern auflösen
-			\Contao\Input::setGet('zps', \Contao\Input::get('zps')); // ZPS-Nummer des Vereins
+			// FE-Modus: URL mit allen möglichen Parametern auflösen. Die
+			// Vereinsseite hängt an vereine/10614.html — unter Contao 5 kommt
+			// der Wert als auto_item (siehe Helper::urlParameter())
+			\Contao\Input::setGet('zps', \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlParameter('zps')); // ZPS-Nummer des Vereins
 			\Contao\Input::setGet('search', \Contao\Input::get('search')); // Suchbegriff
 			\Contao\Input::setGet('order', \Contao\Input::get('order')); // Sortierung
 		}
@@ -121,10 +123,15 @@ class Verein extends \Contao\Module
 			$objPage->pageTitle = 'Suche nach '.$search;
 			$this->Template->subHeadline = 'Suche nach '.$search; // Unterüberschrift setzen
 
-			// Direkt zum Verein springen, wenn nur 1 Treffer
+			// Direkt zum Verein springen, wenn nur 1 Treffer. Bis 1.44.0 stand
+			// hier header('Location: …'): Symfony setzt den Status danach wieder
+			// auf 200, ein Browser folgt dem Location-Header dann nicht — die
+			// Seite zeigte statt dessen die Trefferliste mit dem einen Verein.
+			// Controller::redirect() wirft die RedirectResponseException, die
+			// beide Contao-Fassungen in eine echte Weiterleitung umsetzen
 			if(count($suche->Verbaende) == 0 && count($suche->Vereine) == 1)
 			{
-				header('Location:'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseite().'/'.$suche->Vereine[0]['zps'].'.html');
+				\Contao\Controller::redirect(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl().'/'.$suche->Vereine[0]['zps'].''.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'');
 			}
 
 			// Templates füllen
@@ -268,7 +275,7 @@ class Verein extends \Contao\Module
 			elseif(!empty($datenVerein[0]['clubName'])) $vereinsname = $datenVerein[0]['clubName'];
 			elseif($objClub && $objClub->clubName != '') $vereinsname = $objClub->clubName;
 			else $vereinsname = 'Verein '.$zps;
-			$this->Template->listenlink = ($order == 'alpha') ? sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s.html?order=rang\">Rangliste</a>", $zps) : sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s.html?order=alpha\">Alphaliste</a>", $zps);
+			$this->Template->listenlink = ($order == 'alpha') ? sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix()."?order=rang\">Rangliste</a>", $zps) : sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix()."?order=alpha\">Alphaliste</a>", $zps);
 			$this->Template->vereinsname = $vereinsname;
 
 			// Seitentitel ändern

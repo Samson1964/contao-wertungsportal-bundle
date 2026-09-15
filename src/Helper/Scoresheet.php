@@ -51,8 +51,8 @@ class Scoresheet
 		if(!array_key_exists('additionalReferentFirstname', $this->apiTurnierinfo['body'])) $this->apiTurnierinfo['body']['additionalReferentFirstname'] = false;
 
 		$this->daten['Turniername']           = $this->apiTurnierinfo['body']['label'];
-		$this->daten['Turnierauswertunglink'] = sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s.html">Turnierauswertung</a>', $this->apiTurnierinfo['body']['uuid']);
-		$this->daten['Turnierergebnislink']   = sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/Ergebnisse.html">Turnierergebnisse</a>', $this->apiTurnierinfo['body']['uuid']);
+		$this->daten['Turnierauswertunglink'] = sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">Turnierauswertung</a>', $this->apiTurnierinfo['body']['uuid']);
+		$this->daten['Turnierergebnislink']   = sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/Ergebnisse'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">Turnierergebnisse</a>', $this->apiTurnierinfo['body']['uuid']);
 		$this->daten['Turniercode']           = $this->apiTurnierinfo['body']['uuid'];
 		$this->daten['Turnierende']           = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::ApiDatum($this->apiTurnierinfo['body']['enddate'] ?? null, 'Y-m-d', 'd.m.Y');
 		$this->daten['Berechnet']             = 'unbekannt';
@@ -115,11 +115,11 @@ class Scoresheet
 					'Runde'             => $partie['round'],
 					'Farbe'             => 'white',
 					'Ergebnis'          => mb_substr(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Resultat($partie['result']), 0, 1),
-					'Gegner_Name'       => $schwarzGesperrt ? '<i>gesperrt</i>' : ($partie['blackPlayer']['nuLigaPersonId'] ? sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseiteUrl().'/%s.html" title="%s">%s</a>', $partie['blackPlayer']['nuLigaPersonId'], 'Karteikarte von '.$partie['blackPlayer']['firstname'].' '.$partie['blackPlayer']['lastname'].' aufrufen', $partie['blackPlayer']['lastname'].', '.$partie['blackPlayer']['firstname']) : $partie['blackPlayer']['lastname'].', '.$partie['blackPlayer']['firstname']),
+					'Gegner_Name'       => $schwarzGesperrt ? '<i>gesperrt</i>' : ($partie['blackPlayer']['nuLigaPersonId'] ? sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'" title="%s">%s</a>', $partie['blackPlayer']['nuLigaPersonId'], 'Karteikarte von '.$partie['blackPlayer']['firstname'].' '.$partie['blackPlayer']['lastname'].' aufrufen', $partie['blackPlayer']['lastname'].', '.$partie['blackPlayer']['firstname']) : $partie['blackPlayer']['lastname'].', '.$partie['blackPlayer']['firstname']),
 					'Gegner_UUID'       => $partie['blackPlayer']['playerUuid'],
 					'Gegner_nuID'       => $partie['blackPlayer']['nuLigaPersonId'],
 					'Gegner_DWZ'        => $partie['blackPlayer']['ratingOld'],
-					'Gegner_Scoresheet' => $schwarzGesperrt ? '' : sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/%s.html" title="%s">SC</a>', $this->apiTurnierinfo['body']['uuid'], $partie['blackPlayer']['playerUuid'], 'Spielberichtsbogen von '.$partie['blackPlayer']['firstname'].' '.$partie['blackPlayer']['lastname'].' aufrufen'),
+					'Gegner_Scoresheet' => $schwarzGesperrt ? '' : sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'" title="%s">SC</a>', $this->apiTurnierinfo['body']['uuid'], $partie['blackPlayer']['playerUuid'], 'Spielberichtsbogen von '.$partie['blackPlayer']['firstname'].' '.$partie['blackPlayer']['lastname'].' aufrufen'),
 					'We'                => '0' // Wird später berechnet
 				);
 			}
@@ -149,11 +149,11 @@ class Scoresheet
 					'Runde'             => $partie['round'],
 					'Farbe'             => 'black',
 					'Ergebnis'          => mb_substr(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Resultat($partie['result']), -1),
-					'Gegner_Name'       => $weissGesperrt ? '<i>gesperrt</i>' : ($partie['whitePlayer']['nuLigaPersonId'] ? sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseiteUrl().'/%s.html" title="%s">%s</a>', $partie['whitePlayer']['nuLigaPersonId'], 'Karteikarte von '.$partie['whitePlayer']['firstname'].' '.$partie['whitePlayer']['lastname'].' aufrufen', $partie['whitePlayer']['lastname'].', '.$partie['whitePlayer']['firstname']) : $partie['whitePlayer']['lastname'].', '.$partie['whitePlayer']['firstname']),
+					'Gegner_Name'       => $weissGesperrt ? '<i>gesperrt</i>' : ($partie['whitePlayer']['nuLigaPersonId'] ? sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'" title="%s">%s</a>', $partie['whitePlayer']['nuLigaPersonId'], 'Karteikarte von '.$partie['whitePlayer']['firstname'].' '.$partie['whitePlayer']['lastname'].' aufrufen', $partie['whitePlayer']['lastname'].', '.$partie['whitePlayer']['firstname']) : $partie['whitePlayer']['lastname'].', '.$partie['whitePlayer']['firstname']),
 					'Gegner_UUID'       => $partie['whitePlayer']['playerUuid'],
 					'Gegner_nuID'       => $partie['whitePlayer']['nuLigaPersonId'],
 					'Gegner_DWZ'        => $partie['whitePlayer']['ratingOld'],
-					'Gegner_Scoresheet' => $weissGesperrt ? '' : sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/%s.html" title="%s">SC</a>', $this->apiTurnierinfo['body']['uuid'], $partie['whitePlayer']['playerUuid'], 'Spielberichtsbogen von '.$partie['whitePlayer']['firstname'].' '.$partie['whitePlayer']['lastname'].' aufrufen'),
+					'Gegner_Scoresheet' => $weissGesperrt ? '' : sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'" title="%s">SC</a>', $this->apiTurnierinfo['body']['uuid'], $partie['whitePlayer']['playerUuid'], 'Spielberichtsbogen von '.$partie['whitePlayer']['firstname'].' '.$partie['whitePlayer']['lastname'].' aufrufen'),
 					'We'                => '0' // Wird später berechnet
 				);
 			}

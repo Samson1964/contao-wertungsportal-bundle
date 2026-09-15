@@ -51,7 +51,10 @@ class Turnier extends \Contao\Module
 		}
 		else
 		{
-			// FE-Modus: URL mit allen möglichen Parametern auflösen
+			// FE-Modus: URL mit allen möglichen Parametern auflösen. Unter
+			// Contao 5 kommen die Glieder der Adresse als auto_item bzw. als
+			// Paar Schlüssel/Wert an (siehe Helper::turnierParameterAusUrl())
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::turnierParameterAusUrl();
 			\Contao\Input::setGet('code', \Contao\Input::get('code')); // Turniercode
 			\Contao\Input::setGet('id', \Contao\Input::get('id')); // ID des Spielers
 		}
@@ -67,7 +70,7 @@ class Turnier extends \Contao\Module
 		global $objPage;
 
 		$search = \Contao\Input::get('search'); // Turniersuche aktiv?
-		$turniercode = str_replace(' ','+',\Contao\Input::get('code')); // Turniercode, Leerzeichen durch + ersetzen, da der Browser aus + Leerzeichen macht
+		$turniercode = str_replace(' ', '+', (string) \Contao\Input::get('code')); // Turniercode, Leerzeichen durch + ersetzen, da der Browser aus + Leerzeichen macht
 		$id = \Contao\Input::get('id'); // Spieler-ID
 		$view = \Contao\Input::get('view'); // View
 
@@ -94,7 +97,7 @@ class Turnier extends \Contao\Module
 			$zps = \Contao\Input::get('zps');
 
 			// ZPS-Cookie setzen
-			setcookie('dewis-verband-zps', rtrim(\Contao\Input::get('zps'),0), time()+8640000, '/');
+			setcookie('dewis-verband-zps', rtrim((string) \Contao\Input::get('zps'), '0'), time()+8640000, '/');
 
 			// GET-Parameter korrigieren
 			$last_months = 0 + (int)\Contao\Input::get('last_months');
@@ -124,18 +127,18 @@ class Turnier extends \Contao\Module
 			$periode = array
 			(
 				'von' => $from_year ? $from_year.'-'.$from_month.'-01' : $from_year.'-01-01',
-				'bis' => $to_year ? $to_year.'-'.$to_month.'-'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Monatstage($to_year)[ltrim($to_month,0)] : $to_year.'-12-31',
+				'bis' => $to_year ? $to_year.'-'.$to_month.'-'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Monatstage($to_year)[ltrim($to_month, '0')] : $to_year.'-12-31',
 			);
 
 			// ZPS-Nummer des Verbandes
 			$param = array
 			(
 				'funktion'  => 'Turnierliste',
-				'cachekey'  => strtolower(\Contao\Input::get('keyword')).'-'.$zps.'-'.$periode['von'].'-'.$periode['bis'],
+				'cachekey'  => strtolower((string) \Contao\Input::get('keyword')).'-'.$zps.'-'.$periode['von'].'-'.$periode['bis'],
 				'von'       => $periode['von'],
 				'bis'       => $periode['bis'],
 				'zps'       => $zps,
-				'suche'     => strtolower(\Contao\Input::get('keyword')),
+				'suche'     => strtolower((string) \Contao\Input::get('keyword')),
 			);
 			$resultArr = \Schachbulle\ContaoWertungsportalBundle\Helper\API::autoQuery($param); // Abfrage ausführen
 

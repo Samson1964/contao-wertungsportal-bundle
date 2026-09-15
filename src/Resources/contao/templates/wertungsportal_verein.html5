@@ -18,7 +18,7 @@
 	</div>
 
 	<div class="wp-suche noprint">
-		<form action="<?= \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl() ?>.html" method="get">
+		<form action="<?= \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl().\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix() ?>" method="get">
 			<div class="wp-suche-block wp-suche-block--offen">
 				<div class="wp-suche-felder">
 					<div class="wp-feld wp-feld--breit">

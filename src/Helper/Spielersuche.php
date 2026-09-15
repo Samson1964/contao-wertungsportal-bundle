@@ -59,7 +59,7 @@ class Spielersuche
 				{
 					foreach($person['memberships'] as $mitglied)
 					{
-						$verein = sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s.html\">%s</a>", $mitglied['vkz'], $mitglied['clubName']);
+						$verein = sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix()."\">%s</a>", $mitglied['vkz'], $mitglied['clubName']);
 						if($mitglied['licenceState'] == 'ACTIVE') break; // Abbruch wenn A-Status gefunden
 					}
 				}

@@ -1,7 +1,7 @@
 <?php // Backend-Template: FIDE-Elo-Import aus der Ratinglisten-XML ?>
 
 <div id="tl_buttons">
-	<a href="<?= ampersand($this->zurueck) ?>" class="header_back" title="Zurück zur Elo-Liste" accesskey="b">Zurück</a>
+	<a href="<?= \Contao\StringUtil::ampersand($this->zurueck) ?>" class="header_back" title="Zurück zur Elo-Liste" accesskey="b">Zurück</a>
 </div>
 
 <h2 class="sub_headline">FIDE-Elo-Import (Ratinglisten-XML)</h2>

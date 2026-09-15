@@ -31,7 +31,7 @@
 	<?php if($this->form_verbaende): ?>
 		<?php $this->insert('wertungsportal_form_turniersuche', array
 		(
-			'action'             => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'.html',
+			'action'             => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix(),
 			'form_verbaende'     => $this->form_verbaende,
 			'form_vonmonat'      => $this->form_vonmonat ?: $this->form_monat,
 			'form_bismonat'      => $this->form_bismonat ?: $this->form_monat,

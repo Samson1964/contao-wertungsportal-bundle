@@ -62,7 +62,7 @@
 
 		<?php $this->insert('wertungsportal_form_verbandsliste', array
 		(
-			'action'       => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl().'/'.$this->zps.'.html',
+			'action'       => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl().'/'.$this->zps.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix(),
 			'sel_toplist'  => $this->sel_toplist,
 			'sel_sex'      => $this->sel_sex,
 			'sel_german'   => $this->sel_german,

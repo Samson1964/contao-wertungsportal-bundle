@@ -291,6 +291,28 @@ Wer an Index, Eimern, Sortierung oder Zeichensatz etwas ändert, mißt dagegen n
   `contao-console` „cannot have an empty name", und der Befehl fehlt. `$defaultName` bleibt für
   4.13 und muss gleich lauten (`tests/Contao5/KonsolenbefehleTest.php`).
 
+- **Contao 5 löst Adressglieder anders auf als 4.13** (1.44.1): Den Hook `getPageIdFromUrl`
+  (`API::getParamsFromUrl`, benennt `auto_item` in `id`/`zps`/`code` um) gibt es in 5 nicht. Dort heißt
+  das einzelne Glied `auto_item`, zwei Glieder werden Schlüssel/Wert, und jeder ungelesene Parameter
+  aus der Adresse ergibt 404 („Unused arguments"). Die Module lesen deshalb `Helper::urlParameter()`
+  bzw. `Helper::turnierParameterAusUrl()` in `generate()`; beides ist unter 4.13 ein No-op. Neue
+  Detailparameter immer dort anmelden. Doku: `docs/frontend-adressen.md`.
+- **`header('Location: …')` leitet nicht um** — Symfony setzt den Status danach auf 200. Immer
+  `\Contao\Controller::redirect()` (wirft die RedirectResponseException, 303). Der Wächter
+  `tests/Contao5/EntfernteFunktionenTest.php` schlägt sonst an.
+- **URL-Suffix nie fest schreiben:** `Helper::urlSuffix()` liefert das Suffix des Startpunkts (aus
+  `$objPage->loadDetails()`), `get*seiteUrl()` liefert die Seite ohne Suffix. Link = Seite + `/` +
+  Wert + `urlSuffix()`.
+- **Unter Contao 5 entfernt:** die globalen Funktionen aus `functions.php` (`ampersand()`,
+  `specialchars()`, `deserialize()`, `trimsplit()` …) → `StringUtil`/`ArrayUtil`; die Kurzform
+  `'dataContainer' => 'Table'` → `\Contao\DC_Table::class`. Der Wächter prüft beides.
+- **Prüfstände ohne Browser** (`F:\Claude\tools\contao-frontend-rendern.php`,
+  `contao-backend-rendern.php`): booten den Kernel der Installation und rendern Frontend-Adressen
+  bzw. Backend-Ansichten (`do=…&act=…`) mit Fehlerhandler für Bundle-Dateien — der einzige Weg, die
+  5.7-Installation zu prüfen, solange Apache dort mit PHP 8.3 gegen eine 8.4-Lock läuft. Der
+  Backend-Prüfstand blendet `ctable` aus und rollt zurück, weil `DC_Table::reviseTable()` sonst
+  Kindsätze ohne Eltern löscht (in contao_test_413 Hunderttausende).
+
 - **Identifier**: `nuLigaPersonId` identifiziert eine Person systemweit. Die `playerUuid` in
   Turnier-DTOs gilt NUR innerhalb des jeweiligen Turniers — nie als Personen-UUID speichern!
   Personen-`uuid` (aus /dwz/dwzliste/persons) ist eine dritte, eigene Kennung.

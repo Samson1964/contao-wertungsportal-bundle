@@ -1,7 +1,7 @@
 <?php // Backend-Template: Spieler-Import aus der Vereinsmitglieder-CSV ?>
 
 <div id="tl_buttons">
-	<a href="<?= ampersand($this->zurueck) ?>" class="header_back" title="Zurück zur Spielerliste" accesskey="b">Zurück</a>
+	<a href="<?= \Contao\StringUtil::ampersand($this->zurueck) ?>" class="header_back" title="Zurück zur Spielerliste" accesskey="b">Zurück</a>
 </div>
 
 <h2 class="sub_headline">Spieler-Import (Vereinsmitglieder-CSV)</h2>

@@ -1101,45 +1101,32 @@ class API
 	}
 
 	/**
-	 * Hook-Funktion:
-	 * Wertet das URL-Parameter-Array aus und modifiziert es, wenn das Array für DeWIS bestimmt ist
+	 * Hook getPageIdFromUrl (nur Contao 4.13): Übersetzt die Glieder der
+	 * Adresse in die Parameter der Module.
 	 *
-	 * @return array
+	 * Aus `spieler/NU4005017.html` wird der Parameter `id`, aus
+	 * `vereine/10614.html` und `verbaende/300.html` der Parameter `zps`, aus
+	 * `turniere/<code>.html`, `turniere/<code>/Ergebnisse.html` und
+	 * `turniere/<code>/<spieler-uuid>.html` die Parameter `code`, `view` und
+	 * `id`. Contao 5 kennt den Hook nicht; dort erledigen
+	 * `Helper::urlParameter()` und `Helper::turnierParameterAusUrl()` dasselbe
+	 * in den Modulen.
+	 *
+	 * Bis 1.44.0 leitete der Hook außerdem Verweise der Form
+	 * `spieler.html?pkz=NU…` mit header('Location: …') um. Das war wirkungslos
+	 * — Symfony setzt den Status danach wieder auf 200, und ein Browser folgt
+	 * dem Location-Header nur bei 3xx —; die Umleitung übernimmt jetzt das
+	 * Spielermodul (Spieler::generate()), die Vereinsseite liest `?zps=`
+	 * ohnehin direkt.
+	 *
+	 * @param  array $arrFragments Glieder der Adresse, [0] ist das Seitenalias
+	 * @return array               Glieder mit den Parameternamen der Module
 	 */
 	public static function getParamsFromUrl($arrFragments)
 	{
-		//echo "<!--";
-		//print_r($arrFragments);
 		$args = count($arrFragments); // Anzahl Argumente
 
-		if($args == 1)
-		{
-			// In $args[0] steht das Seitenalias, jetzt prüfen auf URL-Parameter und ggfs. auf neue URL weiterleiten
-			switch($arrFragments[0])
-			{
-
-				case \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseite():
-					if(\Contao\Input::get('zps'))
-					{
-						header('Location:'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseite().'/'.\Contao\Input::get('zps').'.html');
-					}
-					elseif(\Contao\Input::get('pkz'))
-					{
-						header('Location:'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseite().'/'.\Contao\Input::get('pkz').'.html');
-					}
-					break;
-
-				case \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseite():
-					if(\Contao\Input::get('zps'))
-					{
-						header('Location:'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseite().'/'.\Contao\Input::get('zps').'.html');
-					}
-					break;
-
-				default:
-			}
-		}
-		elseif($args > 1)
+		if($args > 1)
 		{
 			// In $args[0] steht das Seitenalias, ab $args[1] die Parameter
 			switch($arrFragments[0])

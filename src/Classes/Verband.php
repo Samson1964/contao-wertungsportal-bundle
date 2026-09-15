@@ -50,8 +50,10 @@ class Verband extends \Contao\Module
 		}
 		else
 		{
-			// FE-Modus: URL mit allen möglichen Parametern auflösen
-			\Contao\Input::setGet('zps', \Contao\Input::get('zps')); // ZPS-Nummer des Verbands
+			// FE-Modus: URL mit allen möglichen Parametern auflösen. Die
+			// Verbandsseite hängt an verbaende/300.html — unter Contao 5 kommt
+			// der Wert als auto_item (siehe Helper::urlParameter())
+			\Contao\Input::setGet('zps', \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlParameter('zps')); // ZPS-Nummer des Verbands
 			\Contao\Input::setGet('toplist', \Contao\Input::get('toplist')); // Top x bei Toplistenausgabe
 			\Contao\Input::setGet('sex', \Contao\Input::get('sex')); // Geschlecht bei Toplistenausgabe
 			\Contao\Input::setGet('age_from', \Contao\Input::get('age_from')); // Alter von bei Toplistenausgabe
@@ -113,9 +115,12 @@ class Verband extends \Contao\Module
 		if(!$toplist)
 		{
 			$this->Template->searchform = true;
-			// Formularanzeige: Seitentitel ändern
-			$objPage->pageTitle = 'DWZ-Listen '.$verbaende[$zps]['name'];
-			$this->Template->subHeadline = 'DWZ-Listen '.$verbaende[$zps]['name']; // Unterüberschrift setzen
+			// Formularanzeige: Seitentitel ändern. Ohne Verbandsliste (Schnitt-
+			// stelle nicht erreichbar, kein Bestand) fehlt der Eintrag — dann
+			// ohne Warnung ein neutraler Titel
+			$verbandsname = $verbaende[$zps]['name'] ?? 'Unbekannter Verband';
+			$objPage->pageTitle = 'DWZ-Listen '.$verbandsname;
+			$this->Template->subHeadline = 'DWZ-Listen '.$verbandsname; // Unterüberschrift setzen
 		}
 
 		/*********************************************************

@@ -50,9 +50,24 @@ class Spieler extends \Contao\Module
 		}
 		else
 		{
-			// FE-Modus: URL mit allen möglichen Parametern auflösen
-			\Contao\Input::setGet('id', \Contao\Input::get('id')); // ID
+			// FE-Modus: URL mit allen möglichen Parametern auflösen. Die
+			// Karteikarte hängt an spieler/NU4005017.html — unter Contao 5 kommt
+			// der Wert als auto_item (siehe Helper::urlParameter())
+			\Contao\Input::setGet('id', \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlParameter('id')); // ID
 			\Contao\Input::setGet('search', \Contao\Input::get('search')); // Suchbegriff
+
+			// Alte Verweise der Form spieler.html?pkz=NU… oder ?zps=… auf die
+			// heutige Adresse umleiten. Bis 1.44.0 tat das der Hook
+			// getPageIdFromUrl mit header('Location: …') — wirkungslos, weil
+			// Symfony den Status danach wieder auf 200 setzt und ein Browser
+			// einem Location-Header nur bei 3xx folgt; die Seite blieb leer.
+			// Controller::redirect() wirft die RedirectResponseException, die
+			// beide Contao-Fassungen in eine echte Weiterleitung umsetzen
+			if(!\Contao\Input::get('id'))
+			{
+				$alt = \Contao\Input::get('pkz') ?: \Contao\Input::get('zps');
+				if($alt) \Contao\Controller::redirect(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseiteUrl().'/'.$alt.''.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'');
+			}
 		}
 
 		return parent::generate(); // Weitermachen mit dem Modul
@@ -150,6 +165,14 @@ class Spieler extends \Contao\Module
 
 				// Hinweis nur, wenn tatsächlich örtliche Treffer dabei sind
 				$lokaleSuche = count(array_filter($daten, function($eintrag) { return $eintrag['Quelle'] === 'Lokal'; })) > 0;
+
+				// Kam von der Schnittstelle ein Fehler und hat auch der örtliche
+				// Bestand nichts, gehört das auf die Seite — bis 1.44.0 blieb
+				// die Trefferliste dann wortlos leer, als gäbe es den Namen nicht
+				if(!count($daten) && !empty($resultArr['error']))
+				{
+					$this->Template->fehler = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::apiFehler($resultArr);
+				}
 			}
 		}
 

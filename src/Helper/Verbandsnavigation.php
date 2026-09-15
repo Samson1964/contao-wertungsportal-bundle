@@ -40,7 +40,7 @@ class Verbandsnavigation
 		(
 			'vkz'   => '000',
 			'name'  => 'Deutscher Schachbund',
-			'url'   => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl().'/%s.html">%s</a>', '000', 'Deutscher Schachbund'),
+			'url'   => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">%s</a>', '000', 'Deutscher Schachbund'),
 			'ebene' => 'level_0'
 		);
 
@@ -53,7 +53,7 @@ class Verbandsnavigation
 				(
 					'vkz'   => substr($verband['clubVkz'],0,3),
 					'name'  => $verband['clubName'],
-					'url'   => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl().'/%s.html">%s</a>', substr($verband['clubVkz'],0,3), $verband['clubName']),
+					'url'   => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">%s</a>', substr($verband['clubVkz'],0,3), $verband['clubName']),
 					'ebene' => 'level_1'
 				);
 			}
@@ -64,7 +64,7 @@ class Verbandsnavigation
 				(
 					'vkz'   => substr($verband['clubVkz'],0,3),
 					'name'  => $verband['clubName'],
-					'url'   => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl().'/%s.html">%s</a>', substr($verband['clubVkz'],0,3), $verband['clubName']),
+					'url'   => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">%s</a>', substr($verband['clubVkz'],0,3), $verband['clubName']),
 					'ebene' => 'level_2'
 				);
 			}
@@ -75,7 +75,7 @@ class Verbandsnavigation
 				(
 					'vkz'   => substr($verband['clubVkz'],0,3),
 					'name'  => $verband['clubName'],
-					'url'   => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl().'/%s.html">%s</a>', substr($verband['clubVkz'],0,3), $verband['clubName']),
+					'url'   => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVerbandseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">%s</a>', substr($verband['clubVkz'],0,3), $verband['clubName']),
 					'ebene' => 'level_3'
 				);
 			}
@@ -84,7 +84,7 @@ class Verbandsnavigation
 		// Vereine-Link ergänzen bei aktuell angefordertem Verband
 		if($this->zps != '000' && isset($verbaende[$this->zps]))
 		{
-			$verbaende[$this->zps]['url'] = '<b>'.$verbaende[$this->zps]['url'].sprintf(' - <a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl().'/%s.html">Vereine</a>', $this->zps).'</b>';
+			$verbaende[$this->zps]['url'] = '<b>'.$verbaende[$this->zps]['url'].sprintf(' - <a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">Vereine</a>', $this->zps).'</b>';
 		}
 
 		$this->daten['Verbaende'] = $verbaende;

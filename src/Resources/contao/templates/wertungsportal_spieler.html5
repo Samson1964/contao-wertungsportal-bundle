@@ -20,7 +20,7 @@
 
 	<?php if($this->searchform): ?>
 		<div class="wp-suche noprint">
-			<form action="<?= \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseiteUrl() ?>.html" method="get">
+			<form action="<?= \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseiteUrl().\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix() ?>" method="get">
 				<div class="wp-suche-block wp-suche-block--offen">
 					<div class="wp-suche-felder">
 						<div class="wp-feld wp-feld--breit">

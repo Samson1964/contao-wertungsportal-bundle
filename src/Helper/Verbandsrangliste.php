@@ -101,7 +101,7 @@ class Verbandsrangliste
 					{
 						if($verbandsPrefix !== '' && strncmp((string) $mitglied['vkz'], $verbandsPrefix, strlen($verbandsPrefix)) !== 0) continue;
 
-						$mitgliedschaft['verein'] = sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s.html\">%s</a>", $mitglied['vkz'], $mitglied['clubName']);
+						$mitgliedschaft['verein'] = sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix()."\">%s</a>", $mitglied['vkz'], $mitglied['clubName']);
 						$mitgliedschaft['status'] = $mitglied['licenceState'] == 'ACTIVE' ? '' : substr($mitglied['licenceState'], 0, 1);
 						$gefunden = true;
 						if($mitglied['licenceState'] == 'ACTIVE') break; // Abbruch wenn A-Status gefunden
@@ -111,7 +111,7 @@ class Verbandsrangliste
 					{
 						foreach($spieler['memberships'] as $mitglied)
 						{
-							$mitgliedschaft['verein'] = sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s.html\">%s</a>", $mitglied['vkz'], $mitglied['clubName']);
+							$mitgliedschaft['verein'] = sprintf("<a href=\"".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix()."\">%s</a>", $mitglied['vkz'], $mitglied['clubName']);
 							$mitgliedschaft['status'] = $mitglied['licenceState'] == 'ACTIVE' ? '' : substr($mitglied['licenceState'], 0, 1);
 							if($mitglied['licenceState'] == 'ACTIVE') break;
 						}

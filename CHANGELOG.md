@@ -1,5 +1,46 @@
 # Wertungsportal Changelog
 
+## Version 1.44.1 (2026-09-15)
+
+* Fix: **Unter Contao 5 waren alle Detailseiten unerreichbar (404):** Karteikarte (`spieler/NU…`),
+  Vereins- und Verbandsseite, Turnierauswertung, Turnierergebnisse und Spielberichtsbogen. Die Module
+  hängen ihre Werte als Glieder an die Adresse; Contao 4.13 übersetzt sie über den Hook
+  `getPageIdFromUrl` in die Parameter der Module. Contao 5 kennt den Hook nicht: Das einzelne Glied
+  heißt dort `auto_item`, zwei Glieder werden zu Schlüssel und Wert, und ein Parameter, den kein Modul
+  liest, führt zur Fehlerseite. Die Module lesen jetzt `auto_item` (`Helper::urlParameter()`) und
+  übersetzen die Turnieradressen selbst (`Helper::turnierParameterAusUrl()`); die Adressen bleiben in
+  beiden Fassungen dieselben. Doku: `docs/frontend-adressen.md`
+* Fix: **Weiterleitungen per `header('Location')` wirkten nicht** — der Sprung zum einzigen
+  Vereinstreffer und die alten Verweise `spieler.html?pkz=…`/`?zps=…` aus der DeWIS-Zeit. Symfony setzt
+  den Status danach wieder auf 200, ein Browser folgt dem Header nur bei 3xx; die Seite blieb leer bzw.
+  zeigte die Trefferliste. Jetzt `Controller::redirect()` (303), in beiden Fassungen
+* Fix: **Drei Import-Ansichten brachen unter Contao 5 ab** — Vereine, Spieler und FIDE-Elo meldeten
+  „Call to undefined function ampersand()". Die globale Funktion gibt es dort nicht mehr; jetzt
+  `StringUtil::ampersand()`
+* Fix: **Das Backend-Modul Statistik brach unter Contao 5 ab** („Class Table not found"): Der
+  DCA-Treiber steht jetzt als Klassenname (`DC_Table::class`) — auch in `tl_wertungsportal_besucher`
+* Fix: **Das URL-Suffix kommt aus der Seiteneinstellung** (`Helper::urlSuffix()`) statt fest als
+  „.html" aus dem Code, an rund 40 Stellen. Auf einer Installation ohne Suffix — der Vorgabe seit
+  Contao 5 — zeigten sonst alle Verweise und Formularziele ins Leere. Mit „.html" wie auf
+  schachbund.de bleibt die Ausgabe byteidentisch
+* Fix: Die Spielersuche nennt den Fehler der Schnittstelle, wenn sie nichts liefert und auch der
+  örtliche Bestand nichts hat; bisher blieb die Trefferliste wortlos leer, als gäbe es den Namen nicht
+* Fix: Die Verbandsseite ohne Verbandsliste (Schnittstelle nicht erreichbar, kein Bestand) meldete
+  „Undefined array key"; jetzt ein neutraler Titel
+* Fix: Abkündigungen ab PHP 8.1 in der Turniersuche und im Turnierformular (`str_replace()`,
+  `strtolower()`, `rtrim()` mit `null` bzw. `0`), dazu zwei falsche Docblocks
+  (`Helper::Resultat()`, `Gewinnerwartung()`)
+* Add: Wächter `tests/Contao5/EntfernteFunktionenTest.php` — entfernte globale Funktionen,
+  DCA-Treiber als Kurzform, Weiterleitung per `header('Location')`
+
+  Geprüft mit 166 Unit-Tests, PHPStan Level 6 gegen Contao 4.13 und 5.7 (keine neuen Meldungen; die
+  Restliste sind Docblock-Eigenheiten der Contao-Klassen) und zwei Prüfständen ohne Browser, die den
+  Kernel booten: alle Frontend-Adressen (Suche, Karteikarte, Verein, Verband, Rangliste, Turniersuche,
+  Auswertung, Ergebnisse, Spielberichtsbogen, alte Verweise) in 4.13.58 und 5.7.7 sowie alle 41
+  Backend-Ansichten der elf Module (Listen, Bearbeiten, Kindtabellen, Importe) in beiden Fassungen.
+  Unter 4.13 zusätzlich über Apache mit der echten Schnittstelle. Elf Seiten vor und nach der
+  Suffix-Umstellung byteweise verglichen — gleich
+
 ## Version 1.44.0 (2026-09-15)
 
 * Change: **DOS-Archive wieder im Format des DeWIS-Servers.** `LV-x-dos_JJJJMMTT.zip` enthält jetzt

@@ -87,7 +87,7 @@ class Verbandsvereine
 				$this->daten['Verbaende'][] = array
 				(
 					'zps'  => $item_vkz,
-					'name' => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl().'/%s.html">%s</a>', $item_vkz, $item['clubName'] ?? ''),
+					'name' => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">%s</a>', $item_vkz, $item['clubName'] ?? ''),
 				);
 			}
 		}
@@ -101,7 +101,7 @@ class Verbandsvereine
 				$this->daten['Vereine'][] = array
 				(
 					'zps'  => $item_vkz,
-					'name' => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl().'/%s.html">%s</a>', $item_vkz, $item['clubName'] ?? ''),
+					'name' => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">%s</a>', $item_vkz, $item['clubName'] ?? ''),
 				);
 			}
 		}

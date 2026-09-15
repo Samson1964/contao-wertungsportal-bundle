@@ -59,7 +59,7 @@ class Turnierformular
 		// Auswahl Verbände
 		foreach($this->liste['verbaende'] as $key => $value)
 		{
-			$kurz = rtrim($value['clubVkz'],0);
+			$kurz = rtrim((string) $value['clubVkz'], '0');
 			$kurzlaenge = strlen($kurz);
 			if($zpscookie)
 			{

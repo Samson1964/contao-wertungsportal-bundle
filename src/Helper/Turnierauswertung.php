@@ -47,7 +47,7 @@ class Turnierauswertung
 		if(!array_key_exists('additionalReferentFirstname', $this->apiTurnierinfo['body']['tournament'])) $this->apiTurnierinfo['body']['tournament']['additionalReferentFirstname'] = false;
 
 		$this->daten['Turniername']           = $this->apiTurnierinfo['body']['tournament']['label'];
-		$this->daten['Turnierergebnislink']   = sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/Ergebnisse.html">Turnierergebnisse</a>', $this->apiTurnierinfo['body']['tournament']['uuid']);
+		$this->daten['Turnierergebnislink']   = sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/Ergebnisse'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">Turnierergebnisse</a>', $this->apiTurnierinfo['body']['tournament']['uuid']);
 		$this->daten['Turniercode']           = $this->apiTurnierinfo['body']['tournament']['uuid'];
 		$this->daten['Turnierende']           = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::ApiDatum($this->apiTurnierinfo['body']['tournament']['enddate'] ?? null, 'Y-m-d', 'd.m.Y');
 		$this->daten['Berechnet']             = 'unbekannt';
@@ -97,13 +97,13 @@ class Turnierauswertung
 					'Nummer'        => $t['playerNo'],
 					'PKZ'           => $t['nuLigaPersonId'],
 					'Spielername'   => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Spielername($t),
-					'Scoresheet'    => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/%s.html" title="%s">SC</a>', $this->apiTurnierinfo['body']['tournament']['uuid'], $t['playerUuid'], 'Spielberichtsbogen von '.$t['firstname'].' '.$t['lastname'].' aufrufen'),
+					'Scoresheet'    => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'" title="%s">SC</a>', $this->apiTurnierinfo['body']['tournament']['uuid'], $t['playerUuid'], 'Spielberichtsbogen von '.$t['firstname'].' '.$t['lastname'].' aufrufen'),
 					'DWZ alt'       => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::DWZ($t['ratingOld'], $t['indexOld']),
 					'DWZ neu'       => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::DWZ($t['ratingNew'], $t['indexNew']),
 					'MglNr'         => sprintf('%04d', $t['memberNo']),
-					'VKZ'           => $t['memberNo'] ? sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl().'/%s.html">%s</a>', $t['vkz'], sprintf('%s-%s', $t['vkz'], sprintf('%04d', $t['memberNo']))) : '',
+					'VKZ'           => $t['memberNo'] ? sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">%s</a>', $t['vkz'], sprintf('%s-%s', $t['vkz'], sprintf('%04d', $t['memberNo']))) : '',
 					'ZPS'           => sprintf('%s-%s', $t['vkz'], sprintf('%04d', $t['memberNo'])),
-					'Verein'        => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s.html\">%s</a>", $t['vkz'], $t['clubName']),
+					'Verein'        => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl()."/%s".\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix()."\">%s</a>", $t['vkz'], $t['clubName']),
 					'Geburt'        => $t['birthyear'],
 					'Geschlecht'    => '',
 					'Elo'           => $fide['elo'],
