@@ -21,9 +21,13 @@ die nuLiga-Personennummer: Ein textuell erfasster Teilnehmer hat keine.
 
 | Angabe | Mitglied | Nichtmitglied |
 |---|---|---|
-| DWZ alt | `ratingOld` und `indexOld`, „1887 - 44" | der Anzeigetext `ratingOldDisplayString`, so wie nu ihn formt: „1905" (Eingangswertung ohne Index, meist eine Elo) oder „(1537)" (frühere DWZ eines Ausgetretenen) |
+| DWZ alt | `ratingOld` und `indexOld`, „1887 - 44" | die **Eingangswertung**, immer ohne Index: aus `ratingOldDisplayString` („1905", meist eine Elo; „(1537)", frühere DWZ eines Ausgetretenen), sonst die errechnete Zahl aus `ratingNewDisplayString` („(1318)", Teilnehmer ganz ohne Wertung) |
 | DWZ neu, DWZ ± | `ratingNew`, `indexNew`, Differenz | **immer leer** — auch wenn die Schnittstelle `ratingNew` liefert |
-| K, We, Leistung, Niveau | die Zahlenfelder | die Zahlenfelder; fehlen sie, die Anzeigetexte `factorKDisplayString` und `winsExpectedDisplayString` |
+| K, We, Leistung, Niveau | die Zahlenfelder | die Zahlenfelder; fehlen sie, die Anzeigetexte `factorKDisplayString` („(56.9)") und `winsExpectedDisplayString` |
+
+**Klammern erscheinen nicht.** nu setzt sie bei Nichtmitgliedern um Wertung und
+Koeffizient; auf der Website steht „1537", „1318" und „56.9" (Entscheidung von
+Frank Binding am 17.09.2026, seit Fassung 1.45.1).
 
 Der Grund für die leere neue DWZ ist die Wertungsordnung, Ziffer 3.4.3:
 
@@ -35,11 +39,20 @@ Die Eingangswertung dagegen **muss** zu sehen sein: Mit ihr zählen die
 Nichtmitglieder für ihre Gegner. Ohne sie lässt sich die Auswertung eines
 Mitglieds nicht nachvollziehen.
 
-Ein Teilnehmer ganz ohne Wertung hat auch keine Eingangswertung. nu setzt für
-ihn eine errechnete Zahl ein und liefert sie als `ratingNewDisplayString`, etwa
-„(1318)". Das ist eine neue Wertung eines Nichtmitglieds und wird nicht
-gezeigt; seine Zeile bleibt in den Wertungsspalten leer. Die Partien gegen ihn
-bekommen trotzdem ihren Erwartungswert — siehe unten.
+Ein Teilnehmer **ganz ohne Wertung** bringt keine Eingangswertung mit. nu
+errechnet für ihn eine Zahl und liefert sie nur als `ratingNewDisplayString`, in
+Klammern, etwa „(1318)". Mit dieser Zahl zählt er für seine Gegner — nachgerechnet
+an der Partie aus dem gemeldeten Bogen: 1887 gegen 1318 ergibt genau das
+gelieferte `expected` von 0,977875. Seit 1.45.1 steht sie deshalb als
+Eingangswertung unter „DWZ alt" bzw. „DWZ", ohne Klammern; bis dahin blieb die
+Zelle leer.
+
+Übernommen wird dabei **nur die Klammerform ohne Index.** Ein Text wie
+„1589 - 7" in `ratingNewDisplayString` wäre eine echte neue DWZ — und die darf
+für ein Nichtmitglied auch nicht unter „DWZ alt" erscheinen.
+
+Wer gar nichts geliefert bekommt, behält leere Wertungsspalten. Die Partien
+gegen ihn haben trotzdem ihren Erwartungswert — siehe unten.
 
 Die Regeln gelten in allen drei Ansichten: In den **Turnierergebnissen** und im
 **Spielberichtsbogen** steht die Eingangswertung in der Spalte „DWZ". Über dem
@@ -84,20 +97,21 @@ blieben leer, und die Summe der Zeilen ergab nie den Wert darunter.
 
 Fällt die Schnittstelle aus, kommen die Seiten aus den Spiegeltabellen
 (`Helper\Lokal`). Damit die Regeln dort genauso gelten, spiegelt
-`tl_wertungsportal_tournaments_evaluation` seit 1.45.0 zwei weitere Felder:
+`tl_wertungsportal_tournaments_evaluation` drei weitere Felder:
 
-| Spalte | Inhalt |
-|---|---|
-| `member` | `'1'` Mitglied, `'0'` Nichtmitglied, leer = unbekannt (Zeile aus der Zeit davor) |
-| `ratingOldDisplayString` | Anzeigetext der alten Wertung — für Nichtmitglieder die einzige Quelle der Eingangswertung |
+| Spalte | seit | Inhalt |
+|---|---|---|
+| `member` | 1.45.0 | `'1'` Mitglied, `'0'` Nichtmitglied, leer = unbekannt (Zeile aus der Zeit davor) |
+| `ratingOldDisplayString` | 1.45.0 | Anzeigetext der alten Wertung — Quelle der Eingangswertung |
+| `ratingNewDisplayString` | 1.45.1 | Anzeigetext der neuen Wertung — bei Teilnehmern ganz ohne Wertung die errechnete Zahl |
 
 `member` ist mit Absicht dreiwertig. Ein Kontrollkästchen könnte „unbekannt"
 nicht von „Nichtmitglied" unterscheiden, und dann verlören im Notbetrieb alle
 älteren Zeilen ihre neue DWZ.
 
 Die Spalten füllen sich mit jedem Abruf der Schnittstelle. **Nach dem
-Einspielen ist `contao:migrate` nötig.** Solange die Spalten fehlen, läuft der
-Abgleich im alten Umfang weiter, statt mit „Unknown column" abzubrechen.
+Einspielen ist `contao:migrate` nötig.** Geprüft wird je Spalte: Fehlt eine noch,
+gleicht der Abgleich die übrigen ab, statt mit „Unknown column" abzubrechen.
 
 Zwei Schwächen des Notbetriebs sind mit behoben: Ein nie gelieferter
 Erwartungswert stand als „0,000" in der Auswertung (die Spalte ist `NOT NULL`

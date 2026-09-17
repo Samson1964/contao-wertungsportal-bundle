@@ -106,7 +106,7 @@
 						<th width="30" class="right-line">Runde</th>
 						<th class="" title="Name des Gegners mit Link zur Karteikarte">Gegner</th>
 						<th class="right-line" title="Link zum Spielberichtsbogen des Spielers">Scoresheet</th>
-						<th width="60" class="right-line" title="DWZ des Gegners vor dem Turnier; bei Nichtmitgliedern die Eingangswertung (meist eine Elo)">DWZ</th>
+						<th width="60" class="right-line" title="DWZ des Gegners vor dem Turnier; bei Nichtmitgliedern die Eingangswertung, mit der sie gezählt haben (meist eine Elo, bei Teilnehmern ohne Wertung die errechnete Zahl)">DWZ</th>
 						<th width="60" class="right-line">Ergebnis</th>
 						<th width="60" class="" title="Erwartungswert, Punkterwartung in dieser Partie">We</th>
 					</tr>

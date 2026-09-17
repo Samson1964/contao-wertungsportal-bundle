@@ -285,9 +285,15 @@ alle drei Ansichten.
   Ausgetretene, die ihre NU-Nummer behalten). Fehlt `member` (ältere Spiegelzeilen), entscheidet die
   leere `nuLigaPersonId`.
 - **Für Nichtmitglieder nie `ratingNew`/`indexNew`/Differenz zeigen** — nu liefert sie trotzdem
-  (WO 3.4.3). Ihre Eingangswertung steht nur in `ratingOldDisplayString`: „1905" ohne Index, bei
-  Ausgetretenen „(1537)" in Klammern. Bei Nichtmitgliedern geht der Text VOR den Zahlenfeldern (die
-  Spiegeltabelle trägt sonst noch Zahlen aus der Mitgliedszeit), bei Mitgliedern umgekehrt.
+  (WO 3.4.3). Ihre Eingangswertung (`eingangswertung()`): `ratingOldDisplayString` („1905", bei
+  Ausgetretenen „(1537)"), sonst `ratingNewDisplayString` NUR in der Klammerform ohne Index („(1318)",
+  Teilnehmer ganz ohne Wertung — nachgerechnet die Zahl hinter ihrem `expected`), zuletzt `ratingOld`.
+  Ohne Klammern wäre der neue Text eine echte DWZ → nie übernehmen. Bei Nichtmitgliedern gehen die
+  Texte VOR den Zahlenfeldern (die Spiegeltabelle trägt sonst noch Zahlen aus der Mitgliedszeit), bei
+  Mitgliedern umgekehrt. Nichtmitglieder nie mit Index.
+- **Keine Klammern in der Ausgabe** (Frank, 17.09.2026: „ohne Klammern") — weder um Wertungen noch um
+  K. `zerlege()` meldet die Klammer nur noch, damit `eingangswertung()` die errechnete Zahl erkennt;
+  `textzahl()` liest Anzeigetexte als Zahl, damit Text und Zahlenfeld gleich aussehen.
 - **`matches[].expected` gilt aus Sicht von WEISS**, egal wessen Bogen. Schwarz = `1 − expected`.
   Steht nirgends, ist aber gemessen (Summe = `winsExpected`, 94 % von 10.927 Bögen; die umgekehrte
   Lesart erklärt einen einzigen weiteren). Kampflose Partien (`PLUS`/`MINUS` im Code) bekommen
@@ -297,10 +303,15 @@ alle drei Ansichten.
   (1/(1+10^(−D/400))) nicht wieder einbauen. In der Spiegeltabelle heißt `expected = 0` „nie
   geliefert" — `Lokal::partien()` lässt die 0 weg, ebenso `winsExpected = 0` in `spielerDto()`.
 - Spiegeltabelle `…_tournaments_evaluation`: `member` ist **dreiwertig** (`'1'`/`'0'`/leer =
-  unbekannt), kein Kontrollkästchen. Beide neuen Spalten hängen an `hatMitgliedsspalten()` — der
-  Abgleich läuft bei jedem API-Abruf, ein „Unknown column" vor `contao:migrate` risse jede Seite mit.
-- Offen (TODO.md): Teilnehmer ganz ohne Wertung — `ratingNewDisplayString` „(1318)" wird nicht
-  gezeigt; K bei Nichtmitgliedern ohne die Klammer von nu; Restpartien werden nirgends angezeigt.
+  unbekannt), kein Kontrollkästchen. Die Zusatzspalten `member`, `ratingOldDisplayString` (1.45.0) und
+  `ratingNewDisplayString` (1.45.1) prüft `zusatzspalten()` JE SPALTE — der Abgleich läuft bei jedem
+  API-Abruf, ein „Unknown column" vor `contao:migrate` risse jede Seite mit. Eine weitere Spalte gehört
+  in `DTO_ZUSATZ_FIELDS` und in `buildDtoSet()`, dazu in `Lokal::spielerDto()`.
+- Contao 5.7 cacht die DCA unter `var/cache/prod/contao/dca/<tabelle>.php`: Nach einer DCA-Änderung
+  zeigt `contao:migrate --dry-run` dort nichts, bis genau diese Datei gelöscht ist (wird beim nächsten
+  Laden neu erzeugt) — kein ganzes `cache:clear` nötig.
+- Offen (TODO.md): Restpartien werden nirgends angezeigt; die Spiegeltabellen setzen nicht mehr
+  gelieferte Felder nie zurück.
 
 ## Fallstricke / Besonderheiten
 

@@ -20,9 +20,15 @@ namespace Schachbulle\ContaoWertungsportalBundle\Helper;
  *    gespeichert." Die Schnittstelle liefert `ratingNew`/`indexNew` trotzdem
  *    mit — angezeigt werden dürfen sie nicht.
  * 2. Ihre Eingangswertung Ro (meist eine Elo) steht NICHT in `ratingOld`,
- *    sondern nur im Anzeigetext `ratingOldDisplayString`, bewusst ohne Index.
- *    Ohne sie bleibt die Auswertung der Mitglieder unverständlich, denn mit
- *    dieser Zahl zählen die Nichtmitglieder für ihre Gegner.
+ *    sondern nur im Anzeigetext `ratingOldDisplayString`, bewusst ohne Index;
+ *    bei Teilnehmern ganz ohne Wertung als errechnete Zahl in
+ *    `ratingNewDisplayString`. Ohne sie bleibt die Auswertung der Mitglieder
+ *    unverständlich, denn mit dieser Zahl zählen die Nichtmitglieder für ihre
+ *    Gegner.
+ *
+ * Klammern gibt es in der Ausgabe keine: nu setzt sie bei Nichtmitgliedern um
+ * Wertung und Koeffizient („(1537)", „(56.9)"), auf der Website entfallen sie
+ * (Entscheidung Frank Binding, 17.09.2026).
  *
  * Diese Klasse bündelt beide Regeln an einer Stelle. Sie kommt ohne Contao
  * aus und lässt sich deshalb ohne Installation prüfen
@@ -95,7 +101,9 @@ class Spielerwertung
 	 * (Nichtmitglied, Eingangswertung ohne Index) und die Klammerform: `(1537)`
 	 * als alte Wertung eines Nichtmitglieds, das früher eine DWZ hatte, und
 	 * `(1318)` als errechnete neue Wertung eines Teilnehmers ohne jede Zahl.
-	 * Die Klammer stammt von nu und wird so weitergereicht.
+	 * Angezeigt wird die Zahl immer ohne Klammer; `klammer` sagt nur, ob der
+	 * Text die Klammerform hatte — daran erkennt eingangswertung() die
+	 * errechnete Zahl.
 	 *
 	 * @param mixed $text Anzeigetext, etwa aus `ratingOldDisplayString`
 	 *
@@ -131,20 +139,19 @@ class Spielerwertung
 	 * Regeln:
 	 * - Alte Wertung eines Mitglieds: `ratingOld`/`indexOld`; fehlt die Zahl,
 	 *   der Anzeigetext `ratingOldDisplayString`.
-	 * - Alte Wertung eines Nichtmitglieds: der Anzeigetext, so wie nu ihn
-	 *   formt — „1905" (Eingangswertung ohne Index, meist eine Elo) oder
-	 *   „(1537)" (frühere DWZ eines Ausgetretenen, in Klammern). Nur wenn er
-	 *   fehlt (ältere Zeilen der Spiegeltabelle), die Zahlenfelder. Ohne Index
-	 *   erscheint nur die Zahl — früher stand dort „1905 - 0".
+	 * - Alte Wertung eines Nichtmitglieds: seine Eingangswertung, siehe
+	 *   eingangswertung() — immer ohne Index, so zeigt nu Nichtmitglieder.
+	 *   Ohne Index erscheint nur die Zahl; früher stand dort „1905 - 0".
 	 * - Neue Wertung und Differenz: bei Nichtmitgliedern IMMER leer, auch wenn
 	 *   die Schnittstelle `ratingNew` liefert (Wertungsordnung 3.4.3).
 	 * - Entwicklungskoeffizient und Erwartungswert: die Zahlenfelder; fehlen
 	 *   sie, die Anzeigetexte `factorKDisplayString` und
-	 *   `winsExpectedDisplayString`.
+	 *   `winsExpectedDisplayString` — ohne die Klammern, die nu bei
+	 *   Nichtmitgliedern setzt.
 	 *
 	 * Die Texte sind fertig für die Vorlage: Sie enthalten nur Ziffern,
-	 * Klammern, Vorzeichen und geschützte Leerzeichen, also nichts, was noch
-	 * maskiert werden müsste.
+	 * Vorzeichen und geschützte Leerzeichen, also nichts, was noch maskiert
+	 * werden müsste.
 	 *
 	 * @param mixed $spieler Spieler-DTO; fehlende Felder und die Platzhalter
 	 *                       `false` aus Helper::PlayerDefaults() sind erlaubt,
@@ -152,8 +159,8 @@ class Spielerwertung
 	 *
 	 * @return array{nichtmitglied:bool,ratingOld:int,indexOld:int,ratingNew:int,indexNew:int,dwzAlt:string,dwzAltKurz:string,dwzNeu:string,differenz:string,factorK:int|float|string,winsExpected:float|false}
 	 *         `dwzAlt`/`dwzNeu` in der Tabellenform „1887 - 44", `dwzAltKurz`
-	 *         nur die Zahl; `winsExpected` ist false, wenn es keinen gibt
-	 *         (passend zu Helper::Erwartungswert())
+	 *         nur die Zahl; `factorK` ist '' und `winsExpected` false, wenn es
+	 *         keinen Wert gibt (passend zu Helper::Erwartungswert())
 	 */
 	public static function aufbereiten($spieler): array
 	{
@@ -165,24 +172,21 @@ class Spielerwertung
 
 		// Alte Wertung. Bei Mitgliedern gelten die Zahlenfelder, der Anzeigetext
 		// springt nur ein, wenn sie fehlen. Bei Nichtmitgliedern ist es
-		// umgekehrt: Den Text formt nu für sie mit Absicht („1905" ohne Index,
-		// „(1537)" für die frühere DWZ eines Ausgetretenen), und die
+		// umgekehrt: Die Texte formt nu für sie mit Absicht, und die
 		// Spiegeltabelle kann daneben noch Zahlen aus einer Zeit tragen, als
 		// der Spieler Mitglied war — nicht mehr gelieferte Felder setzt der
 		// Abgleich nie zurück. Notbetrieb und Schnittstelle zeigen so dasselbe
-		$alt = self::ganzzahl($spieler['ratingOld'] ?? 0);
-		$altIndex = self::ganzzahl($spieler['indexOld'] ?? 0);
-		$klammer = false;
+		if ($nichtmitglied) {
+			$alt = self::eingangswertung($spieler);
+			$altIndex = 0;
+		} else {
+			$alt = self::ganzzahl($spieler['ratingOld'] ?? 0);
+			$altIndex = self::ganzzahl($spieler['indexOld'] ?? 0);
 
-		if ($nichtmitglied || 0 === $alt) {
-			$teile = self::zerlege($spieler['ratingOldDisplayString'] ?? null);
-
-			if (null !== $teile) {
-				$alt = $teile['rating'];
-				$altIndex = $teile['index'];
-				$klammer = $teile['klammer'];
-			} elseif (0 === $alt) {
-				$altIndex = 0;
+			if (0 === $alt) {
+				$teile = self::zerlege($spieler['ratingOldDisplayString'] ?? null);
+				$alt = null !== $teile ? $teile['rating'] : 0;
+				$altIndex = null !== $teile ? $teile['index'] : 0;
 			}
 		}
 
@@ -197,11 +201,14 @@ class Spielerwertung
 		}
 
 		// Entwicklungskoeffizient: Zahl vor Anzeigetext. Der Text trägt bei
-		// Nichtmitgliedern Klammern („(56.9)"), die Zahl nicht
-		$faktor = $spieler['factorK'] ?? '';
+		// Nichtmitgliedern Klammern („(56.9)"); gelesen wird nur die Zahl, damit
+		// beide Wege gleich aussehen
+		$faktor = $spieler['factorK'] ?? null;
 
-		if (!\is_int($faktor) && !\is_float($faktor) && !(\is_string($faktor) && is_numeric($faktor))) {
-			$faktor = self::anzeigezahl($spieler['factorKDisplayString'] ?? null);
+		if (\is_string($faktor) && is_numeric($faktor)) {
+			$faktor = (float) $faktor;
+		} elseif (!\is_int($faktor) && !\is_float($faktor)) {
+			$faktor = self::textzahl($spieler['factorKDisplayString'] ?? null) ?? '';
 		}
 
 		// Erwartungswert: Zahl vor Anzeigetext („1.879")
@@ -210,8 +217,7 @@ class Spielerwertung
 		if (\is_int($erwartung) || \is_float($erwartung) || (\is_string($erwartung) && is_numeric($erwartung))) {
 			$erwartung = (float) $erwartung;
 		} else {
-			$text = trim(self::anzeigezahl($spieler['winsExpectedDisplayString'] ?? null), '()');
-			$erwartung = is_numeric($text) ? (float) $text : false;
+			$erwartung = self::textzahl($spieler['winsExpectedDisplayString'] ?? null) ?? false;
 		}
 
 		return array
@@ -221,8 +227,8 @@ class Spielerwertung
 			'indexOld'      => $altIndex,
 			'ratingNew'     => $neu,
 			'indexNew'      => $neuIndex,
-			'dwzAlt'        => self::dwz($alt, $altIndex, $klammer),
-			'dwzAltKurz'    => $alt > 0 ? ($klammer ? '('.$alt.')' : (string) $alt) : '',
+			'dwzAlt'        => self::dwz($alt, $altIndex),
+			'dwzAltKurz'    => $alt > 0 ? (string) $alt : '',
 			'dwzNeu'        => self::dwz($neu, $neuIndex),
 			'differenz'     => $differenz,
 			'factorK'       => $faktor,
@@ -239,20 +245,15 @@ class Spielerwertung
 	 * Anders als Helper::DWZ() lässt diese Fassung einen fehlenden Index weg,
 	 * statt „1905 - 0" zu schreiben: Eine Elo als Eingangswertung hat keinen.
 	 *
-	 * @param int  $wertung Wertungszahl, 0 = keine
-	 * @param int  $index   Wertungsindex, 0 = keiner
-	 * @param bool $klammer true setzt die Zahl in Klammern (rechnerischer Wert)
+	 * @param int $wertung Wertungszahl, 0 = keine
+	 * @param int $index   Wertungsindex, 0 = keiner
 	 *
 	 * @return string Leer, wenn es keine Wertungszahl gibt
 	 */
-	public static function dwz(int $wertung, int $index = 0, bool $klammer = false): string
+	public static function dwz(int $wertung, int $index = 0): string
 	{
 		if ($wertung <= 0) {
 			return '';
-		}
-
-		if ($klammer) {
-			return '('.$wertung.')';
 		}
 
 		$zahl = str_replace(' ', '&nbsp;&nbsp;', sprintf('%4d', $wertung));
@@ -379,24 +380,67 @@ class Spielerwertung
 	}
 
 	/**
-	 * Lässt von einem Anzeigetext nur durch, was eine Zahl in der Schreibweise
-	 * von nu sein kann: Ziffern, Punkt, Komma, Vorzeichen und die Klammern um
-	 * rechnerische Werte. Alles andere wird verworfen statt maskiert — der Text
-	 * landet ungeprüft in der Vorlage.
+	 * Ermittelt die Eingangswertung eines Nichtmitglieds — die Zahl, mit der es
+	 * für seine Gegner zählt.
+	 *
+	 * Quellen in dieser Reihenfolge:
+	 * 1. `ratingOldDisplayString`: „1905" (meist eine Elo) oder „(1537)"
+	 *    (frühere DWZ eines Ausgetretenen).
+	 * 2. `ratingNewDisplayString`, aber NUR in der Klammerform ohne Index, etwa
+	 *    „(1318)". Das liefert nu für Teilnehmer ganz ohne Wertung: die
+	 *    errechnete Zahl, die nicht gespeichert wird. Dass sie die
+	 *    Eingangswertung ist, lässt sich nachrechnen — mit 1318 ergibt sich das
+	 *    `expected` der Partie gegen 1887 auf fünf Stellen (0,97787). Eine neue
+	 *    Wertung OHNE Klammern wäre dagegen eine echte neue DWZ; die darf für
+	 *    Nichtmitglieder nirgends erscheinen, auch nicht unter „DWZ alt"
+	 *    (Wertungsordnung 3.4.3).
+	 * 3. `ratingOld` — ältere Zeilen der Spiegeltabelle kennen die Texte nicht.
+	 *
+	 * @param array $spieler Spieler-DTO eines Nichtmitglieds
+	 *
+	 * @return int Wertungszahl, 0 wenn keine Quelle eine liefert
+	 */
+	protected static function eingangswertung(array $spieler): int
+	{
+		$teile = self::zerlege($spieler['ratingOldDisplayString'] ?? null);
+
+		if (null !== $teile) {
+			return $teile['rating'];
+		}
+
+		$teile = self::zerlege($spieler['ratingNewDisplayString'] ?? null);
+
+		if (null !== $teile && $teile['klammer'] && 0 === $teile['index']) {
+			return $teile['rating'];
+		}
+
+		return self::ganzzahl($spieler['ratingOld'] ?? 0);
+	}
+
+	/**
+	 * Liest eine Zahl aus einem Anzeigetext der Schnittstelle, etwa „1.879"
+	 * oder „(56.9)".
+	 *
+	 * Die Klammern, die nu um die Werte der Nichtmitglieder setzt, fallen weg;
+	 * ein Dezimalkomma gilt wie ein Punkt. Alles, was keine Zahl in dieser
+	 * Schreibweise ist, wird verworfen statt maskiert — der Wert landet in der
+	 * Vorlage.
 	 *
 	 * @param mixed $text Anzeigetext der Schnittstelle
 	 *
-	 * @return string Der getrimmte Text, leer wenn er fehlt oder etwas anderes
-	 *                enthält
+	 * @return float|null Die Zahl, null wenn der Text fehlt oder etwas anderes
+	 *                    enthält
 	 */
-	protected static function anzeigezahl($text): string
+	protected static function textzahl($text): ?float
 	{
 		if (!\is_string($text) && !\is_int($text) && !\is_float($text)) {
-			return '';
+			return null;
 		}
 
-		$text = trim((string) $text);
+		if (1 !== preg_match('/^\s*\(?\s*([-+]?\d+(?:[.,]\d+)?)\s*\)?\s*$/', (string) $text, $treffer)) {
+			return null;
+		}
 
-		return 1 === preg_match('/^\(?[-+]?\d+(?:[.,]\d+)?\)?$/', $text) ? str_replace(',', '.', $text) : '';
+		return (float) str_replace(',', '.', $treffer[1]);
 	}
 }

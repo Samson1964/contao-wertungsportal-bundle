@@ -32,6 +32,7 @@ use Contao\Model\Collection;
  * @property string $ratingOldDisplayString
  * @property int    $ratingNew
  * @property int    $indexNew
+ * @property string $ratingNewDisplayString
  * @property float  $factorK
  * @property int    $averageRatingCompetitors
  * @property float  $wins
@@ -67,55 +68,63 @@ class WertungsportalTournamentsEvaluationModel extends Model
 
     /**
      * Seit 1.45.0 gespiegelte Zeichenkettenfelder: der Mitgliedsstatus
-     * (`member`, abgelegt als '1'/'0', leer = unbekannt) und der Anzeigetext
-     * der alten Wertung, aus dem die Eingangswertung der Nichtmitglieder
-     * stammt. Sie werden nur angesprochen, wenn ihre Spalten existieren —
-     * siehe hatMitgliedsspalten().
+     * (`member`, abgelegt als '1'/'0', leer = unbekannt) und die Anzeigetexte
+     * der alten und (seit 1.45.1) der neuen Wertung, aus denen die
+     * Eingangswertung der Nichtmitglieder stammt. Sie werden nur angesprochen,
+     * wenn ihre Spalten existieren — siehe zusatzspalten().
      */
-    private const DTO_MITGLIED_FIELDS = ['member', 'ratingOldDisplayString'];
+    private const DTO_ZUSATZ_FIELDS = ['member', 'ratingOldDisplayString', 'ratingNewDisplayString'];
 
     /**
-     * Merker für hatMitgliedsspalten(), null = noch nicht geprüft.
+     * Merker für zusatzspalten(), null = noch nicht geprüft.
      *
-     * @var bool|null
+     * @var string[]|null
      */
-    private static $blnMitgliedsspalten;
+    private static $arrZusatzspalten;
 
     /**
-     * Prüft, ob die Spalten `member` und `ratingOldDisplayString` schon
-     * angelegt sind.
+     * Liefert die Felder aus DTO_ZUSATZ_FIELDS, deren Spalten schon angelegt
+     * sind.
      *
      * Das Bundle wird durch Kopieren des Ordners eingespielt; bis danach
      * contao:migrate gelaufen ist, fehlen neue Spalten. Ohne diese Prüfung
      * scheiterte der Abgleich dann an „Unknown column" — und weil er bei jedem
-     * Abruf der Schnittstelle mitläuft, mit ihm der Seitenaufruf. So läuft der
-     * Abgleich einfach im alten Umfang weiter.
+     * Abruf der Schnittstelle mitläuft, mit ihm der Seitenaufruf. Geprüft wird
+     * JE SPALTE: Ist nur die Spalte der neuesten Fassung noch nicht angelegt,
+     * gleichen die übrigen trotzdem ab.
      *
-     * Das Ergebnis wird je Prozess gemerkt (eine SHOW-COLUMNS-Abfrage, die
-     * Contao seinerseits zwischenspeichert).
+     * Das Ergebnis wird je Prozess gemerkt; Contao liest die Spaltenliste der
+     * Tabelle dafür nur einmal.
      *
-     * @return bool true, wenn beide Spalten vorhanden sind
+     * @return string[] Feldnamen in der Reihenfolge von DTO_ZUSATZ_FIELDS,
+     *                  leer vor dem ersten contao:migrate seit 1.45.0
      */
-    private static function hatMitgliedsspalten(): bool
+    private static function zusatzspalten(): array
     {
-        if (null === self::$blnMitgliedsspalten) {
+        if (null === self::$arrZusatzspalten) {
             $objDatabase = Database::getInstance();
-            self::$blnMitgliedsspalten = $objDatabase->fieldExists('member', static::$strTable) && $objDatabase->fieldExists('ratingOldDisplayString', static::$strTable);
+            self::$arrZusatzspalten = [];
+
+            foreach (self::DTO_ZUSATZ_FIELDS as $strField) {
+                if ($objDatabase->fieldExists($strField, static::$strTable)) {
+                    self::$arrZusatzspalten[] = $strField;
+                }
+            }
         }
 
-        return self::$blnMitgliedsspalten;
+        return self::$arrZusatzspalten;
     }
 
     /**
      * Liefert die Zeichenkettenfelder des Abgleichs in der Reihenfolge, in der
-     * sie in SELECT und INSERT stehen — die Felder aus 1.45.0 nur, wenn ihre
+     * sie in SELECT und INSERT stehen — die Zusatzfelder nur, wenn ihre
      * Spalten existieren.
      *
      * @return string[]
      */
     private static function zeichenkettenFelder(): array
     {
-        return self::hatMitgliedsspalten() ? array_merge(self::DTO_STRING_FIELDS, self::DTO_MITGLIED_FIELDS) : self::DTO_STRING_FIELDS;
+        return array_merge(self::DTO_STRING_FIELDS, self::zusatzspalten());
     }
 
     /**
@@ -205,8 +214,8 @@ class WertungsportalTournamentsEvaluationModel extends Model
      *
      * @param array $player Spieler-DTO der Schnittstelle
      *
-     * @return array Feldname => Wert; `member` und `ratingOldDisplayString`
-     *               nur, wenn ihre Spalten existieren (hatMitgliedsspalten())
+     * @return array Feldname => Wert; `member` und die Anzeigetexte nur, wenn
+     *               ihre Spalten existieren (zusatzspalten())
      */
     private static function buildDtoSet(array $player): array
     {
@@ -234,15 +243,17 @@ class WertungsportalTournamentsEvaluationModel extends Model
             $set['eloPlayer'] = !empty($player['eloPlayer']) ? '1' : '';
         }
 
-        if (self::hatMitgliedsspalten()) {
-            // Dreiwertig: '1' Mitglied, '0' Nichtmitglied; liefert die
-            // Schnittstelle das Feld nicht, bleibt der Bestand unangetastet
-            if (\array_key_exists('member', $player) && null !== $player['member']) {
-                $set['member'] = filter_var($player['member'], FILTER_VALIDATE_BOOLEAN) ? '1' : '0';
-            }
+        $arrZusatz = self::zusatzspalten();
 
-            if (\array_key_exists('ratingOldDisplayString', $player)) {
-                $set['ratingOldDisplayString'] = mb_substr(trim((string) $player['ratingOldDisplayString']), 0, 32);
+        // Dreiwertig: '1' Mitglied, '0' Nichtmitglied; liefert die
+        // Schnittstelle das Feld nicht, bleibt der Bestand unangetastet
+        if (\in_array('member', $arrZusatz, true) && \array_key_exists('member', $player) && null !== $player['member']) {
+            $set['member'] = filter_var($player['member'], FILTER_VALIDATE_BOOLEAN) ? '1' : '0';
+        }
+
+        foreach (['ratingOldDisplayString', 'ratingNewDisplayString'] as $field) {
+            if (\in_array($field, $arrZusatz, true) && \array_key_exists($field, $player)) {
+                $set[$field] = mb_substr(trim((string) $player[$field]), 0, 32);
             }
         }
 

@@ -29,6 +29,7 @@ $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['ratingOldDispla
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['indexOld']                 = ['Index old', 'DWZ index before the tournament.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['ratingNew']                = ['DWZ new', 'DWZ rating after the tournament.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['indexNew']                 = ['Index new', 'DWZ index after the tournament.'];
+$GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['ratingNewDisplayString']   = ['DWZ new (display text)', 'Display text delivered by the API. For participants without any rating this is the only place holding, in brackets, the calculated rating they count with for their opponents, e.g. "(1318)". The website shows it as entry rating, without brackets.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['factorK']                  = ['Factor K', 'Development coefficient K of the evaluation.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['averageRatingCompetitors'] = ['Average rating of competitors', 'Average DWZ rating of the opponents.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['wins']                     = ['Points', 'Points scored in the tournament.'];

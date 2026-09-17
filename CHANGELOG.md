@@ -1,5 +1,34 @@
 # Wertungsportal Changelog
 
+## Version 1.45.1 (2026-09-17)
+
+**Neue Spalte — beim Deployment `contao:migrate` ausführen** (`ratingNewDisplayString` in
+tl_wertungsportal_tournaments_evaluation). Wer 1.45.0 noch nicht eingespielt hat, erledigt mit einem Lauf
+alle drei Spalten. Ohne `contao:migrate` läuft alles weiter; geprüft wird jetzt je Spalte, fehlt nur die
+neue, gleicht der Abgleich die übrigen ab.
+
+* Change: **Teilnehmer ganz ohne Wertung zeigen ihre errechnete Zahl als Eingangswertung.** nu liefert
+  für sie nur `ratingNewDisplayString` in Klammern, etwa „(1318)" — die Zahl, mit der sie für ihre
+  Gegner zählen (nachgerechnet: 1887 gegen 1318 ergibt genau das gelieferte `expected` 0,977875). Sie
+  steht jetzt unter „DWZ alt" in der Turnierauswertung, unter „DWZ" in Turnierergebnissen und
+  Spielberichtsbögen und über dem eigenen Bogen („Eingangswertung 1318"); in 1.45.0 blieb die Zelle leer.
+  Übernommen wird nur die Klammerform ohne Index — eine neue Wertung ohne Klammern wäre eine echte neue
+  DWZ und darf für Nichtmitglieder auch dort nicht erscheinen (Wertungsordnung 3.4.3). Entscheidung von
+  Frank Binding
+* Change: **Keine Klammern mehr** (Entscheidung von Frank Binding): „(1537)", die frühere DWZ eines
+  Ausgetretenen, erscheint als „1537"; ein aus `factorKDisplayString` gelesener Koeffizient wie „(56.9)"
+  als 56.9 und damit genau so wie ein aus `factorK` gelesener („(38.0)" wie 38.0: „38")
+* Change: Nichtmitglieder erscheinen **nie mit Index**, so wie nu sie zeigt. Betrifft nur ältere Zeilen
+  der Spiegeltabelle, die bei textuellen Teilnehmern noch Zahl und Index tragen (im Testbestand 53), bis
+  zum nächsten Abgleich
+* Add: Spalte `ratingNewDisplayString` in der Spiegeltabelle, damit der Notbetrieb die errechnete Zahl
+  ebenfalls kennt; Spaltenwächter je Spalte (`zusatzspalten()` statt `hatMitgliedsspalten()`). Geprüft in
+  4.13 und 5.7: Abgleich vor und nach dem Anlegen der Spalte, Batch-INSERT in einer zurückgerollten
+  Transaktion, Notbetrieb zeigt dieselben Werte wie die Schnittstelle
+* Tests: `SpielerwertungTest` um Klammern, errechnete Zahl und Index ergänzt (20 Prüfungen, zusammen 187).
+  PHPStan Stufe 6 gegen 4.13 und 5.7 ohne neue Funde. Rückwärtsvergleich eines großen Turniers gegen
+  1.45.0: nur „(1537)" → „1537" und die Tooltips
+
 ## Version 1.45.0 (2026-09-17)
 
 **Neue Spalten — beim Deployment `contao:migrate` ausführen** (`member` und `ratingOldDisplayString` in

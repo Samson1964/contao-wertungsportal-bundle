@@ -29,6 +29,7 @@ $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['ratingOldDispla
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['indexOld']                 = ['Index alt', 'DWZ-Index vor dem Turnier.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['ratingNew']                = ['DWZ neu', 'DWZ nach dem Turnier.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['indexNew']                 = ['Index neu', 'DWZ-Index nach dem Turnier.'];
+$GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['ratingNewDisplayString']   = ['DWZ neu (Anzeigetext)', 'Anzeigetext der Schnittstelle. Bei Teilnehmern ganz ohne Wertung steht nur hier, in Klammern, die errechnete Zahl, mit der sie für ihre Gegner zählen, etwa „(1318)". Auf der Website erscheint sie als Eingangswertung, ohne Klammern.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['factorK']                  = ['Faktor K', 'Entwicklungskoeffizient K der Auswertung.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['averageRatingCompetitors'] = ['Gegner-Durchschnitt', 'Durchschnittliche DWZ der Gegner.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['wins']                     = ['Punkte', 'Erzielte Punkte im Turnier.'];

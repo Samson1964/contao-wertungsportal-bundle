@@ -871,13 +871,18 @@ class Lokal
 		if(!empty($row['fideId'])) $dto['fideId'] = (int) $row['fideId'];
 		if(!empty($row['eloPlayer'])) $dto['eloPlayer'] = (int) $row['eloPlayer'];
 
-		// Mitgliedsstatus und Anzeigetext der alten Wertung (seit 1.45.0
-		// gespiegelt). Ein leerer Status heißt „unbekannt" und bleibt weg —
-		// dann entscheidet Spielerwertung::istNichtmitglied() nach der
-		// nuLigaPersonId. Der Anzeigetext trägt die Eingangswertung der
-		// Nichtmitglieder, für die es kein ratingOld gibt
+		// Mitgliedsstatus und Anzeigetexte der Wertungen (seit 1.45.0 bzw.
+		// 1.45.1 gespiegelt). Ein leerer Status heißt „unbekannt" und bleibt
+		// weg — dann entscheidet Spielerwertung::istNichtmitglied() nach der
+		// nuLigaPersonId. Die Anzeigetexte tragen die Eingangswertung der
+		// Nichtmitglieder, für die es kein ratingOld gibt: „1905" in der alten,
+		// „(1318)" in der neuen bei Teilnehmern ganz ohne Wertung
 		if((string) ($row['member'] ?? '') !== '') $dto['member'] = (string) $row['member'] === '1';
-		if((string) ($row['ratingOldDisplayString'] ?? '') !== '') $dto['ratingOldDisplayString'] = (string) $row['ratingOldDisplayString'];
+
+		foreach(array('ratingOldDisplayString', 'ratingNewDisplayString') as $feld)
+		{
+			if((string) ($row[$feld] ?? '') !== '') $dto[$feld] = (string) $row[$feld];
+		}
 
 		// Auswertungswerte nur übernehmen, wenn sie gefüllt sind
 		foreach(array('ratingOld', 'indexOld', 'ratingNew', 'indexNew', 'factorK', 'averageRatingCompetitors', 'tournamentPerformance') as $feld)

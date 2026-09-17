@@ -165,8 +165,9 @@ class SpielerwertungTest extends TestCase
 	}
 
 	/**
-	 * Fehlen die Zahlenfelder, springen die Anzeigetexte ein: „(56.9)" kommt
-	 * mit der Klammer von nu an, „1.879" als Zahl.
+	 * Fehlen die Zahlenfelder, springen die Anzeigetexte ein — ohne die
+	 * Klammern, die nu bei Nichtmitgliedern setzt: aus „(56.9)" wird 56.9. Text
+	 * und Zahl sehen danach gleich aus („(38.0)" wie 38.0: „38").
 	 */
 	public function testAnzeigetexteAlsErsatzFuerFehlendeZahlen(): void
 	{
@@ -175,26 +176,85 @@ class SpielerwertungTest extends TestCase
 
 		$w = Spielerwertung::aufbereiten($spieler);
 
-		$this->assertSame('(56.9)', $w['factorK']);
+		$this->assertSame(56.9, $w['factorK']);
 		$this->assertSame(1.879, $w['winsExpected']);
+
+		$ausText = Spielerwertung::aufbereiten(array('member' => false, 'factorKDisplayString' => '(38.0)'));
+		$ausZahl = Spielerwertung::aufbereiten(array('member' => false, 'factorK' => 38.0));
+		$this->assertSame('38', (string) $ausText['factorK']);
+		$this->assertSame((string) $ausZahl['factorK'], (string) $ausText['factorK']);
+
+		// Ein Dezimalkomma gilt wie ein Punkt, alles andere wird verworfen
+		$this->assertSame(1.5, Spielerwertung::aufbereiten(array('member' => false, 'winsExpectedDisplayString' => '1,5'))['winsExpected']);
+		$this->assertSame('', Spielerwertung::aufbereiten(array('member' => false, 'factorKDisplayString' => '<b>38</b>'))['factorK']);
 	}
 
 	/**
 	 * Der Sonderfall des Teilnehmers ohne jede Wertung: Die Schnittstelle
-	 * liefert nur `ratingNewDisplayString` „(1318)". Das ist eine neue
-	 * Wertung eines Nichtmitglieds und wird nicht gezeigt; alle Felder
-	 * bleiben leer.
+	 * liefert nur `ratingNewDisplayString` „(1318)" — die errechnete Zahl, mit
+	 * der er für seine Gegner zählt. Sie erscheint als Eingangswertung, ohne
+	 * Klammern (Entscheidung vom 17.09.2026). Belegt wird die Bedeutung an der
+	 * Partie aus dem gemeldeten Bogen: 1887 gegen genau diese Zahl ergibt das
+	 * gelieferte `expected` 0,977875.
 	 */
-	public function testNichtmitgliedOhneEingangswertungBleibtLeer(): void
+	public function testNichtmitgliedOhneWertungZeigtErrechneteZahl(): void
 	{
 		$w = Spielerwertung::aufbereiten(array('member' => false, 'ratingNewDisplayString' => '(1318)', 'wins' => 1.0, 'numberOfGames' => 6));
 
-		$this->assertSame('', $w['dwzAlt']);
-		$this->assertSame('', $w['dwzAltKurz']);
+		$this->assertSame('1318', $w['dwzAlt']);
+		$this->assertSame('1318', $w['dwzAltKurz']);
+		$this->assertSame(1318, $w['ratingOld']);
+		$this->assertSame(0, $w['indexOld']);
 		$this->assertSame('', $w['dwzNeu']);
+		$this->assertSame(0, $w['ratingNew']);
 		$this->assertSame('', $w['differenz']);
 		$this->assertSame('', $w['factorK']);
 		$this->assertFalse($w['winsExpected']);
+
+		$this->assertEqualsWithDelta(0.977875, Spielerwertung::gewinnerwartung(1887, $w['ratingOld']), 0.00001);
+
+		// Wer gar nichts geliefert bekommt, bleibt leer
+		$nichts = Spielerwertung::aufbereiten(array('member' => false, 'wins' => 0.0, 'numberOfGames' => 6));
+		$this->assertSame('', $nichts['dwzAlt']);
+		$this->assertSame(0, $nichts['ratingOld']);
+	}
+
+	/**
+	 * Aus `ratingNewDisplayString` wird NUR die Klammerform ohne Index zur
+	 * Eingangswertung. Ohne Klammern wäre der Text eine echte neue DWZ — und
+	 * die darf für ein Nichtmitglied auch unter „DWZ alt" nicht erscheinen
+	 * (Wertungsordnung 3.4.3). Ein vorhandener Anzeigetext der alten Wertung
+	 * geht vor, und für Mitglieder gilt der Ersatz gar nicht.
+	 */
+	public function testNeueWertungWirdNurInKlammerformZurEingangswertung(): void
+	{
+		foreach (array('1589 - 7', '1589', '(1589 - 7)') as $text) {
+			$w = Spielerwertung::aufbereiten(array('member' => false, 'ratingNewDisplayString' => $text, 'ratingNew' => 1589, 'indexNew' => 7));
+			$this->assertSame('', $w['dwzAlt'], $text);
+			$this->assertSame('', $w['dwzNeu'], $text);
+			$this->assertSame(0, $w['ratingOld'], $text);
+		}
+
+		$w = Spielerwertung::aufbereiten(array('member' => false, 'ratingOldDisplayString' => '1554', 'ratingNewDisplayString' => '(1600)'));
+		$this->assertSame('1554', $w['dwzAlt']);
+
+		$w = Spielerwertung::aufbereiten(array('member' => true, 'nuLigaPersonId' => 'NU1', 'ratingNewDisplayString' => '(1318)'));
+		$this->assertSame('', $w['dwzAlt']);
+	}
+
+	/**
+	 * Nichtmitglieder erscheinen nie mit Index — so zeigt nu sie. Ältere Zeilen
+	 * der Spiegeltabelle tragen bei textuellen Teilnehmern teils noch Zahl UND
+	 * Index (im Testbestand 53 Zeilen); bis zum nächsten Abgleich zeigt der
+	 * Notbetrieb davon nur die Zahl.
+	 */
+	public function testNichtmitgliedNieMitIndex(): void
+	{
+		$w = Spielerwertung::aufbereiten(array('nuLigaPersonId' => '', 'ratingOld' => '1650', 'indexOld' => '12'));
+
+		$this->assertTrue($w['nichtmitglied']);
+		$this->assertSame('1650', $w['dwzAlt']);
+		$this->assertSame(0, $w['indexOld']);
 	}
 
 	/**
@@ -216,14 +276,15 @@ class SpielerwertungTest extends TestCase
 	 * Anzeigetext in Klammern. In der Spiegeltabelle stehen daneben noch die
 	 * Zahlen aus der Zeit der Mitgliedschaft (der Abgleich setzt nicht mehr
 	 * gelieferte Felder nie zurück). Der Anzeigetext geht bei Nichtmitgliedern
-	 * vor — sonst zeigte der Notbetrieb „1537 - 47", die Schnittstelle „(1537)".
+	 * vor, angezeigt ohne Klammern — sonst zeigte der Notbetrieb „1537 - 47",
+	 * die Schnittstelle „1537".
 	 */
 	public function testNichtmitgliedAnzeigetextGehtVorZahlen(): void
 	{
-		$w = Spielerwertung::aufbereiten(array('member' => '0', 'nuLigaPersonId' => '', 'ratingOld' => '1537', 'indexOld' => '47', 'ratingOldDisplayString' => '(1537)', 'ratingNew' => '1536', 'indexNew' => '48'));
+		$w = Spielerwertung::aufbereiten(array('member' => '0', 'nuLigaPersonId' => '', 'ratingOld' => '1500', 'indexOld' => '47', 'ratingOldDisplayString' => '(1537)', 'ratingNew' => '1536', 'indexNew' => '48'));
 
-		$this->assertSame('(1537)', $w['dwzAlt']);
-		$this->assertSame('(1537)', $w['dwzAltKurz']);
+		$this->assertSame('1537', $w['dwzAlt']);
+		$this->assertSame('1537', $w['dwzAltKurz']);
 		$this->assertSame(1537, $w['ratingOld']);
 		$this->assertSame(0, $w['indexOld']);
 		$this->assertSame('', $w['dwzNeu']);
@@ -279,16 +340,22 @@ class SpielerwertungTest extends TestCase
 	}
 
 	/**
-	 * Eine errechnete Eingangswertung in Klammern bliebe als solche
-	 * erkennbar, falls nu sie einmal im Anzeigetext der alten Wertung liefert.
+	 * Klammern erscheinen nirgends in der Ausgabe (Entscheidung vom
+	 * 17.09.2026), gleich aus welchem Anzeigetext die Zahl stammt.
 	 */
-	public function testKlammerBleibtErhalten(): void
+	public function testKlammernEntfallen(): void
 	{
-		$w = Spielerwertung::aufbereiten(array('member' => false, 'ratingOldDisplayString' => '(1318)'));
+		$w = Spielerwertung::aufbereiten(array('member' => false, 'ratingOldDisplayString' => '(1318)', 'factorKDisplayString' => '(45.2)', 'winsExpectedDisplayString' => '(2.940)'));
 
-		$this->assertSame('(1318)', $w['dwzAlt']);
-		$this->assertSame('(1318)', $w['dwzAltKurz']);
+		$this->assertSame('1318', $w['dwzAlt']);
+		$this->assertSame('1318', $w['dwzAltKurz']);
 		$this->assertSame(1318, $w['ratingOld']);
+		$this->assertSame(45.2, $w['factorK']);
+		$this->assertSame(2.94, $w['winsExpected']);
+
+		foreach ($w as $feld => $wert) {
+			$this->assertStringNotContainsString('(', (string) $wert, $feld);
+		}
 	}
 
 	/**

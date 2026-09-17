@@ -78,7 +78,7 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_tournaments_evaluation'] = [
 
     // Palettes
     'palettes' => [
-        'default' => '{player_legend},playerUuid,nuLigaPersonId,firstname,lastname,birthyear;{club_legend},vkz,memberNo,clubName;{dwz_legend},fideId,playerNo,eloPlayer,member,ratingOld,indexOld,ratingOldDisplayString,ratingNew,indexNew,factorK,averageRatingCompetitors,wins,numberOfGames,winsExpected,tournamentPerformance;{publish_legend},published',
+        'default' => '{player_legend},playerUuid,nuLigaPersonId,firstname,lastname,birthyear;{club_legend},vkz,memberNo,clubName;{dwz_legend},fideId,playerNo,eloPlayer,member,ratingOld,indexOld,ratingOldDisplayString,ratingNew,indexNew,ratingNewDisplayString,factorK,averageRatingCompetitors,wins,numberOfGames,winsExpected,tournamentPerformance;{publish_legend},published',
     ],
 
     // Fields
@@ -223,10 +223,21 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_tournaments_evaluation'] = [
             'eval'      => ['rgxp' => 'digit', 'tl_class' => 'w50'],
             'sql'       => "int(10) unsigned NOT NULL default 0",
         ],
+        // Anzeigetext der neuen Wertung. Für Mitglieder wiederholt er nur
+        // ratingNew/indexNew; für Teilnehmer ganz ohne Wertung trägt er in
+        // Klammern die errechnete Zahl, mit der sie für ihre Gegner zählen
+        // („(1318)") — ihre Eingangswertung, angezeigt ohne Klammern
+        // (Helper\Spielerwertung::eingangswertung())
+        'ratingNewDisplayString' => [
+            'exclude'   => true,
+            'inputType' => 'text',
+            'eval'      => ['maxlength' => 32, 'tl_class' => 'w50'],
+            'sql'       => "varchar(32) NOT NULL default ''",
+        ],
         'factorK' => [
             'exclude'   => true,
             'inputType' => 'text',
-            'eval'      => ['rgxp' => 'digit', 'tl_class' => 'w50'],
+            'eval'      => ['rgxp' => 'digit', 'tl_class' => 'w50 clr'],
             'sql'       => "double NOT NULL default 0",
         ],
         'averageRatingCompetitors' => [
