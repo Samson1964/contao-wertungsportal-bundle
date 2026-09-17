@@ -274,6 +274,34 @@ Wer an Index, Eimern, Sortierung oder Zeichensatz etwas ändert, mißt dagegen n
   des Servers). Die Zahlenfelder der alten Fassung sind Bytes und dürfen durch keine Wandlung.
 - Alte Fassung: DWZ ohne Wert = kodierte „0000" (`nn`), Feld 7 leer, Feld 13 im Klartext.
 
+## Turnierseiten: Nichtmitglieder und Erwartungswerte (ab 1.45.0)
+
+Doku `docs/turnierseiten.md`. Turnierauswertung, Turnierergebnisse und Scoresheet lesen die Wertung
+eines Spielers NICHT mehr selbst aus dem DTO, sondern über `Helper\Spielerwertung::aufbereiten()`
+(ohne Contao, Prüfungen in `tests/Helper/SpielerwertungTest.php`). Wer dort etwas ändert, ändert
+alle drei Ansichten.
+
+- **Nichtmitglied = `member: false`** (Auskunft DSB-Wertungsreferat: reicht aus, auch für künftig
+  Ausgetretene, die ihre NU-Nummer behalten). Fehlt `member` (ältere Spiegelzeilen), entscheidet die
+  leere `nuLigaPersonId`.
+- **Für Nichtmitglieder nie `ratingNew`/`indexNew`/Differenz zeigen** — nu liefert sie trotzdem
+  (WO 3.4.3). Ihre Eingangswertung steht nur in `ratingOldDisplayString`: „1905" ohne Index, bei
+  Ausgetretenen „(1537)" in Klammern. Bei Nichtmitgliedern geht der Text VOR den Zahlenfeldern (die
+  Spiegeltabelle trägt sonst noch Zahlen aus der Mitgliedszeit), bei Mitgliedern umgekehrt.
+- **`matches[].expected` gilt aus Sicht von WEISS**, egal wessen Bogen. Schwarz = `1 − expected`.
+  Steht nirgends, ist aber gemessen (Summe = `winsExpected`, 94 % von 10.927 Bögen; die umgekehrte
+  Lesart erklärt einen einzigen weiteren). Kampflose Partien (`PLUS`/`MINUS` im Code) bekommen
+  keinen We, obwohl nu einen liefert.
+- `expected` fehlt bei manchen Turnieren ganz und in der Ergebnisliste immer → Ersatzrechnung nach
+  der Wertungsordnung: Φ(D / (200·√2)), trifft nu auf vier Stellen. Die alte Elo-Formel
+  (1/(1+10^(−D/400))) nicht wieder einbauen. In der Spiegeltabelle heißt `expected = 0` „nie
+  geliefert" — `Lokal::partien()` lässt die 0 weg, ebenso `winsExpected = 0` in `spielerDto()`.
+- Spiegeltabelle `…_tournaments_evaluation`: `member` ist **dreiwertig** (`'1'`/`'0'`/leer =
+  unbekannt), kein Kontrollkästchen. Beide neuen Spalten hängen an `hatMitgliedsspalten()` — der
+  Abgleich läuft bei jedem API-Abruf, ein „Unknown column" vor `contao:migrate` risse jede Seite mit.
+- Offen (TODO.md): Teilnehmer ganz ohne Wertung — `ratingNewDisplayString` „(1318)" wird nicht
+  gezeigt; K bei Nichtmitgliedern ohne die Klammer von nu; Restpartien werden nirgends angezeigt.
+
 ## Fallstricke / Besonderheiten
 
 - **`Statement::execute()` mit Array-Argument** (`->execute($chunk)`) funktioniert nur in Contao
@@ -330,6 +358,24 @@ Wer an Index, Eimern, Sortierung oder Zeichensatz etwas ändert, mißt dagegen n
   das `preview.php`-Präfix (im veröffentlichten Zustand egal).
 - Nach Änderungen an `src/Resources/public/` auf dem Server `contao:assets:install` nötig,
   nach DCA-/SQL-Änderungen `contao:migrate` bzw. Install-Tool.
+- **Eigene Backend-Formulare nie in einen `tl_listing_container` setzen.** Dessen 15 px Rand und
+  die 15 px Rand jedes `.widget` addieren sich (Felder bei 30 px, Text bei 15, `h2.sub_headline`
+  bei 18). Maß ist System → Systemwartung: alles auf 15 px. Rohdaten und Zwischenspeicher lösen das
+  seit 1.45.0 über die Klassen `wp-werkzeug…` der backend.css (Überschrift `wp-werkzeug-kopf`,
+  Einleitung `wp-werkzeug-text`, Meldungen `-meldung`, Ergebnis `-ergebnis`); die Klassen der
+  Systemwartung (`maintenance_inactive`) nicht übernehmen, sie sehen in 5.7 anders aus. Nachmessen
+  mit statischen Prüfseiten aus `F:\Claude\tools\contao-backend-rendern.php` (`DUMP=<datei>`),
+  `<base href>` auf contao413.test/contao57.test umschreiben, 1280 px, `getBoundingClientRect()`.
+  ACHTUNG: `public/bundles/contaowertungsportal` ist in beiden Testinstallationen eine KOPIE — eine
+  geänderte backend.css dorthin kopieren und die Seite neu rendern (sonst alter `?v=`-Stempel).
+- **Kontrollkästchen mit Vorgabe „an"** (Rohdaten, „eingerückt"): Ein abgewähltes Kästchen schickt
+  der Browser nicht mit. „Abgewählt" und „noch nie abgeschickt" unterscheidet nur `FORM_SUBMIT` —
+  siehe `Rohabfrage::lesbar()`. Das Formular schickt sich beim Funktionswechsel selbst ab.
+- **Patchskripte mit Heredoc-Paaren (`<<<'ALT'` … `<<<'NEU'`):** Ein mit dem falschen Wort
+  geschlossener Block verschluckt lautlos die nächste Ersetzung und schreibt Skripttext in die
+  Zieldatei; ein zweiter Lauf fügt Blöcke doppelt ein, deren neuer Text mit dem alten beginnt. Vor dem
+  Lauf die Markerpaare prüfen, danach `php -l` auf JEDE Zieldatei, und nie ein ganzes Skript erneut
+  laufen lassen — nur die fehlgeschlagene Datei zurücksetzen und gezielt nachziehen.
 - **`REQUEST_TOKEN`** (Konstante) definiert nur Contao 4.13 — unter Contao 5 bricht jede Vorlage
   daran ab. Token immer über `contao.csrf.token_manager->getDefaultTokenValue()` holen
   (HTML-Attribut: `htmlspecialchars()`, JavaScript: `json_encode()`); in 4.13 derselbe Wert.

@@ -1,5 +1,64 @@
 # Wertungsportal Changelog
 
+## Version 1.45.0 (2026-09-17)
+
+**Neue Spalten — beim Deployment `contao:migrate` ausführen** (`member` und `ratingOldDisplayString` in
+tl_wertungsportal_tournaments_evaluation). Ohne `contao:migrate` läuft alles weiter, nur der Notbetrieb
+kennt die neuen Angaben nicht. Für die geänderte Backend-CSS ist **`contao:assets:install`** nur nötig,
+wenn `web/bundles/contaowertungsportal` auf dem Server eine Kopie statt einer Verknüpfung ist.
+
+* Fix: **Nichtmitglieder („Textuelle") bekamen eine neue DWZ ausgewiesen, aber keine alte.** Die
+  Schnittstelle liefert für sie `ratingNew`/`indexNew`, obwohl die Wertungsordnung (3.4.3) für
+  Vereinslose keine DWZ vorsieht — die Turnierauswertung zeigte sie an. Ihre Eingangswertung steht
+  dagegen nicht in `ratingOld`, sondern nur im Anzeigetext `ratingOldDisplayString` („1905", bewusst
+  ohne Index, meist eine Elo) und fehlte deshalb überall. Jetzt gilt in Turnierauswertung,
+  Turnierergebnissen und Spielberichtsbogen: **keine „DWZ neu" und keine Differenz**, dafür die
+  **Eingangswertung unter „DWZ alt" bzw. „DWZ"**. Nichtmitglied ist, wer `member = false` trägt (laut
+  DSB-Wertungsreferat ausreichend, auch für künftig ausgetretene Mitglieder); fehlt das Feld,
+  entscheidet die nuLiga-Personennummer. K, We, Leistung und Niveau bleiben stehen; fehlen die
+  Zahlenfelder, springen `factorKDisplayString` und `winsExpectedDisplayString` ein. Die Überschrift
+  des Bogens nennt bei Nichtmitgliedern „Eingangswertung" statt „DWZ". Die Regeln stehen an einer Stelle
+  (`Helper\Spielerwertung`). Doku: `docs/turnierseiten.md`
+* Fix: **Im Spielberichtsbogen ergab die Summe der Einzelerwartungen nie den Wert darunter.** Jede
+  Zeile wurde mit der Elo-Formel aus den alten DWZ geschätzt; Gegner ohne DWZ blieben leer (im
+  gemeldeten Bogen drei von sieben), und die geschätzten Werte wichen ab (0,379 statt 0,381). Maßgeblich
+  ist jetzt das `expected` der Schnittstelle. Nachgemessen: Es gilt **immer aus Sicht von Weiß** — mit
+  `1 − expected` für die Schwarzpartien ergibt die Summe genau das gelieferte `winsExpected` (3,890983
+  gegen 3,89098), und dieselben Einzelwerte zeigt das Wertungsportal von nu. So bekommt auch die Partie
+  gegen einen Teilnehmer ganz ohne Wertung ihren Wert. **Kampflose Partien** bekommen keinen: nu liefert
+  für sie ein `expected`, gewertet werden sie nicht (am Bestand geprüft: mit ihnen ginge die Summe bei
+  1.001 von 10.927 Spielern nicht mehr auf)
+* Change: Fehlt `expected` — nu liefert es nicht für jedes Turnier —, wird die Zeile aus den alten
+  Wertungen beider Spieler errechnet, jetzt **nach der Wertungsordnung** (Normalverteilung, Streuung
+  200 × √2) statt mit der Elo-Formel. Die wich bei großen Differenzen sichtbar ab (1887 gegen 1318:
+  0,964 statt 0,978). Errechnete Zeilen sagen das im Tooltip. `Helper::Gewinnerwartung()` rechnet
+  ebenfalls so
+* Change: Die Einzelerwartungen im Spielberichtsbogen stehen mit **Dezimalkomma** wie die Summe darunter
+  und wie in der Turnierauswertung (vorher „0.379" über „3,891")
+* Fix: In den Turnierergebnissen stand bei Spielern ohne Wertung eine **„0"** in der Spalte DWZ (nu
+  liefert dort `ratingOld = 0`); die Zelle bleibt jetzt leer. Eine Wertung ohne Index erscheint als
+  Zahl statt als „1905 - 0"
+* Add: **Spiegeltabelle für den Notbetrieb erweitert:** `member` (dreiwertig: `'1'` Mitglied, `'0'`
+  Nichtmitglied, leer = unbekannt — ein Kontrollkästchen könnte „unbekannt" nicht von „Nichtmitglied"
+  unterscheiden, ältere Zeilen verlören sonst ihre neue DWZ) und `ratingOldDisplayString`. Fehlen die
+  Spalten noch (vor `contao:migrate`), läuft der Abgleich im alten Umfang weiter, statt mit „Unknown
+  column" abzubrechen. Geprüft unter Contao 4.13 und 5.7, Batch-INSERT eingeschlossen
+* Fix: **Notbetrieb:** Ein nie gelieferter Erwartungswert stand als „0,000" in der Auswertung, und ein
+  fehlendes `expected` galt als Erwartung null — beide Spalten sind `NOT NULL` mit Vorgabe 0.
+  `Helper\Lokal` lässt die 0 jetzt weg, wie es die Schnittstelle auch tut
+* Change: **Backend „Rohdaten":** „Eingerückt ausgeben (lesbar)" ist vorbelegt. Ein entfernter Haken
+  bleibt beim Wechsel der Funktion entfernt (`Rohabfrage::lesbar()`)
+* Fix: **Backend „Rohdaten" und „Zwischenspeicher": Überschrift, Einleitung, Felder und Knöpfe standen
+  auf drei verschiedenen Fluchtlinien** (gemessen in 4.13 bei 1280 px: Überschrift 18 px, Text 15 px,
+  Felder und Knopf 30 px vom Rand des Inhaltsbereichs). Das Formular stand in einem
+  `tl_listing_container`; dessen 15 px Rand und die 15 px Rand jedes `.widget` addierten sich. Contao
+  selbst stellt in System → Systemwartung alles auf 15 px (`.maintenance_inactive h2.sub_headline`,
+  `… .tl_tbox`, `… .tl_submit_container`). Das Formular steht jetzt außerhalb des Containers, die
+  übrigen Teile ziehen über eigene Klassen (`wp-werkzeug…` in der backend.css) nach. Nachgemessen:
+  alles auf 15 px, in 4.13 wie in 5.7 (dort standen die Felder bei 30 px und der Knopf bei 27 px)
+* Tests: `tests/Helper/SpielerwertungTest.php` (18 Prüfungen mit den Zahlen des gemeldeten Turniers),
+  `RohabfrageTest` um die Vorgabe ergänzt — zusammen 185 Prüfungen. PHPStan Stufe 6 gegen 4.13 und 5.7
+  ohne neue Funde
 ## Version 1.44.1 (2026-09-15)
 
 * Fix: **Unter Contao 5 waren alle Detailseiten unerreichbar (404):** Karteikarte (`spieler/NU…`),

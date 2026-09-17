@@ -82,9 +82,10 @@ class Turnierauswertung
 				// Fehlende Felder des Spieler-DTOs mit Standardwerten auffüllen
 				$t = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::PlayerDefaults($t);
 
-				// Ratingdifferenz errechnen
-				$ratingdiff = $t['ratingNew'] - $t['ratingOld'];
-				if($ratingdiff > 0) $ratingdiff = "+".$ratingdiff;
+				// Wertungen aufbereiten: Nichtmitglieder bekommen ihre
+				// Eingangswertung aus dem Anzeigetext der Schnittstelle, aber
+				// keine neue DWZ und keine Differenz (Wertungsordnung 3.4.3)
+				$wertung = \Schachbulle\ContaoWertungsportalBundle\Helper\Spielerwertung::aufbereiten($t);
 
 				// Schlüssel für Sortierung generieren
 				$key = \Contao\StringUtil::generateAlias(sprintf('%04d', $t['playerNo']).$t['lastname'].$t['firstname']);
@@ -98,8 +99,8 @@ class Turnierauswertung
 					'PKZ'           => $t['nuLigaPersonId'],
 					'Spielername'   => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Spielername($t),
 					'Scoresheet'    => sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'" title="%s">SC</a>', $this->apiTurnierinfo['body']['tournament']['uuid'], $t['playerUuid'], 'Spielberichtsbogen von '.$t['firstname'].' '.$t['lastname'].' aufrufen'),
-					'DWZ alt'       => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::DWZ($t['ratingOld'], $t['indexOld']),
-					'DWZ neu'       => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::DWZ($t['ratingNew'], $t['indexNew']),
+					'DWZ alt'       => $wertung['dwzAlt'],
+					'DWZ neu'       => $wertung['dwzNeu'],
 					'MglNr'         => sprintf('%04d', $t['memberNo']),
 					'VKZ'           => $t['memberNo'] ? sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getVereinseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">%s</a>', $t['vkz'], sprintf('%s-%s', $t['vkz'], sprintf('%04d', $t['memberNo']))) : '',
 					'ZPS'           => sprintf('%s-%s', $t['vkz'], sprintf('%04d', $t['memberNo'])),
@@ -108,13 +109,14 @@ class Turnierauswertung
 					'Geschlecht'    => '',
 					'Elo'           => $fide['elo'],
 					'Titel'         => $fide['titel'],
-					'DWZ+-'         => $t['ratingNew'] && $t['ratingOld'] ? $ratingdiff : '',
+					'DWZ+-'         => $wertung['differenz'],
 					'Punkte'        => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Punkte($t['wins']),
 					'Partien'       => $t['numberOfGames'],
 					'Ungewertet'    => '',
-					'E'             => $t['factorK'],
+					'E'             => $wertung['factorK'],
 					'Ergebnis'      => sprintf('%s/%s', \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Punkte($t['wins']), $t['numberOfGames']),
-					'We'            => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Erwartungswert($t['winsExpected']),
+					'We'            => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Erwartungswert($wertung['winsExpected']),
+					'Nichtmitglied' => $wertung['nichtmitglied'],
 					'Niveau'        => $t['averageRatingCompetitors'],
 					'Leistung'      => $t['tournamentPerformance'],
 				);

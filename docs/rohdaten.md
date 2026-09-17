@@ -66,6 +66,12 @@ eine Aufruf zurückgibt — dasselbe, was auch das Frontend bekommt.
 
 ## Was die Datei enthält — und was nicht
 
+Das Häkchen „Eingerückt ausgeben (lesbar)" ist seit Fassung 1.45.0
+**vorbelegt**: Die Dateien werden fast immer zum Lesen und Weitergeben geholt.
+Wer es entfernt, behält diese Wahl auch beim Wechsel der Funktion — das
+Formular schickt sich dabei selbst ab, und ein fehlendes Häkchen gilt dann als
+abgewählt, nicht als „noch nie gesetzt".
+
 **Ohne Häkchen bei „eingerückt" kommen die Bytes unverändert**, genau wie nu
 sie geschickt hat. Nur diese Fassung ist mit der Originalantwort identisch und
 taugt, wenn jemand bei nu die Datei mit der eigenen Ausgabe vergleicht.

@@ -482,6 +482,29 @@ class Rohabfrage
 	}
 
 	/**
+	 * Entscheidet, ob die Antwort eingerückt ausgegeben wird.
+	 *
+	 * Vorgabe ist seit 1.45.0 „eingerückt": Die Dateien werden fast immer zum
+	 * Lesen und Weitergeben geholt, die unveränderten Bytes braucht nur, wer
+	 * die Antwort mit der von nu vergleichen will. Ein Kontrollkästchen
+	 * kennt aber keinen Wert für „abgewählt" — der Browser schickt es dann
+	 * gar nicht mit. Ob der Haken fehlt, weil er entfernt wurde, oder weil das
+	 * Formular noch nie abgeschickt wurde, verrät deshalb nur `$abgeschickt`.
+	 * Das Formular schickt sich auch beim Wechsel der Funktion ab; ein dort
+	 * entfernter Haken bleibt so entfernt.
+	 *
+	 * @param bool  $abgeschickt true, wenn das Rohdaten-Formular abgeschickt
+	 *                           wurde (FORM_SUBMIT stimmt)
+	 * @param mixed $wert        Wert des Kästchens aus der Anfrage, '1' = angehakt
+	 *
+	 * @return bool true = eingerückt ausgeben
+	 */
+	public static function lesbar(bool $abgeschickt, $wert): bool
+	{
+		return $abgeschickt ? $wert === '1' : true;
+	}
+
+	/**
 	 * Bereitet den Antworttext für die Datei auf.
 	 *
 	 * Ohne `$lesbar` kommt der Text Byte für Byte so zurück, wie nu ihn

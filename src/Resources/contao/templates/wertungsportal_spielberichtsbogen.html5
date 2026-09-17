@@ -106,9 +106,9 @@
 						<th width="30" class="right-line">Runde</th>
 						<th class="" title="Name des Gegners mit Link zur Karteikarte">Gegner</th>
 						<th class="right-line" title="Link zum Spielberichtsbogen des Spielers">Scoresheet</th>
-						<th width="60" class="right-line">DWZ</th>
+						<th width="60" class="right-line" title="DWZ des Gegners vor dem Turnier; bei Nichtmitgliedern die Eingangswertung (meist eine Elo)">DWZ</th>
 						<th width="60" class="right-line">Ergebnis</th>
-						<th width="60" class="" title="Erwartungswert">We</th>
+						<th width="60" class="" title="Erwartungswert, Punkterwartung in dieser Partie">We</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -120,7 +120,7 @@
 							<td class="right-line<?= $class ?>"><?= $d['Gegner_Scoresheet'] ?></td>
 							<td class="right-line<?= $class ?>"><?= $d['Gegner_DWZ'] ?></td>
 							<td class="right-line<?= $class ?> result <?= $d['Farbe'] ?>"><?= $d['Ergebnis'] ?></td>
-							<td class="<?= $class ?>" title="Geschätzter Erwartungswert"><?= $d['We'] ?></td>
+							<td class="<?= $class ?>" title="<?= !empty($d['We_geschaetzt']) ? 'Aus den alten Wertungen beider Spieler errechnet – die Schnittstelle liefert zu dieser Partie keinen Wert' : 'Erwartungswert laut Auswertung' ?>"><?= $d['We'] ?></td>
 						</tr>
 					<?php endforeach; ?>
 					<tr class="body" style="background-color: #CACACA; color:#000080;">
@@ -129,7 +129,7 @@
 						<td class="right-line<?= $class ?>">&nbsp;</td>
 						<td class="right-line<?= $class ?>" title="Gegnerdurchschnitt"><b><?= $this->spieler['Gegner'] ?></b></td>
 						<td class="right-line<?= $class ?> result"><b><?= $this->spieler['Punkte'] ?></b></td>
-						<td class="<?= $class ?>" title="Realer Erwartungswert"><b><?= $this->spieler['Erwartungswert'] ?></b></td>
+						<td class="<?= $class ?>" title="Erwartungswert im Turnier laut Auswertung (Summe der gewerteten Partien)"><b><?= $this->spieler['Erwartungswert'] ?></b></td>
 					</tr>
 				</tbody>
 			</table>

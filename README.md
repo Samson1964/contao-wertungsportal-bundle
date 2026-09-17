@@ -8,6 +8,9 @@ Ersetzt die SOAP-Schnittstelle von DeWIS und kommuniziert mit der REST-Schnittst
   `{{ftitel::…}}` und `{{verein::…}}` mit der NU-Nummer (früher Helper-Bundle mit DeWIS-ID)
 * [Adressen der Frontend-Seiten](docs/frontend-adressen.md) — Karteikarte, Verein, Verband,
   Turnier: Aufbau der Adressen, Suffix, alte Verweise, Unterschiede zwischen Contao 4.13 und 5
+* [Turnierseiten: Nichtmitglieder und Erwartungswerte](docs/turnierseiten.md) — warum
+  Nichtmitglieder keine neue DWZ bekommen, woher ihre Eingangswertung stammt und wie der
+  Erwartungswert je Partie im Spielberichtsbogen zustande kommt
 * [Vereinslisten-Schnittstelle](docs/vereinslisten-api.md) — Mitgliederlisten als
   JSON für Vereinswebsites: Abruf, Zugangsschlüssel, Verwaltung und Sperren
 * [Zwischenspeicher gezielt leeren](docs/zwischenspeicher.md) — Backend-Modul, das

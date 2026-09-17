@@ -229,6 +229,20 @@ class RohabfrageTest extends TestCase
 	}
 
 	/**
+	 * „Eingerückt" ist die Vorgabe — aber nur, solange das Formular noch nie
+	 * abgeschickt wurde. Danach gilt das Kästchen: Ein entfernter Haken kommt
+	 * als fehlendes Feld an und darf nicht wieder zur Vorgabe werden, sonst
+	 * ließe sich die unveränderte Antwort gar nicht mehr holen.
+	 */
+	public function testEingeruecktIstDieVorgabe(): void
+	{
+		$this->assertTrue(Rohabfrage::lesbar(false, ''), 'erster Aufruf der Seite');
+		$this->assertTrue(Rohabfrage::lesbar(true, '1'), 'abgeschickt mit Haken');
+		$this->assertFalse(Rohabfrage::lesbar(true, ''), 'abgeschickt ohne Haken');
+		$this->assertFalse(Rohabfrage::lesbar(true, '0'));
+	}
+
+	/**
 	 * Der Dateiname nennt Funktion, Angaben und Zeitpunkt und enthält nichts,
 	 * was ein Dateisystem stört.
 	 */

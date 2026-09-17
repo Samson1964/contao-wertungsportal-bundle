@@ -9,16 +9,23 @@
  * (`calc(50% - 30px)`). Der Kasten trägt `cf`, weil `.w50` fließt; ohne das
  * endet der Kasten über den Feldern und die Hilfetexte ragen heraus. Eine
  * einzelne Checkbox neben einem Eingabefeld bekommt wie im Kern `m12 cbx`.
+ *
+ * FLUCHTLINIE: Überschrift, Einleitung, Felder und Knopf beginnen alle 15 px
+ * vom Rand des Inhaltsbereichs — wie in System → Systemwartung. Das Formular
+ * steht deshalb NICHT in einem `tl_listing_container`: Dessen 15 px Rand und
+ * die 15 px Rand jedes `.widget` addierten sich (Felder bei 30 px, Text bei
+ * 15 px, Überschrift bei 18 px — so bis 1.44.1). Die Klassen `wp-werkzeug…`
+ * stehen in der backend.css des Bundles.
  */
 $maske = static function ($text) { return htmlspecialchars((string) $text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); };
 ?>
 <div id="tl_buttons"></div>
 
-<h2 class="sub_headline">Rohdaten der Schnittstelle</h2>
+<h2 class="sub_headline wp-werkzeug-kopf">Rohdaten der Schnittstelle</h2>
 
-<div class="tl_listing_container wp-stat">
+<div class="wp-werkzeug">
 
-	<p class="tl_help" style="margin-bottom:16px">
+	<p class="tl_help wp-werkzeug-text">
 		Ruft eine Funktion der nu-Schnittstelle auf und liefert die Antwort als
 		JSON-Datei — so, wie nu sie schickt: ohne Zwischenspeicher, ohne Abgleich
 		mit den Spiegeltabellen und ohne die Ergänzungen, die das Frontend
@@ -77,7 +84,7 @@ $maske = static function ($text) { return htmlspecialchars((string) $text, ENT_Q
 		</div>
 
 		<?php if(count($this->fehler)): ?>
-			<div class="tl_error" style="margin-top:12px">
+			<div class="tl_error wp-werkzeug-meldung">
 				<?php foreach($this->fehler as $meldung): ?>
 					<div><?= $maske($meldung) ?></div>
 				<?php endforeach; ?>
@@ -91,6 +98,8 @@ $maske = static function ($text) { return htmlspecialchars((string) $text, ENT_Q
 
 	<?php if($this->ergebnis): ?>
 		<?php $e = $this->ergebnis; ?>
+
+		<div class="wp-werkzeug-ergebnis">
 
 		<h3 class="wp-stat-ueberschrift">Keine Datei — die Schnittstelle hat nicht mit HTTP 200 geantwortet</h3>
 
@@ -129,6 +138,8 @@ $maske = static function ($text) { return htmlspecialchars((string) $text, ENT_Q
 				<pre style="white-space:pre-wrap;word-break:break-all;margin:0;padding:8px"><?= $maske($e['auszug']) ?></pre>
 			</div>
 		<?php endif; ?>
+
+		</div>
 
 	<?php endif; ?>
 

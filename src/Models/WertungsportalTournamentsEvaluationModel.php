@@ -26,8 +26,10 @@ use Contao\Model\Collection;
  * @property int    $fideId
  * @property int    $playerNo
  * @property string $eloPlayer
+ * @property string $member
  * @property int    $ratingOld
  * @property int    $indexOld
+ * @property string $ratingOldDisplayString
  * @property int    $ratingNew
  * @property int    $indexNew
  * @property float  $factorK
@@ -62,6 +64,59 @@ class WertungsportalTournamentsEvaluationModel extends Model
     private const DTO_STRING_FIELDS = ['nuLigaPersonId', 'firstname', 'lastname', 'vkz', 'memberNo', 'clubName'];
     private const DTO_INT_FIELDS = ['birthyear', 'fideId', 'playerNo', 'ratingOld', 'indexOld', 'ratingNew', 'indexNew', 'averageRatingCompetitors', 'numberOfGames', 'tournamentPerformance'];
     private const DTO_FLOAT_FIELDS = ['factorK', 'wins', 'winsExpected'];
+
+    /**
+     * Seit 1.45.0 gespiegelte Zeichenkettenfelder: der Mitgliedsstatus
+     * (`member`, abgelegt als '1'/'0', leer = unbekannt) und der Anzeigetext
+     * der alten Wertung, aus dem die Eingangswertung der Nichtmitglieder
+     * stammt. Sie werden nur angesprochen, wenn ihre Spalten existieren —
+     * siehe hatMitgliedsspalten().
+     */
+    private const DTO_MITGLIED_FIELDS = ['member', 'ratingOldDisplayString'];
+
+    /**
+     * Merker für hatMitgliedsspalten(), null = noch nicht geprüft.
+     *
+     * @var bool|null
+     */
+    private static $blnMitgliedsspalten;
+
+    /**
+     * Prüft, ob die Spalten `member` und `ratingOldDisplayString` schon
+     * angelegt sind.
+     *
+     * Das Bundle wird durch Kopieren des Ordners eingespielt; bis danach
+     * contao:migrate gelaufen ist, fehlen neue Spalten. Ohne diese Prüfung
+     * scheiterte der Abgleich dann an „Unknown column" — und weil er bei jedem
+     * Abruf der Schnittstelle mitläuft, mit ihm der Seitenaufruf. So läuft der
+     * Abgleich einfach im alten Umfang weiter.
+     *
+     * Das Ergebnis wird je Prozess gemerkt (eine SHOW-COLUMNS-Abfrage, die
+     * Contao seinerseits zwischenspeichert).
+     *
+     * @return bool true, wenn beide Spalten vorhanden sind
+     */
+    private static function hatMitgliedsspalten(): bool
+    {
+        if (null === self::$blnMitgliedsspalten) {
+            $objDatabase = Database::getInstance();
+            self::$blnMitgliedsspalten = $objDatabase->fieldExists('member', static::$strTable) && $objDatabase->fieldExists('ratingOldDisplayString', static::$strTable);
+        }
+
+        return self::$blnMitgliedsspalten;
+    }
+
+    /**
+     * Liefert die Zeichenkettenfelder des Abgleichs in der Reihenfolge, in der
+     * sie in SELECT und INSERT stehen — die Felder aus 1.45.0 nur, wenn ihre
+     * Spalten existieren.
+     *
+     * @return string[]
+     */
+    private static function zeichenkettenFelder(): array
+    {
+        return self::hatMitgliedsspalten() ? array_merge(self::DTO_STRING_FIELDS, self::DTO_MITGLIED_FIELDS) : self::DTO_STRING_FIELDS;
+    }
 
     /**
      * Findet einen Auswertungseintrag anhand von Turnier-ID und Spieler-UUID.
@@ -125,31 +180,7 @@ class WertungsportalTournamentsEvaluationModel extends Model
             $model->published = '1';
         }
 
-        $set = [];
-
-        foreach (['nuLigaPersonId', 'firstname', 'lastname', 'vkz', 'memberNo', 'clubName'] as $field) {
-            if (\array_key_exists($field, $player)) {
-                $set[$field] = (string) $player[$field];
-            }
-        }
-
-        foreach (['birthyear', 'fideId', 'playerNo', 'ratingOld', 'indexOld', 'ratingNew', 'indexNew', 'averageRatingCompetitors', 'numberOfGames', 'tournamentPerformance'] as $field) {
-            if (\array_key_exists($field, $player)) {
-                $set[$field] = (int) $player[$field];
-            }
-        }
-
-        foreach (['factorK', 'wins', 'winsExpected'] as $field) {
-            if (\array_key_exists($field, $player)) {
-                $set[$field] = (float) $player[$field];
-            }
-        }
-
-        if (\array_key_exists('eloPlayer', $player)) {
-            $set['eloPlayer'] = !empty($player['eloPlayer']) ? '1' : '';
-        }
-
-        if (static::applyApiFields($model, $set) || $isNew) {
+        if (static::applyApiFields($model, self::buildDtoSet($player)) || $isNew) {
             $model->tstamp = time();
             $model->save();
         }
@@ -171,6 +202,11 @@ class WertungsportalTournamentsEvaluationModel extends Model
     /**
      * Baut aus einem Spieler-DTO das typisierte Feld-Array für den Abgleich
      * (nur die von der API tatsächlich gelieferten Felder).
+     *
+     * @param array $player Spieler-DTO der Schnittstelle
+     *
+     * @return array Feldname => Wert; `member` und `ratingOldDisplayString`
+     *               nur, wenn ihre Spalten existieren (hatMitgliedsspalten())
      */
     private static function buildDtoSet(array $player): array
     {
@@ -196,6 +232,18 @@ class WertungsportalTournamentsEvaluationModel extends Model
 
         if (\array_key_exists('eloPlayer', $player)) {
             $set['eloPlayer'] = !empty($player['eloPlayer']) ? '1' : '';
+        }
+
+        if (self::hatMitgliedsspalten()) {
+            // Dreiwertig: '1' Mitglied, '0' Nichtmitglied; liefert die
+            // Schnittstelle das Feld nicht, bleibt der Bestand unangetastet
+            if (\array_key_exists('member', $player) && null !== $player['member']) {
+                $set['member'] = filter_var($player['member'], FILTER_VALIDATE_BOOLEAN) ? '1' : '0';
+            }
+
+            if (\array_key_exists('ratingOldDisplayString', $player)) {
+                $set['ratingOldDisplayString'] = mb_substr(trim((string) $player['ratingOldDisplayString']), 0, 32);
+            }
         }
 
         return $set;
@@ -272,7 +320,8 @@ class WertungsportalTournamentsEvaluationModel extends Model
 
         // Bestand der Auswertung laden (playerUuid => Datensatz)
         $arrExisting = [];
-        $strFields = implode(', ', array_merge(self::DTO_STRING_FIELDS, self::DTO_INT_FIELDS, self::DTO_FLOAT_FIELDS));
+        $arrStringFields = self::zeichenkettenFelder();
+        $strFields = implode(', ', array_merge($arrStringFields, self::DTO_INT_FIELDS, self::DTO_FLOAT_FIELDS));
         $objRows = $objDatabase->prepare('SELECT id, playerUuid, eloPlayer, ' . $strFields . ' FROM ' . static::$strTable . ' WHERE pid=?')
                                ->execute($pid);
 
@@ -288,7 +337,7 @@ class WertungsportalTournamentsEvaluationModel extends Model
             if (!isset($arrExisting[$strUuid])) {
                 $arrRow = [$pid, $intTime, $strUuid];
 
-                foreach (self::DTO_STRING_FIELDS as $strField) {
+                foreach ($arrStringFields as $strField) {
                     $arrRow[] = (string) ($arrSet[$strField] ?? '');
                 }
 
@@ -318,7 +367,7 @@ class WertungsportalTournamentsEvaluationModel extends Model
 
         // Neue Auswertungseinträge blockweise anlegen
         $strColumns = 'pid, tstamp, playerUuid, ' . $strFields . ', eloPlayer, published';
-        $strTuple = '(' . implode(', ', array_fill(0, \count(self::DTO_STRING_FIELDS) + \count(self::DTO_INT_FIELDS) + \count(self::DTO_FLOAT_FIELDS) + 5, '?')) . ')';
+        $strTuple = '(' . implode(', ', array_fill(0, \count($arrStringFields) + \count(self::DTO_INT_FIELDS) + \count(self::DTO_FLOAT_FIELDS) + 5, '?')) . ')';
 
         foreach (array_chunk($arrInsert, 100) as $arrChunk) {
             $strValues = implode(', ', array_fill(0, \count($arrChunk), $strTuple));

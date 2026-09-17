@@ -1399,20 +1399,25 @@ class Helper extends \Contao\Frontend
 	}
 
 	/**
-	 * Liefert die Gewinnerwartung
+	 * Liefert die Gewinnerwartung aus zwei Wertungszahlen.
+	 *
+	 * Gerechnet wird seit 1.45.0 nach der Wertungsordnung (Normalverteilung,
+	 * siehe Spielerwertung::gewinnerwartung()) statt mit der logistischen
+	 * Elo-Formel; die wich bei großen Differenzen sichtbar von der Auswertung
+	 * ab. Der Spielberichtsbogen braucht die Funktion nur noch als Ersatz,
+	 * wenn die Schnittstelle zu einer Partie kein `expected` liefert.
 	 *
 	 * @param  int|string   $dwz       Eigene DWZ
 	 * @param  int|string   $gegnerdwz DWZ des Gegners
-	 * @return string|false            Erwartung mit drei Nachkommastellen,
-	 *                                 false wenn eine der beiden Zahlen fehlt
+	 * @return string|false            Erwartung mit drei Nachkommastellen und
+	 *                                 Dezimalpunkt, false wenn eine der beiden
+	 *                                 Zahlen fehlt
 	 */
 	public static function Gewinnerwartung($dwz, $gegnerdwz)
 	{
-		// Umwandeln in Integer, falls ein String übergeben wurde
-		$dwz = (int)$dwz;
-		$gegnerdwz = (int)$gegnerdwz;
-		if($dwz == 0 || $gegnerdwz == 0) return false;
-		return (sprintf ("%5.3f", 1/(1+pow(10,($gegnerdwz-$dwz)/400))));
+		$erwartung = \Schachbulle\ContaoWertungsportalBundle\Helper\Spielerwertung::gewinnerwartung((int) $dwz, (int) $gegnerdwz);
+
+		return $erwartung === null ? false : sprintf('%5.3f', $erwartung);
 	}
 
 	/**

@@ -67,7 +67,7 @@ class Rohdaten extends \Contao\BackendModule
 			$eingabe[$feld] = $this->post($feld);
 		}
 
-		$lesbar = $this->post('lesbar') === '1';
+		$lesbar = \Schachbulle\ContaoWertungsportalBundle\Helper\Rohabfrage::lesbar($this->post('FORM_SUBMIT') === 'wp_rohdaten', $this->post('lesbar'));
 
 		$this->Template->funktionen = $funktionen;
 		$this->Template->parameter = \Schachbulle\ContaoWertungsportalBundle\Helper\Rohabfrage::PARAMETER;

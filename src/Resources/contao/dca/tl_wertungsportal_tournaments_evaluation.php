@@ -78,7 +78,7 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_tournaments_evaluation'] = [
 
     // Palettes
     'palettes' => [
-        'default' => '{player_legend},playerUuid,nuLigaPersonId,firstname,lastname,birthyear;{club_legend},vkz,memberNo,clubName;{dwz_legend},fideId,playerNo,eloPlayer,ratingOld,indexOld,ratingNew,indexNew,factorK,averageRatingCompetitors,wins,numberOfGames,winsExpected,tournamentPerformance;{publish_legend},published',
+        'default' => '{player_legend},playerUuid,nuLigaPersonId,firstname,lastname,birthyear;{club_legend},vkz,memberNo,clubName;{dwz_legend},fideId,playerNo,eloPlayer,member,ratingOld,indexOld,ratingOldDisplayString,ratingNew,indexNew,factorK,averageRatingCompetitors,wins,numberOfGames,winsExpected,tournamentPerformance;{publish_legend},published',
     ],
 
     // Fields
@@ -173,10 +173,26 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_tournaments_evaluation'] = [
             'eval'      => ['tl_class' => 'w50 m12'],
             'sql'       => "char(1) NOT NULL default ''",
         ],
+        // Mitgliedsstatus laut Schnittstelle (Feld "member"). DREIWERTIG, weil
+        // Zeilen aus der Zeit vor 1.45.0 den Status nicht kennen:
+        // '' = unbekannt, '1' = Mitglied, '0' = Nichtmitglied. Ein Kontroll-
+        // kästchen könnte „unbekannt" nicht von „Nichtmitglied" unterscheiden —
+        // und für Nichtmitglieder wird keine neue DWZ ausgewiesen
+        // (Wertungsordnung 3.4.3). Bei „unbekannt" entscheidet die
+        // nuLigaPersonId, siehe Helper\Spielerwertung::istNichtmitglied()
+        'member' => [
+            'exclude'   => true,
+            'filter'    => true,
+            'inputType' => 'select',
+            'options'   => ['1', '0'],
+            'reference' => &$GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['member_optionen'],
+            'eval'      => ['includeBlankOption' => true, 'tl_class' => 'w50'],
+            'sql'       => "char(1) NOT NULL default ''",
+        ],
         'ratingOld' => [
             'exclude'   => true,
             'inputType' => 'text',
-            'eval'      => ['rgxp' => 'digit', 'tl_class' => 'w50'],
+            'eval'      => ['rgxp' => 'digit', 'tl_class' => 'w50 clr'],
             'sql'       => "int(10) unsigned NOT NULL default 0",
         ],
         'indexOld' => [
@@ -185,10 +201,20 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_tournaments_evaluation'] = [
             'eval'      => ['rgxp' => 'digit', 'tl_class' => 'w50'],
             'sql'       => "int(10) unsigned NOT NULL default 0",
         ],
+        // Anzeigetext der alten Wertung. Für Mitglieder wiederholt er nur
+        // ratingOld/indexOld („1887 - 44"); für Nichtmitglieder ist er die
+        // EINZIGE Quelle der Eingangswertung („1905", bewusst ohne Index, meist
+        // eine Elo) — ratingOld liefert die Schnittstelle für sie nicht
+        'ratingOldDisplayString' => [
+            'exclude'   => true,
+            'inputType' => 'text',
+            'eval'      => ['maxlength' => 32, 'tl_class' => 'w50'],
+            'sql'       => "varchar(32) NOT NULL default ''",
+        ],
         'ratingNew' => [
             'exclude'   => true,
             'inputType' => 'text',
-            'eval'      => ['rgxp' => 'digit', 'tl_class' => 'w50'],
+            'eval'      => ['rgxp' => 'digit', 'tl_class' => 'w50 clr'],
             'sql'       => "int(10) unsigned NOT NULL default 0",
         ],
         'indexNew' => [

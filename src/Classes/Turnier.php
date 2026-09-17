@@ -281,7 +281,7 @@ class Turnier extends \Contao\Module
 			$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
 			$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
 			$this->Template->subHeadline = $scoresheet->Turniername; // Unterüberschrift Turnier setzen
-			$this->Template->playerHeadline = 'Spielberichtsbogen <b>'.$scoresheet->Spieler['Name'].'</b>'.($scoresheet->Spieler['DWZ alt'] ? ' / DWZ '.$scoresheet->Spieler['DWZ alt'] : ''); // Unterüberschrift Spieler setzen
+			$this->Template->playerHeadline = 'Spielberichtsbogen <b>'.$scoresheet->Spieler['Name'].'</b>'.($scoresheet->Spieler['DWZ alt'] ? ' / '.(!empty($scoresheet->Spieler['Nichtmitglied']) ? 'Eingangswertung' : 'DWZ').' '.$scoresheet->Spieler['DWZ alt'] : ''); // Unterüberschrift Spieler setzen
 			$this->Template->turnierheader = $theader;
 			$this->Template->partien = $scoresheet->Ergebnisse;
 			$this->Template->spieler = $scoresheet->Spieler;

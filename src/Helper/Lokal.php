@@ -715,9 +715,14 @@ class Lokal
 			(
 				'round'      => (int) $partie['round'],
 				'result'     => $partie['result'],
-				'expected'   => $partie['expected'],
 				'restpartie' => $partie['restpartie'],
 			);
+
+			// Die Schnittstelle liefert `expected` nur im Spielberichtsbogen.
+			// Partien, die über die Ergebnisliste gespiegelt wurden, tragen
+			// den Vorgabewert 0 der Spalte — der bleibt hier weg, damit die
+			// Aufbereitung ihn nicht für eine Erwartung von null hält
+			if((float) $partie['expected'] > 0) $eintrag['expected'] = (float) $partie['expected'];
 
 			$eintrag['whitePlayer'] = self::spielerZuUuid($spieler, (string) $partie['whitePlayerUuid']);
 			$eintrag['blackPlayer'] = self::spielerZuUuid($spieler, (string) $partie['blackPlayerUuid']);
@@ -866,16 +871,28 @@ class Lokal
 		if(!empty($row['fideId'])) $dto['fideId'] = (int) $row['fideId'];
 		if(!empty($row['eloPlayer'])) $dto['eloPlayer'] = (int) $row['eloPlayer'];
 
+		// Mitgliedsstatus und Anzeigetext der alten Wertung (seit 1.45.0
+		// gespiegelt). Ein leerer Status heißt „unbekannt" und bleibt weg —
+		// dann entscheidet Spielerwertung::istNichtmitglied() nach der
+		// nuLigaPersonId. Der Anzeigetext trägt die Eingangswertung der
+		// Nichtmitglieder, für die es kein ratingOld gibt
+		if((string) ($row['member'] ?? '') !== '') $dto['member'] = (string) $row['member'] === '1';
+		if((string) ($row['ratingOldDisplayString'] ?? '') !== '') $dto['ratingOldDisplayString'] = (string) $row['ratingOldDisplayString'];
+
 		// Auswertungswerte nur übernehmen, wenn sie gefüllt sind
 		foreach(array('ratingOld', 'indexOld', 'ratingNew', 'indexNew', 'factorK', 'averageRatingCompetitors', 'tournamentPerformance') as $feld)
 		{
 			if(!empty($row[$feld])) $dto[$feld] = self::zahl($row[$feld]);
 		}
 
-		foreach(array('wins', 'winsExpected') as $feld)
-		{
-			if((string) ($row[$feld] ?? '') !== '') $dto[$feld] = self::zahl($row[$feld]);
-		}
+		// Punkte: 0 ist ein echtes Ergebnis und bleibt stehen
+		if((string) ($row['wins'] ?? '') !== '') $dto['wins'] = self::zahl($row['wins']);
+
+		// Erwartungswert: Die Spalte ist NOT NULL mit Vorgabe 0 — eine 0 heißt
+		// hier „nie geliefert" (Teilnehmer ohne Wertung), nicht „Erwartung
+		// null". Bis 1.44.1 kam sie durch und stand im Notbetrieb als „0,000"
+		// in der Auswertung, wo die Schnittstelle ein leeres Feld zeigt
+		if((float) ($row['winsExpected'] ?? 0) > 0) $dto['winsExpected'] = self::zahl($row['winsExpected']);
 
 		return $dto;
 	}

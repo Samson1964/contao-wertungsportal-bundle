@@ -109,13 +109,13 @@
 						<th class="">Spielername</th>
 						<th class="right-line" data-sort="nein" title="Link zum Scoresheet/Spielberichtsbogen">SC</th>
 						<th class="right-line" title="Vereinskennziffer und Mitgliedsnummer">VKZ-MNr.</th>
-						<th class="right-line" data-sort="zahl">DWZ alt</th>
+						<th class="right-line" data-sort="zahl" title="DWZ vor dem Turnier; bei Nichtmitgliedern die Eingangswertung ohne Index (meist eine Elo)">DWZ alt</th>
 						<th class="right-line" data-sort="zahl" title="Ergebnis">Erg.</th>
 						<th class="right-line" data-sort="zahl" title="Erwartungswert, Punkterwartung im Turnier">We</th>
 						<th class="right-line" data-sort="zahl" title="Entwicklungsfaktor/Entwicklungskoeffizient">K</th>
 						<th class="right-line" data-sort="zahl" title="Turnierleistung">Lstg.</th>
 						<th class="right-line" data-sort="zahl" title="Gegnerdurchschnitt">Niveau</th>
-						<th class="right-line" data-sort="zahl">DWZ neu</th>
+						<th class="right-line" data-sort="zahl" title="DWZ nach dem Turnier; für Nichtmitglieder wird keine ausgewiesen (Wertungsordnung 3.4.3)">DWZ neu</th>
 						<th data-sort="zahl" title="Differenz neue DWZ abzgl. alte DWZ">DWZ ±</th>
 					</tr>
 				</thead>

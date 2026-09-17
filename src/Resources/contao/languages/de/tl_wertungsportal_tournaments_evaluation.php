@@ -22,7 +22,10 @@ $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['clubName']     
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['fideId']                   = ['FIDE-ID', 'FIDE-Identifikationsnummer des Spielers.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['playerNo']                 = ['Spielernummer', 'Nummer des Spielers im Turnier.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['eloPlayer']                = ['Elo-Spieler', 'Der Spieler wurde nach Elo ausgewertet.'];
+$GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['member']                   = ['Mitglied', 'Mitgliedsstatus laut Schnittstelle. Für Nichtmitglieder wird keine neue DWZ ausgewiesen (Wertungsordnung 3.4.3). Leer = unbekannt (Zeile aus der Zeit vor Fassung 1.45.0).'];
+$GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['member_optionen']          = ['1' => 'Mitglied', '0' => 'Nichtmitglied'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['ratingOld']                = ['DWZ alt', 'DWZ vor dem Turnier.'];
+$GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['ratingOldDisplayString']   = ['DWZ alt (Anzeigetext)', 'Anzeigetext der Schnittstelle. Bei Nichtmitgliedern steht nur hier die Eingangswertung, ohne Index (meist eine Elo).'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['indexOld']                 = ['Index alt', 'DWZ-Index vor dem Turnier.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['ratingNew']                = ['DWZ neu', 'DWZ nach dem Turnier.'];
 $GLOBALS['TL_LANG']['tl_wertungsportal_tournaments_evaluation']['indexNew']                 = ['Index neu', 'DWZ-Index nach dem Turnier.'];

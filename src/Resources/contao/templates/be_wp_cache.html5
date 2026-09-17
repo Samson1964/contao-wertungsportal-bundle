@@ -2,15 +2,21 @@
 /**
  * Backend-Template des Moduls „Zwischenspeicher"
  * Sucht und löscht einzelne Cache-Einträge zu Turnier, Spieler oder Verein.
+ *
+ * FLUCHTLINIE: Überschrift, Einleitung, Felder und Knöpfe beginnen alle 15 px
+ * vom Rand des Inhaltsbereichs — wie in System → Systemwartung. Das Formular
+ * steht deshalb NICHT in einem `tl_listing_container`: Dessen 15 px Rand und
+ * die 15 px Rand jedes `.widget` addierten sich (so bis 1.44.1). Die Klassen
+ * `wp-werkzeug…` stehen in der backend.css des Bundles.
  */
 ?>
 <div id="tl_buttons"></div>
 
-<h2 class="sub_headline">Zwischenspeicher gezielt leeren</h2>
+<h2 class="sub_headline wp-werkzeug-kopf">Zwischenspeicher gezielt leeren</h2>
 
-<div class="tl_listing_container wp-stat">
+<div class="wp-werkzeug">
 
-	<p class="tl_help" style="margin-bottom:16px">
+	<p class="tl_help wp-werkzeug-text">
 		Hier fliegen nur die Einträge zu einem einzelnen Datensatz weg. Den gesamten
 		Zwischenspeicher leert man dagegen unter System&nbsp;&rarr;&nbsp;Systemwartung —
 		danach ist allerdings jede Seite einmal langsam, weil alles neu geholt wird.
@@ -43,7 +49,7 @@
 		</div>
 
 		<?php if($this->fehler): ?>
-			<p class="tl_error"><?= $this->fehler ?></p>
+			<p class="tl_error wp-werkzeug-meldung"><?= $this->fehler ?></p>
 		<?php endif; ?>
 
 		<div class="tl_submit_container">
@@ -55,9 +61,11 @@
 
 	<?php if($this->gesucht): ?>
 
+		<div class="wp-werkzeug-ergebnis">
+
 		<?php if(!count($this->eintraege)): ?>
 
-			<p class="tl_info" style="margin-top:18px">Zu diesem Wert liegt nichts im Zwischenspeicher.
+			<p class="tl_info">Zu diesem Wert liegt nichts im Zwischenspeicher.
 				Entweder wurde er noch nie abgerufen, oder die Einträge sind bereits weg.</p>
 
 		<?php else: ?>
@@ -104,6 +112,8 @@
 			<?php endif; ?>
 
 		<?php endif; ?>
+
+		</div>
 
 	<?php endif; ?>
 

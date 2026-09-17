@@ -156,6 +156,35 @@ a.wp-stat-knopf:hover {
 	white-space				: nowrap;
 }
 
+/* Werkzeugseiten mit eigenem Formular (Rohdaten, Zwischenspeicher): Überschrift,
+   Einleitung, Felder und Knöpfe auf EINER Fluchtlinie, 15 px vom Rand des
+   Inhaltsbereichs — so, wie Contao es in System → Systemwartung macht (dort über
+   `.maintenance_inactive h2.sub_headline`, `… .tl_tbox`, `… .tl_submit_container`).
+   Die Felder bringen ihre 15 px über `.widget` selbst mit; der Rest zieht hier
+   nach. Ohne diese Regeln steht die Überschrift bei 18 px (Vorgabe des Kerns) und
+   der Knopf unter Contao 5 bei 12 px. Gemessen in 4.13 und 5.7 bei 1280 px Breite */
+h2.sub_headline.wp-werkzeug-kopf {
+	margin-left				: 15px;
+	margin-right			: 15px;
+}
+
+.wp-werkzeug-text {
+	margin					: 10px 15px 0;
+}
+
+.wp-werkzeug .tl_submit_container {
+	padding-left			: 15px;
+	padding-right			: 15px;
+}
+
+.wp-werkzeug-meldung {
+	margin					: 0 15px 12px;
+}
+
+.wp-werkzeug-ergebnis {
+	margin					: 0 15px 24px;
+}
+
 /* Zwischenüberschriften der Statistik (Vereinslisten-Schnittstelle) */
 .wp-stat-ueberschrift {
 	margin					: 28px 0 10px;

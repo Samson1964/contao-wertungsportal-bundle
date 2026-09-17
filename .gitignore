@@ -24,3 +24,6 @@
 
 # Vorlagen der DOS-Archive (enthalten Personendaten, nur zum Nachschlagen)
 /DOS-Downloads/
+
+# Schriftwechsel und Schnittstellenantworten zu Anzeigefehlern (enthalten Personendaten)
+/Problem Frontend/
