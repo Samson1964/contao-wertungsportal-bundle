@@ -10,6 +10,14 @@ Verbands-Archive:
 
 Beide sind voneinander unabhängig: Der Converter holt sich seine Datei selbst.
 
+**Anmeldung (ab 1.46.0):** Die Zip-Dateien gehören zur DWZ-Liste, die nu per
+OAuth2 schützt. Beide Befehle laden deshalb mit dem Token der DWZ-Liste; die
+Zugangsdaten stehen unter Wertungsportal → Einstellungen → „Zugang zur
+DWZ-Liste". Fehlen sie, laden die Befehle wie bisher ohne Anmeldung — das
+klappt, solange nu die Liste frei ausliefert. Verweigert nu eine Datei
+(HTTP 401), steht der Grund in der Ausgabe, und der Befehl gibt 1 zurück.
+Einzelheiten: [Zugang zur Schnittstelle](zugang.md).
+
 ## Der Cronjob muß umgestellt werden
 
 > **Beim Deploy zu erledigen.** Bis 1.35.2 rief der Hoster die beiden Skripte

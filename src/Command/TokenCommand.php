@@ -13,7 +13,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
- * Zeigt den Zustand des Zugangstokens — ohne die Schnittstelle zu belasten.
+ * Zeigt den Zustand der Zugangstoken — ohne die Schnittstelle zu belasten.
  *
  * Hintergrund: Die Schnittstelle von nu gibt je Kennung nur eine begrenzte Zahl
  * Zugangstoken aus und antwortet danach mit „Too much access tokens". Ein Token
@@ -26,6 +26,10 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  * holt sich JEDER Seitenaufruf und JEDER Cronlauf ein eigenes Token, und das
  * Kontingent ist in Stunden aufgebraucht. Von außen ist das nicht zu sehen,
  * deshalb dieser Befehl.
+ *
+ * Seit 1.46.0 gibt es zwei Kennungen (siehe docs/zugang.md): eine für Turniere
+ * und Personen, eine für die DWZ-Liste. Der Befehl zeigt beide getrennt — mit
+ * eigener Tokendatei und eigener Zählung, denn das Kontingent gilt je Kennung.
  *
  * Er fragt standardmäßig **nichts** bei der Schnittstelle an und kostet damit
  * auch kein Token.
@@ -41,6 +45,14 @@ class TokenCommand extends Command
     protected static $defaultName = 'wertungsportal:token';
 
     /**
+     * Überschriften der beiden Zugänge.
+     */
+    private const ZUGAENGE = [
+        OAuth2Client::ZUGANG_TURNIERE => 'Turniere und Personen (/dwz/tournaments, /dwz/persons)',
+        OAuth2Client::ZUGANG_DWZLISTE => 'DWZ-Liste (/dwz/dwzliste, Zip-Downloads)',
+    ];
+
+    /**
      * @var ContaoFramework
      */
     private $framework;
@@ -53,36 +65,39 @@ class TokenCommand extends Command
     }
 
     /**
-     * Beschreibt den Befehl und seinen einen Schalter.
+     * Beschreibt den Befehl und seine Schalter.
      *
      * @return void
      */
     protected function configure(): void
     {
         $this
-            ->setDescription('Zeigt, ob das Zugangstoken der Schnittstelle richtig zwischengespeichert wird')
-            ->addOption('pruefen', null, InputOption::VALUE_NONE, 'Zusätzlich einen echten Abruf machen (kostet ein Token!)')
-            ->addOption('auswertung', null, InputOption::VALUE_NONE, 'Das Tokenprotokoll auswerten: Anfragen, Wettläufe, neue Familien')
+            ->setDescription('Zeigt, ob die Zugangstoken der Schnittstelle richtig zwischengespeichert werden')
+            ->addOption('pruefen', null, InputOption::VALUE_NONE, 'Zusätzlich je Zugang einen echten Abruf machen (kostet ggf. ein Token!)')
+            ->addOption('auswertung', null, InputOption::VALUE_NONE, 'Die Tokenprotokolle auswerten: Anfragen, Wettläufe, neue Familien')
             ->setHelp(
                 "Ohne Schalter fragt der Befehl NICHTS bei der Schnittstelle an und kostet\n"
-                ."damit auch kein Token. Er sieht nur nach, was örtlich hinterlegt ist.\n\n"
+                ."damit auch kein Token. Er sieht nur nach, was örtlich hinterlegt ist —\n"
+                ."getrennt für die beiden Kennungen: Turniere und Personen, DWZ-Liste.\n\n"
                 ."Die entscheidende Zeile ist \"Schreibbar\". Steht dort NEIN, holt sich jeder\n"
                 ."Seitenaufruf und jeder Cronlauf ein eigenes Zugangstoken — dann ist das\n"
                 ."Kontingent bei nu binnen Stunden erschöpft, und daran ändert auch\n"
                 ."Abwarten nichts.\n\n"
-                ."Mit --pruefen wird ein einzelner öffentlicher und ein einzelner geschützter\n"
-                ."Endpunkt abgerufen. Das kostet im ungünstigen Fall ein Token und sollte\n"
-                ."nicht wiederholt werden, solange das Kontingent klemmt.\n"
+                ."Mit --pruefen wird je Zugang ein einzelner Endpunkt abgerufen. Das kostet\n"
+                ."im ungünstigen Fall je ein Token und sollte nicht wiederholt werden,\n"
+                ."solange das Kontingent klemmt. Es ist der schnellste Weg, frisch\n"
+                ."eingetragene Zugangsdaten der DWZ-Liste zu prüfen.\n"
             )
         ;
     }
 
     /**
-     * Gibt den Zustand aus.
+     * Gibt den Zustand beider Zugänge aus.
      *
      * @param  InputInterface  $input
      * @param  OutputInterface $output
-     * @return int 0 alles in Ordnung, 1 die Tokendatei ist nicht brauchbar
+     * @return int 0 alles in Ordnung, 1 eine Tokendatei ist nicht brauchbar
+     *             oder ein Probeabruf scheiterte
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
@@ -92,7 +107,79 @@ class TokenCommand extends Command
 
         $io->title('Wertungsportal: Zugangstoken');
 
-        $datei = OAuth2Client::tokendatei();
+        $brauchbar = true;
+
+        foreach (self::ZUGAENGE as $zugang => $titel) {
+            $io->section($titel);
+
+            if (!$this->zustand($io, $zugang)) {
+                $brauchbar = false;
+            }
+        }
+
+        if (!$brauchbar) {
+            return 1;
+        }
+
+        if ($input->getOption('auswertung')) {
+            foreach (self::ZUGAENGE as $zugang => $titel) {
+                $this->auswertung($io, OAuth2Client::tokenprotokoll($zugang), $titel);
+            }
+        }
+
+        if ($input->getOption('pruefen')) {
+            return $this->pruefen($io);
+        }
+
+        $io->success('Die Tokendateien sind brauchbar und werden verwendet. Kommt trotzdem „Too much access tokens", liegt die Grenze bei nu.');
+
+        return 0;
+    }
+
+    /**
+     * Gibt die Tabelle eines Zugangs aus: Zugangsdaten, Tokendatei, Token und
+     * die Tokenanfragen des laufenden Tages.
+     *
+     * Für die DWZ-Liste gibt es zwei Sonderfälle ohne eigene Tokendatei: keine
+     * Zugangsdaten (Abruf ohne Anmeldung, wie bis 1.45.1) und dieselbe
+     * Client-ID wie beim Turnierzugang (gemeinsames Token).
+     *
+     * @param  SymfonyStyle $io     Ausgabe
+     * @param  string       $zugang OAuth2Client::ZUGANG_…
+     * @return bool false, wenn die Tokendatei nicht geschrieben werden kann
+     */
+    private function zustand(SymfonyStyle $io, string $zugang): bool
+    {
+        $felder = OAuth2Client::EINSTELLUNGEN[$zugang];
+        $zeilen = [];
+
+        if (OAuth2Client::ZUGANG_TURNIERE === $zugang) {
+            $zeilen[] = ['Basisadresse', (string) ($GLOBALS['TL_CONFIG']['wertungsportal_apiBasisURL'] ?? '(nicht gepflegt)')];
+        }
+
+        if (OAuth2Client::ZUGANG_DWZLISTE === $zugang) {
+            if (!OAuth2Client::eingerichtet($zugang)) {
+                $io->table(['Angabe', 'Wert'], [
+                    ['Zugangsdaten', '<fg=yellow>nicht eingetragen</>'],
+                    ['Folge', 'Die DWZ-Liste wird ohne Anmeldung abgerufen — nur so lange möglich, wie nu sie frei ausliefert.'],
+                ]);
+
+                return true;
+            }
+
+            if (OAuth2Client::ZUGANG_TURNIERE === OAuth2Client::zugangFuer('/dwz/dwzliste/clubs')) {
+                $io->table(['Angabe', 'Wert'], [
+                    ['Zugangsdaten', 'dieselbe Client-ID wie bei Turnieren und Personen'],
+                    ['Folge', 'Ein gemeinsames Token — Tokendatei und Zählung siehe oben.'],
+                ]);
+
+                return true;
+            }
+        }
+
+        $scope = trim((string) ($GLOBALS['TL_CONFIG'][$felder['scope']] ?? ''));
+
+        $datei = OAuth2Client::tokendatei($zugang);
         $verzeichnis = \dirname($datei);
         $vorhanden = is_file($datei);
 
@@ -100,14 +187,11 @@ class TokenCommand extends Command
         // nicht angelegte Datei ist kein Mangel
         $schreibbar = $vorhanden ? is_writable($datei) : is_writable($verzeichnis);
 
-        $zeilen = [
-            ['Basisadresse', (string) ($GLOBALS['TL_CONFIG']['wertungsportal_apiBasisURL'] ?? '(nicht gepflegt)')],
-            ['Scope', (string) ($GLOBALS['TL_CONFIG']['wertungsportal_scopeListe'] ?? '(nicht gepflegt)')],
-            ['Zugangsdaten vollständig', OAuth2Client::eingerichtet() ? 'ja' : '<fg=red>NEIN</>'],
-            ['Tokendatei', $datei],
-            ['Vorhanden', $vorhanden ? 'ja' : 'nein (wird beim nächsten Abruf angelegt)'],
-            ['<options=bold>Schreibbar</>', $schreibbar ? '<info>ja</info>' : '<fg=red>NEIN</>'],
-        ];
+        $zeilen[] = ['Scope', '' !== $scope ? $scope : '(keiner — nu nimmt den der Kennung zugedachten)'];
+        $zeilen[] = ['Zugangsdaten vollständig', OAuth2Client::eingerichtet($zugang) ? 'ja' : '<fg=red>NEIN</>'];
+        $zeilen[] = ['Tokendatei', $datei];
+        $zeilen[] = ['Vorhanden', $vorhanden ? 'ja' : 'nein (wird beim nächsten Abruf angelegt)'];
+        $zeilen[] = ['<options=bold>Schreibbar</>', $schreibbar ? '<info>ja</info>' : '<fg=red>NEIN</>'];
 
         // Ein Ausweichen ins Systemverzeichnis ist der eigentliche Warnfall
         if (false === strpos($datei, 'system'.\DIRECTORY_SEPARATOR.'tmp') && false === strpos($datei, 'system/tmp')) {
@@ -139,7 +223,7 @@ class TokenCommand extends Command
 
         // Wieviele Token die Anlage tatsächlich anfordert — die Zahl, die der
         // Gegenseite fehlt, wenn man über das Kontingent sprechen will
-        $protokoll = OAuth2Client::tokenprotokoll();
+        $protokoll = OAuth2Client::tokenprotokoll($zugang);
 
         if ('' !== $protokoll && is_file($protokoll)) {
             $heute = date('Y-m-d');
@@ -179,71 +263,113 @@ class TokenCommand extends Command
                 .$verzeichnis.' prüfen.'
             );
 
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Ruft je Zugang einen Endpunkt ab und bewertet das Ergebnis.
+     *
+     * Die DWZ-Liste läuft dabei genau so, wie das Frontend sie abruft: mit
+     * ihrem Token, mit dem gemeinsamen Token oder ohne Anmeldung — je nachdem,
+     * was eingetragen ist. Ein 401 dort heißt deshalb je nach Lage „Zugangsdaten
+     * fehlen" oder „Zugangsdaten stimmen nicht".
+     *
+     * @param  SymfonyStyle $io Ausgabe
+     * @return int 0 beide antworten mit 200, sonst 1
+     */
+    private function pruefen(SymfonyStyle $io): int
+    {
+        $io->section('Abruf zur Probe');
+        $io->text('Je ein Aufruf: DWZ-Liste und Turniere.');
+        $io->newLine();
+
+        $client = new OAuth2Client();
+        $liste = $client->apiBaseUrl.'/dwz/dwzliste/persons?lastname=Muster&firstname=Max';
+        $turniere = $client->apiBaseUrl.'/dwz/tournaments?searchString=x&fromDate=2026-01-01&toDate=2026-01-02';
+
+        $weg = [
+            OAuth2Client::ZUGANG_DWZLISTE => 'mit dem Token der DWZ-Liste',
+            OAuth2Client::ZUGANG_TURNIERE => 'mit dem Token von Turnieren und Personen',
+        ];
+        $ergebnis = [];
+
+        $ohneToken = '';
+
+        foreach (['DWZ-Liste' => $liste, 'Turniere' => $turniere] as $was => $url) {
+            $zugang = OAuth2Client::zugangFuer($url);
+            $r = $client->callApiWithRefresh($url);
+            $code = (int) ($r['http_code'] ?? 0);
+            $ergebnis[$was] = $code;
+            $wie = null === $zugang ? 'ohne Anmeldung' : $weg[$zugang];
+
+            // Übergangsregel: Die DWZ-Liste kam trotz Zugangsdaten ohne Token
+            if (!empty($r['ohne_anmeldung'])) {
+                $ohneToken = (string) $r['ohne_anmeldung'];
+                $wie = '<fg=yellow>OHNE Anmeldung — kein Token zu bekommen</>';
+            }
+
+            if (200 === $code) {
+                $io->writeln(sprintf('  <info>HTTP 200</info>  %s (%s)', $was, $wie));
+            } else {
+                $io->writeln(sprintf('  <fg=red>HTTP %d</>  %s (%s)', $code, $was, $wie));
+                $io->writeln('            '.trim((string) ($r['error_message'] ?? '(ohne Meldung)')));
+            }
+
+            if ('' !== $ohneToken && 'DWZ-Liste' === $was) {
+                $io->writeln('            '.$ohneToken);
+            }
+        }
+
+        $io->newLine();
+
+        if ('' !== $ohneToken) {
+            $io->warning(
+                'Die Zugangsdaten der DWZ-Liste funktionieren nicht — die Antwort kam nur, weil nu die Liste noch '
+                .'ohne Anmeldung ausliefert. Sobald nu umstellt, gehen die Besucher in den Notbetrieb. '
+                .'Zugangsdaten und Scope prüfen (Wertungsportal → Einstellungen → Zugang zur DWZ-Liste). '
+                .'Vor dem nächsten Versuch die Wartezeit von fünf Minuten abwarten.'
+            );
+
             return 1;
         }
 
-        if ($input->getOption('auswertung')) {
-            $this->auswertung($io, $protokoll);
-        }
-
-        if ($input->getOption('pruefen')) {
-            $io->section('Abruf zur Probe');
-            $io->text('Je ein Aufruf: einmal öffentlich, einmal mit Token.');
-            $io->newLine();
-
-            $client = new OAuth2Client();
-            $ergebnis = [];
-
-            foreach ([
-                'öffentlich (ohne Token)' => $client->apiBaseUrl.'/dwz/dwzliste/persons?lastname=Muster&firstname=Max',
-                'geschützt (mit Token)' => $client->apiBaseUrl.'/dwz/tournaments?searchString=x&fromDate=2026-01-01&toDate=2026-01-02',
-            ] as $was => $url) {
-                $r = $client->callApiWithRefresh($url);
-                $code = (int) ($r['http_code'] ?? 0);
-                $ergebnis[$was] = $code;
-
-                if (200 === $code) {
-                    $io->writeln(sprintf('  <info>HTTP 200</info>  %s', $was));
-                } else {
-                    $io->writeln(sprintf('  <fg=red>HTTP %d</>  %s', $code, $was));
-                    $io->writeln('            '.trim((string) ($r['error_message'] ?? '(ohne Meldung)')));
-                }
+        if (200 === $ergebnis['DWZ-Liste'] && 200 === $ergebnis['Turniere']) {
+            if (!OAuth2Client::eingerichtet(OAuth2Client::ZUGANG_DWZLISTE)) {
+                $io->note('Die DWZ-Liste lief ohne Anmeldung, weil für sie keine Zugangsdaten eingetragen sind. Sobald nu die Anmeldung verlangt, gehören sie unter Wertungsportal → Einstellungen → Zugang zur DWZ-Liste.');
             }
 
-            $io->newLine();
-
-            $oeffentlich = $ergebnis['öffentlich (ohne Token)'] ?? 0;
-            $geschuetzt = $ergebnis['geschützt (mit Token)'] ?? 0;
-
-            if (200 === $oeffentlich && 200 !== $geschuetzt) {
-                $io->warning(
-                    'Die Verbindung zu nu steht — der öffentliche Endpunkt antwortet. Nur das '
-                    ."Zugangstoken ist nicht zu bekommen.\nAn dieser Anlage liegt es nicht: Die "
-                    .'Tokendatei ist schreibbar und wird verwendet. Die Grenze liegt bei nu und '
-                    .'gehört dort angesprochen (Kennung, Kontingent, Scope).'
-                );
-
-                return 1;
-            }
-
-            if (200 !== $oeffentlich) {
-                $io->error('Schon der öffentliche Endpunkt antwortet nicht — dann steht die Verbindung selbst in Frage, nicht das Token.');
-
-                return 1;
-            }
-
-            $io->success('Beide Endpunkte antworten. Das Zugangstoken ist in Ordnung.');
+            $io->success('Beide Zugänge antworten. Die Zugangstoken sind in Ordnung.');
 
             return 0;
         }
 
-        $io->success('Die Tokendatei ist brauchbar und wird verwendet. Kommt trotzdem „Too much access tokens", liegt die Grenze bei nu.');
+        if (0 === $ergebnis['DWZ-Liste'] && 0 === $ergebnis['Turniere']) {
+            $io->error('Keiner der beiden Abrufe hat eine Antwort bekommen — dann steht die Verbindung selbst in Frage, nicht ein Token.');
 
-        return 0;
+            return 1;
+        }
+
+        if (200 !== $ergebnis['DWZ-Liste']) {
+            $io->warning(OAuth2Client::eingerichtet(OAuth2Client::ZUGANG_DWZLISTE)
+                ? 'Die DWZ-Liste antwortet nicht mit 200. Zugangsdaten und Scope der DWZ-Liste prüfen (Wertungsportal → Einstellungen → Zugang zur DWZ-Liste); die Meldung oben nennt den Grund.'
+                : 'Die DWZ-Liste antwortet nicht mit 200, und für sie sind keine Zugangsdaten eingetragen. Verlangt nu inzwischen eine Anmeldung, gehören sie unter Wertungsportal → Einstellungen → Zugang zur DWZ-Liste.');
+        }
+
+        if (200 !== $ergebnis['Turniere']) {
+            $io->warning(
+                'Turniere und Personen antworten nicht mit 200. Liegt es am Token, ist die Grenze bei nu '
+                .'anzusprechen (Kennung, Kontingent, Scope) — an der Tokendatei dieser Anlage liegt es nicht.'
+            );
+        }
+
+        return 1;
     }
 
     /**
-     * Wertet das Tokenprotokoll aus.
+     * Wertet ein Tokenprotokoll aus.
      *
      * Beantwortet drei Fragen, die man ohne Aufzeichnung nur raten kann:
      * Wie oft wird überhaupt angefragt? Wie viele **neue Token-Familien**
@@ -253,15 +379,17 @@ class TokenCommand extends Command
      * einlösen kann und die übrigen auf `client_credentials` ausweichen?
      *
      * Genau diese Zahlen braucht ein Gespräch mit dem Betreiber der
-     * Schnittstelle über das Kontingent.
+     * Schnittstelle über das Kontingent — je Kennung, deshalb je Zugang ein
+     * eigenes Protokoll.
      *
      * @param  SymfonyStyle $io        Ausgabe
      * @param  string       $protokoll Pfad der Monatsdatei, darf leer sein
+     * @param  string       $titel     Überschrift des Zugangs
      * @return void
      */
-    private function auswertung(SymfonyStyle $io, string $protokoll): void
+    private function auswertung(SymfonyStyle $io, string $protokoll, string $titel): void
     {
-        $io->section('Auswertung des Tokenprotokolls');
+        $io->section('Auswertung des Tokenprotokolls — '.$titel);
 
         if ('' === $protokoll || !is_file($protokoll)) {
             $io->text('Noch keine Aufzeichnung vorhanden.');

@@ -97,10 +97,17 @@ Bewusst **anders als ein Abruf im Frontend**:
 * Ist die Schnittstelle in den Einstellungen **abgeschaltet**, ruft auch
   dieses Modul nichts ab. Ein bewusster Stopp — etwa weil nu das
   Tokenkontingent drosselt — soll sich nicht über das Backend aushebeln lassen.
-* Der Abruf benutzt **dasselbe Zugangstoken** wie das Frontend. Ein Klick kostet
+* Der Abruf benutzt **dasselbe Zugangstoken** wie das Frontend — für die
+  Funktionen der DWZ-Liste das der DWZ-Liste, sonst das von Turnieren und
+  Personen (siehe [Zugang zur Schnittstelle](zugang.md)). Ein Klick kostet
   also kein zusätzliches Token, solange das gespeicherte gilt. Nach einem 401
   oder 403 einige Minuten warten und nicht wiederholt klicken — jeder neue
   Versuch verlängert eine Sperre.
+* Frisch eingetragene Zugangsdaten der DWZ-Liste lassen sich hier erst dann
+  prüfen, wenn nu die Anmeldung verlangt: Solange die Liste frei ausgeliefert
+  wird, kommt die Datei auch ohne gültiges Token. Zum Prüfen deshalb
+  `wertungsportal:token --pruefen` nehmen — der Befehl sagt ausdrücklich, ob
+  die DWZ-Liste mit oder ohne Token kam (siehe [Zugang zur Schnittstelle](zugang.md)).
 
 ## Datenschutz
 

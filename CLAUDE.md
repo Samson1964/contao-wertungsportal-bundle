@@ -11,6 +11,23 @@ Nachfolger des alten contao-dewis-bundles; Migrationsstatus siehe TODO.md, Histo
 Dokumentation unter https://schachde-apps.liga.nu/dsbwertungsportal/apidocs/resources.html
 (DSBPersonREST, DSBTournamentREST und DWZListeREST sind für das Wertungsportal relevant)
 
+**Zwei Kennungen (ab 1.46.0), Doku `docs/zugang.md`:** Turniere und Personen (`/dwz/tournaments`,
+`/dwz/persons`, Einstellungen `wertungsportal_clientID/_clientSecret/_scopeListe`, Scope
+`dsb_tournament`) und die DWZ-Liste (`/dwz/dwzliste`, `wertungsportal_dwzliste_clientID/
+_clientSecret/_scope`). Die DWZ-Liste war bis September 2026 frei; nu hat angekündigt, sie zu
+schützen (am 22.09.2026 noch frei). Die Weiche ist `OAuth2Client::zugangFuer()`; Tokendatei,
+Prozessspeicher (`$tokenSpeicher` & Co. sind nach Tokendatei geschlüsselt), Wartezeit und
+Tokenprotokoll sind je Zugang getrennt. Gleiche Client-ID → Turnierzugang (ein Token).
+**Übergangsregel:** Ist für die DWZ-Liste kein Token zu bekommen, wird ohne versucht; erst ein
+401 wird zum `tokenfehler` (→ Notbetrieb). Eine so ohne Token gekommene Antwort trägt
+`ohne_anmeldung` — daran erkennt `wertungsportal:token --pruefen` falsche Zugangsdaten, die sonst
+erst beim Umstellen auffielen. Das Rohdaten-Modul kann das NICHT zeigen (es liefert bei 200 nur
+die Datei). Zip-Downloads über `OAuth2Client::herunterladen()` (ersetzt `Helper::DownloadDatei`),
+Adresse über `downloadAdresse()`. **Die echten Zugangsdaten nie in Code, Doku, Tests oder
+Commit** — Tests laufen gegen `tests/Helper/NuSchnittstelleAttrappe.php` (php -S, Prozess-
+isolation, eigenes TL_ROOT). Den Scope der DWZ-Liste hat nu nicht genannt: leer = keiner
+angefordert (bis 1.45.1 ging `scope=` leer hinaus).
+
 ## Neue Funktionen 20.07.2026 (Upload + Livetest offen)
 
 - **Blacklist**: tl_wertungsportal_persons hat blocked/grund/melder (analog tl_dwz_spi).

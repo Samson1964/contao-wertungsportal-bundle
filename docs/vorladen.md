@@ -261,13 +261,15 @@ auf „aus" steht — vorzuladen gäbe es dann nichts.
 ## Wenn die Schnittstelle das Zugangstoken verweigert
 
 Antwortet nu mit **„Too much access tokens for the requested client-id"**, sind
-zu viele Zugangstoken auf einmal auf die Kennung ausgestellt. Betroffen sind nur
-die **geschützten** Endpunkte — `/dwz/tournaments/…` und `/dwz/persons/…`. Der
-öffentliche Teil (`/dwz/dwzliste/…`, also die Karteikarte selbst) antwortet
-weiter normal.
+zu viele Zugangstoken auf einmal auf die Kennung ausgestellt. Betroffen ist nur
+**diese eine Kennung**: Seit Fassung 1.46.0 hat die DWZ-Liste (`/dwz/dwzliste/…`,
+also die Karteikarte selbst) eine eigene, mit eigenem Token und eigener
+Wartezeit — siehe [Zugang zur Schnittstelle](zugang.md). Bis nu die Anmeldung
+dort scharf schaltet, antwortet sie ohnehin auch ohne Token.
 
 Ein Token gilt eine Zeit lang und wird in `system/tmp/wertungsportal-token.json`
-abgelegt, damit alle Seitenaufrufe und alle Cronläufe dasselbe benutzen. Lässt
+abgelegt (das der DWZ-Liste in `wertungsportal-token-dwzliste.json` daneben),
+damit alle Seitenaufrufe und alle Cronläufe dasselbe benutzen. Lässt
 sich diese Datei **nicht schreiben**, holt sich jeder Aufruf ein eigenes Token —
 bei einem Vorladelauf Hunderte in Minuten, und das Kontingent ist erschöpft.
 Genau das steht dann im Systemprotokoll:
@@ -293,14 +295,15 @@ Nachsehen, ob alles stimmt:
 php vendor/bin/contao-console wertungsportal:token
 ```
 
-Der Befehl fragt **nichts** bei nu an und kostet kein Token. Die entscheidende
-Zeile ist „Schreibbar": Steht dort NEIN, holt sich jeder Seitenaufruf und jeder
-Cronlauf ein eigenes Token, und dann hilft auch Abwarten nicht. Mit `--pruefen`
-macht er je einen Abruf auf einen öffentlichen und einen geschützten Endpunkt —
-antwortet der erste mit 200 und der zweite mit 403, liegt es am Token und nicht
-an der Verbindung.
+Der Befehl fragt **nichts** bei nu an und kostet kein Token. Er zeigt beide
+Kennungen getrennt. Die entscheidende Zeile ist „Schreibbar": Steht dort NEIN,
+holt sich jeder Seitenaufruf und jeder Cronlauf ein eigenes Token, und dann
+hilft auch Abwarten nicht. Mit `--pruefen` macht er je Kennung einen Abruf —
+antwortet der eine mit 200 und der andere nicht, liegt es am Token dieser
+Kennung und nicht an der Verbindung.
 
-**Jede Tokenanfrage wird aufgezeichnet**, in `var/logs/wertungsportal-token-JJJJ-MM.log`:
+**Jede Tokenanfrage wird aufgezeichnet**, in `var/logs/wertungsportal-token-JJJJ-MM.log`
+(die der DWZ-Liste in `wertungsportal-token-dwzliste-JJJJ-MM.log`):
 
 ```
 Zeitpunkt;Art;Ergebnis;Hinweis;Herkunft

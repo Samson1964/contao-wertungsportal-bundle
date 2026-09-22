@@ -1,5 +1,53 @@
 # Wertungsportal Changelog
 
+## Version 1.46.0 (2026-09-22)
+
+**Nach dem Einspielen:** Unter Wertungsportal → Einstellungen → **„Zugang zur DWZ-Liste"** Client-ID
+und Client Secret eintragen, dann `php vendor/bin/contao-console wertungsportal:token --pruefen`. Keine
+Datenbankänderung, `contao:migrate` ist nicht nötig. Ohne die neuen Angaben läuft alles wie bisher —
+solange nu die DWZ-Liste frei ausliefert.
+
+* Add: **Anmeldung für die DWZ-Liste.** nu schützt `/dwz/dwzliste/…` künftig per OAuth2 und hat dem DSB
+  dafür eine eigene Kennung gegeben. Das Bundle führt jetzt zwei Zugänge: Turniere und Personen
+  (`/dwz/tournaments`, `/dwz/persons`, wie bisher) und die DWZ-Liste (Spielersuche, Karteikarte, Vereins-
+  und Verbandslisten, Ranglisten, Vereinslisten-Schnittstelle, Zip-Downloads). Jeder Zugang hat eigene
+  Zugangsdaten, eine eigene Tokendatei (`system/tmp/wertungsportal-token-dwzliste.json`), eine eigene
+  Wartezeit nach einem Fehlschlag und ein eigenes Tokenprotokoll
+  (`var/logs/wertungsportal-token-dwzliste-JJJJ-MM.log`) — das Kontingent von nu gilt je Kennung, ein
+  Engpass der einen sperrt die andere nicht mehr mit. Dieselbe Client-ID in beiden Zugängen ergibt ein
+  gemeinsames Token. Welcher Zugang gilt, entscheidet `OAuth2Client::zugangFuer()`; die Aufrufer merken
+  davon nichts. Doku: `docs/zugang.md`
+* Add: **Übergang ohne Ausfall.** Ohne Zugangsdaten der DWZ-Liste wird sie wie bis 1.45.1 ohne Anmeldung
+  abgerufen. Ist trotz Zugangsdaten kein Token zu bekommen (falsches Geheimnis, falscher Scope,
+  Kontingent), wird ohne versucht — solange nu frei ausliefert, merken die Besucher nichts. Verlangt nu die
+  Anmeldung, wird aus dem HTTP 401 ein Tokenfehler: Die Besucher bekommen den Notbetrieb mit Hinweis statt
+  einer Fehlermeldung, und im Systemprotokoll steht der Grund („… keine Zugangsdaten eingetragen" bzw. die
+  Antwort von nu). Bis 1.45.1 hätte die Umstellung bei nu auf allen Spieler-, Vereins- und Verbandsseiten
+  eine Fehlermeldung erzeugt
+* Change: **`wertungsportal:token`** zeigt beide Zugänge getrennt. `--pruefen` ruft je Zugang einen
+  Endpunkt ab, nennt den Weg (eigenes Token, gemeinsames, ohne Anmeldung) und warnt ausdrücklich, wenn die
+  DWZ-Liste trotz eingetragener Zugangsdaten nur ohne Token durchkam — sonst fiele ein falsches Geheimnis
+  erst auf, wenn nu umstellt. `--auswertung` wertet beide Tokenprotokolle aus
+* Change: **Zip-Downloads der DWZ-Liste** (`wertungsportal:download`, `wertungsportal:converter`) laden mit
+  dem Token der DWZ-Liste über `OAuth2Client::herunterladen()` (ersetzt `Helper::DownloadDatei()`). Die
+  Adresse folgt der Basisadresse der Einstellungen statt der fest eingetragenen Produktivadresse
+  (`OAuth2Client::downloadAdresse()`, ohne Basisadresse wie bisher). Bei HTTP 401 wird nicht wiederholt,
+  sondern gleich mit Grund gemeldet
+* Fix: **Die Zip-Downloads prüften das Zertifikat der Gegenstelle nicht** (`CURLOPT_SSL_VERIFYPEER` aus).
+  Mit einem Token in der Anfrage darf das nicht sein; die Prüfung ist jetzt eingeschaltet wie bei allen
+  übrigen Abrufen (gegen den Server von nu mit PHP 8.3 und 8.4 geprüft)
+* Change: Ohne eingetragenen Scope fordert der Tokenabruf keinen mehr an (bis 1.45.1 ging ein leeres
+  `scope=` hinaus). Für die DWZ-Liste hat nu keinen Scope genannt; beim Turnierzugang steht
+  `dsb_tournament`, dort ändert sich nichts
+* Fix: Mit eingeschaltetem Debug-Log stand das **Client Secret im Klartext** in
+  `wertungsportal_oauth2client.log`. Jetzt nur noch „gesetzt, n Zeichen"
+* Tests: `tests/Helper/OAuth2ClientTest.php` (10 Prüfungen) gegen einen Nachbau der Schnittstelle
+  (`tests/Helper/NuSchnittstelleAttrappe.php` auf dem eingebauten PHP-Server) — Weiche, getrennte
+  Tokendateien und Protokolle, gemeinsame Kennung, Übergang, Erneuerung nach 401, Downloads; mit erfundenen
+  Kennungen, nie gegen nu. Zusammen 197 Prüfungen. Dazu in 4.13 und 5.7: Einstellungsmaske und
+  `wertungsportal:token`; `--pruefen` in allen vier Lagen gegen den Nachbau und einmal gegen nu (4.13, ohne
+  Zugangsdaten der DWZ-Liste); Spieler-, Vereins- und Turniersuche gegen die echte Schnittstelle
+
 ## Version 1.45.1 (2026-09-17)
 
 **Neue Spalte — beim Deployment `contao:migrate` ausführen** (`ratingNewDisplayString` in

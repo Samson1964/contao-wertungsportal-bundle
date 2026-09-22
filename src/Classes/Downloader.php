@@ -15,6 +15,11 @@ namespace Schachbulle\ContaoWertungsportalBundle\Classes;
  * Der frueher noetige Token-Schutz (`?key=`) entfaellt ersatzlos: Ein
  * Konsolenbefehl ist von aussen nicht erreichbar.
  *
+ * **Anmeldung (ab 1.46.0):** nu schuetzt die DWZ-Liste samt Zip-Downloads per
+ * OAuth2. Geladen wird deshalb ueber `OAuth2Client::herunterladen()` mit dem
+ * Token der DWZ-Liste; die Adresse baut `OAuth2Client::downloadAdresse()` aus
+ * der Basisadresse der Einstellungen (siehe docs/zugang.md).
+ *
  * Die Ausgabe geht weiterhin per `echo` heraus; der Konsolenbefehl faengt sie
  * ab und reicht sie zeilenweise durch, damit der Fortschritt waehrend des
  * Laufs sichtbar bleibt.
@@ -48,7 +53,6 @@ class Downloader
 			'LV-M-dwzliste.zip'
 		);
 		
-		$url = 'https://schachde-apps.liga.nu/dsbwertungsportal/rs/dwz/dwzliste/download/';
 		$datum = date('Ymd');
 		$zielpfad = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::projektpfad().'/files/wertungsportal/downloads/';
 		$fehlschlaege = 0;
@@ -62,7 +66,7 @@ class Downloader
 
 			// Datei laden - mit Statuscheck, Zip-Prüfung und Wiederholungen
 			echo "Lade $link<br>\n";
-			$ergebnis = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::DownloadDatei($url.$link, $zieldatei);
+			$ergebnis = \Schachbulle\ContaoWertungsportalBundle\Helper\OAuth2Client::herunterladen(\Schachbulle\ContaoWertungsportalBundle\Helper\OAuth2Client::downloadAdresse($link), $zieldatei);
 
 			if($ergebnis['success'])
 			{

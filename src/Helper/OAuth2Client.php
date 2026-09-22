@@ -5,13 +5,64 @@ namespace Schachbulle\ContaoWertungsportalBundle\Helper;
 /**
  * OAuth2 Client Credentials Flow mit Refresh-Token-Unterstützung
  * Spec: https://www.oauth.com/oauth2-servers/access-tokens/client-credentials/
+ *
+ * **Zwei Zugänge, zwei Kennungen.** nu vergibt für die Turnier- und
+ * Personenabfragen (`/dwz/tournaments`, `/dwz/persons`) eine Kennung und für
+ * die DWZ-Liste (`/dwz/dwzliste`, dazu die Zip-Downloads) eine zweite — die
+ * DWZ-Liste war bis September 2026 frei abrufbar. Jeder Zugang hat eigene
+ * Zugangsdaten, eine eigene Tokendatei, eine eigene Wartezeit nach einem
+ * Fehlschlag und ein eigenes Tokenprotokoll: Das Kontingent von nu („Too much
+ * access tokens") gilt je Kennung, und ein Engpass der einen darf die andere
+ * nicht mitreißen. Welcher Zugang zu einer Adresse gehört, entscheidet
+ * zugangFuer(); gepflegt werden die Daten unter Wertungsportal → Einstellungen.
+ * Doku: docs/zugang.md
  */
 
 class OAuth2Client
 {
+	/**
+	 * Zugang für `/dwz/tournaments` und `/dwz/persons` — die ursprüngliche
+	 * Kennung des Bundles.
+	 */
+	const ZUGANG_TURNIERE = 'turniere';
+
+	/**
+	 * Zugang für `/dwz/dwzliste` (Spielersuche, Karteikarte, Vereins- und
+	 * Verbandslisten, Zip-Downloads der DWZ-Liste).
+	 */
+	const ZUGANG_DWZLISTE = 'dwzliste';
+
+	/**
+	 * Einstellungen (tl_settings) je Zugang. Basis- und Token-Adresse teilen
+	 * sich beide: Die Kennungen stammen aus demselben Portal von nu.
+	 */
+	const EINSTELLUNGEN = array
+	(
+		self::ZUGANG_TURNIERE => array
+		(
+			'clientId'     => 'wertungsportal_clientID',
+			'clientSecret' => 'wertungsportal_clientSecret',
+			'scope'        => 'wertungsportal_scopeListe',
+		),
+		self::ZUGANG_DWZLISTE => array
+		(
+			'clientId'     => 'wertungsportal_dwzliste_clientID',
+			'clientSecret' => 'wertungsportal_dwzliste_clientSecret',
+			'scope'        => 'wertungsportal_dwzliste_scope',
+		),
+	);
+
+	/**
+	 * Basisadresse der Produktivschnittstelle. Nur Rückfall für die
+	 * Zip-Downloads, falls in den Einstellungen keine Basisadresse steht —
+	 * die Downloads liefen früher ganz ohne Einstellungen.
+	 */
+	const BASIS_PRODUKTIV = 'https://schachde-apps.liga.nu/dsbwertungsportal/rs';
+
 	// ─────────────────────────────────────────────
 	//  Konfiguration (öffentliche Eigenschaften)
 	// ─────────────────────────────────────────────
+	public string $zugang; // self::ZUGANG_TURNIERE oder self::ZUGANG_DWZLISTE
 	public string $apiBaseUrl;
 	public string $clientId;
 	public string $clientSecret;
@@ -81,36 +132,53 @@ class OAuth2Client
 	const FEHLER_WIEDERHOLBAR = array(16, 18, 52, 55, 56, 92);
 
 	/**
-	 * Tokendaten für die Dauer dieses Prozesses.
+	 * Tokendaten für die Dauer dieses Prozesses, je Tokendatei (= je Zugang).
 	 *
 	 * Zweite Verteidigungslinie neben der Datei: Läßt sich die Datei nicht
 	 * schreiben — verschiedene Benutzer für Web und Kommandozeile, ein eigenes
 	 * /tmp je Dienst, ein Aufräumer dazwischen —, bliebe sonst jeder einzelne
 	 * Abruf ohne hinterlegtes Token und holte sich ein eigenes. Bei einem
 	 * Vorladelauf sind das Hunderte in Minuten.
+	 *
+	 * Seit 1.46.0 nach Tokendatei geschlüsselt: Mit nur EINEM Speicher bekäme
+	 * ein Abruf der DWZ-Liste das Token der Turnierkennung — und nu wiese ihn ab.
+	 *
+	 * @var array<string,array> Tokendatei => Tokendaten
 	 */
 	protected static array $tokenSpeicher = array();
 
 	/**
 	 * Zeitpunkt, bis zu dem nach einem Fehlschlag nicht erneut angefragt wird,
-	 * samt der Meldung von damals. Gilt für diesen Prozess; für die folgenden
-	 * steht dasselbe in der Tokendatei.
+	 * samt der Meldung von damals — je Tokendatei, damit ein Engpass der einen
+	 * Kennung die andere nicht mitsperrt. Gilt für diesen Prozess; für die
+	 * folgenden steht dasselbe in der Tokendatei.
+	 *
+	 * @var array<string,int>    Tokendatei => Zeitpunkt
+	 * @var array<string,string> Tokendatei => Meldung
 	 */
-	protected static int $gesperrtBis = 0;
-	protected static string $sperrgrund = '';
+	protected static array $gesperrtBis = array();
+	protected static array $sperrgrund = array();
 
 	/**
-	 * Prüft, ob die Zugangsdaten der Schnittstelle gepflegt sind.
+	 * Prüft, ob die Zugangsdaten eines Zugangs gepflegt sind.
 	 *
-	 * Ohne Basisadresse, Kennung, Geheimnis und Token-Adresse ist kein Abruf
-	 * möglich. Statisch, damit die Frage beantwortet werden kann, bevor
-	 * überhaupt eine Instanz entsteht.
+	 * Ohne Basisadresse, Token-Adresse, Kennung und Geheimnis ist kein
+	 * angemeldeter Abruf möglich. Statisch, damit die Frage beantwortet werden
+	 * kann, bevor überhaupt eine Instanz entsteht.
+	 *
+	 * Ohne Angabe wird der Turnierzugang geprüft — so wie vor 1.46.0, als es
+	 * nur ihn gab. An ihm hängt, ob das Bundle die Schnittstelle überhaupt
+	 * anspricht (API::autoQuery, Vorlader, Rohdaten).
+	 *
+	 * @param string $zugang self::ZUGANG_TURNIERE oder self::ZUGANG_DWZLISTE
 	 *
 	 * @return bool true, wenn alle vier Angaben vorliegen
 	 */
-	public static function eingerichtet(): bool
+	public static function eingerichtet(string $zugang = self::ZUGANG_TURNIERE): bool
 	{
-		foreach (array('wertungsportal_apiBasisURL', 'wertungsportal_clientID', 'wertungsportal_clientSecret', 'wertungsportal_tokenURL') as $strEinstellung)
+		$felder = self::EINSTELLUNGEN[$zugang] ?? self::EINSTELLUNGEN[self::ZUGANG_TURNIERE];
+
+		foreach (array('wertungsportal_apiBasisURL', 'wertungsportal_tokenURL', $felder['clientId'], $felder['clientSecret']) as $strEinstellung)
 		{
 			if (trim((string) ($GLOBALS['TL_CONFIG'][$strEinstellung] ?? '')) === '') return false;
 		}
@@ -118,27 +186,76 @@ class OAuth2Client
 		return true;
 	}
 
+	/**
+	 * Ermittelt, mit welchem Zugang eine Adresse der Schnittstelle abgerufen
+	 * wird.
+	 *
+	 * - `/dwz/tournaments`, `/dwz/persons`: Turnierzugang.
+	 * - `/dwz/dwzliste`: DWZ-Liste — aber nur, wenn deren Zugangsdaten gepflegt
+	 *   sind. Sonst null, also ohne Anmeldung, so wie bis 1.45.1: Bis nu die
+	 *   Anmeldung scharf schaltet, läuft eine Installation ohne die neuen Daten
+	 *   unverändert weiter. Trägt die DWZ-Liste dieselbe Client-ID wie der
+	 *   Turnierzugang, gilt der Turnierzugang — ein gemeinsames Token statt
+	 *   zweier Token-Familien derselben Kennung, die das Kontingent doppelt
+	 *   belasteten.
+	 * - alles andere: null.
+	 *
+	 * @param string $apiUrl Vollständige Adresse oder Pfad der Schnittstelle
+	 *
+	 * @return string|null Zugang, null = ohne Anmeldung abrufen
+	 */
+	public static function zugangFuer(string $apiUrl): ?string
+	{
+		foreach (array('/dwz/persons', '/dwz/tournaments') as $pfad)
+		{
+			if (strpos($apiUrl, $pfad) !== false) return self::ZUGANG_TURNIERE;
+		}
+
+		if (strpos($apiUrl, '/dwz/dwzliste') === false) return null;
+
+		if (!self::eingerichtet(self::ZUGANG_DWZLISTE)) return null;
+
+		$liste = trim((string) ($GLOBALS['TL_CONFIG'][self::EINSTELLUNGEN[self::ZUGANG_DWZLISTE]['clientId']] ?? ''));
+		$turniere = trim((string) ($GLOBALS['TL_CONFIG'][self::EINSTELLUNGEN[self::ZUGANG_TURNIERE]['clientId']] ?? ''));
+
+		return $liste === $turniere ? self::ZUGANG_TURNIERE : self::ZUGANG_DWZLISTE;
+	}
+
 	// ─────────────────────────────────────────────
 	//  Konstruktor – initialisiert alle Konfigurationswerte
 	// ─────────────────────────────────────────────
-	public function __construct()
+
+	/**
+	 * Liest die Zugangsdaten eines Zugangs aus den Einstellungen.
+	 *
+	 * @param string $zugang self::ZUGANG_TURNIERE (Vorgabe, wie vor 1.46.0)
+	 *                       oder self::ZUGANG_DWZLISTE; Unbekanntes gilt als
+	 *                       Turnierzugang
+	 */
+	public function __construct(string $zugang = self::ZUGANG_TURNIERE)
 	{
+		$this->zugang = isset(self::EINSTELLUNGEN[$zugang]) ? $zugang : self::ZUGANG_TURNIERE;
+		$felder = self::EINSTELLUNGEN[$this->zugang];
+
 		// Die Einstellungen werden ausdrücklich in Zeichenketten gewandelt:
 		// Solange sie im Backend nicht gepflegt sind, liefert TL_CONFIG null,
 		// und die getypten Eigenschaften quittieren das mit einem TypeError —
-		// also einem 500er auf jeder Seite, die das Bundle einbindet
+		// also einem 500er auf jeder Seite, die das Bundle einbindet.
+		// Das Geheimnis kommt aus dem Backend mit „#" als Entität zurück
 		$this->apiBaseUrl    = (string) ($GLOBALS['TL_CONFIG']['wertungsportal_apiBasisURL'] ?? '');
-		$this->clientId      = (string) ($GLOBALS['TL_CONFIG']['wertungsportal_clientID'] ?? '');
-		$this->clientSecret  = str_replace('&#35;', '#', (string) ($GLOBALS['TL_CONFIG']['wertungsportal_clientSecret'] ?? ''));
+		$this->clientId      = trim((string) ($GLOBALS['TL_CONFIG'][$felder['clientId']] ?? ''));
+		$this->clientSecret  = str_replace('&#35;', '#', trim((string) ($GLOBALS['TL_CONFIG'][$felder['clientSecret']] ?? '')));
 		$this->tokenEndpoint = (string) ($GLOBALS['TL_CONFIG']['wertungsportal_tokenURL'] ?? '');
-		$this->scope         = (string) ($GLOBALS['TL_CONFIG']['wertungsportal_scopeListe'] ?? '');
-		$this->cacheFile     = self::tokendatei();
+		$this->scope         = trim((string) ($GLOBALS['TL_CONFIG'][$felder['scope']] ?? ''));
+		$this->cacheFile     = self::tokendatei($this->zugang);
 		$this->timeout       = \Schachbulle\ContaoWertungsportalBundle\Helper\API::timeout();
 
-		$log = 'OAuth2Client initialisiert mit folgenden Werten:'."\n";
+		// Das Geheimnis gehört auch ins Fehlerprotokoll nicht hinein — bis
+		// 1.45.1 stand es dort im Klartext, sobald das Debug-Log lief
+		$log = 'OAuth2Client ('.$this->zugang.') initialisiert mit folgenden Werten:'."\n";
 		$log .= 'apiBaseUrl = '.$this->apiBaseUrl."\n";
 		$log .= 'clientId = '.$this->clientId."\n";
-		$log .= 'clientSecret = '.rawurldecode($this->clientSecret)."\n";
+		$log .= 'clientSecret = '.($this->clientSecret === '' ? '(leer)' : '(gesetzt, '.strlen($this->clientSecret).' Zeichen)')."\n";
 		$log .= 'tokenEndpoint = '.$this->tokenEndpoint."\n";
 		$log .= 'scope = '.$this->scope;
 		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
@@ -165,10 +282,17 @@ class OAuth2Client
 	 * Ist der Projektpfad nicht zu ermitteln (eigenständige Download-Skripte
 	 * ohne Container), bleibt das Systemverzeichnis als Ausweg.
 	 *
+	 * Je Zugang eine eigene Datei. Der Turnierzugang behält den Namen von vor
+	 * 1.46.0: Mit einem neuen Namen fände die Anlage ihr Token nach dem
+	 * Einspielen nicht wieder und holte eine neue Token-Familie.
+	 *
+	 * @param string $zugang self::ZUGANG_TURNIERE oder self::ZUGANG_DWZLISTE
+	 *
 	 * @return string Vollständiger Pfad zur Tokendatei
 	 */
-	public static function tokendatei(): string
+	public static function tokendatei(string $zugang = self::ZUGANG_TURNIERE): string
 	{
+		$zusatz = $zugang === self::ZUGANG_TURNIERE ? '' : '-'.preg_replace('/[^a-z]/', '', $zugang);
 		$wurzel = '';
 
 		try
@@ -189,11 +313,11 @@ class OAuth2Client
 
 			if(is_dir($verzeichnis) || @mkdir($verzeichnis, 0775, true))
 			{
-				if(is_writable($verzeichnis)) return $verzeichnis.'/wertungsportal-token.json';
+				if(is_writable($verzeichnis)) return $verzeichnis.'/wertungsportal-token'.$zusatz.'.json';
 			}
 		}
 
-		return sys_get_temp_dir().'/oauth2_token_cache.json';
+		return sys_get_temp_dir().'/oauth2_token_cache'.str_replace('-', '_', $zusatz).'.json';
 	}
 
 	/**
@@ -207,7 +331,7 @@ class OAuth2Client
 	 */
 	public function readCache(): array
 	{
-		if(!empty(self::$tokenSpeicher)) return self::$tokenSpeicher;
+		if(!empty(self::$tokenSpeicher[$this->cacheFile])) return self::$tokenSpeicher[$this->cacheFile];
 
 		if(!file_exists($this->cacheFile))
 		{
@@ -221,7 +345,7 @@ class OAuth2Client
 		$daten = json_decode($inhalt, true) ?? [];
 
 		// Was aus der Datei kommt, gilt auch für diesen Prozess
-		if(!empty($daten)) self::$tokenSpeicher = $daten;
+		if(!empty($daten)) self::$tokenSpeicher[$this->cacheFile] = $daten;
 
 		return $daten;
 	}
@@ -239,23 +363,31 @@ class OAuth2Client
 	 */
 	public function writeCache(array $data): void
 	{
-		self::$tokenSpeicher = $data;
+		self::$tokenSpeicher[$this->cacheFile] = $data;
 
 		if(@file_put_contents($this->cacheFile, json_encode($data)) === false)
 		{
-			static $gemeldet = false;
+			static $gemeldet = array();
 
-			if(!$gemeldet)
+			if(empty($gemeldet[$this->cacheFile]))
 			{
-				$gemeldet = true;
+				$gemeldet[$this->cacheFile] = true;
 				$this->protokolliere('Die Tokendatei '.$this->cacheFile.' läßt sich nicht schreiben. Innerhalb eines Aufrufs hilft der Zwischenspeicher im Arbeitsspeicher, aber jeder neue Seitenaufruf und jeder Cronlauf fordert ein eigenes Zugangstoken an — die Schnittstelle weist das irgendwann mit "Too much access tokens" ab. Bitte Schreibrechte prüfen.');
 			}
 		}
 	}
 
+	/**
+	 * Vergisst das Token dieses Zugangs — im Prozessspeicher und in der Datei.
+	 *
+	 * Der andere Zugang bleibt unberührt: Ein abgewiesenes Token der
+	 * DWZ-Liste sagt nichts über das der Turniere.
+	 *
+	 * @return void
+	 */
 	public function clearCache(): void
 	{
-		self::$tokenSpeicher = array();
+		unset(self::$tokenSpeicher[$this->cacheFile]);
 
 		if(file_exists($this->cacheFile))
 		{
@@ -278,15 +410,25 @@ class OAuth2Client
 	 */
 	protected function sperreSetzen(string $meldung): void
 	{
-		self::$gesperrtBis = time() + self::TOKENSPERRE;
-		self::$sperrgrund = $meldung;
+		self::$gesperrtBis[$this->cacheFile] = time() + self::TOKENSPERRE;
+		self::$sperrgrund[$this->cacheFile] = $meldung;
 
 		@file_put_contents($this->cacheFile, json_encode(array(
-			'gesperrt_bis' => self::$gesperrtBis,
+			'gesperrt_bis' => self::$gesperrtBis[$this->cacheFile],
 			'sperrgrund'   => $meldung,
 		)));
 
-		$this->protokolliere('Zugangstoken nicht zu bekommen — '.$meldung.'. Weitere Versuche werden für '.self::TOKENSPERRE.' Sekunden ausgesetzt.');
+		$this->protokolliere('Zugangstoken '.$this->bezeichnung().' nicht zu bekommen — '.$meldung.'. Weitere Versuche werden für '.self::TOKENSPERRE.' Sekunden ausgesetzt.');
+	}
+
+	/**
+	 * Benennt den Zugang für Protokollzeilen und Meldungen.
+	 *
+	 * @return string Etwa „(DWZ-Liste)"
+	 */
+	public function bezeichnung(): string
+	{
+		return $this->zugang === self::ZUGANG_DWZLISTE ? '(DWZ-Liste)' : '(Turniere und Personen)';
 	}
 
 	/**
@@ -322,8 +464,8 @@ class OAuth2Client
 	 */
 	protected function sperre(): ?array
 	{
-		$bis = self::$gesperrtBis;
-		$grund = self::$sperrgrund;
+		$bis = self::$gesperrtBis[$this->cacheFile] ?? 0;
+		$grund = self::$sperrgrund[$this->cacheFile] ?? '';
 
 		if($bis === 0 && file_exists($this->cacheFile))
 		{
@@ -391,12 +533,16 @@ class OAuth2Client
 		{
 			$errorMsg = $data['error_description'] ?? $data['error'] ?? 'Unbekannter Fehler';
 
-			self::buchen($postFields['grant_type'] ?? '?', 'abgelehnt', 'HTTP '.$httpCode.': '.$errorMsg);
+			self::buchen($this->zugang, $postFields['grant_type'] ?? '?', 'abgelehnt', 'HTTP '.$httpCode.': '.$errorMsg);
 
-			return ['error' => true, 'error_message' => "Token-Anfrage fehlgeschlagen (HTTP $httpCode): $errorMsg", 'http_code' => $httpCode];
+			// Beim Turnierzugang lautet die Meldung wie vor 1.46.0 — nach ihr
+			// wird in Protokollen gesucht (docs/vorladen.md)
+			$wofuer = $this->zugang === self::ZUGANG_DWZLISTE ? ' für die DWZ-Liste' : '';
+
+			return ['error' => true, 'error_message' => "Token-Anfrage$wofuer fehlgeschlagen (HTTP $httpCode): $errorMsg", 'http_code' => $httpCode];
 		}
 
-		self::buchen($postFields['grant_type'] ?? '?', 'ausgestellt', 'gültig '.($data['expires_in'] ?? '?').' s');
+		self::buchen($this->zugang, $postFields['grant_type'] ?? '?', 'ausgestellt', 'gültig '.($data['expires_in'] ?? '?').' s');
 
 		return array_merge(['error' => false], $data);
 	}
@@ -414,16 +560,20 @@ class OAuth2Client
 	 * fünf Minuten Lebensdauer sind das im ungünstigen Fall ein paar hundert
 	 * Zeilen am Tag.
 	 *
+	 * Je Zugang eine eigene Datei: Das Kontingent gilt je Kennung, und so
+	 * bleibt jede Datei für sich die Zahl, die man nu nennen kann.
+	 *
+	 * @param  string $zugang   Zugang, für den angefragt wurde
 	 * @param  string $art      grant_type der Anfrage (client_credentials, refresh_token)
 	 * @param  string $ergebnis 'ausgestellt' oder 'abgelehnt'
 	 * @param  string $hinweis  Gültigkeitsdauer bzw. Fehlertext
 	 * @return void
 	 */
-	protected static function buchen(string $art, string $ergebnis, string $hinweis): void
+	protected static function buchen(string $zugang, string $art, string $ergebnis, string $hinweis): void
 	{
 		try
 		{
-			$datei = self::tokenprotokoll();
+			$datei = self::tokenprotokoll($zugang);
 
 			if($datei === '') return;
 
@@ -441,12 +591,19 @@ class OAuth2Client
 	}
 
 	/**
-	 * Liefert den Pfad der Monatsdatei für die Tokenanfragen.
+	 * Liefert den Pfad der Monatsdatei für die Tokenanfragen eines Zugangs.
+	 *
+	 * Der Turnierzugang behält den Namen von vor 1.46.0
+	 * (`wertungsportal-token-JJJJ-MM.log`), die DWZ-Liste schreibt nach
+	 * `wertungsportal-token-dwzliste-JJJJ-MM.log`.
+	 *
+	 * @param string $zugang self::ZUGANG_TURNIERE oder self::ZUGANG_DWZLISTE
 	 *
 	 * @return string Vollständiger Pfad, '' wenn kein Verzeichnis nutzbar ist
 	 */
-	public static function tokenprotokoll(): string
+	public static function tokenprotokoll(string $zugang = self::ZUGANG_TURNIERE): string
 	{
+		$zusatz = $zugang === self::ZUGANG_TURNIERE ? '' : preg_replace('/[^a-z]/', '', $zugang).'-';
 		$wurzel = '';
 
 		try
@@ -467,7 +624,7 @@ class OAuth2Client
 		if(!is_dir($verzeichnis) && !@mkdir($verzeichnis, 0775, true)) return '';
 		if(!is_writable($verzeichnis)) return '';
 
-		return $verzeichnis.'/wertungsportal-token-'.date('Y-m').'.log';
+		return $verzeichnis.'/wertungsportal-token-'.$zusatz.date('Y-m').'.log';
 	}
 
 	// ─────────────────────────────────────────────
@@ -478,12 +635,19 @@ class OAuth2Client
 		$log = "🔑 Hole neuen Access Token (client_credentials) ...\n";
 		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 
-		$tokenData = $this->requestToken([
-		    'grant_type'    => 'client_credentials',
-		    'client_id'     => $this->clientId,
-		    'client_secret' => $this->clientSecret,
-		    'scope'         => $this->scope,
-		]);
+		$felder = array
+		(
+			'grant_type'    => 'client_credentials',
+			'client_id'     => $this->clientId,
+			'client_secret' => $this->clientSecret,
+		);
+
+		// Ohne eingetragenen Scope wird keiner angefordert (RFC 6749 §3.3: der
+		// Server nimmt dann den der Kennung zugedachten). Bis 1.45.1 ging
+		// auch ein leerer mit hinaus — für die DWZ-Liste hat nu keinen genannt
+		if($this->scope !== '') $felder['scope'] = $this->scope;
+
+		$tokenData = $this->requestToken($felder);
 
 		$log = "Neuer Access-Token:\n".print_r($tokenData, true);
 		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
@@ -642,7 +806,7 @@ class OAuth2Client
 		{
 			// Zweite Prüfung — und zwar aus der DATEI, nicht aus dem
 			// Prozessspeicher: Der kennt nur den Stand von vorhin
-			self::$tokenSpeicher = array();
+			unset(self::$tokenSpeicher[$this->cacheFile]);
 			$cache = $this->readCache();
 
 			if(!empty($cache['access_token']) && isset($cache['expires_at']) && time() < ($cache['expires_at'] - 30))
@@ -704,23 +868,163 @@ class OAuth2Client
 		return $tokenData;
 	}
 
-	// ─────────────────────────────────────────────
-	//  Prüft, ob ein Endpunkt ein Token benötigt.
-	//  Nicht öffentlich sind /dwz/persons und /dwz/tournaments –
-	//  beide verlangen einen Access Token. Alle anderen
-	//  Schnittstellen (z. B. /dwz/dwzliste) sind öffentlich.
-	// ─────────────────────────────────────────────
-	public function requiresToken(string $apiUrl): bool
+	/**
+	 * Baut die Adresse eines Zip-Downloads der DWZ-Liste.
+	 *
+	 * Die Basis kommt aus den Einstellungen — wie bei allen übrigen Abrufen.
+	 * Bis 1.45.1 stand die Produktivadresse fest in Downloader und Converter;
+	 * mit Anmeldung ginge das nicht mehr gut: Ein Token der Demo-Umgebung taugt
+	 * nicht für die Produktivschnittstelle. Ohne eingetragene Basis bleibt die
+	 * Produktivadresse, damit die Downloads wie bisher auch ohne gepflegte
+	 * Zugangsdaten laufen.
+	 *
+	 * @param string $datei Dateiname, etwa `LV-0-dwzliste.zip`
+	 *
+	 * @return string Vollständige Adresse
+	 */
+	public static function downloadAdresse(string $datei): string
 	{
-		$geschuetztePfade = ['/dwz/persons', '/dwz/tournaments'];
+		$basis = rtrim(trim((string) ($GLOBALS['TL_CONFIG']['wertungsportal_apiBasisURL'] ?? '')), '/');
 
-		foreach ($geschuetztePfade as $pfad) {
-			if (strpos($apiUrl, $pfad) !== false) {
-				return true;
+		if($basis === '') $basis = self::BASIS_PRODUKTIV;
+
+		return $basis.'/dwz/dwzliste/download/'.rawurlencode($datei);
+	}
+
+	/**
+	 * Lädt eine Datei der Schnittstelle herunter und prüft das Ergebnis:
+	 * cURL-Fehler, HTTP-Status 200 und (wahlweise) ein gültiges Zip-Archiv.
+	 *
+	 * Bis 1.45.1 stand diese Funktion als `Helper::DownloadDatei()` im Helper
+	 * und lud ohne Anmeldung. Seit nu auch die Zip-Dateien der DWZ-Liste
+	 * schützt, braucht der Download das Token der DWZ-Liste — deshalb wohnt er
+	 * jetzt neben der Tokenbehandlung.
+	 *
+	 * - Das Token wird **je Versuch** erfragt: Zwischen zwei Versuchen liegen
+	 *   Pausen, und ein Lauf über zwanzig Dateien dauert länger als ein Token
+	 *   lebt. Solange es gilt, kostet das keine Anfrage bei nu.
+	 * - Ist kein Token zu bekommen, wird ohne versucht — solange nu die
+	 *   DWZ-Liste noch frei ausliefert, klappt der Download dann trotzdem.
+	 * - Bei **HTTP 401** wird nicht wiederholt: Mit demselben Token scheitert
+	 *   jeder weitere Versuch genauso, und ein neues kostet Kontingent.
+	 * - Die Gegenstelle wird geprüft (`CURLOPT_SSL_VERIFYPEER`). Bis 1.45.1 war
+	 *   die Prüfung abgeschaltet — mit einem Token in der Anfrage darf sie das
+	 *   nicht sein. Die übrigen Abrufe prüfen seit jeher.
+	 *
+	 * Bei Fehlschlag wird der Download nach einer kurzen Pause wiederholt,
+	 * unvollständige Dateien werden gelöscht statt liegen gelassen (der
+	 * nu-Server liefert gelegentlich abgeschnittene Zips).
+	 *
+	 * @param string $url      Quell-URL
+	 * @param string $ziel     Zielpfad im Dateisystem
+	 * @param int    $versuche Maximale Anzahl Versuche
+	 * @param bool   $zipCheck Datei nach dem Download als Zip-Archiv prüfen
+	 *
+	 * @return array array('success' => bool, 'error' => string, 'versuche' => int)
+	 */
+	public static function herunterladen(string $url, string $ziel, int $versuche = 3, bool $zipCheck = true): array
+	{
+		$fehler = '';
+
+		for($versuch = 1; $versuch <= $versuche; $versuch++)
+		{
+			if($versuch > 1) sleep(5); // Kurze Pause vor der Wiederholung
+
+			$tokenfehler = '';
+			$kopf = self::anmeldekopf($url, $tokenfehler);
+
+			$fp = @fopen($ziel, 'w');
+
+			if($fp === false)
+			{
+				return array('success' => false, 'error' => 'Zieldatei kann nicht geschrieben werden: '.$ziel, 'versuche' => $versuch);
 			}
+
+			$ch = curl_init($url);
+			curl_setopt_array($ch, array
+			(
+				CURLOPT_FILE           => $fp,
+				CURLOPT_HTTPHEADER     => $kopf,
+				CURLOPT_TIMEOUT        => 3600,
+				CURLOPT_FOLLOWLOCATION => true,
+				CURLOPT_SSL_VERIFYPEER => true,
+				CURLOPT_SSL_VERIFYHOST => 2,
+			));
+			curl_exec($ch);
+			$curlFehler = curl_errno($ch) ? curl_error($ch) : '';
+			$httpCode = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+			curl_close($ch);
+			fclose($fp);
+
+			if($curlFehler)
+			{
+				$fehler = 'Curl-Fehler: '.$curlFehler;
+			}
+			elseif($httpCode === 401)
+			{
+				@unlink($ziel);
+
+				if($tokenfehler !== '') $grund = $tokenfehler;
+				elseif($kopf) $grund = 'nu hat das Zugangstoken abgewiesen';
+				else $grund = 'nu verlangt eine Anmeldung, für die DWZ-Liste sind aber keine Zugangsdaten eingetragen (Wertungsportal → Einstellungen → Zugang zur DWZ-Liste)';
+
+				return array('success' => false, 'error' => 'HTTP-Status 401 — '.$grund, 'versuche' => $versuch);
+			}
+			elseif($httpCode != 200)
+			{
+				$fehler = 'HTTP-Status '.$httpCode;
+			}
+			elseif($zipCheck)
+			{
+				// Zip-Konsistenzprüfung erkennt auch abgeschnittene Downloads
+				$zip = new \ZipArchive();
+				$res = $zip->open($ziel, \ZipArchive::CHECKCONS);
+
+				if($res === true)
+				{
+					$zip->close();
+
+					return array('success' => true, 'error' => '', 'versuche' => $versuch);
+				}
+
+				$fehler = 'Zip-Archiv defekt oder unvollständig (Code '.$res.')';
+			}
+			else
+			{
+				return array('success' => true, 'error' => '', 'versuche' => $versuch);
+			}
+
+			@unlink($ziel); // Defekte Datei nicht liegen lassen
 		}
 
-		return false;
+		return array('success' => false, 'error' => $fehler, 'versuche' => $versuche);
+	}
+
+	/**
+	 * Liefert die Kopfzeile mit dem Zugangstoken für eine Adresse.
+	 *
+	 * @param string $url          Adresse der Schnittstelle
+	 * @param string $tokenfehler  Erhält die Meldung, wenn ein Token nötig
+	 *                             wäre, aber keines zu bekommen ist
+	 *
+	 * @return string[] `Authorization: Bearer …` oder leer (ohne Anmeldung)
+	 */
+	protected static function anmeldekopf(string $url, string &$tokenfehler): array
+	{
+		$zugang = self::zugangFuer($url);
+
+		if($zugang === null) return array();
+
+		$token = (new self($zugang))->getValidToken();
+
+		if(!empty($token['error']))
+		{
+			$tokenfehler = (string) ($token['error_message'] ?? 'Zugangstoken nicht verfügbar');
+
+			return array();
+		}
+
+		return array('Authorization: Bearer '.$token['access_token']);
 	}
 
 	// ─────────────────────────────────────────────
@@ -853,34 +1157,72 @@ class OAuth2Client
 
 	/**
 	 * Der eigentliche Aufruf samt Token-Behandlung (siehe callApiWithRefresh).
+	 *
+	 * Welche Kennung gilt, entscheidet zugangFuer(). Das Token holt eine
+	 * Instanz DIESES Zugangs (`$tokenClient`), der Abruf selbst läuft über die
+	 * aufrufende Instanz — so greifen deren Schalter wie `rohantwort`.
+	 *
+	 * Für die DWZ-Liste gilt eine Übergangsregel: Ist kein Token zu bekommen
+	 * (keine Zugangsdaten, falscher Scope, erschöpftes Kontingent), wird sie
+	 * ohne abgerufen — solange nu sie noch frei ausliefert, merkt davon kein
+	 * Besucher etwas. Erst ein 401 macht daraus einen Tokenfehler (siehe
+	 * ohneAnmeldung()), und der schickt die Besucher wie jeder Tokenfehler in
+	 * den Notbetrieb statt auf eine Fehlerseite.
+	 *
+	 * @param string     $apiUrl Vollständige Adresse
+	 * @param string     $method GET oder POST
+	 * @param array|null $body   Rumpf eines POST
+	 *
+	 * @return array Antwort wie callApi(); ein Tokenfehler trägt 'tokenfehler' => true,
+	 *               eine DWZ-Liste, die trotz Zugangsdaten ohne Token kam,
+	 *               'ohne_anmeldung' => Grund
 	 */
 	protected function callApiIntern(string $apiUrl, string $method = 'GET', ?array $body = null): array
 	{
 		$log = 'API-Aufruf: '.$apiUrl."\n";
 		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 
-		// Öffentliche Schnittstellen (alles außer /dwz/persons)
-		// werden ohne Token aufgerufen.
-		if(!$this->requiresToken($apiUrl))
+		$zugang = self::zugangFuer($apiUrl);
+		$dwzliste = strpos($apiUrl, '/dwz/dwzliste') !== false;
+
+		// Ohne Anmeldung: frei abrufbare Adressen — und die DWZ-Liste, solange
+		// für sie keine Zugangsdaten eingetragen sind
+		if($zugang === null)
 		{
-			$log = "ℹ️ Öffentlicher Endpunkt (".$apiUrl.") – Aufruf ohne Token.\n";
+			$log = "ℹ️ Aufruf ohne Token (".$apiUrl.").\n";
 			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 			$result = $this->callApi(null, $apiUrl, $method, $body);
 			$log = "Answer REST-API:\n".print_r($result, true);
 			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
-			return $result;
-		}
-		else
-		{
-			$log = "ℹ️ Geschützter Endpunkt (".$apiUrl.") – Aufruf mit Token.\n";
-			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
+
+			return $dwzliste ? self::ohneAnmeldung($result, '') : $result;
 		}
 
-		$tokenResult = $this->getValidToken();
+		$tokenClient = $zugang === $this->zugang ? $this : new self($zugang);
+
+		$log = "ℹ️ Geschützter Endpunkt (".$apiUrl.") – Aufruf mit Token ".$tokenClient->bezeichnung().".\n";
+		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
+
+		$tokenResult = $tokenClient->getValidToken();
 		if($tokenResult['error'])
 		{
 			$log = "Fehler bei Token-Resultat:\n".print_r($tokenResult, true);
 			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
+
+			// Übergangsregel der DWZ-Liste, siehe oben
+			if($dwzliste)
+			{
+				$grund = (string) ($tokenResult['error_message'] ?? 'Zugangstoken nicht verfügbar');
+				$antwort = self::ohneAnmeldung($this->callApi(null, $apiUrl, $method, $body), $grund);
+
+				// Kam die Antwort ohne Token, wird das vermerkt: Sonst sähe
+				// `wertungsportal:token --pruefen` ein HTTP 200 und hielte
+				// falsche Zugangsdaten für richtig
+				if(empty($antwort['error'])) $antwort['ohne_anmeldung'] = $grund;
+
+				return $antwort;
+			}
+
 			return $tokenResult;
 		}
 
@@ -900,30 +1242,31 @@ class OAuth2Client
 			$log = "⚠️ HTTP 401 – Token wird erneuert ...\n";
 			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 
-			// Einmal je Aufruf ins Systemprotokoll, auch ohne Debug-Log: Diese
-			// Erneuerung ist die unauffälligste Art, das Tokenkontingent zu
-			// verbrauchen. Ein 401 mitten in einem Lauf, dessen Token noch
-			// gültig war, deutet auf eine Drosselung der Gegenseite hin — und
-			// die Antwort des Bundles darauf ist ausgerechnet ein NEUES Token.
-			// Ohne diese Zeile ist das von außen nicht zu erkennen
-			static $gemeldet401 = false;
+			// Einmal je Aufruf und Zugang ins Systemprotokoll, auch ohne
+			// Debug-Log: Diese Erneuerung ist die unauffälligste Art, das
+			// Tokenkontingent zu verbrauchen. Ein 401 mitten in einem Lauf,
+			// dessen Token noch gültig war, deutet auf eine Drosselung der
+			// Gegenseite hin — und die Antwort des Bundles darauf ist
+			// ausgerechnet ein NEUES Token. Ohne diese Zeile ist das von außen
+			// nicht zu erkennen
+			static $gemeldet401 = array();
 
-			if(!$gemeldet401)
+			if(empty($gemeldet401[$zugang]))
 			{
-				$gemeldet401 = true;
-				$this->protokolliere('Die Schnittstelle hat einen Abruf mit HTTP 401 abgewiesen, obwohl ein Token vorlag ('.$apiUrl.'). Das Token wird erneuert — das kostet ein weiteres aus dem Kontingent.');
+				$gemeldet401[$zugang] = true;
+				$tokenClient->protokolliere('Die Schnittstelle hat einen Abruf mit HTTP 401 abgewiesen, obwohl ein Token '.$tokenClient->bezeichnung().' vorlag ('.$apiUrl.'). Das Token wird erneuert — das kostet ein weiteres aus dem Kontingent.');
 			}
 
-			$cache = $this->readCache();
-			$this->clearCache();
+			$cache = $tokenClient->readCache();
+			$tokenClient->clearCache();
 
 			if(!empty($cache['refresh_token']))
 			{
-				$tokenData = $this->refreshToken($cache['refresh_token']);
+				$tokenData = $tokenClient->refreshToken($cache['refresh_token']);
 			}
 			else
 			{
-				$tokenData = $this->fetchNewToken();
+				$tokenData = $tokenClient->fetchNewToken();
 			}
 
 			if($tokenData['error'])
@@ -932,7 +1275,7 @@ class OAuth2Client
 
 				if(0 !== (int) ($tokenData['http_code'] ?? 0))
 				{
-					$this->sperreSetzen((string) ($tokenData['error_message'] ?? ''));
+					$tokenClient->sperreSetzen((string) ($tokenData['error_message'] ?? ''));
 				}
 
 				return $tokenData;
@@ -957,6 +1300,48 @@ class OAuth2Client
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Wertet einen Abruf der DWZ-Liste aus, der ohne Token lief.
+	 *
+	 * Antwortet nu darauf mit **HTTP 401**, verlangt die DWZ-Liste eine
+	 * Anmeldung, die dieser Abruf nicht hatte. Daraus wird ein Tokenfehler:
+	 * API::autoQuery() schickt die Besucher dann in den Notbetrieb
+	 * (Zwischenspeicher, örtlicher Bestand) und schreibt den Grund ins
+	 * Systemprotokoll. Bis 1.45.1 hätte derselbe 401 als gewöhnliche
+	 * Fehlerantwort eine Fehlermeldung auf der Seite erzeugt — genau das wäre
+	 * geschehen, sobald nu die Anmeldung scharf schaltet.
+	 *
+	 * Den Antworttext von nu (`roh`) reicht die Methode weiter, falls er
+	 * angefordert war: Im Rohdaten-Modul ist er die genaueste Auskunft.
+	 *
+	 * @param array  $result      Antwort von callApi()
+	 * @param string $tokenfehler Grund, warum kein Token vorlag; leer, wenn für
+	 *                            die DWZ-Liste gar keine Zugangsdaten
+	 *                            eingetragen sind
+	 *
+	 * @return array Die Antwort unverändert, bei HTTP 401 ein Tokenfehler
+	 */
+	protected static function ohneAnmeldung(array $result, string $tokenfehler): array
+	{
+		if(!empty($result['error']) || 401 !== (int) ($result['http_code'] ?? 0)) return $result;
+
+		$meldung = $tokenfehler !== ''
+			? 'Die DWZ-Liste verlangt eine Anmeldung, das Zugangstoken dafür war aber nicht zu bekommen: '.$tokenfehler
+			: 'Die DWZ-Liste verlangt eine Anmeldung (HTTP 401), in den Einstellungen des Wertungsportals sind dafür aber keine Zugangsdaten eingetragen (Zugang zur DWZ-Liste).';
+
+		$antwort = array
+		(
+			'error'         => true,
+			'error_message' => $meldung,
+			'http_code'     => 401,
+			'tokenfehler'   => true,
+		);
+
+		if(isset($result['roh'])) $antwort['roh'] = $result['roh'];
+
+		return $antwort;
 	}
 }
 

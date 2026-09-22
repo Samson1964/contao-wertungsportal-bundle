@@ -9,6 +9,7 @@ $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_legend']       = 'Wertungspor
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_anzeige_legend'] = 'Anzeige im Frontend';
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_seiten_legend'] = 'Seiten der Website';
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_zugang_legend'] = 'Zugang zur Schnittstelle';
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_zugang_dwzliste_legend'] = 'Zugang zur DWZ-Liste';
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_abruf_legend'] = 'Live-Abruf';
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cache_legend'] = 'Zwischenspeicher';
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_vorladen_legend'] = 'Nächtliches Vorladen';
@@ -37,9 +38,13 @@ $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_seite_verband'] = array('Verb
 
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_apiBasisURL'] = array('API-Basisadresse', 'URL der API-Basis (ohne endenden Slash)');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_tokenURL'] = array('Token-Adresse', 'URL des Token-Endpoints (ohne endenden Slash)');
-$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_clientID'] = array('Client-ID', 'Client-Identifikationsnummer');
-$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_clientSecret'] = array('Client Secret', 'Geheimes Passwort');
-$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_scopeListe'] = array('Scope (Bereiche)', 'Bereiche eintragen, für die Zugriff gegeben werden soll.');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_clientID'] = array('Client-ID', 'Kennung für die Turnier- und Personenabfragen (/dwz/tournaments, /dwz/persons). Die DWZ-Liste hat eine eigene, siehe „Zugang zur DWZ-Liste".');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_clientSecret'] = array('Client Secret', 'Geheimes Passwort zur Client-ID');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_scopeListe'] = array('Scope (Bereiche)', 'Bereiche eintragen, für die Zugriff gegeben werden soll (Turniere und Personen: dsb_tournament).');
+
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_dwzliste_clientID'] = array('Client-ID der DWZ-Liste', 'Kennung für /dwz/dwzliste: Spielersuche, Karteikarte, Vereins- und Verbandslisten und die Zip-Downloads. Basis- und Token-Adresse gelten wie unter „Zugang zur Schnittstelle". Leer = die DWZ-Liste wird wie bisher ohne Anmeldung abgerufen. Dieselbe Client-ID wie dort ergibt ein gemeinsames Token.');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_dwzliste_clientSecret'] = array('Client Secret der DWZ-Liste', 'Geheimes Passwort zur Client-ID der DWZ-Liste');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_dwzliste_scope'] = array('Scope der DWZ-Liste', 'Nur eintragen, wenn nu einen vorgibt. Leer = es wird keiner angefordert, nu nimmt dann den der Kennung zugedachten. Meldet der Tokenabruf „Wrong or no scope(s) provided", den Scope bei nu erfragen.');
 
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_api_aus'] = array('Live-Abruf abschalten', 'Es wird keine Verbindung zur Schnittstelle mehr aufgebaut; ausgeliefert wird nur noch, was im Zwischenspeicher liegt — auch wenn dessen Gültigkeit abgelaufen ist. Die Ausgaben weisen darauf hin. Für Wartungsfenster und Störungen bei nu.');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_api_timeout'] = array('Wartezeit der Schnittstelle', 'Nach dieser Zeit ohne Antwort wird der Abruf abgebrochen und auf den Zwischenspeicher zurückgegriffen. Ohne Auswahl gilt 30 Sekunden.');

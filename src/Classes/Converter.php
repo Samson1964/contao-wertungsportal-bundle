@@ -19,6 +19,10 @@ namespace Schachbulle\ContaoWertungsportalBundle\Classes;
  * Der frueher noetige Token-Schutz (`?key=`) entfaellt ersatzlos: Ein
  * Konsolenbefehl ist von aussen nicht erreichbar.
  *
+ * **Anmeldung (ab 1.46.0):** Die Deutschland-Datei kommt ueber
+ * `OAuth2Client::herunterladen()` mit dem Token der DWZ-Liste — nu schuetzt
+ * auch die Zip-Downloads (siehe docs/zugang.md).
+ *
  * ACHTUNG bei Aenderungen: Die Dateien des nu-Servers sind windows-1252-kodiert.
  * `writeReadme()` arbeitet deshalb bewusst byte-basiert ohne
  * Encoding-Umwandlung, und die CRLF-Zeilenenden bleiben erhalten.
@@ -81,7 +85,7 @@ class Converter
 	public function run()
 	{
 		// Download der CSV-Datei Deutschland vom nu-Server
-		$url = 'https://schachde-apps.liga.nu/dsbwertungsportal/rs/dwz/dwzliste/download/LV-0-dwzliste.zip';
+		$url = \Schachbulle\ContaoWertungsportalBundle\Helper\OAuth2Client::downloadAdresse('LV-0-dwzliste.zip');
 		$datum = date('Ymd');
 
 		$link_array = pathinfo($url);
@@ -92,7 +96,7 @@ class Converter
 		echo "Lade $url<br>\n";
 		$zieldatei = $this->zielpfad.$dateiname.'_'.$datum.'.'.$suffix;
 		echo "Schreibe $zieldatei<br>\n";
-		$ergebnis = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::DownloadDatei($url, $zieldatei);
+		$ergebnis = \Schachbulle\ContaoWertungsportalBundle\Helper\OAuth2Client::herunterladen($url, $zieldatei);
 
 		if(!$ergebnis['success'])
 		{
