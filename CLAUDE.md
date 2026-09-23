@@ -25,8 +25,11 @@ erst beim Umstellen auffielen. Das Rohdaten-Modul kann das NICHT zeigen (es lief
 die Datei). Zip-Downloads über `OAuth2Client::herunterladen()` (ersetzt `Helper::DownloadDatei`),
 Adresse über `downloadAdresse()`. **Die echten Zugangsdaten nie in Code, Doku, Tests oder
 Commit** — Tests laufen gegen `tests/Helper/NuSchnittstelleAttrappe.php` (php -S, Prozess-
-isolation, eigenes TL_ROOT). Den Scope der DWZ-Liste hat nu nicht genannt: leer = keiner
-angefordert (bis 1.45.1 ging `scope=` leer hinaus).
+isolation, eigenes TL_ROOT). **Scope der DWZ-Liste: `dwz_liste`** (nu-Support, am 23.09.2026
+nachgereicht; `SCOPE_DWZLISTE` gilt als Vorgabe, wenn das Feld leer ist — ein Eintrag geht vor).
+Turniere: `dsb_tournament`, dort keine Vorgabe. Ein LEERER Scope geht nicht mehr mit hinaus
+(bis 1.45.1 ging `scope=` leer hinaus). Token-Endpunkt für beide:
+`https://schachde-portal.liga.nu/rs/auth/token`.
 
 ## Neue Funktionen 20.07.2026 (Upload + Livetest offen)
 

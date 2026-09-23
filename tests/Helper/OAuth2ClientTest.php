@@ -24,7 +24,7 @@ class OAuth2ClientTest extends TestCase
 	 * Zugangsdaten des Nachbaus. Frei erfunden.
 	 */
 	private const TURNIERE = array('id' => 'turnier-id', 'geheim' => 'turnier-geheim', 'scope' => 'dsb_tournament');
-	private const LISTE = array('id' => 'liste-id', 'geheim' => 'liste-geheim');
+	private const LISTE = array('id' => 'liste-id', 'geheim' => 'liste-geheim', 'scope' => OAuth2Client::SCOPE_DWZLISTE);
 
 	/**
 	 * @var resource|null Prozess des PHP-Servers
@@ -128,6 +128,48 @@ class OAuth2ClientTest extends TestCase
 	}
 
 	/**
+	 * Für die DWZ-Liste verlangt nu den Scope `dwz_liste` (Auskunft des
+	 * nu-Supports vom 23.09.2026). Er gilt als Vorgabe, solange in den
+	 * Einstellungen nichts steht; ein Eintrag geht vor. Beim Turnierzugang
+	 * gibt es keine Vorgabe — dort steht der Scope seit jeher in den
+	 * Einstellungen.
+	 */
+	public function testScopeDerDwzListe(): void
+	{
+		$GLOBALS['TL_CONFIG'] = self::einstellungen('http://nu.invalid', true);
+
+		$this->assertSame('dwz_liste', OAuth2Client::SCOPE_DWZLISTE);
+		$this->assertSame('dwz_liste', (new OAuth2Client(OAuth2Client::ZUGANG_DWZLISTE))->scope, 'ohne Eintrag die Vorgabe');
+		$this->assertSame(self::TURNIERE['scope'], (new OAuth2Client())->scope);
+
+		$GLOBALS['TL_CONFIG']['wertungsportal_dwzliste_scope'] = ' anderer_scope ';
+		$this->assertSame('anderer_scope', (new OAuth2Client(OAuth2Client::ZUGANG_DWZLISTE))->scope, 'ein Eintrag geht vor');
+
+		$GLOBALS['TL_CONFIG']['wertungsportal_scopeListe'] = '';
+		$this->assertSame('', (new OAuth2Client())->scope, 'für Turniere gibt es keine Vorgabe');
+	}
+
+	/**
+	 * Der eingetragene Scope geht mit hinaus, und ein falscher führt genau zu
+	 * der Meldung, an der man ihn erkennt.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function testFalscherScopeWirdGemeldet(): void
+	{
+		$basis = $this->starte(array('dwzliste_offen' => true), true);
+		$GLOBALS['TL_CONFIG']['wertungsportal_dwzliste_scope'] = 'falscher_scope';
+
+		$client = new OAuth2Client();
+		$antwort = $client->callApiWithRefresh($basis.'/dwz/dwzliste/clubs');
+
+		$this->assertSame(200, $antwort['http_code'], 'Übergang: nu liefert noch frei aus');
+		$this->assertStringContainsString('Wrong or no scope(s) provided', $antwort['ohne_anmeldung']);
+		$this->assertSame('falscher_scope', $this->tokenanfragen()[0]['scope']);
+	}
+
+	/**
 	 * Die Download-Adresse folgt der Basisadresse der Einstellungen; ohne sie
 	 * bleibt es bei der Produktivschnittstelle wie bis 1.45.1.
 	 */
@@ -191,7 +233,7 @@ class OAuth2ClientTest extends TestCase
 		// wiederverwendet, das der Turniere eigens geholt
 		$anfragen = $this->tokenanfragen();
 		$this->assertCount(2, $anfragen);
-		$this->assertSame(array('client_credentials', self::LISTE['id'], null), array($anfragen[0]['grant'], $anfragen[0]['client'], $anfragen[0]['scope']), 'ohne eingetragenen Scope wird keiner angefordert');
+		$this->assertSame(array('client_credentials', self::LISTE['id'], 'dwz_liste'), array($anfragen[0]['grant'], $anfragen[0]['client'], $anfragen[0]['scope']), 'ohne Eintrag gilt die Vorgabe dwz_liste');
 		$this->assertSame(array('client_credentials', self::TURNIERE['id'], self::TURNIERE['scope']), array($anfragen[1]['grant'], $anfragen[1]['client'], $anfragen[1]['scope']));
 
 		// Jede Adresse mit dem Token ihrer Kennung
@@ -382,7 +424,7 @@ class OAuth2ClientTest extends TestCase
 		$konfig += array(
 			'kennungen' => array(
 				self::TURNIERE['id'] => array('geheim' => self::TURNIERE['geheim'], 'scope' => self::TURNIERE['scope']),
-				self::LISTE['id']    => array('geheim' => self::LISTE['geheim']),
+				self::LISTE['id']    => array('geheim' => self::LISTE['geheim'], 'scope' => self::LISTE['scope']),
 			),
 			'zugelassen' => array('dwzliste' => array(self::LISTE['id']), 'turniere' => array(self::TURNIERE['id'])),
 		);

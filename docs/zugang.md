@@ -17,7 +17,7 @@ vor und nach der Umstellung bei nu.
 | Adressen | `/dwz/tournaments/…`, `/dwz/persons/…` | `/dwz/dwzliste/…` |
 | Im Frontend | Turniersuche, Auswertung, Ergebnisse, Spielberichtsbogen, Turnierhistorie der Karteikarte | Spielersuche, Karteikarte, Vereins- und Verbandslisten, Ranglisten, Vereinslisten-Schnittstelle |
 | Konsolenbefehle | Vorladen der Turniere | Vorladen der Karteikarten, `wertungsportal:download`, `wertungsportal:converter` |
-| Einstellungen | Client-ID, Client Secret, Scope (`dsb_tournament`) | Client-ID, Client Secret, Scope der DWZ-Liste |
+| Einstellungen | Client-ID, Client Secret, Scope (`dsb_tournament`) | Client-ID, Client Secret; Scope `dwz_liste` (Vorgabe, Feld kann leer bleiben) |
 | Tokendatei | `system/tmp/wertungsportal-token.json` | `system/tmp/wertungsportal-token-dwzliste.json` |
 | Tokenprotokoll | `var/logs/wertungsportal-token-JJJJ-MM.log` | `var/logs/wertungsportal-token-dwzliste-JJJJ-MM.log` |
 
@@ -33,8 +33,9 @@ mit nu über das Kontingent spricht, braucht die Zahl je Kennung.
 ## Einrichten
 
 1. Im Backend unter **Wertungsportal → Einstellungen**, Gruppe **„Zugang zur
-   DWZ-Liste"**, Client-ID und Client Secret eintragen. Den Scope nur, wenn nu
-   einen nennt (siehe unten).
+   DWZ-Liste"**, Client-ID und Client Secret eintragen. Das Feld **Scope bleibt
+   leer** — dann fordert das Bundle `dwz_liste` an, so wie nu es verlangt
+   (siehe unten).
 2. Prüfen, auf der Kommandozeile:
 
    ```bash
@@ -83,15 +84,24 @@ er je Abruf eine kurze, vergebliche Anfrage und schadet sonst nicht.
 
 ## Der Scope
 
-Für die Turniere verlangt nu den Scope `dsb_tournament`. Für die DWZ-Liste hat
-nu **keinen genannt**. Bleibt das Feld leer, fordert das Bundle keinen an; nach
-RFC 6749 (Abschnitt 3.3) nimmt der Server dann den, der der Kennung zugedacht
-ist. Antwortet nu beim Tokenabruf mit „Wrong or no scope(s) provided", den Scope
-bei nu erfragen und eintragen.
+Für die Turniere verlangt nu den Scope `dsb_tournament`, für die DWZ-Liste
+**`dwz_liste`** (Auskunft des nu-Supports; in der ersten Mitteilung an die
+Umsysteme fehlte sie, nachgereicht am 23.09.2026). Ohne den richtigen Scope gibt
+der Token-Endpunkt kein Token aus, sondern meldet „Wrong or no scope(s)
+provided".
 
-Bis 1.45.1 schickte das Bundle auch einen **leeren** Scope mit (`scope=`). Jetzt
-bleibt der Parameter ganz weg, wenn nichts eingetragen ist. Beim Turnierzugang
-ändert das nichts, dort steht `dsb_tournament`.
+Das Bundle fordert `dwz_liste` **von sich aus** an, solange im Feld „Scope der
+DWZ-Liste" nichts steht (`OAuth2Client::SCOPE_DWZLISTE`). Ein Eintrag geht vor —
+nennt nu einer anderen Anlage einen anderen Scope, trägt sie ihn dort ein. Einen
+**leeren** Scope schickt das Bundle nicht mehr mit (`scope=`, so bis 1.45.1);
+steht bei einem Zugang ohne Vorgabe nichts, bleibt der Parameter ganz weg, und
+der Server nimmt nach RFC 6749 (Abschnitt 3.3) den der Kennung zugedachten.
+
+Der Token-Endpunkt ist für beide Kennungen derselbe:
+`https://schachde-portal.liga.nu/rs/auth/token`.
+
+`wertungsportal:token` zeigt in der Zeile „Scope", was tatsächlich angefordert
+wird, und vermerkt, wenn es die Vorgabe ist.
 
 ## Die Zip-Downloads
 

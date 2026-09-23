@@ -1,5 +1,15 @@
 # Wertungsportal Changelog
 
+## Version 1.46.1 (2026-09-23)
+
+* Add: **Der Scope der DWZ-Liste heißt `dwz_liste`** — die Angabe hat nu nachgereicht, in der ersten
+  Mitteilung an die Umsysteme fehlte sie. Ohne ihn gibt der Token-Endpunkt kein Token aus („Wrong or no
+  scope(s) provided"). Das Bundle fordert ihn jetzt von sich aus an, solange im Feld „Scope der DWZ-Liste"
+  nichts steht (`OAuth2Client::SCOPE_DWZLISTE`); ein Eintrag geht wie bisher vor. Beim Einrichten genügen
+  damit Client-ID und Client Secret
+* Change: `wertungsportal:token` zeigt in der Zeile „Scope", was tatsächlich angefordert wird, und
+  vermerkt, wenn es die Vorgabe ist
+
 ## Version 1.46.0 (2026-09-22)
 
 **Nach dem Einspielen:** Unter Wertungsportal → Einstellungen → **„Zugang zur DWZ-Liste"** Client-ID

@@ -187,7 +187,10 @@ class TokenCommand extends Command
         // nicht angelegte Datei ist kein Mangel
         $schreibbar = $vorhanden ? is_writable($datei) : is_writable($verzeichnis);
 
-        $zeilen[] = ['Scope', '' !== $scope ? $scope : '(keiner — nu nimmt den der Kennung zugedachten)'];
+        // Angefordert wird, was der Client tatsächlich schickt — bei der
+        // DWZ-Liste also die Vorgabe `dwz_liste`, wenn nichts eingetragen ist
+        $angefordert = (new OAuth2Client($zugang))->scope;
+        $zeilen[] = ['Scope', '' !== $angefordert ? $angefordert.('' === $scope ? ' (Vorgabe, nichts eingetragen)' : '') : '(keiner — nu nimmt den der Kennung zugedachten)'];
         $zeilen[] = ['Zugangsdaten vollständig', OAuth2Client::eingerichtet($zugang) ? 'ja' : '<fg=red>NEIN</>'];
         $zeilen[] = ['Tokendatei', $datei];
         $zeilen[] = ['Vorhanden', $vorhanden ? 'ja' : 'nein (wird beim nächsten Abruf angelegt)'];

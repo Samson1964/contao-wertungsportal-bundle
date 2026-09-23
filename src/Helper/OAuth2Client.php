@@ -59,6 +59,20 @@ class OAuth2Client
 	 */
 	const BASIS_PRODUKTIV = 'https://schachde-apps.liga.nu/dsbwertungsportal/rs';
 
+	/**
+	 * Scope, den nu für die DWZ-Liste verlangt: **dwz_liste**.
+	 *
+	 * Auskunft des nu-Supports, von Frank Binding am 23.09.2026 weitergegeben —
+	 * in der ersten Mitteilung an die Umsysteme fehlte die Angabe. Ohne den
+	 * richtigen Scope gibt der Token-Endpunkt kein Token aus („Wrong or no
+	 * scope(s) provided").
+	 *
+	 * Er gilt als Vorgabe, wenn in den Einstellungen nichts steht. Ein Eintrag
+	 * geht vor: Nennt nu einer anderen Anlage einen anderen Scope, trägt sie
+	 * ihn dort ein.
+	 */
+	const SCOPE_DWZLISTE = 'dwz_liste';
+
 	// ─────────────────────────────────────────────
 	//  Konfiguration (öffentliche Eigenschaften)
 	// ─────────────────────────────────────────────
@@ -247,6 +261,11 @@ class OAuth2Client
 		$this->clientSecret  = str_replace('&#35;', '#', trim((string) ($GLOBALS['TL_CONFIG'][$felder['clientSecret']] ?? '')));
 		$this->tokenEndpoint = (string) ($GLOBALS['TL_CONFIG']['wertungsportal_tokenURL'] ?? '');
 		$this->scope         = trim((string) ($GLOBALS['TL_CONFIG'][$felder['scope']] ?? ''));
+
+		// Vorgabe der DWZ-Liste, solange nichts eingetragen ist: Ohne den
+		// Scope `dwz_liste` gibt nu kein Token aus, und eine leer gelassene
+		// Zeile im Backend soll den Zugang nicht kosten (siehe SCOPE_DWZLISTE)
+		if($this->scope === '' && $this->zugang === self::ZUGANG_DWZLISTE) $this->scope = self::SCOPE_DWZLISTE;
 		$this->cacheFile     = self::tokendatei($this->zugang);
 		$this->timeout       = \Schachbulle\ContaoWertungsportalBundle\Helper\API::timeout();
 
