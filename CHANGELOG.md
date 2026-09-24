@@ -1,5 +1,18 @@
 # Wertungsportal Changelog
 
+## Version 1.46.3 (2026-09-24)
+
+* Fix: **Leere DWZ-Umstufungen stehen nicht mehr in der Karteikarte.** Die Turnierhistorie
+  (`/dwz/persons/{id}/history`) enthält auch Umstufungen ganz ohne Wertungsangabe — nur Stichtag und
+  Name, etwa `{"referenceDate": "2026-06-08", "name": "Umstufung 2026"}`. Bei einem Spieler ohne DWZ
+  und ohne ausgewertetes Turnier ist die jährliche Umstufung folgenlos, nu vermerkt sie aber trotzdem.
+  Gemeldet für NU4112056: Dort stand „Umstufung 2026 (08.06.2026)" als einzige Zeile der Kartei, ohne
+  DWZ und mit der Marke AKT. Umstufungen, bei denen nur die ALTE Wertung bekannt ist, bleiben stehen —
+  das kann eine Streichung sein (`Karteikarte::umstufungOhneWerte()`)
+* Fix: **AKT nur noch, wenn der oberste Eintrag auch eine DWZ ausweist.** Die Prüfung verglich mit
+  `&nbsp;`, einem Wert, den `Helper::DWZ()` nie zurückgibt (bei fehlender Wertung kommt eine leere
+  Zeichenkette). Damit trug auch ein Eintrag ohne DWZ die Marke der aktuellen Wertung
+
 ## Version 1.46.2 (2026-09-24)
 
 Abgleich mit der Anleitung „OAuth2-Zugriff auf das DSB-Wertungsportal" (nu, Stand September 2026).

@@ -138,6 +138,10 @@ class Karteikarte
 			}
 			foreach($upgrades as $up)
 			{
+				// Umstufungen ohne jede Wertungsangabe bleiben draußen, siehe
+				// self::umstufungOhneWerte()
+				if(self::umstufungOhneWerte($up)) continue;
+
 				$eintraege[] = array('typ' => 'upgrade', 'datum' => (string) ($up['referenceDate'] ?? ''), 'index' => (int) ($up['indexNew'] ?? 0), 'data' => $up);
 			}
 
@@ -182,7 +186,13 @@ class Karteikarte
 					if(!array_key_exists('numberOfGames', $turnier['player'])) $turnier['player']['numberOfGames'] = '';
 
 					$dwz_neu = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::DWZ($turnier['player']['ratingNew'], $turnier['player']['indexNew']);
-					$nummer = ($index == 0 && $dwz_neu != '&nbsp;') ? 'AKT' : $laufNr;
+
+					// AKT steht für die aktuelle DWZ — also nur, wenn der oberste
+					// Eintrag auch eine ausweist. Helper::DWZ() gibt in diesem Fall
+					// eine LEERE Zeichenkette zurück; der frühere Vergleich mit
+					// '&nbsp;' traf einen Wert, den die Funktion nie liefert, und
+					// so bekam auch ein Eintrag ohne DWZ die Marke AKT
+					$nummer = ($index == 0 && $dwz_neu !== '') ? 'AKT' : $laufNr;
 
 					$kartei[] = array
 					(
@@ -224,7 +234,7 @@ class Karteikarte
 					// hervorgehobene Zeile mit Name und resultierender DWZ
 					$up = $eintrag['data'];
 					$dwz_neu = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::DWZ($up['ratingNew'] ?? 0, $up['indexNew'] ?? 0);
-					$nummer = ($index == 0 && $dwz_neu != '&nbsp;') ? 'AKT' : $laufNr;
+					$nummer = ($index == 0 && $dwz_neu !== '') ? 'AKT' : $laufNr;
 
 					$kartei[] = array
 					(
@@ -293,6 +303,42 @@ class Karteikarte
 	//  damit die Leistungskurve ohne Unterbrechungen durchläuft.
 	//  Rückgabe '' bei weniger als 2 verwertbaren Punkten.
 	// ─────────────────────────────────────────────
+	/**
+	 * Beurteilt, ob eine DWZ-Umstufung überhaupt etwas aussagt.
+	 *
+	 * Die Schnittstelle liefert in der Turnierhistorie auch Umstufungen, die
+	 * **keine einzige Wertungsangabe** tragen — nur Stichtag und Name, etwa:
+	 *
+	 *     { "referenceDate": "2026-06-08", "name": "Umstufung 2026" }
+	 *
+	 * So kam es bei NU4112056 (gemeldet am 24.09.2026): Der Spieler hat keine
+	 * DWZ und kein ausgewertetes Turnier, die jährliche Umstufung ist bei ihm
+	 * also folgenlos geblieben. nu vermerkt sie trotzdem. In der Karteikarte
+	 * wurde daraus eine Zeile mit Namen und Datum, aber ohne Wertung — und
+	 * weil sie die einzige war, trug sie auch noch die Marke AKT.
+	 *
+	 * Eine Umstufung, bei der die DWZ nur ALT bekannt ist, bleibt dagegen
+	 * stehen: Sie kann eine Streichung sein, und die gehört in die Kartei.
+	 *
+	 * Aus der örtlichen Spiegelung (Notbetrieb) kommen dieselben Einträge mit
+	 * `0` statt fehlender Felder — die Spalten sind Ganzzahlen. Eine DWZ von 0
+	 * gibt es nicht, beides heißt also dasselbe.
+	 *
+	 * @param array $up Ein Eintrag aus `body.upgrades` der Turnierhistorie
+	 *
+	 * @return bool true, wenn weder alte noch neue Wertung vorliegt und der
+	 *              Eintrag deshalb nicht in die Karteikarte gehört
+	 */
+	public static function umstufungOhneWerte(array $up): bool
+	{
+		foreach(array('ratingNew', 'ratingOld', 'indexNew', 'indexOld') as $feld)
+		{
+			if((int) ($up[$feld] ?? 0) > 0) return false;
+		}
+
+		return true;
+	}
+
 	private function erstelleDiagramm($punkte, $breite = 700)
 	{
 		// Fehlende Leistungen aus den Turnierdaten schätzen (lineare

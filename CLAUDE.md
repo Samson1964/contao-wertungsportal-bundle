@@ -63,6 +63,12 @@ Refresh-Token und weichen auf `client_credentials` aus.
   Kette über clubs.federation aufwärts, DSB hart als Wurzel wie in der Verbandsnavigation);
   DWZ/Leistungs-Diagramm als serverseitiges SVG (`Karteikarte::erstelleDiagramm()`,
   kein Chart.js — der tote contaodewis-Verweis wurde aus dem Template entfernt).
+  Die Kartei führt Turniere (`entries`) und Umstufungen (`upgrades`) in EINER Nummerierung;
+  `AKT` bekommt der oberste Eintrag nur, wenn er eine DWZ ausweist (`Helper::DWZ()` gibt sonst
+  eine LEERE Zeichenkette zurück — nicht `&nbsp;`). **Umstufungen ohne jede Wertungsangabe**
+  (nu liefert dann nur referenceDate und name) fallen raus, sonst entsteht eine leere Zeile und
+  die Nummerierung verschiebt sich: `Karteikarte::umstufungOhneWerte()`, ab 1.46.3. Aus der
+  Spiegelung kommen dieselben Einträge mit `0` statt fehlender Felder.
 - **CSV-Import**: tstamp der importierten Datensätze = Datum aus dem Dateinamen
   (JJJJMMTTHHIISS, Fallback Jetzt-Zeit); Importdaten überschreiben Bestand IMMER
   (kein tstamp-Vergleich). Regeln in TODO.md dokumentiert.
