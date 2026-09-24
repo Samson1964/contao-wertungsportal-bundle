@@ -100,8 +100,32 @@ der Server nimmt nach RFC 6749 (Abschnitt 3.3) den der Kennung zugedachten.
 Der Token-Endpunkt ist für beide Kennungen derselbe:
 `https://schachde-portal.liga.nu/rs/auth/token`.
 
+Der Scope geht **in jede Tokenanfrage** mit — auch in die Erneuerung über das
+Refresh-Token. So führt ihn die Anleitung von nu auf. Bis 1.46.1 ging er nur
+beim ersten Abruf mit; nu hat das hingenommen, zugesichert ist der
+Geltungsbereich eines so erneuerten Tokens aber nicht.
+
 `wertungsportal:token` zeigt in der Zeile „Scope", was tatsächlich angefordert
 wird, und vermerkt, wenn es die Vorgabe ist.
+
+### Eine Kennung für beides
+
+Steht in beiden Feldern dieselbe Client-ID, holt das Bundle **ein** gemeinsames
+Token — zwei Token-Familien derselben Kennung würden sich gegenseitig die
+Refresh-Token entwerten. Geholt wird es mit dem Scope des Turnierzugangs, und
+ein Token gilt nur für die Scopes, mit denen es geholt wurde. Dort gehören dann
+**beide** hinein, durch ein Leerzeichen getrennt:
+
+```
+dsb_tournament dwz_liste
+```
+
+Das erlaubt OAuth 2.0 ausdrücklich, aber ein Token bekommt nur, wer für **alle**
+angeforderten Scopes freigeschaltet ist — sonst wird die ganze Anfrage
+abgelehnt, und damit stünde auch der Turnierzugang still. Ist die Kennung nicht
+für beides freigeschaltet, bleibt der Weg über zwei getrennte Kennungen.
+`wertungsportal:token` warnt, wenn der gemeinsame Scope `dwz_liste` nicht
+abdeckt.
 
 ## Die Zip-Downloads
 
@@ -116,11 +140,42 @@ deren Token (`OAuth2Client::herunterladen()`, früher `Helper::DownloadDatei()`)
   für die Produktivschnittstelle taugt.
 * Das Token wird **je Datei** erfragt. Ein Lauf über zwanzig Dateien dauert
   länger, als ein Token lebt; solange es gilt, kostet das keine Anfrage.
-* Bei **HTTP 401** wird nicht wiederholt, sondern gleich gemeldet — mit Grund,
-  etwa „für die DWZ-Liste sind aber keine Zugangsdaten eingetragen".
+* Bei **HTTP 401** wird das Token einmal erneuert und der Download wiederholt —
+  so sieht es die Anleitung von nu vor, denn ein Token kann widerrufen worden
+  sein. Erneuert wird über das Refresh-Token (nicht über eine neue Anfrage,
+  siehe unten), und zwar ohne die sonst übliche Pause. Bleibt es beim 401, wird
+  gemeldet statt weiterversucht — mit Grund, etwa „für die DWZ-Liste sind aber
+  keine Zugangsdaten eingetragen".
 * Die **Zertifikatsprüfung** ist jetzt eingeschaltet. Bis 1.45.1 war sie bei den
   Downloads abgeschaltet; mit einem Token in der Anfrage darf sie das nicht sein.
   Die übrigen Abrufe prüfen seit jeher.
+
+## Was nu vorgibt
+
+Aus der Anleitung „OAuth2-Zugriff auf das DSB-Wertungsportal (DWZ-System)",
+Stand September 2026. Die Zahlen stehen hier, weil das Bundle sich danach
+richtet:
+
+| Vorgabe | Wert | Was das Bundle daraus macht |
+| --- | --- | --- |
+| Lebensdauer eines Access Tokens | 5 Minuten | Wird erneuert, sobald weniger als 30 Sekunden bleiben. Nennt die Antwort keine Dauer, gilt `TOKEN_LEBENSDAUER` = 300 s |
+| Neue Token je Kennung | höchstens **5 in 30 Minuten** | Ein Lauf kommt mit einer einzigen Anfrage aus und erneuert danach nur noch. Die Dateisperre verhindert, daß mehrere Vorgänge gleichzeitig erneuern |
+| Refresh-Token | nur der **jüngste** gilt | Wird bei jeder Erneuerung mitgeschrieben. Fehlt er in einer Antwort, bleibt der bisherige stehen (RFC 6749 §6) |
+| Abgelaufene Autorisierung | HTTP 401 | Token erneuern, Abruf einmal wiederholen — in `callApiIntern()` wie beim Zip-Download |
+| Parameter des Tokenabrufs | im **Body**, nicht in der Adresse | `application/x-www-form-urlencoded`, so verlangt es RFC 6749 |
+
+Abgewiesen wird ein Tokenabruf mit **HTTP 403** und immer derselben
+Sammelmeldung: „1. No accesses for this client-id or 2. Too much access tokens
+for the requested client-id or 3. Wrong or no scope(s) provided". Welche der
+drei Ursachen vorliegt, steht nicht dabei. Deshalb wartet das Bundle danach
+**30 Minuten** (`TOKENSPERRE_KONTINGENT`) statt der sonst üblichen fünf: So lang
+ist das Fenster des Kontingents, und bei den beiden anderen Ursachen hilft
+schnelles Nachfassen ohnehin nicht. Im Protokoll des Livesystems vom 13.08.2026
+stehen dafür vier abgewiesene Abrufe in zwölf Minuten.
+
+Wie oft die Anlage tatsächlich anfragt, steht in
+`var/logs/wertungsportal-token-JJJJ-MM.log` (je Zugang eine Datei);
+`wertungsportal:token --auswertung` fasst es zusammen.
 
 ## Für Entwickler
 

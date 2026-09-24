@@ -77,12 +77,21 @@ if ('/auth/token' === $pfad) {
 
 	$n = $nummer();
 
-	return $antwort(200, array(
+	$ausgabe = array(
 		'access_token'  => $kennung.'-zugang-'.$n,
 		'refresh_token' => $kennung.'-erneuerung-'.$n,
 		'expires_in'    => 300,
 		'token_type'    => 'bearer',
-	));
+	);
+
+	// Die Beispielantwort in der Anleitung von nu nennt gar keine
+	// Lebensdauer. Mit `ohne_expires_in` läßt sich prüfen, wofür der Client
+	// sein Token dann hält
+	if (!empty($konfig['ohne_expires_in'])) {
+		unset($ausgabe['expires_in']);
+	}
+
+	return $antwort(200, $ausgabe);
 }
 
 // ─────────────── Abrufe ───────────────

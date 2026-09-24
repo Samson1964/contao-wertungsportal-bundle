@@ -168,10 +168,30 @@ class TokenCommand extends Command
             }
 
             if (OAuth2Client::ZUGANG_TURNIERE === OAuth2Client::zugangFuer('/dwz/dwzliste/clubs')) {
+                // Ein Token gilt nur für die Scopes, mit denen es geholt wurde.
+                // Bei gemeinsamer Kennung holt es der Turnierzugang — mit
+                // dessen Scope. Steht `dwz_liste` nicht darin, taugt es für
+                // die DWZ-Liste nicht, sobald nu die Anmeldung verlangt
+                $gemeinsam = (new OAuth2Client(OAuth2Client::ZUGANG_TURNIERE))->scope;
+                $deckt = '' === $gemeinsam || \in_array(OAuth2Client::SCOPE_DWZLISTE, preg_split('/\s+/', $gemeinsam) ?: [], true);
+
                 $io->table(['Angabe', 'Wert'], [
                     ['Zugangsdaten', 'dieselbe Client-ID wie bei Turnieren und Personen'],
                     ['Folge', 'Ein gemeinsames Token — Tokendatei und Zählung siehe oben.'],
+                    ['Scope', '' !== $gemeinsam ? $gemeinsam.($deckt ? '' : ' <fg=yellow>(ohne '.OAuth2Client::SCOPE_DWZLISTE.')</>') : '(keiner — nu nimmt den der Kennung zugedachten)'],
                 ]);
+
+                if (!$deckt) {
+                    $io->warning(
+                        'Das gemeinsame Token wird mit dem Scope "'.$gemeinsam.'" angefordert. Die DWZ-Liste verlangt '
+                        .'aber "'.OAuth2Client::SCOPE_DWZLISTE.'", und ein Token gilt nur für die Scopes, mit denen es geholt wurde. '
+                        .'Solange nu die DWZ-Liste noch frei ausliefert, fällt das nicht auf; danach beantwortet sie jeden '
+                        .'Abruf mit 401. Abhilfe: unter Wertungsportal → Einstellungen → Scope beide eintragen, durch ein '
+                        .'Leerzeichen getrennt ("'.$gemeinsam.' '.OAuth2Client::SCOPE_DWZLISTE.'"). Ein Token bekommt nur, wer für '
+                        .'alle angeforderten Scopes freigeschaltet ist — ist die Kennung das nicht, bleibt der Weg über zwei '
+                        .'getrennte Kennungen.'
+                    );
+                }
 
                 return true;
             }
@@ -333,7 +353,9 @@ class TokenCommand extends Command
                 'Die Zugangsdaten der DWZ-Liste funktionieren nicht — die Antwort kam nur, weil nu die Liste noch '
                 .'ohne Anmeldung ausliefert. Sobald nu umstellt, gehen die Besucher in den Notbetrieb. '
                 .'Zugangsdaten und Scope prüfen (Wertungsportal → Einstellungen → Zugang zur DWZ-Liste). '
-                .'Vor dem nächsten Versuch die Wartezeit von fünf Minuten abwarten.'
+                .'Vor dem nächsten Versuch die Wartezeit abwarten: fünf Minuten, nach einer Abweisung mit '
+                .'HTTP 403 dreißig — dahinter kann das Kontingent stecken, und das zählt in einem Fenster '
+                .'von 30 Minuten.'
             );
 
             return 1;

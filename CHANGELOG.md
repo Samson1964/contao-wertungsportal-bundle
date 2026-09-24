@@ -1,5 +1,36 @@
 # Wertungsportal Changelog
 
+## Version 1.46.2 (2026-09-24)
+
+Abgleich mit der Anleitung „OAuth2-Zugriff auf das DSB-Wertungsportal" (nu, Stand September 2026).
+Fünf Abweichungen, alle an der Anmeldung:
+
+* Fix: **Der Scope geht jetzt auch in die Erneuerung** über das Refresh-Token. Die Anleitung führt ihn
+  dort ausdrücklich auf; bis 1.46.1 ging er nur beim ersten Abruf mit. nu hat das hingenommen,
+  zugesichert ist der Geltungsbereich eines so erneuerten Tokens aber nicht — für die DWZ-Liste hieße
+  ein Token ohne `dwz_liste`, daß nach fünf Minuten jeder Abruf mit 401 zurückkommt
+* Fix: **Nach einem HTTP 401 wird unter der Dateisperre erneuert.** Sie gab es schon, der 401-Pfad lief
+  aber daran vorbei. Weist nu mehrere gleichzeitige Abrufe ab, erneuerten sonst alle zugleich; nu löst
+  nur das jüngste Refresh-Token ein, die übrigen weichen auf `client_credentials` aus — und davon sind
+  nur **fünf in 30 Minuten** erlaubt. Hat ein anderer Vorgang inzwischen erneuert, wird dessen Token
+  übernommen, statt selbst anzufragen
+* Fix: **Der Zip-Download erneuert bei HTTP 401 und wiederholt einmal**, statt abzubrechen — so sieht es
+  die Anleitung für abgelaufene Autorisierung vor. Erneuert wird über das Refresh-Token und ohne die
+  sonst übliche Pause von fünf Sekunden; die gilt einer stockenden Leitung, nicht einem Tokenwechsel
+* Change: **Wartezeit nach HTTP 403 auf 30 Minuten** (`TOKENSPERRE_KONTINGENT`). Hinter diesem Status
+  steckt bei nu immer dieselbe Sammelmeldung — fehlende Freischaltung, erschöpftes Kontingent oder
+  falscher Scope. Das Kontingent zählt in einem Fenster von 30 Minuten; nach fünf Minuten erneut
+  anzufragen verbrennt nur die verbliebenen Versuche. Für alle anderen Fehler bleibt es bei fünf Minuten
+* Change: Nennt die Antwort keine Lebensdauer, gilt jetzt die dokumentierte von **300 Sekunden**
+  (`TOKEN_LEBENSDAUER`) statt der Stunde, die bis 1.46.1 im Code stand. Die Beispielantwort der Anleitung
+  enthält das Feld gar nicht; bliebe es einmal aus, hielte die Anlage ein längst abgelaufenes Token 55
+  Minuten lang für gültig und bekäme auf jeden Abruf ein 401
+* Change: `wertungsportal:token` warnt, wenn für beide Zugänge **dieselbe Client-ID** eingetragen ist und
+  deren Scope `dwz_liste` nicht abdeckt. Das gemeinsame Token taugte dann nicht für die DWZ-Liste, sobald
+  nu die Anmeldung verlangt. Abhilfe ist ein Scope mit beiden Angaben: `dsb_tournament dwz_liste`
+* Add: `docs/zugang.md` nennt die Vorgaben von nu mit Zahlen (Lebensdauer, Kontingent, Refresh-Regeln)
+  und den Fall der gemeinsamen Kennung
+
 ## Version 1.46.1 (2026-09-23)
 
 * Add: **Der Scope der DWZ-Liste heißt `dwz_liste`** — die Angabe hat nu nachgereicht, in der ersten

@@ -29,7 +29,19 @@ isolation, eigenes TL_ROOT). **Scope der DWZ-Liste: `dwz_liste`** (nu-Support, a
 nachgereicht; `SCOPE_DWZLISTE` gilt als Vorgabe, wenn das Feld leer ist — ein Eintrag geht vor).
 Turniere: `dsb_tournament`, dort keine Vorgabe. Ein LEERER Scope geht nicht mehr mit hinaus
 (bis 1.45.1 ging `scope=` leer hinaus). Token-Endpunkt für beide:
-`https://schachde-portal.liga.nu/rs/auth/token`.
+`https://schachde-portal.liga.nu/rs/auth/token`. Der Scope geht seit 1.46.2 auch in die
+**Erneuerung** mit (so die Anleitung von nu). Gleiche Client-ID für beide Zugänge: Dann muß der
+Scope des Turnierzugangs BEIDE nennen (`dsb_tournament dwz_liste`) — `wertungsportal:token` warnt.
+
+**Vorgaben von nu** (Anleitung „OAuth2-Zugriff auf das DSB-Wertungsportal", Stand 09/2026,
+Zahlen in `docs/zugang.md`): Access Token 5 Minuten gültig (`TOKEN_LEBENSDAUER`, Rückfall wenn
+`expires_in` fehlt); **höchstens 5 neue Token je Kennung in 30 Minuten**; nur der jüngste
+Refresh-Token gilt; bei 401 erneuern und einmal wiederholen. Ein abgewiesener Tokenabruf kommt
+als HTTP 403 mit einer Sammelmeldung für drei Ursachen (keine Freischaltung / Kontingent /
+falscher Scope) — deshalb danach 30 Minuten Wartezeit (`TOKENSPERRE_KONTINGENT`), sonst 5
+(`TOKENSPERRE`). Jede Erneuerung läuft unter der Dateisperre, auch die nach einem 401
+(`erneuereNach401()`): Sonst erneuern parallele Aufrufe gleichzeitig, entwerten sich die
+Refresh-Token und weichen auf `client_credentials` aus.
 
 ## Neue Funktionen 20.07.2026 (Upload + Livetest offen)
 

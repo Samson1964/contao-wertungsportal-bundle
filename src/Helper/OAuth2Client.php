@@ -127,6 +127,36 @@ class OAuth2Client
 	const TOKENSPERRE = 300;
 
 	/**
+	 * Wartezeit, wenn nu den Tokenabruf mit **HTTP 403** abweist, in Sekunden.
+	 *
+	 * Hinter diesem Status steckt bei nu immer dieselbe Sammelmeldung: „1. No
+	 * accesses for this client-id or 2. Too much access tokens for the
+	 * requested client-id or 3. Wrong or no scope(s) provided". Welche der
+	 * drei Ursachen vorliegt, ist ihr nicht zu entnehmen — also gilt die
+	 * vorsichtigste Annahme.
+	 *
+	 * Das Kontingent zählt nach der Anleitung von nu in einem Fenster von
+	 * **30 Minuten** (derzeit höchstens fünf Tokenabrufe je Kennung). Nach
+	 * fünf Minuten erneut anzufragen hieße, die verbliebenen Versuche im
+	 * selben Fenster zu verbrennen — im Protokoll des Livesystems vom
+	 * 13.08.2026 stehen dafür vier abgewiesene Abrufe in zwölf Minuten. Bei
+	 * den beiden anderen Ursachen hilft schnelles Nachfassen ohnehin nicht:
+	 * Dort muss jemand die Einstellungen ändern.
+	 */
+	const TOKENSPERRE_KONTINGENT = 1800;
+
+	/**
+	 * Angenommene Lebensdauer eines Zugangstokens in Sekunden, wenn die
+	 * Antwort von nu keine nennt.
+	 *
+	 * Fünf Minuten — so steht es in der Anleitung, und so liefert es nu
+	 * auch (`expires_in: 300`, nachgesehen im Tokenprotokoll). Die
+	 * Beispielantwort der Anleitung enthält das Feld allerdings gar nicht,
+	 * deshalb der ausdrückliche Rückfall.
+	 */
+	const TOKEN_LEBENSDAUER = 300;
+
+	/**
 	 * cURL-Fehlernummern, bei denen ein zweiter Versuch sinnvoll ist.
 	 *
 	 * Alle bezeichnen einen Abriss der VERBINDUNG, nicht eine Antwort des
@@ -424,12 +454,16 @@ class OAuth2Client
 	 * enthält dann kein Token, sondern nur die Sperre — `readCache` liefert
 	 * keinen `access_token`, der Ablauf bleibt also derselbe.
 	 *
-	 * @param  string $meldung Fehlertext der Schnittstelle, für das Protokoll
+	 * @param  string $meldung  Fehlertext der Schnittstelle, für das Protokoll
+	 * @param  int    $httpCode Status der abgewiesenen Antwort; 403 steht bei
+	 *                          nu auch für ein erschöpftes Kontingent und
+	 *                          zieht deshalb die lange Wartezeit nach sich
 	 * @return void
 	 */
-	protected function sperreSetzen(string $meldung): void
+	protected function sperreSetzen(string $meldung, int $httpCode = 0): void
 	{
-		self::$gesperrtBis[$this->cacheFile] = time() + self::TOKENSPERRE;
+		$dauer = 403 === $httpCode ? self::TOKENSPERRE_KONTINGENT : self::TOKENSPERRE;
+		self::$gesperrtBis[$this->cacheFile] = time() + $dauer;
 		self::$sperrgrund[$this->cacheFile] = $meldung;
 
 		@file_put_contents($this->cacheFile, json_encode(array(
@@ -437,7 +471,7 @@ class OAuth2Client
 			'sperrgrund'   => $meldung,
 		)));
 
-		$this->protokolliere('Zugangstoken '.$this->bezeichnung().' nicht zu bekommen — '.$meldung.'. Weitere Versuche werden für '.self::TOKENSPERRE.' Sekunden ausgesetzt.');
+		$this->protokolliere('Zugangstoken '.$this->bezeichnung().' nicht zu bekommen — '.$meldung.'. Weitere Versuche werden für '.$dauer.' Sekunden ausgesetzt.');
 	}
 
 	/**
@@ -677,7 +711,7 @@ class OAuth2Client
 		}
 
 		$this->saveTokenToCache($tokenData);
-		$log = "✅ Neuer Token erhalten (gültig für {$tokenData['expires_in']} Sekunden).\n";
+		$log = "✅ Neuer Token erhalten (gültig für ".($tokenData['expires_in'] ?? self::TOKEN_LEBENSDAUER)." Sekunden).\n";
 		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 		return $tokenData;
 	}
@@ -690,12 +724,24 @@ class OAuth2Client
 		$log = "🔄 Erneuere Access Token via Refresh-Token ...\n";
 		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 
-		$tokenData = $this->requestToken([
+		$felder = array
+		(
 			'grant_type'    => 'refresh_token',
 			'refresh_token' => $refreshToken,
 			'client_id'     => $this->clientId,
 			'client_secret' => $this->clientSecret,
-		]);
+		);
+
+		// Der Scope gehört auch in die Erneuerung. Die Anleitung von nu
+		// („OAuth2-Zugriff auf das DSB-Wertungsportal", Stand September 2026)
+		// führt ihn beim Refresh Token Request ausdrücklich auf. Bis 1.46.1
+		// ging er nur beim ersten Abruf mit; nu hat das hingenommen, aber
+		// zugesichert ist der Geltungsbereich eines so erneuerten Tokens
+		// nicht. Für die DWZ-Liste hieße ein Token ohne `dwz_liste`, dass
+		// nach fünf Minuten jeder Abruf mit 401 zurückkommt
+		if($this->scope !== '') $felder['scope'] = $this->scope;
+
+		$tokenData = $this->requestToken($felder);
 
 		$log = "Neuer Refresh-Token:\n".print_r($tokenData, true);
 		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
@@ -706,7 +752,7 @@ class OAuth2Client
 		}
 
 		$this->saveTokenToCache($tokenData);
-		$log = "✅ Token erneuert (gültig für {$tokenData['expires_in']} Sekunden).\n";
+		$log = "✅ Token erneuert (gültig für ".($tokenData['expires_in'] ?? self::TOKEN_LEBENSDAUER)." Sekunden).\n";
 		if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
 		return $tokenData;
 	}
@@ -716,7 +762,14 @@ class OAuth2Client
 	// ─────────────────────────────────────────────
 	public function saveTokenToCache(array $tokenData): void
 	{
-		$expiresIn = $tokenData['expires_in'] ?? 3600;
+		// Nennt nu keine Lebensdauer, gilt die dokumentierte: fünf Minuten.
+		// Bis 1.46.1 stand hier eine Stunde — ein Wert, der nirgends herkam.
+		// Bliebe `expires_in` einmal aus, hielte die Anlage ein längst
+		// abgelaufenes Token 55 Minuten lang für gültig: Jeder Abruf käme
+		// mit 401 zurück und zöge eine Erneuerung nach sich
+		$expiresIn = (int) ($tokenData['expires_in'] ?? self::TOKEN_LEBENSDAUER);
+
+		if($expiresIn <= 0) $expiresIn = self::TOKEN_LEBENSDAUER;
 
 		// **Ein fehlendes Refresh-Token in der Antwort heißt nicht, dass es
 		// keins mehr gibt.** Nach RFC 6749 §6 KANN der Server bei einer
@@ -880,11 +933,103 @@ class OAuth2Client
 
 			if(0 !== (int) ($tokenData['http_code'] ?? 0))
 			{
-				$this->sperreSetzen((string) ($tokenData['error_message'] ?? ''));
+				$this->sperreSetzen((string) ($tokenData['error_message'] ?? ''), (int) $tokenData['http_code']);
 			}
 		}
 
 		return $tokenData;
+	}
+
+	/**
+	 * Erneuert das Token, nachdem die Schnittstelle einen Abruf damit
+	 * abgewiesen hat (HTTP 401) — unter derselben Dateisperre wie jede
+	 * andere Erneuerung.
+	 *
+	 * Ohne die Sperre lief genau hier vorbei, wogegen sie eingeführt wurde:
+	 * Weist nu mehrere gleichzeitige Abrufe ab — etwa weil das Token
+	 * widerrufen wurde —, erneuern sonst alle zugleich. nu verbraucht ein
+	 * Refresh-Token beim Einlösen, also bekommt der erste ein neues und die
+	 * übrigen „Refresh Token already used or invalid"; die weichen auf
+	 * `client_credentials` aus, und davon sind nur fünf in 30 Minuten erlaubt.
+	 *
+	 * @param string $abgewiesen Das Token, mit dem der Abruf scheiterte. Steht
+	 *                           inzwischen ein anderes in der Tokendatei, hat
+	 *                           ein anderer Vorgang schon erneuert und es wird
+	 *                           ohne eigene Anfrage übernommen.
+	 *
+	 * @return array Tokendaten oder Fehlerantwort mit `tokenfehler`
+	 */
+	public function erneuereNach401(string $abgewiesen): array
+	{
+		$sperrdatei = @fopen($this->cacheFile.'.lock', 'c');
+
+		if($sperrdatei === false || !@flock($sperrdatei, LOCK_EX))
+		{
+			if($sperrdatei !== false) @fclose($sperrdatei);
+
+			return $this->erneuereStattToken($abgewiesen);
+		}
+
+		try
+		{
+			return $this->erneuereStattToken($abgewiesen);
+		}
+		finally
+		{
+			@flock($sperrdatei, LOCK_UN);
+			@fclose($sperrdatei);
+		}
+	}
+
+	/**
+	 * Ersetzt ein abgewiesenes Token — entweder durch das, was inzwischen
+	 * hinterlegt ist, oder durch ein frisch erneuertes.
+	 *
+	 * @param  string $abgewiesen Das abgewiesene Zugangstoken
+	 * @return array              Tokendaten oder Fehlerantwort
+	 */
+	protected function erneuereStattToken(string $abgewiesen): array
+	{
+		// Aus der DATEI nachsehen, nicht aus dem Prozessspeicher: Der kennt
+		// nur den Stand von vorhin — also das abgewiesene Token
+		unset(self::$tokenSpeicher[$this->cacheFile]);
+		$cache = $this->readCache();
+
+		if(!empty($cache['access_token']) && $cache['access_token'] !== $abgewiesen && isset($cache['expires_at']) && time() < ($cache['expires_at'] - 30))
+		{
+			$log = "ℹ️ Ein anderer Vorgang hat inzwischen erneuert.\n";
+			if(!empty($GLOBALS['TL_CONFIG']['wertungsportal_debuglog'])) \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::protokoll($log, 'wertungsportal_oauth2client.log');
+
+			return array('error' => false, 'access_token' => $cache['access_token']);
+		}
+
+		return $this->erneuere($cache);
+	}
+
+	/**
+	 * Ersetzt das Token, mit dem eine Adresse abgerufen wurde, nachdem nu es
+	 * abgewiesen hat.
+	 *
+	 * Gedacht für Wege ohne Client-Instanz — den Zip-Download etwa, der sich
+	 * seine Kopfzeile über anmeldekopf() holt. Danach steht das frische Token
+	 * hinterlegt und der nächste Versuch nimmt es von dort.
+	 *
+	 * Erneuert wird über erneuereNach401(), also über das Refresh-Token und
+	 * unter der Dateisperre. Das Token einfach wegzuwerfen wäre teurer: Ohne
+	 * Refresh-Token bliebe nur `client_credentials`, und davon sind bei nu
+	 * nur fünf in 30 Minuten erlaubt.
+	 *
+	 * @param  string $url        Adresse der Schnittstelle
+	 * @param  string $abgewiesen Das Token, das nu abgewiesen hat
+	 * @return void
+	 */
+	public static function tokenErneuern(string $url, string $abgewiesen): void
+	{
+		$zugang = self::zugangFuer($url);
+
+		if($zugang === null) return;
+
+		(new self($zugang))->erneuereNach401($abgewiesen);
 	}
 
 	/**
@@ -944,10 +1089,15 @@ class OAuth2Client
 	public static function herunterladen(string $url, string $ziel, int $versuche = 3, bool $zipCheck = true): array
 	{
 		$fehler = '';
+		$erneuert = false; // ein abgewiesenes Token wird nur einmal ersetzt
+		$sofort = false;   // nach einem Tokenwechsel lohnt das Warten nicht
 
 		for($versuch = 1; $versuch <= $versuche; $versuch++)
 		{
-			if($versuch > 1) sleep(5); // Kurze Pause vor der Wiederholung
+			// Kurze Pause vor der Wiederholung — sie gilt einer stockenden
+			// Leitung. Wurde nur das Token ersetzt, ist sie verschenkte Zeit
+			if($versuch > 1 && !$sofort) sleep(5);
+			$sofort = false;
 
 			$tokenfehler = '';
 			$kopf = self::anmeldekopf($url, $tokenfehler);
@@ -982,6 +1132,21 @@ class OAuth2Client
 			elseif($httpCode === 401)
 			{
 				@unlink($ziel);
+
+				// Ging ein Token mit, wird es einmal ersetzt und der Download
+				// wiederholt: nu kann es widerrufen haben, und die Anleitung
+				// sieht für 401 ausdrücklich Erneuern und Wiederholen vor.
+				// Das frische Token steht danach hinterlegt, anmeldekopf() nimmt
+				// es beim nächsten Durchlauf von dort
+				if($kopf && !$erneuert && $versuch < $versuche)
+				{
+					$erneuert = true;
+					$sofort = true;
+					$fehler = 'HTTP-Status 401 — nu hat das Zugangstoken abgewiesen';
+					self::tokenErneuern($url, substr((string) $kopf[0], \strlen('Authorization: Bearer ')));
+
+					continue;
+				}
 
 				if($tokenfehler !== '') $grund = $tokenfehler;
 				elseif($kopf) $grund = 'nu hat das Zugangstoken abgewiesen';
@@ -1276,27 +1441,12 @@ class OAuth2Client
 				$tokenClient->protokolliere('Die Schnittstelle hat einen Abruf mit HTTP 401 abgewiesen, obwohl ein Token '.$tokenClient->bezeichnung().' vorlag ('.$apiUrl.'). Das Token wird erneuert — das kostet ein weiteres aus dem Kontingent.');
 			}
 
-			$cache = $tokenClient->readCache();
-			$tokenClient->clearCache();
+			// Unter der Dateisperre, damit nicht mehrere gleichzeitig erneuern
+			// und sich dabei die Refresh-Token entwerten (siehe erneuereNach401)
+			$tokenData = $tokenClient->erneuereNach401((string) $tokenResult['access_token']);
 
-			if(!empty($cache['refresh_token']))
+			if(!empty($tokenData['error']))
 			{
-				$tokenData = $tokenClient->refreshToken($cache['refresh_token']);
-			}
-			else
-			{
-				$tokenData = $tokenClient->fetchNewToken();
-			}
-
-			if($tokenData['error'])
-			{
-				$tokenData['tokenfehler'] = true;
-
-				if(0 !== (int) ($tokenData['http_code'] ?? 0))
-				{
-					$tokenClient->sperreSetzen((string) ($tokenData['error_message'] ?? ''));
-				}
-
 				return $tokenData;
 			}
 

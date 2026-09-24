@@ -167,6 +167,35 @@ class OAuth2ClientTest extends TestCase
 		$this->assertSame(200, $antwort['http_code'], 'Übergang: nu liefert noch frei aus');
 		$this->assertStringContainsString('Wrong or no scope(s) provided', $antwort['ohne_anmeldung']);
 		$this->assertSame('falscher_scope', $this->tokenanfragen()[0]['scope']);
+
+		// nu beantwortet ein erschöpftes Kontingent mit demselben HTTP 403 wie
+		// einen falschen Scope. Weil das Kontingent in einem Fenster von 30
+		// Minuten zählt, wird danach eine halbe Stunde nicht wieder angefragt
+		$datei = json_decode((string) file_get_contents($this->wurzel.'/system/tmp/wertungsportal-token-dwzliste.json'), true);
+		$this->assertGreaterThan(time() + 600, $datei['gesperrt_bis'], 'deutlich länger als die gewöhnliche Wartezeit');
+		$this->assertLessThanOrEqual(time() + 1800, $datei['gesperrt_bis'], 'die 30 Minuten des Kontingentfensters');
+	}
+
+	/**
+	 * Nennt nu keine Lebensdauer, gilt die dokumentierte von fünf Minuten —
+	 * nicht die Stunde, die bis 1.46.1 im Code stand. Ein zu lange für
+	 * gültig gehaltenes Token bringt jeden Abruf mit 401 zurück.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function testLebensdauerOhneAngabe(): void
+	{
+		$basis = $this->starte(array('dwzliste_offen' => false, 'ohne_expires_in' => true), true);
+
+		$client = new OAuth2Client();
+		$this->assertSame(200, $client->callApiWithRefresh($basis.'/dwz/dwzliste/clubs')['http_code']);
+
+		$datei = json_decode((string) file_get_contents($this->wurzel.'/system/tmp/wertungsportal-token-dwzliste.json'), true);
+		// Feste Zahlen, nicht die Konstante: Sonst wanderte die Erwartung mit,
+		// wenn jemand die Vorgabe verstellt. 300 s nennt die Anleitung von nu
+		$this->assertLessThanOrEqual(time() + 300, $datei['expires_at']);
+		$this->assertGreaterThan(time() + 270, $datei['expires_at']);
 	}
 
 	/**
@@ -332,7 +361,76 @@ class OAuth2ClientTest extends TestCase
 		$anfragen = $this->tokenanfragen();
 		$this->assertSame(array('client_credentials', 'refresh_token'), array_column($anfragen, 'grant'));
 		$this->assertSame(array(self::LISTE['id'], self::LISTE['id']), array_column($anfragen, 'client'));
+
+		// Der Scope gehört in BEIDE Anfragen — so führt ihn die Anleitung von
+		// nu auf. Bis 1.46.1 ging er nur beim ersten Mal mit, und was für ein
+		// Token die Erneuerung danach zurückgibt, ist nicht zugesichert
+		$this->assertSame(array(OAuth2Client::SCOPE_DWZLISTE, OAuth2Client::SCOPE_DWZLISTE), array_column($anfragen, 'scope'));
 		$this->assertFileDoesNotExist($this->wurzel.'/system/tmp/wertungsportal-token.json', 'der Turnierzugang wurde nicht angefasst');
+	}
+
+	/**
+	 * Weist nu den Download mit einem widerrufenen Token ab, wird das Token
+	 * ersetzt und der Download wiederholt — so sieht es die Anleitung von nu
+	 * für HTTP 401 vor. Bis 1.46.1 brach der Download dort ab.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function testDownloadNachWiderruf(): void
+	{
+		$basis = $this->starte(array('dwzliste_offen' => false), true);
+		$GLOBALS['TL_CONFIG']['wertungsportal_apiBasisURL'] = $basis;
+
+		$ziel = $this->wurzel.'/LV-A-dwzliste.zip';
+		$adresse = OAuth2Client::downloadAdresse('LV-A-dwzliste.zip');
+		$this->assertTrue(OAuth2Client::herunterladen($adresse, $ziel)['success']);
+
+		// nu widerruft das Token, das gerade noch galt
+		$erstes = $this->benutzteToken('/rs/dwz/dwzliste/download/')[0];
+		$this->konfig(array('dwzliste_offen' => false, 'widerrufen' => array($erstes)));
+
+		$ergebnis = OAuth2Client::herunterladen($adresse, $ziel);
+		$this->assertTrue($ergebnis['success'], $ergebnis['error']);
+		$this->assertSame(2, $ergebnis['versuche']);
+		$this->assertSame(array('client_credentials', 'refresh_token'), array_column($this->tokenanfragen(), 'grant'));
+	}
+
+	/**
+	 * Hat ein anderer Vorgang das abgewiesene Token inzwischen ersetzt, wird
+	 * dessen Token übernommen, statt selbst eines anzufordern.
+	 *
+	 * Der Fall entsteht, wenn mehrere Seitenaufrufe gleichzeitig auf ein
+	 * widerrufenes Token laufen. Ohne diese Prüfung fragen alle an; nu löst
+	 * aber nur das jüngste Refresh-Token ein, die übrigen weichen auf
+	 * `client_credentials` aus — und davon sind nur fünf in 30 Minuten erlaubt.
+	 *
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function testFremdeErneuerungWirdUebernommen(): void
+	{
+		$basis = $this->starte(array('dwzliste_offen' => false), true);
+
+		$client = new OAuth2Client();
+		$this->assertSame(200, $client->callApiWithRefresh($basis.'/dwz/dwzliste/clubs')['http_code']);
+
+		$erstes = $this->benutzteToken('/rs/dwz/dwzliste')[0];
+		$this->konfig(array('dwzliste_offen' => false, 'widerrufen' => array($erstes)));
+
+		// Was ein anderer Vorgang hinterlassen hätte: ein gültiges, anderes Token
+		$datei = $this->wurzel.'/system/tmp/wertungsportal-token-dwzliste.json';
+		file_put_contents($datei, json_encode(array(
+			'access_token'  => self::LISTE['id'].'-zugang-99',
+			'refresh_token' => self::LISTE['id'].'-erneuerung-99',
+			'expires_at'    => time() + 300,
+		)));
+
+		$this->assertSame(200, $client->callApiWithRefresh($basis.'/dwz/dwzliste/clubs')['http_code']);
+
+		$this->assertCount(1, $this->tokenanfragen(), 'keine eigene Anfrage — das fremde Token genügt');
+		$benutzt = $this->benutzteToken('/rs/dwz/dwzliste');
+		$this->assertSame(self::LISTE['id'].'-zugang-99', end($benutzt));
 	}
 
 	/**
