@@ -11,6 +11,9 @@ Ersetzt die SOAP-Schnittstelle von DeWIS und kommuniziert mit der REST-Schnittst
 * [Zugang zur Schnittstelle: zwei Kennungen](docs/zugang.md) — Anmeldung per OAuth2 für
   Turniere und Personen und (seit 1.46.0) für die DWZ-Liste: Einstellungen, Tokendateien,
   Verhalten vor und nach der Umstellung bei nu, Zip-Downloads
+* [Beispielskript für eigene Anwendungen](docs/oauth2-beispiel.md) — eine eigenständige
+  PHP-Klasse samt fünf Beispielen, ohne Contao und ohne Composer; gedacht zur Weitergabe
+  an Vereine, Verbände und andere Umsysteme
 * [Turnierseiten: Nichtmitglieder und Erwartungswerte](docs/turnierseiten.md) — warum
   Nichtmitglieder keine neue DWZ bekommen, woher ihre Eingangswertung stammt und wie der
   Erwartungswert je Partie im Spielberichtsbogen zustande kommt

@@ -1,5 +1,22 @@
 # Wertungsportal Changelog
 
+## Version 1.47.0 (2026-09-25)
+
+* Add: **Beispielskript für den OAuth2-Zugriff** unter `docs/oauth2-beispiel/` samt Anleitung
+  `docs/oauth2-beispiel.md` — gedacht zur Veröffentlichung auf der DSB-Website. Eine
+  eigenständige Klasse (`DsbOAuth2Client`, eine Datei, ohne Contao und ohne Composer, PHP ab 7.4)
+  und fünf Beispiele: Turniersuche, ein Turnier vollständig, Spielerhistorie, DWZ-Liste
+  seitenweise, Zip-Download
+* Add: Die Klasse führt die Regeln mit, die im Dauerbetrieb zählen — ein Token und danach nur
+  Erneuerungen (nu erlaubt fünf neue je Kennung in 30 Minuten), Tokendatei statt Arbeitsspeicher,
+  Dateisperre gegen gleichzeitiges Erneuern, Scope in jeder Anfrage, 30 Minuten Wartezeit nach
+  einem HTTP 403, Erneuerung und Wiederholung nach einem 401, Zertifikatsprüfung, Paginierung
+  über einen Generator und Zip-Downloads mit Prüfung auf Vollständigkeit
+* Add: Die Anleitung nennt die Fallstricke, die man sonst teuer lernt: Wo die Tokendatei liegen
+  muß, warum ein HTTP 403 drei Ursachen haben kann, wann beide Scopes in eine Anfrage gehören,
+  daß fehlende Felder fehlen statt 0 zu sein, daß Nichtmitglieder keine neue DWZ bekommen und
+  daß Umstufungen ganz ohne Wertungsangabe kommen können
+
 ## Version 1.46.3 (2026-09-24)
 
 * Fix: **Leere DWZ-Umstufungen stehen nicht mehr in der Karteikarte.** Die Turnierhistorie

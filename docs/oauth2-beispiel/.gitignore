@@ -1,0 +1,10 @@
+# Die eigenen Zugangsdaten gehören nicht in die Versionsverwaltung
+zugangsdaten.php
+
+# Token und Sperrdateien entstehen zur Laufzeit
+token/
+*.json
+*.json.lock
+
+# Heruntergeladene Dateien der DWZ-Liste
+*.zip

@@ -190,3 +190,12 @@ wissen.
 `tests/Helper/OAuth2ClientTest.php` prüft das alles gegen einen Nachbau der
 Schnittstelle (`tests/Helper/NuSchnittstelleAttrappe.php`, gestartet mit dem
 eingebauten PHP-Server) — mit erfundenen Kennungen, nie gegen nu.
+
+## Dasselbe ohne Contao
+
+Für Umsysteme, die nicht mit Contao arbeiten, liegt unter
+[`oauth2-beispiel.md`](oauth2-beispiel.md) eine eigenständige Fassung: eine
+einzelne Klasse mit denselben Regeln (Tokendatei, Dateisperre, Wartezeiten,
+Scope in jeder Anfrage) und fünf Beispielskripten. Sie ist zur Weitergabe
+gedacht und hängt an nichts — weder an diesem Bundle noch an Composer.
+Wer an den Regeln hier etwas ändert, sollte dort nachziehen.
