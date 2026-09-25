@@ -24,6 +24,18 @@ Ganzes weitergegeben werden.
 Voraussetzungen: **PHP ab 7.4** mit den Erweiterungen `curl` und `json`, für
 die Zip-Dateien zusätzlich `zip`.
 
+Ausgeführt und auf Meldungen geprüft wurde das Paket unter **PHP 8.3 und 8.4**:
+`error_reporting=E_ALL`, dazu ein eigener Fehlerhandler, der auch die mit `@`
+unterdrückten Meldungen sichtbar macht — es läuft ohne Warnungen, Hinweise und
+Abkündigungen. Für 7.4 spricht die statische Prüfung: PHPStan auf Stufe 6
+meldet gegen PHP 7.4, 8.3 und 8.4 nichts.
+
+Eine einzige Meldung gibt die Klasse absichtlich aus, als `E_USER_WARNING`:
+wenn sich die Tokendatei nicht anlegen oder schreiben läßt. Sie ist die
+Vorstufe zum erschöpften Kontingent und darf nicht untergehen. Ist die Ablage
+nicht nutzbar, arbeitet die Klasse danach still im Arbeitsspeicher weiter und
+faßt die Datei gar nicht erst an.
+
 ## Loslegen
 
 1. Eine API-Freischaltung beim Deutschen Schachbund beantragen. Sie bekommen

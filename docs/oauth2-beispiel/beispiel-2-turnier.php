@@ -50,7 +50,7 @@ function ergebnis(string $code): string
 /**
  * Setzt Vor- und Nachnamen eines Spielerblocks zusammen.
  *
- * @param array|null $spieler Block `whitePlayer` oder `blackPlayer`
+ * @param array<string,mixed>|null $spieler Block `whitePlayer` oder `blackPlayer`
  *
  * @return string „Nachname, Vorname"; „—" wenn kein Spieler angegeben ist
  */

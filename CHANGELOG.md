@@ -1,5 +1,23 @@
 # Wertungsportal Changelog
 
+## Version 1.47.1 (2026-09-25)
+
+Nur das Beispielskript (`docs/oauth2-beispiel/`), das Bundle selbst ist unverändert.
+
+* Fix: **Die Beispielklasse löst keine Dateisystem-Warnungen mehr aus.** Ob die Tokendatei
+  benutzbar ist, wird jetzt EINMAL beim Einrichten geprüft (`ablagePruefen()`, legt das
+  Verzeichnis bei Bedarf an); danach wird sie gar nicht erst angefaßt, wenn sie es nicht ist.
+  Vorher versuchten `fopen()` und `file_put_contents()` es bei jedem Zugriff — die Warnungen
+  waren zwar mit `@` verdeckt, ein Rahmenwerk mit eigenem Fehlerhandler hätte sie aber
+  protokolliert. Geblieben ist eine einzige, absichtliche Meldung (`E_USER_WARNING`) mit der
+  Aufforderung, die Schreibrechte zu prüfen
+* Change: Array-Typen in allen Docblocks der Klasse (`array<string,mixed>`,
+  `array{status:int,text:string}`, `Generator<int,array<string,mixed>>`) — PHPStan Stufe 6
+  meldet damit gegen PHP 7.4, 8.3 und 8.4 nichts mehr, und dem Leser sagen sie mehr als ein
+  blankes `array`
+* Add: Die Anleitung nennt, was tatsächlich geprüft wurde: ausgeführt unter PHP 8.3 und 8.4 mit
+  `error_reporting=E_ALL` und einem Fehlerhandler, der auch unterdrückte Meldungen sichtbar macht
+
 ## Version 1.47.0 (2026-09-25)
 
 * Add: **Beispielskript für den OAuth2-Zugriff** unter `docs/oauth2-beispiel/` samt Anleitung

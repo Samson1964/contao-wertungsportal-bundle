@@ -205,9 +205,17 @@ class DsbOAuth2Client
 	private $timeout;
 
 	/**
-	 * @var array Tokendaten dieses Prozesses — zweite Ebene neben der Datei
+	 * @var array<string,mixed> Tokendaten dieses Prozesses — zweite Ebene neben der Datei
 	 */
 	private $speicher = array();
+
+	/**
+	 * @var bool Ist die Tokendatei benutzbar? Einmal im Konstruktor geprüft.
+	 *           Wenn nicht, arbeitet die Klasse nur im Arbeitsspeicher weiter
+	 *           — und faßt die Datei gar nicht erst an, statt bei jedem
+	 *           Zugriff eine Warnung auszulösen
+	 */
+	private $ablageNutzbar = true;
 
 	/**
 	 * Richtet den Client ein.
@@ -233,7 +241,7 @@ class DsbOAuth2Client
 	 * @param string $scope        Angeforderter Scope, z. B. self::SCOPE_TURNIERE.
 	 *                             Mehrere durch Leerzeichen getrennt; die Anfrage
 	 *                             gelingt nur, wenn alle freigeschaltet sind
-	 * @param array  $einstellungen Wahlweise abweichende Werte:
+	 * @param array<string,mixed> $einstellungen Wahlweise abweichende Werte:
 	 *                             `tokendatei` (Vorgabe: dsb-token-<Kennung>.json
 	 *                             neben dieser Datei), `timeout` (Vorgabe 30 s),
 	 *                             `tokenUrl` und `apiUrl` (für Testumgebungen)
@@ -259,6 +267,63 @@ class DsbOAuth2Client
 		// selbst steht nicht im Namen — Dateinamen landen schnell in
 		// Protokollen und Sicherungen
 		$this->tokendatei = (string) ($einstellungen['tokendatei'] ?? __DIR__.'/dsb-token-'.substr(sha1($this->clientId), 0, 12).'.json');
+		$this->ablageNutzbar = $this->ablagePruefen();
+	}
+
+	/**
+	 * Stellt fest, ob die Tokendatei benutzbar ist, und legt ihr Verzeichnis
+	 * bei Bedarf an.
+	 *
+	 * Einmal beim Einrichten statt bei jedem Zugriff: Sonst liefe jeder
+	 * Schreibversuch in eine Warnung, die nur mit `@` verdeckt wäre — in
+	 * einem Rahmenwerk mit eigenem Fehlerhandler stünde sie trotzdem im
+	 * Protokoll.
+	 *
+	 * Ist die Ablage nicht nutzbar, bricht nichts ab: Die Klasse arbeitet mit
+	 * dem Token im Arbeitsspeicher weiter. Das reicht für einen Seitenaufruf
+	 * — aber jeder weitere holt ein eigenes Token, und davon sind nur fünf je
+	 * 30 Minuten erlaubt. Deshalb die deutliche Warnung.
+	 *
+	 * @return bool true, wenn Token und Sperrdatei geschrieben werden können
+	 */
+	private function ablagePruefen(): bool
+	{
+		$verzeichnis = \dirname($this->tokendatei);
+
+		// Bis zum ersten vorhandenen Teil des Weges hochgehen und dort nachsehen,
+		// ob überhaupt angelegt werden kann. Ohne diese Vorprüfung löst ein
+		// aussichtsloses mkdir() eine Warnung aus — hier zwar mit @ verdeckt,
+		// aber ein Rahmenwerk mit eigenem Fehlerhandler protokolliert sie doch
+		$vorhanden = $verzeichnis;
+
+		while (!file_exists($vorhanden) && \dirname($vorhanden) !== $vorhanden) {
+			$vorhanden = \dirname($vorhanden);
+		}
+
+		if (!is_dir($verzeichnis) && (!is_dir($vorhanden) || !is_writable($vorhanden) || !@mkdir($verzeichnis, 0770, true)) && !is_dir($verzeichnis)) {
+			trigger_error(
+				'Das Verzeichnis für die Tokendatei läßt sich nicht anlegen: '.$verzeichnis.'. Ohne hinterlegtes '
+				.'Token fordert jeder Aufruf ein eigenes an — die Schnittstelle weist das bald mit '
+				.'„Too much access tokens" ab.',
+				E_USER_WARNING
+			);
+
+			return false;
+		}
+
+		// Bei einer vorhandenen Datei zählt sie selbst, sonst das Verzeichnis
+		if (is_file($this->tokendatei) ? !is_writable($this->tokendatei) : !is_writable($verzeichnis)) {
+			trigger_error(
+				'Die Tokendatei '.$this->tokendatei.' läßt sich nicht schreiben. Bitte die Schreibrechte '
+				.'prüfen — sie müssen für ALLE Wege gelten, die die Schnittstelle benutzen (Webserver und '
+				.'Cronjob). Sonst holt sich jeder Aufruf ein eigenes Zugangstoken.',
+				E_USER_WARNING
+			);
+
+			return false;
+		}
+
+		return true;
 	}
 
 	/**
@@ -270,10 +335,11 @@ class DsbOAuth2Client
 	 *
 	 * @param string $pfad      Pfad relativ zur Basisadresse, etwa
 	 *                          `/dwz/tournaments` oder `/dwz/persons/NU1234567/history`
-	 * @param array  $parameter Abfrageparameter, etwa `array('limit' => 10)`.
-	 *                          Leere Werte (null, '') werden weggelassen
+	 * @param array<string,mixed> $parameter Abfrageparameter, etwa
+	 *                          `array('limit' => 10)`. Leere Werte (null, '')
+	 *                          werden weggelassen
 	 *
-	 * @return array Die Antwort von nu als Array
+	 * @return array<string,mixed> Die Antwort von nu als Array
 	 *
 	 * @throws DsbOAuth2Exception bei jedem Status außer 200, bei ungültigem
 	 *                            JSON und wenn kein Token zu bekommen ist
@@ -326,10 +392,10 @@ class DsbOAuth2Client
 	 * Kontingent zu belasten.
 	 *
 	 * @param string $pfad      Pfad eines Listen-Endpunkts
-	 * @param array  $parameter Abfrageparameter ohne `limit` und `offset`
+	 * @param array<string,mixed> $parameter Abfrageparameter ohne `limit` und `offset`
 	 * @param int    $proSeite  Datensätze je Abruf (1 bis 1000)
 	 *
-	 * @return Generator Liefert die Einträge aus `data` nacheinander
+	 * @return Generator<int,array<string,mixed>> Liefert die Einträge aus `data` nacheinander
 	 *
 	 * @throws DsbOAuth2Exception wie get()
 	 */
@@ -515,7 +581,7 @@ class DsbOAuth2Client
 	 *
 	 * @param string $pfad      Pfad relativ zur Basisadresse, mit oder ohne
 	 *                          führenden Schrägstrich
-	 * @param array  $parameter Abfrageparameter; null und '' entfallen
+	 * @param array<string,mixed> $parameter Abfrageparameter; null und '' entfallen
 	 *
 	 * @return string Vollständige Adresse samt Abfragezeichenkette
 	 */
@@ -542,7 +608,7 @@ class DsbOAuth2Client
 	 * @param string $token        Zugangstoken ohne „Bearer"
 	 * @param bool   $wiederholung Interner Schalter; beim zweiten Versuch true
 	 *
-	 * @return array `status` (int) und `text` (string, der Antwortkörper)
+	 * @return array{status:int,text:string} Status und Antwortkörper
 	 *
 	 * @throws DsbOAuth2Exception bei einem Verbindungsfehler
 	 */
@@ -589,7 +655,7 @@ class DsbOAuth2Client
 	 * Anleitung. Die Parameter gehen nach RFC 6749 in den **Körper** der
 	 * Anfrage, nicht in die Adresse.
 	 *
-	 * @param array $felder `grant_type` und, beim Erneuern, `refresh_token`
+	 * @param array<string,string> $felder `grant_type` und, beim Erneuern, `refresh_token`
 	 *
 	 * @return string Das neue Zugangstoken
 	 *
@@ -666,7 +732,7 @@ class DsbOAuth2Client
 	/**
 	 * Beurteilt, ob ein hinterlegtes Token noch benutzt werden kann.
 	 *
-	 * @param array $stand Inhalt der Tokendatei
+	 * @param array<string,mixed> $stand Inhalt der Tokendatei
 	 *
 	 * @return bool true, wenn ein Token vorliegt und der Puffer noch nicht
 	 *              angebrochen ist
@@ -686,7 +752,7 @@ class DsbOAuth2Client
 	 * Aufruf von vorn an. Bei einem Kontingentfehler füttert das genau die
 	 * Ursache, und die Anlage kommt aus dem Zustand nicht mehr heraus.
 	 *
-	 * @param array $stand Inhalt der Tokendatei
+	 * @param array<string,mixed> $stand Inhalt der Tokendatei
 	 *
 	 * @return void
 	 *
@@ -739,7 +805,7 @@ class DsbOAuth2Client
 	 *                     Nötig unter der Sperre: Dort zählt, was ein anderer
 	 *                     Vorgang inzwischen geschrieben hat
 	 *
-	 * @return array Leeres Array, wenn nichts hinterlegt oder lesbar ist
+	 * @return array<string,mixed> Leeres Array, wenn nichts hinterlegt oder lesbar ist
 	 */
 	private function cacheLesen(bool $frisch = false): array
 	{
@@ -747,7 +813,7 @@ class DsbOAuth2Client
 			return $this->speicher;
 		}
 
-		if (!is_file($this->tokendatei)) {
+		if (!$this->ablageNutzbar || !is_file($this->tokendatei)) {
 			return $this->speicher;
 		}
 
@@ -764,11 +830,10 @@ class DsbOAuth2Client
 	/**
 	 * Legt Tokendaten ab — im Prozessspeicher und in der Datei.
 	 *
-	 * Läßt sich die Datei nicht schreiben, wird gewarnt und weitergearbeitet.
-	 * Lautlos darf das nicht bleiben: Genau dieser Fall führt dazu, daß jeder
-	 * Seitenaufruf ein eigenes Token anfordert und das Kontingent aufbraucht.
+	 * Ist die Ablage nicht nutzbar, bleibt es beim Arbeitsspeicher — gewarnt
+	 * wurde dann schon beim Einrichten (siehe ablagePruefen()).
 	 *
-	 * @param array $daten Tokendaten oder ein Sperrvermerk
+	 * @param array<string,mixed> $daten Tokendaten oder ein Sperrvermerk
 	 *
 	 * @return void
 	 */
@@ -776,12 +841,12 @@ class DsbOAuth2Client
 	{
 		$this->speicher = $daten;
 
+		if (!$this->ablageNutzbar) {
+			return;
+		}
+
 		if (false === @file_put_contents($this->tokendatei, json_encode($daten))) {
-			trigger_error(
-				'Die Tokendatei '.$this->tokendatei.' läßt sich nicht schreiben. Damit fordert jeder Aufruf ein '
-				.'eigenes Zugangstoken an — die Schnittstelle weist das bald mit „Too much access tokens" ab.',
-				E_USER_WARNING
-			);
+			trigger_error('Die Tokendatei '.$this->tokendatei.' konnte nicht geschrieben werden.', E_USER_WARNING);
 		}
 	}
 
@@ -804,7 +869,7 @@ class DsbOAuth2Client
 	 */
 	private function unterSperre(callable $aufgabe): string
 	{
-		$sperrdatei = @fopen($this->tokendatei.'.lock', 'c');
+		$sperrdatei = $this->ablageNutzbar ? @fopen($this->tokendatei.'.lock', 'c') : false;
 
 		if (false === $sperrdatei || !@flock($sperrdatei, LOCK_EX)) {
 			if (false !== $sperrdatei) {
