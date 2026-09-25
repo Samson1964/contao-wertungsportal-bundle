@@ -1,8 +1,9 @@
 # Die eigenen Zugangsdaten gehören nicht in die Versionsverwaltung
 zugangsdaten.php
 
-# Token und Sperrdateien entstehen zur Laufzeit
+# Token, Sperrdateien und der Zwischenspeicher entstehen zur Laufzeit
 token/
+zwischenspeicher/
 *.json
 *.json.lock
 

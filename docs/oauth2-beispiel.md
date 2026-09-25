@@ -8,10 +8,16 @@ es läuft ohne Contao, ohne Composer und ohne dieses Repository.
 Gedacht ist es zur Veröffentlichung auf der DSB-Website: Der Ordner kann als
 Ganzes weitergegeben werden.
 
+Wer damit anfängt, liest die **[Anleitung für Einsteiger](oauth2-beispiel/README.md)**
+im Ordner selbst: vom leeren Verzeichnis über die Zugangsdaten bis zur fertigen
+Spielersuche, mit den Fehlermeldungen, die dabei auftreten können. Diese Seite
+hier ist die kurze Fassung für alle, die schon wissen, was OAuth2 ist.
+
 ## Was drin ist
 
 | Datei | Zweck |
 |---|---|
+| `README.md` | **Anleitung für Einsteiger** — Schritt für Schritt vom leeren Verzeichnis bis zur fertigen Suche |
 | `DsbOAuth2Client.php` | Die Klasse. Eine Datei, keine Abhängigkeiten |
 | `zugangsdaten.beispiel.php` | Vorlage für Client-ID und Client Secret |
 | `start.php` | Gemeinsamer Anfang der Beispiele (Zugangsdaten lesen, Clients bauen) |
@@ -20,6 +26,7 @@ Ganzes weitergegeben werden.
 | `beispiel-3-spieler.php` | Spieler suchen und seine DWZ-Geschichte ausgeben |
 | `beispiel-4-dwzliste.php` | DWZ-Liste seitenweise durchgehen |
 | `beispiel-5-download.php` | Die DWZ-Liste als Zip-Datei holen |
+| `beispiel-6-webseite.php` | Eine Seite mit Suchformular — samt Zwischenspeicher und sicherer Ausgabe |
 
 Voraussetzungen: **PHP ab 7.4** mit den Erweiterungen `curl` und `json`, für
 die Zip-Dateien zusätzlich `zip`.

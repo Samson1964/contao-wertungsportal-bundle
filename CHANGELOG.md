@@ -1,5 +1,20 @@
 # Wertungsportal Changelog
 
+## Version 1.48.0 (2026-09-25)
+
+Nur das Beispielskript (`docs/oauth2-beispiel/`), das Bundle selbst ist unverändert.
+
+* Add: **Anleitung für Einsteiger** als `README.md` im Beispielordner — für alle, die PHP
+  können, aber noch nie mit einer Schnittstelle gearbeitet haben. Zwölf Abschnitte vom leeren
+  Verzeichnis über das Beantragen des Zugangs und den ersten Aufruf bis zur Liste dessen, was vor
+  dem Livegang geprüft sein sollte. Enthält die vier Regeln, an denen sonst alle scheitern
+  (Zwischenspeicher, schreibbare Tokendatei, Zugangsdaten außerhalb des Web-Verzeichnisses,
+  fehlende Felder) und eine Tabelle der üblichen Fehlermeldungen samt Abhilfe
+* Add: `beispiel-6-webseite.php` — eine fertige Seite mit Suchformular. Zeigt die drei Dinge, die
+  eine Schnittstellenabfrage im Web braucht: einen Zwischenspeicher (sonst löst jeder Besucher
+  einen Abruf aus), `htmlspecialchars()` bei jeder Ausgabe und eine Fehlerbehandlung, die dem
+  Besucher eine Meldung zeigt statt einer weißen Seite. Läuft ohne Webserver über `php -S`
+
 ## Version 1.47.1 (2026-09-25)
 
 Nur das Beispielskript (`docs/oauth2-beispiel/`), das Bundle selbst ist unverändert.
