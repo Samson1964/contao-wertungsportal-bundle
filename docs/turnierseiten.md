@@ -93,6 +93,56 @@ Drei Regeln folgen daraus:
 Bis 1.44.1 wurde **jede** Zeile mit der Elo-Formel geschätzt. Gegner ohne DWZ
 blieben leer, und die Summe der Zeilen ergab nie den Wert darunter.
 
+## Erst-DWZ des Gegners im Spielberichtsbogen (ab 1.49.0)
+
+Bekommen in einem Turnier Spieler ihre **erste** DWZ, rechnet nu die Auswertung
+ein zweites Mal — und setzt dabei für sie die gerade erworbene Erst-DWZ als
+Wertung ein. Ihre Gegner bekommen dadurch auch für diese Partien einen
+Erwartungswert, obwohl der Gegner vor dem Turnier gar keine DWZ hatte.
+
+Bis 1.48.0 stand dann im Spielberichtsbogen eine **leere DWZ-Zelle neben einem
+We** — und niemand konnte die Zahl nachvollziehen. Gemeldet am 27.09.2026 für
+Hendrik Pham (NU4481210, OWL U10 Verbandsklasse): Gegnerin Emma Pugachova, vor
+dem Turnier ohne DWZ, im Turnier 1348 - 1; We 0,294.
+
+Nachgerechnet: Φ((1195 − 1348) / (200·√2)) = 0,2943 — nu hat also genau mit
+der Erst-DWZ gerechnet. Auch der Gegnerschnitt 1321 in der Summenzeile geht
+nur mit ihr auf: (1423 + 1192 + 1321 + 1348) / 4 = 1321.
+
+Jetzt steht die Erst-DWZ in der DWZ-Spalte, **farbig hervorgehoben** und mit
+einem Hinweis im Tooltip:
+
+> Erst-DWZ aus diesem Turnier (1348 - 1). Vor dem Turnier ohne DWZ – die
+> Partie wurde in einem zweiten Rechengang mit dieser Zahl gewertet.
+
+Die Regel (`Spielerwertung::gezaehlteErstDwz()`) verlangt **alle drei**
+Bedingungen:
+
+| # | Bedingung | Warum |
+|---|---|---|
+| 1 | Der Gegner hat **keine alte DWZ** | Sonst steht die alte ohnehin da |
+| 2 | Die Partie hat trotzdem einen **Erwartungswert von nu** | Nur dann hat sie gezählt. Kampflose Partien und geschätzte Werte zählen nicht |
+| 3 | Der Gegner hat eine neue DWZ mit **Index 1** | Das ist eine Erst-DWZ |
+
+Nichtmitglieder fallen von selbst heraus: Für sie wird keine neue DWZ
+ausgewiesen, und ihre Eingangswertung steht bereits als alte Wertung da.
+
+Im selben Turnier kommt auch der Fall vor, daß **zwei** Spieler mit Erst-DWZ
+gegeneinander spielen (Pugachova 1348 gegen Bates 1158, Runde 3): nu rechnet
+dann mit beiden Erst-DWZ (Φ(190 / 282,8) = 0,749), und in beiden Bögen steht
+die Zahl des jeweils anderen hervorgehoben.
+
+Gestaltet ist die Markierung über die Klasse `erst-dwz` in
+`public/css/default.css`: dunkles Orange (#B35300, Kontrast 5,0:1 auf Weiß),
+fett, gepunktet unterstrichen, Mauszeiger mit Fragezeichen. **Nach dem
+Einspielen ist `contao:assets:install` nötig**, sonst fehlt die Farbe.
+
+**Was damit nicht aufgeht:** Der Bogen des Erst-DWZ-Spielers selbst. Dessen
+Gegnerschnitt (bei Pugachova 1256) enthält auch Gegner ohne DWZ und
+Restpartien aus früheren Turnieren, mit Werten, die nu nur intern für die
+Erstbewertung ansetzt und nicht ausliefert. Aus den sichtbaren Zeilen läßt er
+sich nicht nachrechnen.
+
 ## Notbetrieb
 
 Fällt die Schnittstelle aus, kommen die Seiten aus den Spiegeltabellen
@@ -112,6 +162,11 @@ nicht von „Nichtmitglied" unterscheiden, und dann verlören im Notbetrieb alle
 Die Spalten füllen sich mit jedem Abruf der Schnittstelle. **Nach dem
 Einspielen ist `contao:migrate` nötig.** Geprüft wird je Spalte: Fehlt eine noch,
 gleicht der Abgleich die übrigen ab, statt mit „Unknown column" abzubrechen.
+
+Die Erst-DWZ des Gegners erscheint im Notbetrieb nur, wenn die Partie mit
+`expected` gespiegelt wurde — also über einen früheren Abruf des
+Spielberichtsbogens. Aus der Ergebnisliste kommt das Feld nie (siehe oben),
+und ohne Erwartungswert von nu gilt Bedingung 2 als nicht erfüllt.
 
 Zwei Schwächen des Notbetriebs sind mit behoben: Ein nie gelieferter
 Erwartungswert stand als „0,000" in der Auswertung (die Spalte ist `NOT NULL`

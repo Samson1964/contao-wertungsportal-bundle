@@ -25,6 +25,19 @@
 	background-color		: #D8D8D8;
 }
 
+/* Erst-DWZ eines Gegners im Spielberichtsbogen (ab 1.49.0): Der Gegner hatte
+   vor dem Turnier keine DWZ und hat mit der hier erworbenen gezählt. Farbe
+   und gepunktete Linie zeigen, daß es mehr zu lesen gibt (title-Attribut).
+   #B35300 auf Weiß: Kontrast 5,0:1 (WCAG AA). */
+.dewis table.body td.erst-dwz
+{
+	color					: #B35300;
+	font-weight				: bold;
+	text-decoration			: underline dotted;
+	text-underline-offset	: 3px;
+	cursor					: help;
+}
+
 /* Men� */
 
 .dewislinks

@@ -1,5 +1,19 @@
 # Wertungsportal Changelog
 
+## Version 1.49.0 (2026-09-28)
+
+* Add: **Erst-DWZ des Gegners im Spielberichtsbogen.** Bekommen in einem Turnier Spieler ihre erste
+  DWZ, rechnet nu die Auswertung ein zweites Mal und setzt dabei die Erst-DWZ ein — ihre Gegner
+  bekommen so einen Erwartungswert gegen jemanden, der vor dem Turnier keine DWZ hatte. Bisher stand
+  dann eine leere DWZ-Zelle neben dem We. Gemeldet für Hendrik Pham (NU4481210): Gegnerin ohne alte
+  DWZ, Erst-DWZ 1348 - 1, We 0,294 — nachgerechnet exakt Φ((1195 − 1348) / (200·√2)). Jetzt steht
+  die Erst-DWZ in der Spalte, farbig hervorgehoben (Klasse `erst-dwz`) und mit einem Hinweis im
+  Tooltip. Die Regel verlangt alle drei Bedingungen (Frank Binding): keine alte DWZ, trotzdem ein
+  Erwartungswert von nu, eine neue DWZ mit Index 1 (`Spielerwertung::gezaehlteErstDwz()`).
+  Damit geht auch der Gegnerschnitt der Summenzeile aus den sichtbaren Zahlen auf
+* Change: Der Tooltip des Spaltenkopfs „DWZ" erklärt die Hervorhebung
+* **Einspielen:** `contao:assets:install` — die Farbe steht in `public/css/default.css`
+
 ## Version 1.48.0 (2026-09-25)
 
 Nur das Beispielskript (`docs/oauth2-beispiel/`), das Bundle selbst ist unverändert.

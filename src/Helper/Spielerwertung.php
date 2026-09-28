@@ -314,6 +314,60 @@ class Spielerwertung
 	}
 
 	/**
+	 * Liefert die Erst-DWZ, mit der ein Gegner ohne alte DWZ in einer Partie
+	 * gezählt hat — oder 0, wenn das nicht der Fall ist.
+	 *
+	 * Hintergrund: Bekommen in einem Turnier Spieler ihre ERSTE DWZ, rechnet
+	 * nu die Auswertung ein zweites Mal — und setzt dabei für diese Spieler
+	 * die gerade erworbene Erst-DWZ als Wertung ein. Ihre Gegner bekommen so
+	 * auch für diese Partien einen Erwartungswert, obwohl der Gegner vor dem
+	 * Turnier gar keine DWZ hatte. Im Spielberichtsbogen stand dann eine
+	 * leere DWZ-Zelle neben einem We, und niemand konnte die Zahl
+	 * nachvollziehen.
+	 *
+	 * Gemeldet am 27.09.2026 (Hendrik Pham, NU4481210, OWL U10 Verbandsklasse):
+	 * Gegnerin Emma Pugachova ohne alte DWZ, Erst-DWZ 1348 - 1, geliefertes
+	 * `expected` 0,294276. Nachgerechnet: Φ((1195 − 1348) / (200·√2)) =
+	 * 0,2943 — nu hat also genau mit der Erst-DWZ gerechnet. Auch der
+	 * Gegnerschnitt (1321) geht nur mit ihr auf.
+	 *
+	 * Die drei Bedingungen (Frank Binding, 28.09.2026) müssen ALLE erfüllt sein:
+	 *
+	 * 1. Der Gegner hat keine alte DWZ.
+	 * 2. Die Partie hat trotzdem einen Erwartungswert — und zwar den von nu,
+	 *    keinen geschätzten. Eine Schätzung braucht zwei alte Wertungen und
+	 *    kann hier gar nicht entstehen; ohne `expected` ist unbekannt, ob nu
+	 *    die Partie gewertet hat.
+	 * 3. Der Gegner hat eine neue DWZ mit Index 1, also eine Erst-DWZ.
+	 *
+	 * Nichtmitglieder fallen von selbst heraus: aufbereiten() weist für sie
+	 * keine neue DWZ aus (Wertungsordnung 3.4.3), und ihre Eingangswertung
+	 * steht ohnehin schon als alte Wertung da.
+	 *
+	 * @param array<string,mixed> $gegner    Ergebnis von aufbereiten() für den Gegner
+	 * @param array<string,mixed> $erwartung Ergebnis von partieerwartung() für die Partie
+	 *
+	 * @return int Die Erst-DWZ (z. B. 1348), 0 wenn eine der Bedingungen fehlt
+	 */
+	public static function gezaehlteErstDwz(array $gegner, array $erwartung): int
+	{
+		// 1. keine alte DWZ
+		if ((int) ($gegner['ratingOld'] ?? 0) > 0) {
+			return 0;
+		}
+
+		// 2. trotzdem ein Erwartungswert, und zwar der von nu
+		if (null === ($erwartung['wert'] ?? null) || !empty($erwartung['geschaetzt'])) {
+			return 0;
+		}
+
+		// 3. eine Erst-DWZ: neue Wertung mit Index 1
+		$neu = (int) ($gegner['ratingNew'] ?? 0);
+
+		return $neu > 0 && 1 === (int) ($gegner['indexNew'] ?? 0) ? $neu : 0;
+	}
+
+	/**
 	 * Berechnet die Gewinnerwartung aus zwei Wertungszahlen nach der
 	 * Wertungsordnung: Normalverteilung über die Differenz, Streuung 200 × √2.
 	 *

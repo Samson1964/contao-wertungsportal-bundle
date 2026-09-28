@@ -452,4 +452,116 @@ class SpielerwertungTest extends TestCase
 		$this->assertNull(Spielerwertung::gewinnerwartung(0, 1800));
 		$this->assertNull(Spielerwertung::gewinnerwartung(1800, 0));
 	}
+
+	/**
+	 * Die Gegnerin aus der Meldung vom 27.09.2026, genau wie nu sie im
+	 * Spielberichtsbogen von Hendrik Pham (NU4481210) liefert: Mitglied, keine
+	 * alte DWZ, im Turnier die Erst-DWZ 1348 - 1 erworben.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private static function gegnerinMitErstDwz(): array
+	{
+		return array
+		(
+			'playerUuid'               => 'bf32c558-82ba-493f-b493-25bb4ac41e57',
+			'nuLigaPersonId'           => 'NU4540553',
+			'member'                   => true,
+			'ratingNew'                => 1348,
+			'indexNew'                 => 1,
+			'averageRatingCompetitors' => 1256,
+			'wins'                     => 3,
+			'numberOfGames'            => 5,
+			'ratingNewDisplayString'   => '1348 - 1',
+		);
+	}
+
+	/**
+	 * Der Beleg, daß nu mit der Erst-DWZ rechnet: Die gelieferte Erwartung von
+	 * Weiß (1195) gegen die Gegnerin ohne alte DWZ ist 0,294276 — genau das,
+	 * was die Wertungsordnung für 1195 gegen 1348 ergibt.
+	 */
+	public function testNuRechnetMitDerErstDwz(): void
+	{
+		$this->assertEqualsWithDelta(0.294276, Spielerwertung::gewinnerwartung(1195, 1348), 0.00001);
+	}
+
+	/**
+	 * Alle drei Bedingungen erfüllt: keine alte DWZ, ein Erwartungswert von
+	 * nu, eine neue DWZ mit Index 1. Dann zählt die Erst-DWZ — gleich, ob der
+	 * Bogenspieler Weiß oder Schwarz hatte.
+	 */
+	public function testErstDwzZaehltBeiAllenDreiBedingungen(): void
+	{
+		$gegnerin = Spielerwertung::aufbereiten(self::gegnerinMitErstDwz());
+		$partie = array('result' => 'BLACK_WINS', 'expected' => 0.294276);
+
+		$this->assertSame(1348, Spielerwertung::gezaehlteErstDwz($gegnerin, Spielerwertung::partieerwartung($partie, true, 1195, $gegnerin['ratingOld'])));
+		$this->assertSame(1348, Spielerwertung::gezaehlteErstDwz($gegnerin, Spielerwertung::partieerwartung($partie, false, 1195, $gegnerin['ratingOld'])));
+	}
+
+	/**
+	 * Bedingung 1: Mit einer alten DWZ ist nichts zu ergänzen — die alte steht
+	 * ohnehin da.
+	 */
+	public function testKeineErstDwzMitAlterDwz(): void
+	{
+		$gegner = Spielerwertung::aufbereiten(array('member' => true, 'nuLigaPersonId' => 'NU1', 'ratingOld' => 1423, 'indexOld' => 5, 'ratingNew' => 1410, 'indexNew' => 6));
+
+		$this->assertSame(0, Spielerwertung::gezaehlteErstDwz($gegner, array('wert' => 0.21, 'geschaetzt' => false)));
+
+		// Auch nicht, wenn nur der Anzeigetext die alte DWZ trägt
+		$gegner = Spielerwertung::aufbereiten(array('member' => true, 'nuLigaPersonId' => 'NU1', 'ratingOldDisplayString' => '1423 - 5', 'ratingNew' => 1348, 'indexNew' => 1));
+
+		$this->assertSame(0, Spielerwertung::gezaehlteErstDwz($gegner, array('wert' => 0.21, 'geschaetzt' => false)));
+	}
+
+	/**
+	 * Bedingung 2: Ohne Erwartungswert von nu hat die Partie nicht gezählt —
+	 * so wie Runde 1 im Bogen von Hendrik Pham (Gegner ohne DWZ, keine
+	 * Erst-DWZ, kein `expected`). Eine kampflose Partie zählt nie, und eine
+	 * bloße Schätzung beweist nichts.
+	 */
+	public function testKeineErstDwzOhneErwartungswertVonNu(): void
+	{
+		$gegnerin = Spielerwertung::aufbereiten(self::gegnerinMitErstDwz());
+
+		// kein expected, und schätzen läßt sich ohne alte Wertung nichts
+		$this->assertSame(0, Spielerwertung::gezaehlteErstDwz($gegnerin, Spielerwertung::partieerwartung(array('result' => 'BLACK_WINS'), true, 1195, 0)));
+
+		// kampflos — nu liefert trotzdem manchmal ein expected
+		$this->assertSame(0, Spielerwertung::gezaehlteErstDwz($gegnerin, Spielerwertung::partieerwartung(array('result' => 'MINUS_PLUS', 'expected' => 0.294276), true, 1195, 0)));
+
+		// geschätzt statt geliefert
+		$this->assertSame(0, Spielerwertung::gezaehlteErstDwz($gegnerin, array('wert' => 0.29, 'geschaetzt' => true)));
+	}
+
+	/**
+	 * Bedingung 3: Nur eine Wertung mit Index 1 ist eine Erst-DWZ. Ein Gegner
+	 * ohne neue DWZ (zu wenige Partien) hat nicht gezählt.
+	 */
+	public function testKeineErstDwzOhneIndexEins(): void
+	{
+		$erwartung = array('wert' => 0.29, 'geschaetzt' => false);
+
+		$gegner = Spielerwertung::aufbereiten(array('member' => true, 'nuLigaPersonId' => 'NU1', 'ratingNew' => 1348, 'indexNew' => 2));
+		$this->assertSame(0, Spielerwertung::gezaehlteErstDwz($gegner, $erwartung));
+
+		// Runde 1 bei Hendrik Pham: Sbaiti, 2 Partien, keine DWZ bekommen
+		$gegner = Spielerwertung::aufbereiten(array('member' => true, 'nuLigaPersonId' => 'NU4437249', 'averageRatingCompetitors' => 1258, 'wins' => 0, 'numberOfGames' => 2));
+		$this->assertSame(0, Spielerwertung::gezaehlteErstDwz($gegner, $erwartung));
+	}
+
+	/**
+	 * Nichtmitglieder bekommen keine neue DWZ (Wertungsordnung 3.4.3) und
+	 * damit auch keine Erst-DWZ — selbst wenn nu eine liefert. Ihre
+	 * Eingangswertung steht bereits als alte Wertung da.
+	 */
+	public function testKeineErstDwzFuerNichtmitglieder(): void
+	{
+		$gegner = self::gegnerinMitErstDwz();
+		$gegner['member'] = false;
+
+		$this->assertSame(0, Spielerwertung::gezaehlteErstDwz(Spielerwertung::aufbereiten($gegner), array('wert' => 0.29, 'geschaetzt' => false)));
+	}
 }

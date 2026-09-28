@@ -348,6 +348,16 @@ alle drei Ansichten.
 - Contao 5.7 cacht die DCA unter `var/cache/prod/contao/dca/<tabelle>.php`: Nach einer DCA-Änderung
   zeigt `contao:migrate --dry-run` dort nichts, bis genau diese Datei gelöscht ist (wird beim nächsten
   Laden neu erzeugt) — kein ganzes `cache:clear` nötig.
+- **Erst-DWZ des Gegners im Spielberichtsbogen (ab 1.49.0):** Bekommt ein Spieler im Turnier seine
+  erste DWZ, rechnet nu ein zweites Mal und setzt sie für seine Gegner ein — die bekommen einen We,
+  obwohl er keine alte DWZ hat. `Spielerwertung::gezaehlteErstDwz()` liefert sie, wenn ALLE drei
+  Bedingungen gelten (Franks Regel): keine alte DWZ, `expected` von nu (nicht geschätzt, nicht
+  kampflos), neue DWZ mit Index 1. Das Scoresheet setzt sie in `Gegner_DWZ` und den Hinweistext in
+  `Gegner_ErstDWZ`; das Template gibt der Zelle die Klasse `erst-dwz` + `title` (CSS in
+  `public/css/default.css` → nach dem Einspielen `contao:assets:install`). Beleg: NU4481210 im
+  Turnier b6739640…, We 0,294276 = Φ((1195 − 1348)/(200·√2)). Der Gegnerschnitt des Erst-DWZ-
+  Spielers SELBST ist aus den sichtbaren Zeilen nicht nachrechenbar (interne Werte der
+  Erstbewertung, Restpartien) — das ist kein Fehler des Bundles.
 - Offen (TODO.md): Restpartien werden nirgends angezeigt; die Spiegeltabellen setzen nicht mehr
   gelieferte Felder nie zurück.
 

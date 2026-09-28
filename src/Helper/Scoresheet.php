@@ -125,6 +125,10 @@ class Scoresheet
 				// Gewinnerwartung dieser Partie aus Sicht von Weiß
 				$erwartung = \Schachbulle\ContaoWertungsportalBundle\Helper\Spielerwertung::partieerwartung($partie, true, $weissWertung['ratingOld'], $schwarzWertung['ratingOld']);
 
+				// Hatte der Gegner keine alte DWZ und hat mit seiner hier
+				// erworbenen Erst-DWZ gezählt, steht diese in der DWZ-Spalte
+				$erstDwz = \Schachbulle\ContaoWertungsportalBundle\Helper\Spielerwertung::gezaehlteErstDwz($schwarzWertung, $erwartung);
+
 				// Ergebnis eintragen
 				$this->daten['Ergebnisse'][] = array
 				(
@@ -134,7 +138,8 @@ class Scoresheet
 					'Gegner_Name'       => $schwarzGesperrt ? '<i>gesperrt</i>' : ($partie['blackPlayer']['nuLigaPersonId'] ? sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'" title="%s">%s</a>', $partie['blackPlayer']['nuLigaPersonId'], 'Karteikarte von '.$partie['blackPlayer']['firstname'].' '.$partie['blackPlayer']['lastname'].' aufrufen', $partie['blackPlayer']['lastname'].', '.$partie['blackPlayer']['firstname']) : $partie['blackPlayer']['lastname'].', '.$partie['blackPlayer']['firstname']),
 					'Gegner_UUID'       => $partie['blackPlayer']['playerUuid'],
 					'Gegner_nuID'       => $partie['blackPlayer']['nuLigaPersonId'],
-					'Gegner_DWZ'        => $schwarzWertung['dwzAltKurz'],
+					'Gegner_DWZ'        => $erstDwz > 0 ? (string) $erstDwz : $schwarzWertung['dwzAltKurz'],
+					'Gegner_ErstDWZ'    => self::erstDwzHinweis($erstDwz, $schwarzWertung),
 					'Gegner_Scoresheet' => $schwarzGesperrt ? '' : sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'" title="%s">SC</a>', $this->apiTurnierinfo['body']['uuid'], $partie['blackPlayer']['playerUuid'], 'Spielberichtsbogen von '.$partie['blackPlayer']['firstname'].' '.$partie['blackPlayer']['lastname'].' aufrufen'),
 					'We'                => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Erwartungswert($erwartung['wert'] === null ? false : $erwartung['wert']),
 					'We_geschaetzt'     => $erwartung['geschaetzt'],
@@ -164,6 +169,9 @@ class Scoresheet
 				// Gewinnerwartung dieser Partie aus Sicht von Schwarz
 				$erwartung = \Schachbulle\ContaoWertungsportalBundle\Helper\Spielerwertung::partieerwartung($partie, false, $schwarzWertung['ratingOld'], $weissWertung['ratingOld']);
 
+				// Erst-DWZ des Gegners, siehe oben
+				$erstDwz = \Schachbulle\ContaoWertungsportalBundle\Helper\Spielerwertung::gezaehlteErstDwz($weissWertung, $erwartung);
+
 				// Ergebnis eintragen
 				$this->daten['Ergebnisse'][] = array
 				(
@@ -173,7 +181,8 @@ class Scoresheet
 					'Gegner_Name'       => $weissGesperrt ? '<i>gesperrt</i>' : ($partie['whitePlayer']['nuLigaPersonId'] ? sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'" title="%s">%s</a>', $partie['whitePlayer']['nuLigaPersonId'], 'Karteikarte von '.$partie['whitePlayer']['firstname'].' '.$partie['whitePlayer']['lastname'].' aufrufen', $partie['whitePlayer']['lastname'].', '.$partie['whitePlayer']['firstname']) : $partie['whitePlayer']['lastname'].', '.$partie['whitePlayer']['firstname']),
 					'Gegner_UUID'       => $partie['whitePlayer']['playerUuid'],
 					'Gegner_nuID'       => $partie['whitePlayer']['nuLigaPersonId'],
-					'Gegner_DWZ'        => $weissWertung['dwzAltKurz'],
+					'Gegner_DWZ'        => $erstDwz > 0 ? (string) $erstDwz : $weissWertung['dwzAltKurz'],
+					'Gegner_ErstDWZ'    => self::erstDwzHinweis($erstDwz, $weissWertung),
 					'Gegner_Scoresheet' => $weissGesperrt ? '' : sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'" title="%s">SC</a>', $this->apiTurnierinfo['body']['uuid'], $partie['whitePlayer']['playerUuid'], 'Spielberichtsbogen von '.$partie['whitePlayer']['firstname'].' '.$partie['whitePlayer']['lastname'].' aufrufen'),
 					'We'                => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Erwartungswert($erwartung['wert'] === null ? false : $erwartung['wert']),
 					'We_geschaetzt'     => $erwartung['geschaetzt'],
@@ -181,6 +190,31 @@ class Scoresheet
 			}
 		}
 			}
+
+	/**
+	 * Liefert den Hinweis zur Erst-DWZ eines Gegners für das title-Attribut.
+	 *
+	 * Leer, wenn der Gegner nicht mit einer Erst-DWZ gezählt hat — dann wird
+	 * die Zelle nicht hervorgehoben. Der Text nennt die Erst-DWZ samt Index,
+	 * damit sie mit der Karteikarte des Gegners verglichen werden kann.
+	 *
+	 * @param int                 $erstDwz Ergebnis von Spielerwertung::gezaehlteErstDwz()
+	 * @param array<string,mixed> $gegner  Ergebnis von Spielerwertung::aufbereiten()
+	 *
+	 * @return string Hinweistext ohne HTML, '' ohne Erst-DWZ
+	 */
+	protected static function erstDwzHinweis(int $erstDwz, array $gegner): string
+	{
+		if ($erstDwz <= 0) {
+			return '';
+		}
+
+		return sprintf(
+			'Erst-DWZ aus diesem Turnier (%d - %d). Vor dem Turnier ohne DWZ – die Partie wurde in einem zweiten Rechengang mit dieser Zahl gewertet.',
+			$erstDwz,
+			(int) ($gegner['indexNew'] ?? 1)
+		);
+	}
 
 	// ─────────────────────────────────────────────
 	//  Magische Methode __set
