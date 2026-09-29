@@ -84,8 +84,7 @@ class Verband extends \Contao\Module
 
 		$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 		$this->Template->shl = 'h2'; // Standard-Überschriftgröße 2
-		$this->Template->headline = 'DWZ - Verband'; // Standard-Überschrift
-		$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+		$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben, im Modul abschaltbar
 		$this->Template->zps = $zps; // Aktuelle ZPS-Nummer
 
 		// Aktuelle Auswahl für die Vorbelegung des Formulars (auf der
@@ -173,8 +172,7 @@ class Verband extends \Contao\Module
 			$this->Template = new \Contao\FrontendTemplate('wertungsportal_verbandsliste');
 			$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 			$this->Template->shl = 'h2'; // Standard-Überschriftgröße 2
-			$this->Template->headline = 'DWZ - Verband'; // Standard-Überschrift
-			$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+			$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben, im Modul abschaltbar
 			$this->Template->subHeadline = $titel;
 			$this->Template->daten = $rangliste->Rangliste;
 

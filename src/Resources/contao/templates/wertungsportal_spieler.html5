@@ -10,13 +10,15 @@
 		<<?= $this->hl ?>><?= $this->headline ?></<?= $this->hl ?>>
 	<?php endif; ?> 
 
-	<div class="dewislinks noprint">
-		<ul>
-		<?php foreach($this->navigation as $d): ?>
-			<?= $d ?>
-		<?php endforeach; ?>
-		</ul>
-	</div>
+	<?php if($this->navigation): ?>
+		<div class="dewislinks noprint">
+			<ul>
+			<?php foreach($this->navigation as $d): ?>
+				<?= $d ?>
+			<?php endforeach; ?>
+			</ul>
+		</div>
+	<?php endif; ?>
 
 	<?php if($this->searchform): ?>
 		<div class="wp-suche noprint">

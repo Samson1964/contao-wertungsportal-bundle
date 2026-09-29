@@ -1,5 +1,22 @@
 # Wertungsportal Changelog
 
+## Version 1.50.0 (2026-09-29)
+
+* Add: **Die Linkleiste „Spieler | Vereine | Verbände | Turniere" ist je Modul abschaltbar** — neues
+  Feld „Navigation ausblenden" (`wertungsportal_ohneNavigation`) in den Modulen Spieler, Verein,
+  Verband und Turnier. Anlaß: Auf der DWZ-Spielersuche von schachbund.de soll eine Anzeige zwischen
+  Linkleiste und Suchformular stehen; Überschrift und Linkleiste stehen dafür als eigene
+  Inhaltselemente über dem Modul. Ohne Leiste gibt das Template auch den leeren Rahmen
+  (`div.dewislinks`) nicht mehr aus — in allen neun Templates mit Linkleiste
+* Change: **Die Überschrift kommt jetzt aus dem Modulfeld „Überschrift".** Die fest eingebauten Texte
+  „Wertungsportal - Spieler", „Wertungsportal - Verein", „DWZ - Verband" und „DWZ - Turnier" sind
+  entfallen (11 Stellen). Ein leeres Feld heißt: keine Überschrift. Die Ebene bleibt `h1` — die
+  Auswahl der Ebene im Feld wirkt in diesen Modulen nicht
+* **Einspielen:** `contao:migrate` (neue Spalte `tl_module.wertungsportal_ohneNavigation`). **VORHER**
+  in den Modulen die bisherige Überschrift ins Feld „Überschrift" eintragen oder als Inhaltselement
+  setzen — sonst stehen die Suchseiten ohne H1 da. Bis zum `contao:migrate` fehlt nur die neue
+  Spalte; die Linkleiste erscheint dann wie bisher
+
 ## Version 1.49.0 (2026-09-28)
 
 * Add: **Erst-DWZ des Gegners im Spielberichtsbogen.** Bekommen in einem Turnier Spieler ihre erste

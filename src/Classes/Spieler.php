@@ -86,10 +86,7 @@ class Spieler extends \Contao\Module
 		// Template vorbelegen
 		$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 		$this->Template->shl = 'h2'; // Standard-Überschriftgröße 2
-		// Überschrift passend zum Menüpunkt: Der Bereich heißt „Personen",
-		// nicht mehr „Spieler"
-		$this->Template->headline = 'Wertungsportal - Spieler'; // Standard-Überschrift
-		$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+		$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben, im Modul abschaltbar
 
 		$mitglied = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getMitglied(); // Daten des aktuellen Mitgliedes laden
 

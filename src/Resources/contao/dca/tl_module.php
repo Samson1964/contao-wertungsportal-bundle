@@ -14,10 +14,10 @@
  */
 
 $GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_spielersuche'] = '{title_legend},name,headline,type;{config_legend},wertungsportal_searchfield;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
-$GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_spieler'] = '{title_legend},name,headline,type;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
-$GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_verein'] = '{title_legend},name,headline,type;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
-$GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_verband'] = '{title_legend},name,headline,type;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
-$GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_turnier'] = '{title_legend},name,headline,type;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
+$GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_spieler'] = '{title_legend},name,headline,type;{wertungsportal_navigation_legend},wertungsportal_ohneNavigation;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
+$GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_verein'] = '{title_legend},name,headline,type;{wertungsportal_navigation_legend},wertungsportal_ohneNavigation;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
+$GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_verband'] = '{title_legend},name,headline,type;{wertungsportal_navigation_legend},wertungsportal_ohneNavigation;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
+$GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_turnier'] = '{title_legend},name,headline,type;{wertungsportal_navigation_legend},wertungsportal_ohneNavigation;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
 $GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_bestenliste'] = '{title_legend},name,headline,type;{bestenliste_legend},dwz_topcount,dwz_gender;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
 $GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_token'] = '{title_legend},name,headline,type;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
 
@@ -123,3 +123,19 @@ $GLOBALS['TL_DCA']['tl_module']['fields']['dwz_gender'] = array
 	'sql'                                => "char(1) NOT NULL default 'm'"
 );
 
+// Linkleiste „Spieler | Vereine | Verbände | Turniere" nicht ausgeben (ab 1.50.0) —
+// etwa wenn sie als eigenes Inhaltselement über dem Modul steht, damit dazwischen
+// etwas anderes Platz findet. Bis zum contao:migrate fehlt die Spalte; das Modul
+// liest dann null und zeigt die Leiste wie bisher
+$GLOBALS['TL_DCA']['tl_module']['fields']['wertungsportal_ohneNavigation'] = array
+(
+	'label'                              => &$GLOBALS['TL_LANG']['tl_module']['wertungsportal_ohneNavigation'],
+	'exclude'                            => true,
+	'inputType'                          => 'checkbox',
+	'eval'                               => array
+	(
+		'tl_class'                       => 'w50',
+		'isBoolean'                      => true,
+	),
+	'sql'                                => "char(1) NOT NULL default ''",
+);

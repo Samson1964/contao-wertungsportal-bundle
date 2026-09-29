@@ -78,8 +78,7 @@ class Verein extends \Contao\Module
 
 		$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 		$this->Template->shl = 'h2'; // Standard-Überschriftgröße 2
-		$this->Template->headline = 'Wertungsportal - Verein'; // Standard-Überschrift
-		$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+		$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben, im Modul abschaltbar
 		$this->Template->search = $search;
 
 		// Prüfen, ob der Suchbegriff überhaupt etwas Suchbares enthält.

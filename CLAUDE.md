@@ -363,6 +363,17 @@ alle drei Ansichten.
 
 ## Fallstricke / Besonderheiten
 
+- **Überschrift und Linkleiste der Suchmodule (ab 1.50.0):** Spieler, Verein, Verband und Turnier
+  setzen KEINE eigene Überschrift mehr — `Module::generate()` füllt eine leere Template-Überschrift
+  NACH `compile()` aus dem Modulfeld (geprüft 4.13.58 und 5.7, gilt auch für die in `compile()` neu
+  erzeugten FrontendTemplates). `hl = 'h1'` bleibt gesetzt, die Ebenenwahl im Feld wirkt also nicht.
+  Kein Schalter „Überschrift ausblenden" bauen: leeres Feld = keine Überschrift. Die Linkleiste ist
+  über `wertungsportal_ohneNavigation` abschaltbar; jede Zuweisung von `navigation` liest das
+  Modulfeld über `$this->` (Modul), nicht über das Template. Die Templates schließen
+  `div.dewislinks` in `<?php if($this->navigation): ?>` ein, sonst bliebe der leere Rahmen stehen.
+  `Referentenliste.php` und `wertungsportal_referenten` sind bewußt nicht umgestellt. Anlaß war eine
+  Anzeige zwischen Linkleiste und Suchformular auf schachbund.de.
+
 - **`Statement::execute()` mit Array-Argument** (`->execute($chunk)`) funktioniert nur in Contao
   4.13 (dort ausgepackt, mit Deprecation). Contao 5 serialisiert das Array zu EINEM Parameter:
   `IN (?)` trifft nichts (bei Zahlenspalten sogar die Zeilen mit 0), mehrere Platzhalter

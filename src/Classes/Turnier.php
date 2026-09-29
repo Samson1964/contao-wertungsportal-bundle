@@ -84,8 +84,7 @@ class Turnier extends \Contao\Module
 
 		$this->Template->hl = 'h1'; // Standard-Überschriftgröße
 		$this->Template->shl = 'h2'; // Standard-Überschriftgröße 2
-		$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
-		$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+		$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben, im Modul abschaltbar
 
 		if($search)
 		{
@@ -167,8 +166,7 @@ class Turnier extends \Contao\Module
 
 			$this->Template = new \Contao\FrontendTemplate('wertungsportal_turniersuche');
 			$this->Template->hl = 'h1'; // Standard-Überschriftgröße
-			$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
-			$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+			$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben, im Modul abschaltbar
 			$this->Template->subHeadline = $title; // Unterüberschrift Turnier setzen
 			$this->Template->daten = $trefferliste->Turnierliste;
 			$this->Template->anzahl = count($trefferliste->Turnierliste);
@@ -250,8 +248,7 @@ class Turnier extends \Contao\Module
 
 				$this->Template = new \Contao\FrontendTemplate('wertungsportal_spielberichtsbogen');
 				$this->Template->hl = 'h1'; // Standard-Überschriftgröße
-				$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
-				$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+				$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben, im Modul abschaltbar
 				$this->Template->subHeadline = $scoresheet->Turniername; // Unterüberschrift Turnier setzen
 				$this->Template->fehler = 'Dieser Spielberichtsbogen ist nicht verfügbar.';
 				return;
@@ -278,8 +275,7 @@ class Turnier extends \Contao\Module
 
 			$this->Template = new \Contao\FrontendTemplate('wertungsportal_spielberichtsbogen');
 			$this->Template->hl = 'h1'; // Standard-Überschriftgröße
-			$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
-			$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+			$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben, im Modul abschaltbar
 			$this->Template->subHeadline = $scoresheet->Turniername; // Unterüberschrift Turnier setzen
 			$this->Template->playerHeadline = 'Spielberichtsbogen <b>'.$scoresheet->Spieler['Name'].'</b>'.($scoresheet->Spieler['DWZ alt'] ? ' / '.(!empty($scoresheet->Spieler['Nichtmitglied']) ? 'Eingangswertung' : 'DWZ').' '.$scoresheet->Spieler['DWZ alt'] : ''); // Unterüberschrift Spieler setzen
 			$this->Template->turnierheader = $theader;
@@ -344,8 +340,7 @@ class Turnier extends \Contao\Module
 
 			$this->Template = new \Contao\FrontendTemplate('wertungsportal_turnierergebnisse');
 			$this->Template->hl = 'h1'; // Standard-Überschriftgröße
-			$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
-			$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+			$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben, im Modul abschaltbar
 			$this->Template->subHeadline = $ergebnisse->Turniername; // Unterüberschrift Turnier setzen
 			$this->Template->turnierheader = $theader;
 			$this->Template->spieler = $ergebnisse->Spieler;
@@ -397,8 +392,7 @@ class Turnier extends \Contao\Module
 
 			$this->Template = new \Contao\FrontendTemplate('wertungsportal_turnierauswertung');
 			$this->Template->hl = 'h1'; // Standard-Überschriftgröße
-			$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
-			$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+			$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben, im Modul abschaltbar
 			$this->Template->subHeadline = $auswertung->Turniername; // Unterüberschrift Turnier setzen
 			$this->Template->turnierheader = $theader;
 			$this->Template->spieler = $auswertung->Spieler;
@@ -442,8 +436,7 @@ class Turnier extends \Contao\Module
 
 		$this->Template = new \Contao\FrontendTemplate($strTemplate);
 		$this->Template->hl = 'h1'; // Standard-Überschriftgröße
-		$this->Template->headline = 'DWZ - Turnier'; // Standard-Überschrift
-		$this->Template->navigation = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben
+		$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben, im Modul abschaltbar
 		$this->Template->subHeadline = $strSubHeadline; // Unterüberschrift setzen
 		$this->Template->fehler = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::apiFehler($arrResult);
 	}

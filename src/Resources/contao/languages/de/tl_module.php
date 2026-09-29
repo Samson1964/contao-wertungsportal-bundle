@@ -18,6 +18,12 @@ $GLOBALS['TL_LANG']['tl_module']['wertungsportal_verband'] = array('Verbandssuch
 $GLOBALS['TL_LANG']['tl_module']['wertungsportal_turnier'] = array('Turniersuche','Suche nach Turnieren aktivieren');
 
 /**
+ * Navigation (ab 1.50.0)
+ */
+$GLOBALS['TL_LANG']['tl_module']['wertungsportal_navigation_legend'] = 'Navigation';
+$GLOBALS['TL_LANG']['tl_module']['wertungsportal_ohneNavigation'] = array('Navigation ausblenden', 'Die Linkleiste „Spieler | Vereine | Verbände | Turniere“ nicht ausgeben, etwa wenn sie als eigenes Inhaltselement über dem Modul steht.');
+
+/**
  * Bestenliste
  */
 $GLOBALS['TL_LANG']['tl_module']['bestenliste_legend'] = 'Bestenliste';

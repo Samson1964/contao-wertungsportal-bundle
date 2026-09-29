@@ -12,6 +12,12 @@ $GLOBALS['TL_LANG']['tl_module']['wertungsportal_verband'] = array('Federation s
 $GLOBALS['TL_LANG']['tl_module']['wertungsportal_turnier'] = array('Tournament search','Enable searching for tournaments');
 
 /**
+ * Navigation (since 1.50.0)
+ */
+$GLOBALS['TL_LANG']['tl_module']['wertungsportal_navigation_legend'] = 'Navigation';
+$GLOBALS['TL_LANG']['tl_module']['wertungsportal_ohneNavigation'] = array('Hide navigation', 'Do not output the link bar "Players | Clubs | Federations | Tournaments", e.g. when it is placed above the module as a separate content element.');
+
+/**
  * Best list
  */
 $GLOBALS['TL_LANG']['tl_module']['bestenliste_legend'] = 'Best list';
