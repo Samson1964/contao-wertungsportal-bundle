@@ -10,3 +10,14 @@ wertungsportal_api_vereinsliste:
         _controller: Schachbulle\ContaoWertungsportalBundle\Controller\VereinslisteController
         _scope: frontend
         _token_check: false
+
+# Reklamationsformular (ab 1.51.0). Im Frontend-Bereich, damit die Anmeldung
+# des Mitglieds zur Verfügung steht, und MIT Tokenprüfung: Contao weist ein
+# Absenden ohne gültiges REQUEST_TOKEN ab, bevor der Controller läuft
+wertungsportal_reklamation:
+    path: /wertungsportal-api/reklamation
+    methods: [POST]
+    defaults:
+        _controller: Schachbulle\ContaoWertungsportalBundle\Controller\ReklamationController
+        _scope: frontend
+        _token_check: true

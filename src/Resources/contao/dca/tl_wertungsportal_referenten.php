@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Contao\DataContainer;
 use Contao\DC_Table;
 use Schachbulle\ContaoWertungsportalBundle\Classes\Referenten;
+use Schachbulle\ContaoWertungsportalBundle\Helper\Adressverknuepfung;
 
 /**
  * Tabelle tl_wertungsportal_referenten
@@ -13,11 +14,23 @@ use Schachbulle\ContaoWertungsportalBundle\Classes\Referenten;
  * Auswahl der Verbände wird nicht gepflegt, sondern aus dem Vereinsbestand
  * gelesen (Referenten::getVerbaende) — eine Umgliederung bei nu wandert damit
  * von selbst in die Liste.
+ *
+ * Ab 1.51.0 kann ein Referent einer Adresse aus der Adressverwaltung
+ * (schachbulle/contao-adressen-bundle) zugeordnet werden; dann kommen Name und
+ * Kontaktdaten von dort (Helper\Adressverknuepfung). Feld und Übernahme-Knopf
+ * erscheinen nur, wenn das Bundle installiert ist — die Spalte gibt es immer,
+ * damit das Datenbankschema nicht vom Paketbestand abhängt.
  */
 $GLOBALS['TL_DCA']['tl_wertungsportal_referenten'] = [
     'config' => [
         'dataContainer' => DC_Table::class,
         'enableVersioning' => true,
+        'onload_callback' => [
+            [Referenten::class, 'pflichtfelder'],
+        ],
+        'onsubmit_callback' => [
+            [Referenten::class, 'nameUebernehmen'],
+        ],
         'sql' => [
             'keys' => [
                 'id' => 'primary',
@@ -85,6 +98,17 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_referenten'] = [
         'tstamp' => [
             'sql' => "int(10) unsigned NOT NULL default 0",
         ],
+        'adresse' => [
+            'label'            => &$GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['adresse'],
+            'exclude'          => true,
+            'inputType'        => 'select',
+            'options_callback' => [Referenten::class, 'getAdressen'],
+            'wizard'           => [
+                [Referenten::class, 'adresseBearbeiten'],
+            ],
+            'eval'             => ['includeBlankOption' => true, 'blankOptionLabel' => '– keine, nur die Angaben unten –', 'chosen' => true, 'tl_class' => 'w50 wizard'],
+            'sql'              => "int(10) unsigned NOT NULL default 0",
+        ],
         'nachname' => [
             'label'     => &$GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['nachname'],
             'exclude'   => true,
@@ -92,7 +116,9 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_referenten'] = [
             'sorting'   => true,
             'flag'      => DataContainer::SORT_INITIAL_LETTER_ASC,
             'inputType' => 'text',
-            'eval'      => ['mandatory' => true, 'maxlength' => 128, 'tl_class' => 'w50'],
+            // Pflicht nur ohne Adresse — Referenten::pflichtfelder() nimmt die
+            // Pflicht zurück, wenn eine gewählt ist
+            'eval'      => ['mandatory' => true, 'maxlength' => 128, 'tl_class' => 'w50 clr'],
             'sql'       => "varchar(128) NOT NULL default ''",
         ],
         'vorname' => [
@@ -173,3 +199,21 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_referenten'] = [
         ],
     ],
 ];
+
+// Mit Adressverwaltung: Feld „Adresse" vor den Namen und der Knopf für die
+// einmalige Übernahme (Classes\Referentenuebernahme)
+if (Adressverknuepfung::verfuegbar()) {
+    $GLOBALS['TL_DCA']['tl_wertungsportal_referenten']['palettes']['default'] = str_replace(
+        '{person_legend},nachname,',
+        '{person_legend},adresse,nachname,',
+        $GLOBALS['TL_DCA']['tl_wertungsportal_referenten']['palettes']['default']
+    );
+
+    $GLOBALS['TL_DCA']['tl_wertungsportal_referenten']['list']['global_operations'] = [
+        'uebernehmen' => [
+            'href'       => 'key=uebernehmen',
+            'class'      => 'header_theme_import',
+            'attributes' => 'onclick="Backend.getScrollOffset()"',
+        ],
+    ] + $GLOBALS['TL_DCA']['tl_wertungsportal_referenten']['list']['global_operations'];
+}

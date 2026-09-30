@@ -107,6 +107,17 @@ $GLOBALS['BE_MOD']['wertungsportal'] = array
 		(
 			'tl_wertungsportal_referenten',
 		),
+		// Globale Operation: Referenten aus der Adressverwaltung übernehmen
+		// (key=uebernehmen, ab 1.51.0; nur mit contao-adressen-bundle)
+		'uebernehmen'    => array('Schachbulle\ContaoWertungsportalBundle\Classes\Referentenuebernahme', 'run'),
+	),
+	// Reklamationen aus dem Frontend (ab 1.51.0, Helper\Reklamation)
+	'wp-reklamationen' => array
+	(
+		'tables'         => array
+		(
+			'tl_wertungsportal_reklamationen',
+		),
 	),
 	'wp-sperren'   => array
 	(
@@ -239,3 +250,4 @@ $GLOBALS['TL_MODELS']['tl_wertungsportal_tokens_access'] = \Schachbulle\ContaoWe
 $GLOBALS['TL_MODELS']['tl_wertungsportal_besucher'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalBesucherModel::class;
 $GLOBALS['TL_MODELS']['tl_wertungsportal_referenten'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalReferentenModel::class;
 $GLOBALS['TL_MODELS']['tl_wertungsportal_sperren'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalSperrenModel::class;
+$GLOBALS['TL_MODELS']['tl_wertungsportal_reklamationen'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalReklamationenModel::class;

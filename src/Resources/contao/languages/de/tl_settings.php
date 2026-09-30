@@ -14,6 +14,7 @@ $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_abruf_legend'] = 'Live-Abruf'
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cache_legend'] = 'Zwischenspeicher';
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_vorladen_legend'] = 'Nächtliches Vorladen';
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_mail_legend'] = 'E-Mail-Versand';
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_reklamation_legend'] = 'Reklamationen';
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_schnittstelle_legend'] = 'Vereinslisten-Schnittstelle';
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_bremse_legend'] = 'Bremse gegen Massenabfragen';
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_protokoll_legend'] = 'Protokolle';
@@ -98,6 +99,8 @@ $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_cron_aus'] = array('Nächtlic
 
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_mail_absender'] = array('Absenderadresse', 'Absender der E-Mails dieses Bundles, zum Beispiel der Schlüssel-E-Mail der Vereinslisten-Schnittstelle. Ohne Eintrag gilt die Adresse des Administrators aus den allgemeinen Einstellungen. Die Adresse muß zur Domain der Website passen, sonst stufen viele Postfächer die Nachricht als Fälschung ein.');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_mail_absendername'] = array('Absendername', 'Name, der beim Empfänger als Absender erscheint. Ohne Eintrag der Name der Website.');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_reklamation_email'] = array('E-Mail-Adresse des DSB-Admins', 'Bekommt jede Reklamation als Blindkopie und ist Empfänger, wenn die Ansicht keinen Wertungsreferenten nennt (Karteikarte, Vereinsliste, Suchen). Ohne Eintrag erscheint der Link „Reklamation“ nirgends. Absender der Reklamationen ist die Absenderadresse unter „E-Mail-Versand“.');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_reklamation_name'] = array('Name des DSB-Admins', 'Erscheint in Anrede und Empfängerzeile. Ohne Eintrag der Absendername.');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_mail_token'] = array('Vorlage der Schlüssel-E-Mail', 'HTML-Vorlage für die E-Mail mit dem Zugangsschlüssel. Ohne Auswahl geht die Nachricht als reiner Text hinaus. Eigene Fassungen legt man als Kopie unter templates/ an; der Dateiname muß mit „wp_mail_token" beginnen. Die verfügbaren Platzhalter stehen im Kopf der mitgelieferten Vorlage.');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_api_abrufe_tag'] = array('Erlaubte Abrufe je Tag', 'Höchstzahl der Vereinslisten-Abrufe je Zugangsschlüssel und Tag; gezählt werden nur erfolgreiche Abrufe. Dieselbe Zahl nennt die Schlüssel-E-Mail, Text und Verhalten bleiben also beieinander. Ohne Eintrag gelten 24 (ein Abruf je Stunde), eine 0 hebt die Grenze auf. Unabhängig davon greift eine Bremse von 120 Anfragen je Stunde und IP-Adresse.');
 

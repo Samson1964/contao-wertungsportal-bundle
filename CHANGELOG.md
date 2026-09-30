@@ -1,5 +1,52 @@
 # Wertungsportal Changelog
 
+## Version 1.51.0 (2026-09-30)
+
+* Add: **Reklamationen.** Angemeldete Mitglieder sehen neben dem Wertungsreferenten einer Ansicht einen
+  Link „Reklamation". Er öffnet ein Formular in einer Lightbox (natives `<dialog>`, ohne Bibliothek),
+  dessen Betreff („Reklamation zu …") und Text schon alles enthalten, was der Empfänger braucht:
+  Turnier, Zeitraum, Turniercode, Spieler mit NU-Nummer, Verein oder Rangliste und die Adresse der
+  Seite. Beides ist frei änderbar. Abgeschickt wird per `fetch` an die neue Route
+  `POST /wertungsportal-api/reklamation`; die Seite bleibt stehen. Doku: `docs/reklamationen.md`
+* Add: Der Link steht bei Turnierauswertung, Ergebnisliste und Spielberichtsbogen neben dem Auswerter
+  (Empfänger: der Auswerter), bei der Karteikarte neben „Zuständiger Wertungsreferent", unter der
+  DWZ-Liste eines Vereins, unter der Rangliste eines Verbandes (Empfänger: die zuständigen Referenten
+  aus „Referenten") und unter den Trefferlisten der drei Suchen. **Ist kein Name vorhanden, geht die
+  Reklamation an den DSB-Admin**
+* Add: Absender ist die Absenderadresse unter „E-Mail-Versand", der DSB-Admin bekommt jede Reklamation
+  als Blindkopie (außer er ist selbst Empfänger — dann nennt auch der Dialog keine Kopie), Antworten
+  gehen an die Adresse aus dem Mitgliedskonto. Eine Fußzeile, die das Mitglied
+  nicht ändern kann, nennt Name, Adresse und Mitgliedsnummer aus dem Konto, die Seite und die Zeit
+* Add: Einstellungen „Reklamationen" mit Adresse und Name des DSB-Admins. **Ohne Adresse erscheint der
+  Link nirgends**
+* Add: Backend-Modul **Reklamationen** (`tl_wertungsportal_reklamationen`): jede Reklamation mit Absender,
+  Empfänger, Betreff, Text und Stand — auch die, deren Versand scheiterte (rot, mit der Meldung des
+  Mailservers). Bearbeitbar sind nur „Erledigt" und eine Notiz
+* Sicherheit: Der Empfänger kommt nie aus dem Formular, sondern steht beim Anzeigen der Seite fest und
+  reist signiert durch den Browser (HMAC-SHA256 mit dem Kernel-Secret). Die Route prüft die Anmeldung
+  selbst und läuft mit Contaos Anfragetoken; höchstens 5 Reklamationen je Mitglied und Stunde;
+  Zeilenumbrüche im Betreff werden eingeebnet, damit sich keine Kopfzeilen unterschieben lassen
+* Add: **Wertungsreferenten mit Adresse aus der Adressverwaltung.** Ist `schachbulle/contao-adressen-bundle`
+  installiert, lässt sich jedem Referenten eine Adresse zuordnen (Auswahl mit Suche, Stift öffnet die
+  Adresse). Name, E-Mail, Telefon und Anschrift kommen dann bei jeder Ausgabe frisch von dort; die
+  eigenen Felder springen nur ein, wo die Adresse nichts hat. Was dort als nicht öffentlich markiert
+  ist, bleibt auch hier verborgen — Reklamationen erreichen den Referenten trotzdem. Inaktive oder
+  gelöschte Adressen zeigt die Liste rot an; dann gelten die eigenen Angaben. Doku: `docs/referenten.md`
+* Add: Knopf **„Aus der Adressverwaltung übernehmen"** im Modul Referenten: legt die dort als
+  Wertungsreferenten eingetragenen Personen samt Verbänden als Referenten an — erst Vorschau, dann
+  Übernahme, wahlweise gleich veröffentlicht. Schon verknüpfte Adressen werden übergangen, ein zweiter
+  Lauf verdoppelt nichts. Die Zuständigkeit wird danach nur noch im Wertungsportal gepflegt; Feld und
+  Frontend-Modul „Wertungsreferenten" des Adressen-Bundles sind veraltet
+* Add: Der DSB selbst (`00000`) steht in der Auswahl „Zuständig für" — bisher ließ sich kein Referent
+  des Bundes zuordnen, weil die Liste nur den Vereinsbestand kannte
+* Change: `Referentenbaum` liefert neben der verschleierten Adresse (`email`) die Klartextadresse
+  (`adresse`) für den Versand — sie gehört in kein Template
+* **Einspielen:** `contao:migrate` (neue Tabelle `tl_wertungsportal_reklamationen`, neue Spalte
+  `tl_wertungsportal_referenten.adresse`), `contao:assets:install` (neues Skript `js/reklamation.js`,
+  Stile in `css/default.css` und `css/backend.css`), `cache:clear` (neue Route und neuer Dienst).
+  Danach unter **Wertungsportal → Einstellungen → Reklamationen** die Adresse des DSB-Admins eintragen
+  und unter **Referenten** die Übernahme aus der Adressverwaltung ansehen
+
 ## Version 1.50.0 (2026-09-29)
 
 * Add: **Die Linkleiste „Spieler | Vereine | Verbände | Turniere" ist je Modul abschaltbar** — neues

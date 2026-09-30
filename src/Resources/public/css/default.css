@@ -926,3 +926,208 @@
 .dewis .wp-referenten-block h3 {
 	margin					: 0 0 6px;
 }
+
+/* ── Reklamationen (ab 1.51.0, Helper\Reklamation, js/reklamation.js) ──────────
+   Der Link ist ein <button>, denn er öffnet einen Dialog und führt nirgendwohin.
+   Er erscheint nur für angemeldete Mitglieder. Die Farben greifen das Orange der
+   Erst-DWZ-Markierung auf; #9A3412 auf #FFF7ED hat einen Kontrast von 6,9:1. */
+.wp-reklamation-link
+{
+	display					: inline-block;
+	margin					: 0 0 0 .75em;
+	padding					: .05em .6em;
+	font					: inherit;
+	font-size				: .85em;
+	line-height				: 1.5;
+	color					: #9A3412;
+	background				: #FFF7ED;
+	border					: 1px solid #FDBA74;
+	border-radius			: 3px;
+	cursor					: pointer;
+	vertical-align			: baseline;
+}
+
+.wp-reklamation-link:hover,
+.wp-reklamation-link:focus-visible
+{
+	background				: #FFEDD5;
+	border-color			: #EA580C;
+	outline					: none;
+}
+
+/* Zeile unter Listen ohne eigenes Referentenfeld (Verein, Suchen) */
+.dewis p.wp-reklamation-zeile
+{
+	margin					: .5em 0 1em;
+	font-size				: .9em;
+}
+
+.dewis p.wp-reklamation-zeile .wp-reklamation-link
+{
+	margin-left				: .4em;
+}
+
+/* Der Dialog selbst. Breite und Höhe richten sich nach dem Fenster; auf dem
+   Telefon bleibt ringsum ein schmaler Rand */
+dialog.wp-reklamation
+{
+	box-sizing				: border-box;
+	width					: min(46rem, calc(100vw - 2rem));
+	max-height				: calc(100vh - 2rem);
+	padding					: 1.5rem 1.75rem;
+	border					: 0;
+	border-radius			: 6px;
+	box-shadow				: 0 12px 40px rgba(0, 37, 51, .35);
+	color					: #002533;
+	background				: #FFF;
+	font-size				: 15px;
+	line-height				: 1.45;
+}
+
+dialog.wp-reklamation::backdrop
+{
+	background				: rgba(0, 37, 51, .55);
+}
+
+.wp-reklamation h2
+{
+	margin					: 0 2rem .4rem 0;
+	color					: #004F6E;
+	font-size				: 1.3em;
+}
+
+.wp-reklamation-hinweis
+{
+	margin					: 0 0 .4rem;
+	font-size				: .9em;
+	color					: #44555C;
+}
+
+.wp-reklamation label
+{
+	display					: block;
+	margin					: .9rem 0 .3rem;
+	font-weight				: bold;
+}
+
+.wp-reklamation input[type="text"],
+.wp-reklamation textarea
+{
+	box-sizing				: border-box;
+	width					: 100%;
+	padding					: .5rem .6rem;
+	font					: inherit;
+	color					: inherit;
+	background				: #FFF;
+	border					: 1px solid #9AA5AA;
+	border-radius			: 3px;
+}
+
+/* Feste Zeichenbreite: Die Angaben der Vorlage („Turnier:", „Zeitraum:" …)
+   sind mit Leerzeichen ausgerichtet und stehen so auch in der E-Mail */
+.wp-reklamation textarea
+{
+	min-height				: 18rem;
+	resize					: vertical;
+	font-family				: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+	font-size				: 13.5px;
+	line-height				: 1.45;
+}
+
+.wp-reklamation input[type="text"]:focus,
+.wp-reklamation textarea:focus
+{
+	border-color			: #004F6E;
+	outline					: 2px solid rgba(0, 79, 110, .25);
+	outline-offset			: 0;
+}
+
+.wp-reklamation input:disabled,
+.wp-reklamation textarea:disabled
+{
+	color					: #6B7B80;
+	background				: #F4F6F7;
+}
+
+.wp-reklamation-schliessen
+{
+	position				: absolute;
+	top						: .6rem;
+	right					: .8rem;
+	padding					: 0 .25rem;
+	font-size				: 1.7rem;
+	line-height				: 1;
+	color					: #44555C;
+	background				: none;
+	border					: 0;
+	cursor					: pointer;
+}
+
+.wp-reklamation-meldung
+{
+	min-height				: 1.45em;
+	margin					: .8rem 0 0;
+}
+
+.wp-reklamation-meldung.fehler
+{
+	color					: #B91C1C;
+	font-weight				: bold;
+}
+
+.wp-reklamation-meldung.erfolg
+{
+	color					: #15803D;
+	font-weight				: bold;
+}
+
+.wp-reklamation-knoepfe
+{
+	display					: flex;
+	flex-wrap				: wrap;
+	gap						: .75rem;
+	margin-top				: 1rem;
+}
+
+.wp-reklamation-senden,
+.wp-reklamation-abbrechen
+{
+	padding					: .5rem 1.2rem;
+	font					: inherit;
+	font-weight				: bold;
+	border-radius			: 3px;
+	cursor					: pointer;
+}
+
+.wp-reklamation-senden
+{
+	color					: #FFF;
+	background				: #004F6E;
+	border					: 1px solid #004F6E;
+}
+
+.wp-reklamation-senden:disabled
+{
+	opacity					: .6;
+	cursor					: wait;
+}
+
+.wp-reklamation-abbrechen
+{
+	color					: #004F6E;
+	background				: #FFF;
+	border					: 1px solid #004F6E;
+}
+
+@media (max-width: 600px)
+{
+	dialog.wp-reklamation
+	{
+		padding				: 1rem;
+	}
+
+	.wp-reklamation textarea
+	{
+		min-height			: 14rem;
+	}
+}

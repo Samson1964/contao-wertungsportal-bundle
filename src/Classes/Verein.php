@@ -122,6 +122,9 @@ class Verein extends \Contao\Module
 			$objPage->pageTitle = 'Suche nach '.$search;
 			$this->Template->subHeadline = 'Suche nach '.$search; // Unterüberschrift setzen
 
+			// Reklamation unter der Trefferliste — an den DSB-Admin
+			$this->Template->reklamation = \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerSuche('vereinssuche', (string) $search, (string) \Contao\Environment::get('uri')));
+
 			// Direkt zum Verein springen, wenn nur 1 Treffer. Bis 1.44.0 stand
 			// hier header('Location: …'): Symfony setzt den Status danach wieder
 			// auf 200, ein Browser folgt dem Location-Header dann nicht — die
@@ -287,6 +290,9 @@ class Verein extends \Contao\Module
 			$this->Template->rangliste = $vereinsliste->Rangliste;
 			$this->Template->daten = $vereinsliste->Daten;
 			$this->Template->referent = ''; // Wertungsreferent zuweisen
+
+			// Reklamation zur Vereinsliste — an den DSB-Admin
+			$this->Template->reklamation = \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerVerein((string) $vereinsname, (string) $zps, (string) \Contao\Environment::get('uri')));
 
 			// Untertemplate initialisieren und füllen
 			$this->Subtemplate = new \Contao\FrontendTemplate($this->subTemplate);

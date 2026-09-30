@@ -18,7 +18,7 @@ use Contao\Validator;
  * zu überblicken. Jetzt sind es elf aufklappbare Gruppen, und die allgemeinen
  * Contao-Einstellungen sind wieder frei davon.
  */
-$GLOBALS['TL_DCA']['tl_settings']['palettes']['wertungsportal'] = '{wertungsportal_anzeige_legend},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url;{wertungsportal_seiten_legend:hide},wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband;{wertungsportal_zugang_legend:hide},wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe;{wertungsportal_zugang_dwzliste_legend:hide},wertungsportal_dwzliste_clientID,wertungsportal_dwzliste_clientSecret,wertungsportal_dwzliste_scope;{wertungsportal_abruf_legend:hide},wertungsportal_api_aus,wertungsportal_api_timeout;{wertungsportal_cache_legend:hide},wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_cachezeit_turnierdaten_alt;{wertungsportal_vorladen_legend:hide},wertungsportal_cron_aus;{wertungsportal_mail_legend:hide},wertungsportal_mail_absender,wertungsportal_mail_absendername,wertungsportal_mail_token;{wertungsportal_schnittstelle_legend:hide},wertungsportal_api_abrufe_tag,wertungsportal_api_freigabe,wertungsportal_api_sperren;{wertungsportal_bremse_legend:hide},wertungsportal_limit_minute,wertungsportal_limit_stunde,wertungsportal_limit_tag;{wertungsportal_protokoll_legend:hide},wertungsportal_zugriffslog,wertungsportal_debuglog;{wertungsportal_bilder_legend:hide},wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize;{wertungsportal_inserttags_legend:hide},insert_verein_replaces';
+$GLOBALS['TL_DCA']['tl_settings']['palettes']['wertungsportal'] = '{wertungsportal_anzeige_legend},wertungsportal_karteisperre_gaeste,wertungsportal_passive_ausblenden,wertungsportal_geburtsjahr_ausblenden,wertungsportal_geschlecht_ausblenden,wertungsportal_historie,wertungsportal_elobase_url;{wertungsportal_seiten_legend:hide},wertungsportal_seite_spieler,wertungsportal_seite_turnier,wertungsportal_seite_verein,wertungsportal_seite_verband;{wertungsportal_zugang_legend:hide},wertungsportal_apiBasisURL,wertungsportal_tokenURL,wertungsportal_clientID,wertungsportal_clientSecret,wertungsportal_scopeListe;{wertungsportal_zugang_dwzliste_legend:hide},wertungsportal_dwzliste_clientID,wertungsportal_dwzliste_clientSecret,wertungsportal_dwzliste_scope;{wertungsportal_abruf_legend:hide},wertungsportal_api_aus,wertungsportal_api_timeout;{wertungsportal_cache_legend:hide},wertungsportal_cache,wertungsportal_cachezeit_spieler,wertungsportal_cachezeit_vereine,wertungsportal_cachezeit_verbaende,wertungsportal_cachezeit_turniersuche,wertungsportal_cachezeit_turnierdaten,wertungsportal_cachezeit_turnierdaten_alt;{wertungsportal_vorladen_legend:hide},wertungsportal_cron_aus;{wertungsportal_mail_legend:hide},wertungsportal_mail_absender,wertungsportal_mail_absendername,wertungsportal_mail_token;{wertungsportal_reklamation_legend:hide},wertungsportal_reklamation_email,wertungsportal_reklamation_name;{wertungsportal_schnittstelle_legend:hide},wertungsportal_api_abrufe_tag,wertungsportal_api_freigabe,wertungsportal_api_sperren;{wertungsportal_bremse_legend:hide},wertungsportal_limit_minute,wertungsportal_limit_stunde,wertungsportal_limit_tag;{wertungsportal_protokoll_legend:hide},wertungsportal_zugriffslog,wertungsportal_debuglog;{wertungsportal_bilder_legend:hide},wertungsportal_playerDefaultImage,wertungsportal_playerImageSize,wertungsportal_clubDefaultImage,wertungsportal_clubImageSize;{wertungsportal_inserttags_legend:hide},insert_verein_replaces';
 
 /**
  * fields
@@ -597,5 +597,36 @@ $GLOBALS['TL_DCA']['tl_settings']['fields']['insert_verein_replaces'] = array
 				'inputType'   => 'text',
 			),
 		)
+	)
+);
+
+// DSB-Admin für Reklamationen (ab 1.51.0, Helper\Reklamation): Empfänger,
+// wenn eine Ansicht keinen Wertungsreferenten nennt, und Empfänger einer
+// Blindkopie jeder Reklamation. Ohne Adresse erscheint der Link nicht
+$GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_reklamation_email'] = array
+(
+	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_reklamation_email'],
+	'inputType'               => 'text',
+	'eval'                    => array
+	(
+		'mandatory'           => false,
+		'maxlength'           => 255,
+		'rgxp'                => 'email',
+		'decodeEntities'      => true,
+		'tl_class'            => 'w50 clr'
+	)
+);
+
+// Name des DSB-Admins in Anrede und Empfängerzeile; ohne Eintrag der
+// Absendername der Bundle-E-Mails
+$GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_reklamation_name'] = array
+(
+	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_reklamation_name'],
+	'inputType'               => 'text',
+	'eval'                    => array
+	(
+		'mandatory'           => false,
+		'maxlength'           => 128,
+		'tl_class'            => 'w50'
 	)
 );

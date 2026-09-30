@@ -71,7 +71,7 @@
 					</tr>
 					<tr class="row_2">
 						<td class="col_1 label bottom-line">Auswerter:</td>
-						<td class="col_2 value bottom-line"><?= $this->turnierheader['Auswerter1'] ?></td>
+						<td class="col_2 value bottom-line"><?= $this->turnierheader['Auswerter1'] ?><?= $this->reklamation ?></td>
 					</tr>
 					<tr class="row_3">
 						<td class="col_1 label bottom-line">Turnierende:</td>

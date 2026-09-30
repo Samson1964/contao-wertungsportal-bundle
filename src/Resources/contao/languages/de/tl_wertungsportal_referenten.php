@@ -4,6 +4,7 @@
  * Beschriftungen der Tabelle tl_wertungsportal_referenten
  */
 
+$GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['adresse']   = array('Adresse aus der Adressverwaltung', 'Ist eine Adresse gewählt, kommen Name, E-Mail, Telefon und Anschrift bei jeder Ausgabe von dort; der Nachname darf dann leer bleiben. Die Felder unten gelten nur, wo die Adresse nichts hat. Was dort als nicht öffentlich markiert ist, erscheint auch hier nicht — Reklamationen erreichen den Referenten trotzdem.');
 $GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['nachname']  = array('Nachname', 'Nachname des Referenten');
 $GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['vorname']   = array('Vorname', 'Vorname des Referenten');
 $GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['nuId']      = array('nu-ID', 'Kennung der Person im Wertungsportal, z. B. NU4093214');
@@ -14,6 +15,11 @@ $GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['plz']       = array('PLZ', 
 $GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['ort']       = array('Ort', 'Wohnort');
 $GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['verbaende'] = array('Zuständig für', 'Verbände, für die dieser Referent zuständig ist. Die Liste kommt aus dem Vereinsbestand: Verband ist, wessen Kennziffer auf 00 endet — also Landesverbände ebenso wie Bezirke. Ist die Liste leer, wurde der Vereinsbestand noch nicht abgeglichen.');
 $GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['published'] = array('Veröffentlichen', 'Nur veröffentlichte Referenten erscheinen in Ausgaben');
+
+/**
+ * Globale Operationen
+ */
+$GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['uebernehmen'] = array('Aus der Adressverwaltung übernehmen', 'Wertungsreferenten samt Verbänden aus der Adressverwaltung anlegen — erst Vorschau, dann Übernahme');
 
 /**
  * Legenden

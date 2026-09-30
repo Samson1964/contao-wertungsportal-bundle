@@ -176,6 +176,9 @@ class Turnier extends \Contao\Module
 			$this->Template->search_from = $from_month.'/'.$from_year;
 			$this->Template->search_to = $to_month.'/'.$to_year;
 
+			// Reklamation unter der Trefferliste — an den DSB-Admin
+			$this->Template->reklamation = \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerSuche('turniersuche', (string) $title, (string) \Contao\Environment::get('uri')));
+
 			// Suchformular auch auf der Ergebnisseite ausgeben — mit den
 			// Werten der laufenden Suche vorbelegt, damit sie sich direkt
 			// anpassen lässt statt über den Zurück-Weg zur Suchseite
@@ -281,6 +284,19 @@ class Turnier extends \Contao\Module
 			$this->Template->turnierheader = $theader;
 			$this->Template->partien = $scoresheet->Ergebnisse;
 			$this->Template->spieler = $scoresheet->Spieler;
+
+			// Reklamation neben dem Auswerter — an ihn, ohne Namen an den DSB-Admin.
+			// Nur für angemeldete Mitglieder, sonst bleibt es leer
+			$this->Template->reklamation = \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerTurnier(
+				(array) ($resultTur['body'] ?? array()),
+				'spielberichtsbogen',
+				(string) \Contao\Environment::get('uri'),
+				array
+				(
+					'name' => (string) ($scoresheet->Spieler['Name'] ?? ''),
+					'id'   => \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::nuIdAusBogen((array) ($resultErg['body'] ?? array()), (string) $id),
+				)
+			));
 		}
 		elseif($turniercode && !$id && $view == 'results')
 		{
@@ -345,6 +361,9 @@ class Turnier extends \Contao\Module
 			$this->Template->turnierheader = $theader;
 			$this->Template->spieler = $ergebnisse->Spieler;
 			$this->Template->istKreuztabelle = $ergebnisse->istKreuztabelle;
+
+			// Reklamation neben dem Auswerter, siehe Spielberichtsbogen
+			$this->Template->reklamation = \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerTurnier((array) ($resultTur['body'] ?? array()), 'turnierergebnisse', (string) \Contao\Environment::get('uri')));
 		}
 		elseif($turniercode && !$id)
 		{
@@ -396,6 +415,9 @@ class Turnier extends \Contao\Module
 			$this->Template->subHeadline = $auswertung->Turniername; // Unterüberschrift Turnier setzen
 			$this->Template->turnierheader = $theader;
 			$this->Template->spieler = $auswertung->Spieler;
+
+			// Reklamation neben dem Auswerter, siehe Spielberichtsbogen
+			$this->Template->reklamation = \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerTurnier((array) ($resultTur['body'] ?? array()), 'turnierauswertung', (string) \Contao\Environment::get('uri')));
 		}
 		else
 		{

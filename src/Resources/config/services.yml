@@ -6,6 +6,13 @@ services:
         arguments:
             - '@contao.framework'
 
+    # Reklamationsformular (Route in routing.yml). Öffentlich aus demselben
+    # Grund wie oben
+    Schachbulle\ContaoWertungsportalBundle\Controller\ReklamationController:
+        public: true
+        arguments:
+            - '@contao.framework'
+
     # Nächtlicher Cronjob: lädt Turnierdaten der letzten Wochen vor, damit
     # nicht jeder erste Besucher auf die Schnittstelle warten muss.
     # Alle 10 Minuten zwischen 1 und 3 Uhr; jeder Lauf macht dort weiter, wo

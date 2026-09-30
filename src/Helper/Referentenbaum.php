@@ -114,15 +114,25 @@ class Referentenbaum
 	 * Ein Referent kann für mehrere Verbände zuständig sein und taucht dann
 	 * unter jedem auf.
 	 *
+	 * Ist einem Referenten eine Adresse aus der Adressverwaltung zugeordnet
+	 * (ab 1.51.0), kommen Name und Kontaktdaten von dort — alle Adressen mit
+	 * einer Abfrage, siehe Adressverknuepfung::zusammenfuehren().
+	 *
 	 * @return array VKZ => Liste aufbereiteter Personen
 	 */
 	protected static function alle()
 	{
 		$zuordnung = array();
+		$zeilen = array();
 
 		try
 		{
 			$objReferenten = \Contao\Database::getInstance()->execute("SELECT * FROM tl_wertungsportal_referenten WHERE published = '1' ORDER BY nachname, vorname");
+
+			while($objReferenten->next())
+			{
+				$zeilen[] = $objReferenten->row();
+			}
 		}
 		catch(\Throwable $e)
 		{
@@ -130,11 +140,13 @@ class Referentenbaum
 			return array();
 		}
 
-		while($objReferenten->next())
-		{
-			$person = self::person($objReferenten->row());
+		$adressen = Adressverknuepfung::lade(array_column($zeilen, 'adresse'));
 
-			foreach(\Contao\StringUtil::deserialize($objReferenten->verbaende, true) as $vkz)
+		foreach($zeilen as $zeile)
+		{
+			$person = self::person(Adressverknuepfung::zusammenfuehren($zeile, $adressen[(int) ($zeile['adresse'] ?? 0)] ?? null));
+
+			foreach(\Contao\StringUtil::deserialize($zeile['verbaende'] ?? null, true) as $vkz)
 			{
 				$zuordnung[(string) $vkz][] = $person;
 			}
@@ -146,21 +158,32 @@ class Referentenbaum
 	/**
 	 * Bereitet einen Referenten für die Ausgabe auf.
 	 *
-	 * Die E-Mail-Adresse wird als fertiger, verschleierter Link geliefert:
+	 * Die E-Mail-Adresse wird als fertiger, verschleierter Link geliefert
+	 * (`email`) und daneben als Klartext (`adresse`) für den Versand einer
+	 * Reklamation — die Klartextfassung gehört in kein Template.
+	 *
+	 * Zur Verschleierung:
 	 * StringUtil::encodeEmail wandelt sie in Entities, sodass sie im Quelltext
 	 * nicht als Adresse zu lesen ist. Sammler, die stumpf nach „@" suchen,
 	 * gehen damit leer aus.
 	 *
-	 * @param  array $row Datensatz aus tl_wertungsportal_referenten
+	 * Erwartet wird die Zeile NACH Adressverknuepfung::zusammenfuehren(): Dort
+	 * stehen Titel und Versandadresse, und eine nicht öffentliche Adresse ist
+	 * in `email` schon leer, in `versandadresse` aber noch vorhanden. Eine
+	 * rohe Zeile geht auch — dann gilt die eigene E-Mail für beides.
+	 *
+	 * @param  array $row Datensatz aus tl_wertungsportal_referenten, mit Adresse überlagert
 	 * @return array      Aufbereitete Felder für das Template
 	 */
 	protected static function person($row)
 	{
 		$email = trim((string) ($row['email'] ?? ''));
+		$versand = trim((string) ($row['versandadresse'] ?? $email));
+		$teile = array(trim((string) ($row['titel'] ?? '')), trim((string) ($row['vorname'] ?? '')), trim((string) ($row['nachname'] ?? '')));
 
 		return array
 		(
-			'name'     => trim(($row['vorname'] ?? '').' '.($row['nachname'] ?? '')),
+			'name'     => implode(' ', Adressverknuepfung::ohneLeere($teile)),
 			'nachname' => (string) ($row['nachname'] ?? ''),
 			'vorname'  => (string) ($row['vorname'] ?? ''),
 			'nuid'     => (string) ($row['nuId'] ?? ''),
@@ -169,6 +192,11 @@ class Referentenbaum
 			'ort'      => (string) ($row['ort'] ?? ''),
 			'telefon'  => (string) ($row['telefon'] ?? ''),
 			'email'    => $email !== '' ? \Contao\StringUtil::encodeEmail('<a href="mailto:'.$email.'">'.$email.'</a>') : '',
+
+			// Klartextadresse für die Reklamation (Helper\Reklamation). Sie geht
+			// signiert in den Kontext und nie ungeschützt ins Template — auch
+			// dann, wenn sie in der Adressverwaltung nicht öffentlich ist
+			'adresse'  => $versand,
 		);
 	}
 

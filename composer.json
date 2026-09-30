@@ -25,6 +25,9 @@
         "schachbulle/contao-flaggen-bundle": "*",
         "menatwork/contao-multicolumnwizard-bundle": "^3.6 || ^4.0"
     },
+    "suggest": {
+        "schachbulle/contao-adressen-bundle": "Name und Kontaktdaten der Wertungsreferenten aus der Adressverwaltung beziehen"
+    },
     "conflict": {
         "contao/core": "*",
         "contao/manager-plugin": "<2.0 || >=3.0"

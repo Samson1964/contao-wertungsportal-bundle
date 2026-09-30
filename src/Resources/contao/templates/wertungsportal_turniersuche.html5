@@ -131,6 +131,10 @@
 		<?php endforeach; ?>
 		</tbody>
 	</table>
+
+	<?php if($this->reklamation): ?>
+		<p class="wp-reklamation-zeile">Stimmt hier etwas nicht?<?= $this->reklamation ?></p>
+	<?php endif; ?>
 	
 	<?php $this->endblock(); ?>
 

@@ -180,7 +180,20 @@ class Verband extends \Contao\Module
 			// Verband selbst niemand eingetragen, gilt der nächste darüber —
 			// die Auskunft „wenden Sie sich an den Landesverband" ist immer
 			// noch besser als gar keine
-			$this->Template->referenten = \Schachbulle\ContaoWertungsportalBundle\Helper\Referentenbaum::zustaendig($zps);
+			$zustaendig = \Schachbulle\ContaoWertungsportalBundle\Helper\Referentenbaum::zustaendig($zps);
+			$this->Template->referenten = $zustaendig;
+
+			// Reklamation zur Rangliste — an die Referenten, die darunter stehen,
+			// sonst an den DSB-Admin. Für den Versand die Klartextadresse, nicht
+			// den verschleierten Link
+			$empfaenger = array();
+
+			foreach($zustaendig['referenten'] as $referent)
+			{
+				$empfaenger[] = array('name' => (string) ($referent['name'] ?? ''), 'email' => (string) ($referent['adresse'] ?? ''));
+			}
+
+			$this->Template->reklamation = \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerRangliste((string) $titel, (string) $zps, $empfaenger, (string) \Contao\Environment::get('uri')));
 			$this->Template->fehler = $resultArr['error'] ? \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::apiFehler($resultArr) : false;
 			$this->Template->verbaende = $verbaende;
 

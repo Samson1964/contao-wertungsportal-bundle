@@ -55,6 +55,9 @@
 		<div class="searchresult">
 			<?= $this->searchresult ?>
 		</div>
+		<?php if($this->reklamation): ?>
+			<p class="wp-reklamation-zeile">Stimmt hier etwas nicht?<?= $this->reklamation ?></p>
+		<?php endif; ?>
 	<?php endif; ?> 
 
 	<?php if($this->sperre): ?>
@@ -145,7 +148,7 @@
 						<?php $row++; ?>
 						<tr class="row_<?= $row ?> referent">
 							<td class="col_1 col_2" colspan="2">Zuständiger Wertungsreferent:</td>
-							<td class="col_3 col_4 col_5 col_6 value" colspan="4"><?= $this->referent ?></td>
+							<td class="col_3 col_4 col_5 col_6 value" colspan="4"><?= $this->referent ?><?= $this->reklamation ?></td>
 						</tr>
 					</tbody>
 				</table>

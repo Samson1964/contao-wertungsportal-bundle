@@ -185,6 +185,14 @@ h2.sub_headline.wp-werkzeug-kopf {
 	margin					: 0 15px 24px;
 }
 
+/* Referenten aus der Adressverwaltung übernehmen: Personen ohne passenden
+   Verband (ab 1.51.0) */
+.wp-uebernahme-liste {
+	margin					: 6px 0 12px 18px;
+	padding					: 0;
+	line-height				: 1.6;
+}
+
 /* Zwischenüberschriften der Statistik (Vereinslisten-Schnittstelle) */
 .wp-stat-ueberschrift {
 	margin					: 28px 0 10px;

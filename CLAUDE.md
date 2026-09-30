@@ -361,6 +361,67 @@ alle drei Ansichten.
 - Offen (TODO.md): Restpartien werden nirgends angezeigt; die Spiegeltabellen setzen nicht mehr
   gelieferte Felder nie zurück.
 
+## Reklamationen (ab 1.51.0)
+
+Doku `docs/reklamationen.md`. Link „Reklamation" für angemeldete Mitglieder neben dem Referenten der
+Ansicht, Formular in einem nativen `<dialog>` (`public/js/reklamation.js`), Versand per `fetch` an
+`POST /wertungsportal-api/reklamation` (`Controller/ReklamationController`, `_scope: frontend`,
+`_token_check: true`), Ablage in `tl_wertungsportal_reklamationen` (BE_MOD `wp-reklamationen`).
+Logik komplett in `Helper/Reklamation.php` — die reinen Teile (Kontexte, Empfänger, Texte,
+Signatur, Bereinigung) ohne Contao, geprüft in `tests/Helper/ReklamationTest.php`.
+
+- **Der Empfänger kommt NIE aus dem Formular.** `link()` bestimmt ihn beim Rendern und signiert den
+  Kontext (HMAC mit `kernel.secret`); `einreichen()` prüft nur die Signatur. Wer hier einen
+  Formularwert als Empfänger zuläßt, macht die Absenderadresse des DSB zum offenen Relais.
+- Empfänger: Turnierseiten → Auswerter aus dem nu-Turnierkopf (nur mit Nachname UND gültiger Adresse),
+  Verbandsrangliste → `Referentenbaum::zustaendig()` (Klartext in `adresse`), sonst DSB-Admin
+  (`wertungsportal_reklamation_email`/`_name`). Ohne Admin-Adresse erscheint kein Link. Absender ist
+  `TokenRegistrierung::absenderadresse()`. Frank am 30.09.2026: In „Referenten" steht noch niemand —
+  heute geht also fast alles an den Admin (bis die Übernahme aus der Adressverwaltung gelaufen ist).
+- **Fremde Antworten auf den POST:** Weist Contao das Anfragetoken ab (abgelaufene Sitzung), antwortet
+  es selbst mit 400 — in 4.13 als HTML-Seite, in **5.7 als JSON** (Symfony-Fehlerbeschreibung
+  `{type,title,status,detail}`, weil das Skript `Accept: application/json` schickt). Das Skript deutet
+  deshalb nur Antworten MIT `ok`-Feld als Controller-Antwort, alles andere nach dem Status. Geprüft
+  in beiden Fassungen über `$kernel->handle()` mit falschem Token und Sitzungscookie.
+- Reply-To und Fußzeile stammen aus dem Mitgliedskonto, nie aus dem Formular. Bremse:
+  `HOECHSTZAHL` je `ZEITFENSTER` (5/Stunde) über `countBy` in der Tabelle.
+- Empfänger an `Contao\Email` immer als ARRAY übergeben (`sendTo(array('Name <a@b>'))`) — eine
+  Zeichenkette zerlegt `compileRecipients()` an Kommas. Namen laufen durch `name()` (ohne `<>",;`).
+- Prüfstand: `$container->set('mailer', <Aufzeichner>)` — `Contao\Email` holt genau diesen Dienst
+  (4.13 und 5.7). Nie gegen echte Adressen prüfen.
+- Neue Ansicht anbinden: im Modul `$this->Template->reklamation = Reklamation::link(Reklamation::
+  fuer…(…))`, im Template `<?= $this->reklamation ?>` an die Stelle des Referenten oder die Zeile
+  `p.wp-reklamation-zeile` in `<?php if($this->reklamation): ?>`.
+
+## Referenten und Adressverwaltung (ab 1.51.0)
+
+Doku `docs/referenten.md`. `tl_wertungsportal_referenten.adresse` verweist auf `tl_adressen.id`
+(Paket `schachbulle/contao-adressen-bundle`, nur `suggest`, KEINE Abhängigkeit). Logik in
+`Helper/Adressverknuepfung.php`, reine Teile geprüft in `tests/Helper/AdressverknuepfungTest.php`.
+
+- **Frank am 30.09.2026:** Das Referenten-Modul und das Feld `tl_adressen.wertungsreferent` des
+  Adressen-Bundles sind veraltet — die Zuständigkeit wird NUR hier gepflegt. Das Feld wird genau
+  einmal gelesen: von der Übernahme (`Classes/Referentenuebernahme`, BE_MOD-Schlüssel `uebernehmen`).
+  Nichts anderes darf sich darauf stützen.
+- Die Adresse liefert Name/E-Mail/Telefon/Anschrift **live** (`Referentenbaum::alle()` →
+  `Adressverknuepfung::lade()` mit einer Abfrage → `zusammenfuehren()`). Sichtbarkeitsschalter der
+  Adresse (`email_view` …) gelten: verborgen = leer, OHNE Rückfall auf die eigenen Felder. Nur für
+  den Versand (`versandadresse` → `Referentenbaum` `adresse`) zählt auch eine verborgene E-Mail.
+  Anschrift immer als Ganzes aus einer Quelle. Inaktiv/gelöscht → eigene Felder.
+- Verfügbarkeit über `kernel.bundles['ContaoAdressenBundle']`, nicht `class_exists()`. Die DCA
+  nimmt Feld und Knopf nur dann auf; die SPALTE gibt es immer (Schema unabhängig vom Paketbestand).
+  Contao 5 cacht die gemischte DCA — nach Installation des Adressen-Bundles `cache:clear`.
+- `Referenten::getVerbaende()` stellt `00000` (DSB) voran — vorher ließ sich kein Bundesreferent
+  zuordnen. PHP macht aus „10000" einen Ganzzahlschlüssel; `isset($liste['10000'])` findet ihn.
+- Nachname ist Pflicht, außer eine Adresse ist gewählt (`Referenten::pflichtfelder`, onload, nur
+  `act=edit`); `nameUebernehmen` (onsubmit) schreibt den Namen der Adresse für Sortierung/Suche.
+- Suchbare Auswahl: `chosen => true` wird in 5.7 zu `div.tl_select_wrapper[data-controller=
+  contao--choices]`, nicht zur Klasse `tl_chosen` — beim Prüfen der Ausgabe nicht verwechseln.
+- Prüfstand `referenten_probe.php` (Scratchpad-Muster): Testadresse/-referenten auf freien IDs
+  990001/990002, Übernahme echt gegen die Testdatenbank und gefiltert zurückgenommen
+  (`id > MAX vorher AND adresse IN (…)`). In contao_test (5.7) ist `tl_wertungsportal_clubs` LEER —
+  dort kennt die Übernahme nur `00000`; aussagekräftig ist contao_test_413 (103 von 104 übernommen).
+
 ## Fallstricke / Besonderheiten
 
 - **Überschrift und Linkleiste der Suchmodule (ab 1.50.0):** Spieler, Verein, Verband und Turnier

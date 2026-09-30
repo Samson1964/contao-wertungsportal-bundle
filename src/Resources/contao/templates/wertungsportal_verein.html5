@@ -52,6 +52,9 @@
 		<div class="searchresult">
 			<?= $this->searchresult ?>
 		</div>
+		<?php if($this->reklamation): ?>
+			<p class="wp-reklamation-zeile">Stimmt hier etwas nicht?<?= $this->reklamation ?></p>
+		<?php endif; ?>
 	<?php endif; ?>
 
 	<?php if($this->sichtbar): ?>
@@ -88,6 +91,10 @@
 				</tbody>
 			</table>
 		</div>
+
+		<?php if($this->reklamation): ?>
+			<p class="wp-reklamation-zeile">Stimmt hier etwas nicht?<?= $this->reklamation ?></p>
+		<?php endif; ?>
 
 		<?php
 			// Spaltensortierung per Klick auf die Spaltenköpfe (nochmaliger

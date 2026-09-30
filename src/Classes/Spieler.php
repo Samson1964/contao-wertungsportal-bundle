@@ -103,6 +103,9 @@ class Spieler extends \Contao\Module
 			$this->Template->subHeadline = 'Suche nach '.$search; // Unterüberschrift setzen
 			$this->Template->search = $search;
 
+			// Reklamation unter der Trefferliste — an den DSB-Admin
+			$this->Template->reklamation = \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerSuche('spielersuche', (string) $search, (string) \Contao\Environment::get('uri')));
+
 			// Suchbegriff analysieren – auf dem Rohstring, damit das Komma zwischen
 			// Nachname und Vorname erhalten bleibt (contao.slug würde es sonst durch
 			// "-" ersetzen und die Trennung zerstören)
@@ -282,6 +285,9 @@ class Spieler extends \Contao\Module
 				$this->Template->historie     = $kartei->Historie;
 				$this->Template->vereine      = $kartei->Vereine;
 				$this->Template->referent     = $kartei->Referent;
+
+				// Reklamation neben dem (leeren) Wertungsreferenten — an den DSB-Admin
+				$this->Template->reklamation  = $gesperrt ? '' : \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerKarteikarte((string) $kartei->Titelname, (string) $id, (string) \Contao\Environment::get('uri')));
 				$this->Template->kartei       = $kartei->Kartei;
 				$this->Template->diagramm     = $kartei->Diagramm;
 				$this->Template->diagrammKomplett = $kartei->DiagrammKomplett;
