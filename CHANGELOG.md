@@ -1,5 +1,40 @@
 # Wertungsportal Changelog
 
+## Version 1.53.0 (2026-09-30)
+
+* Add: **Zuständiger Wertungsreferent bei Spielern, Vereinen, Verbänden und Turnieren**, jeweils mit
+  Herkunft **API** (von nu) oder **Lokal** (aus „Referenten"). nu liefert nur bei Turnieren einen
+  (den Auswerter); fehlt er, steht der lokale da, weicht er ab, der lokale zusätzlich. Karteikarte:
+  Zeile „Zuständiger Wertungsreferent" (bisher fest „-") über den Verein der aktiven Mitgliedschaft;
+  Verein: neue Zeile im Vereinskopf; Verband: Kennzeichnung am Block unter der Rangliste. Neue Klasse
+  `Helper\Zustaendigkeit`, Doku `docs/referenten.md`
+* Add: Reklamationen zu Karteikarte und Verein gehen an die lokalen Referenten statt an den DSB-Admin;
+  bei Turnieren ohne Auswerter von nu ebenfalls
+* Add: Frontend-Modul **Wertungsreferenten (Baum)** (`wertungsportal_referentenbaum`): Verbände als
+  verschachtelte Liste ohne den DSB, je Verband Kennziffer und Name, je Referent Vor- und Nachname
+  und E-Mail-Adressen
+* Add: Eigener **Absender der Reklamationen** (Adresse und Name) unter Einstellungen → Reklamationen;
+  leer gilt weiter „E-Mail-Versand" (dort stand „DSB | Registrierung DWZ-Abfrage")
+* Fix: Im Backend-Modul Referenten stand bei `00000` ein gewöhnlicher Verein (auf schachbund.de
+  „SC Lörzweiler") — ein Eintrag mit dieser Kennziffer im Vereinsbestand überschrieb die Beschriftung.
+  `00000` heißt jetzt immer „Deutscher Schachbund", auch in den Frontend-Ausgaben
+* Fix: Das Veröffentlichen-Symbol fehlte in der Liste der Referenten (`toggle` stand an der Operation
+  statt am Feld `published`)
+* Fix: **Reklamation auf der Turnierauswertung** (seit 1.51.0): Der Turnierkopf steckt dort unter
+  `tournament` und wurde nicht gelesen — im vorbelegten Text fehlten Turniername, Zeitraum und
+  Turniercode, und die Reklamation ging an den Admin statt an den Auswerter
+* Fix: Unter Contao 5 brach die Verbandsrangliste ab, sobald Referenten eingetragen sind
+  (`new \FrontendTemplate` im Template — den globalen Klassennamen gibt es dort nicht); ebenso das
+  Modul „Wertungsreferenten"
+* Fix: Die Zuständigkeit übersprang in Bayern und Sachsen den Bezirk (Verein in Augsburg: Kreis 27100 →
+  sofort Landesverband 20000, Bezirk Schwaben 27000 nie). `Helper::vkzKette()` kennt jetzt die Stufe
+  „erste zwei Stellen + 000"; in den übrigen Landesverbänden ändert sich nichts
+* Change: Die immer leere Tabelle „Zuständiger Wertungsreferent" am Ende der Verbandsliste ist entfernt
+* **Einspielen:** `contao:assets:install` (Stile in `css/default.css`) und `cache:clear`. Kein migrate.
+  Danach unter Einstellungen → Reklamationen den Absender eintragen und, wer mag, das Modul
+  „Wertungsreferenten (Baum)" anlegen. Auf schachbund.de den Vereinsbestand prüfen:
+  `SELECT id, clubVkz, clubName FROM tl_wertungsportal_clubs WHERE clubVkz = '00000'`
+
 ## Version 1.52.0 (2026-09-30)
 
 * Change: **Kontaktdaten der Wertungsreferenten nur noch aus der Adressverwaltung.** Anschrift,

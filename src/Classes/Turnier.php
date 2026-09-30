@@ -257,6 +257,8 @@ class Turnier extends \Contao\Module
 				return;
 			}
 
+			$zustaendig = $this->zustaendigkeit((array) ($resultTur['body'] ?? array()), (string) $scoresheet->Auswerter1);
+
 			$theader = array
 			(
 				'Auswertung'            => $scoresheet->Auswertung,
@@ -265,7 +267,7 @@ class Turnier extends \Contao\Module
 				'Turnierende'           => $scoresheet->Turnierende,
 				'Berechnet'             => $scoresheet->Berechnet,
 				'Nachberechnet'         => $scoresheet->Nachberechnet,
-				'Auswerter1'            => $scoresheet->Auswerter1,
+				'Auswerter1'            => $zustaendig['anzeige'],
 				'Auswerter2'            => $scoresheet->Auswerter2,
 				'Spieler'               => $scoresheet->AnzahlSpieler,
 				'Partien'               => $scoresheet->AnzahlPartien,
@@ -285,8 +287,9 @@ class Turnier extends \Contao\Module
 			$this->Template->partien = $scoresheet->Ergebnisse;
 			$this->Template->spieler = $scoresheet->Spieler;
 
-			// Reklamation neben dem Auswerter — an ihn, ohne Namen an den DSB-Admin.
-			// Nur für angemeldete Mitglieder, sonst bleibt es leer
+			// Reklamation neben dem Auswerter — an ihn, ohne ihn an die lokalen
+			// Referenten, ohne beide an den DSB-Admin. Nur für angemeldete
+			// Mitglieder, sonst bleibt es leer
 			$this->Template->reklamation = \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerTurnier(
 				(array) ($resultTur['body'] ?? array()),
 				'spielberichtsbogen',
@@ -295,7 +298,8 @@ class Turnier extends \Contao\Module
 				(
 					'name' => (string) ($scoresheet->Spieler['Name'] ?? ''),
 					'id'   => \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::nuIdAusBogen((array) ($resultErg['body'] ?? array()), (string) $id),
-				)
+				),
+				$zustaendig['ersatz']
 			));
 		}
 		elseif($turniercode && !$id && $view == 'results')
@@ -337,6 +341,8 @@ class Turnier extends \Contao\Module
 			// Turnierinfo und Turnierergebnisse auswerten
 			$ergebnisse = new \Schachbulle\ContaoWertungsportalBundle\Helper\Turnierergebnisse($resultTur, $resultErg);
 
+			$zustaendig = $this->zustaendigkeit((array) ($resultTur['body'] ?? array()), (string) $ergebnisse->Auswerter1);
+
 			$theader = array
 			(
 				'Turniercode'           => $ergebnisse->Turniercode,
@@ -344,7 +350,7 @@ class Turnier extends \Contao\Module
 				'Turnierende'           => $ergebnisse->Turnierende,
 				'Berechnet'             => $ergebnisse->Berechnet,
 				'Nachberechnet'         => $ergebnisse->Nachberechnet,
-				'Auswerter1'            => $ergebnisse->Auswerter1,
+				'Auswerter1'            => $zustaendig['anzeige'],
 				'Auswerter2'            => $ergebnisse->Auswerter2,
 				'Spieler'               => $ergebnisse->AnzahlSpieler,
 				'Partien'               => $ergebnisse->AnzahlPartien,
@@ -363,7 +369,7 @@ class Turnier extends \Contao\Module
 			$this->Template->istKreuztabelle = $ergebnisse->istKreuztabelle;
 
 			// Reklamation neben dem Auswerter, siehe Spielberichtsbogen
-			$this->Template->reklamation = \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerTurnier((array) ($resultTur['body'] ?? array()), 'turnierergebnisse', (string) \Contao\Environment::get('uri')));
+			$this->Template->reklamation = \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerTurnier((array) ($resultTur['body'] ?? array()), 'turnierergebnisse', (string) \Contao\Environment::get('uri'), null, $zustaendig['ersatz']));
 		}
 		elseif($turniercode && !$id)
 		{
@@ -390,6 +396,10 @@ class Turnier extends \Contao\Module
 			// Turnierauswertung auswerten
 			$auswertung = new \Schachbulle\ContaoWertungsportalBundle\Helper\Turnierauswertung($resultTur);
 
+			// Die Turnierauswertung liefert den Turnierkopf unter „tournament" —
+			// zustaendigkeit() und Reklamation::fuerTurnier() nehmen beide Formen
+			$zustaendig = $this->zustaendigkeit((array) ($resultTur['body'] ?? array()), (string) $auswertung->Auswerter1);
+
 			$theader = array
 			(
 				'Auswertung'            => $auswertung->Auswertung,
@@ -398,7 +408,7 @@ class Turnier extends \Contao\Module
 				'Turnierende'           => $auswertung->Turnierende,
 				'Berechnet'             => $auswertung->Berechnet,
 				'Nachberechnet'         => $auswertung->Nachberechnet,
-				'Auswerter1'            => $auswertung->Auswerter1,
+				'Auswerter1'            => $zustaendig['anzeige'],
 				'Auswerter2'            => $auswertung->Auswerter2,
 				'Spieler'               => $auswertung->AnzahlSpieler,
 				'Partien'               => $auswertung->AnzahlPartien,
@@ -417,7 +427,7 @@ class Turnier extends \Contao\Module
 			$this->Template->spieler = $auswertung->Spieler;
 
 			// Reklamation neben dem Auswerter, siehe Spielberichtsbogen
-			$this->Template->reklamation = \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerTurnier((array) ($resultTur['body'] ?? array()), 'turnierauswertung', (string) \Contao\Environment::get('uri')));
+			$this->Template->reklamation = \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerTurnier((array) ($resultTur['body'] ?? array()), 'turnierauswertung', (string) \Contao\Environment::get('uri'), null, $zustaendig['ersatz']));
 		}
 		else
 		{
@@ -461,6 +471,46 @@ class Turnier extends \Contao\Module
 		$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben, im Modul abschaltbar
 		$this->Template->subHeadline = $strSubHeadline; // Unterüberschrift setzen
 		$this->Template->fehler = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::apiFehler($arrResult);
+	}
+
+	/**
+	 * Ermittelt den zuständigen Wertungsreferenten eines Turniers (ab 1.53.0).
+	 *
+	 * Der Auswerter von nu (API) steht zuerst; fehlt er oder weicht er von
+	 * den lokalen Referenten des Turnierverbandes ab, stehen diese dabei
+	 * (Lokal) — Regeln in Helper\Zustaendigkeit. Die lokalen gehen außerdem
+	 * als Ersatzempfänger in die Reklamation, falls nu keinen Auswerter nennt.
+	 *
+	 * Für Gäste bleibt es bei der bisherigen Anzeige: Die Turnierseiten
+	 * zeigen den Auswerter nur angemeldeten Besuchern (Helper::Gesperrt()),
+	 * und die Helfer liefern dann bereits die Anmeldebitte.
+	 *
+	 * @param  array  $body   Antwort von nu, Turnierkopf flach oder unter `tournament`
+	 * @param  string $bisher Bisherige Anzeige des Auswerters (für Gäste)
+	 * @return array          anzeige (HTML für „Auswerter:") und ersatz (Liste
+	 *                        mit name und email für die Reklamation)
+	 */
+	protected function zustaendigkeit(array $body, $bisher)
+	{
+		$kopf = (isset($body['tournament']) && is_array($body['tournament'])) ? $body['tournament'] : $body;
+		$lokal = \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::lokal((string) ($kopf['vkz'] ?? ''));
+		$eintraege = \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::eintraege(\Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::ausTurnier($kopf), $lokal);
+
+		if(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Gesperrt())
+		{
+			$anzeige = (string) $bisher;
+		}
+		else
+		{
+			$anzeige = \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::html($eintraege);
+			if($anzeige === '') $anzeige = '-';
+		}
+
+		return array
+		(
+			'anzeige' => $anzeige,
+			'ersatz'  => \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::empfaenger($lokal),
+		);
 	}
 
 }

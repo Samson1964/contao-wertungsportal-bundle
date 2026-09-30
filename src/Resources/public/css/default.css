@@ -927,6 +927,78 @@
 	margin					: 0 0 6px;
 }
 
+/* Herkunft des zuständigen Wertungsreferenten (ab 1.53.0, Helper\Zustaendigkeit):
+   „API" = von nu geliefert, „Lokal" = aus dem Backend-Modul „Referenten".
+   Kontraste: #1E40AF auf #EFF6FF 8,0:1, #166534 auf #F0FDF4 6,8:1 */
+.wp-quelle {
+	display					: inline-block;
+	margin-left				: 4px;
+	padding					: 0 5px;
+	border-radius			: 3px;
+	font-size				: 0.75em;
+	font-weight				: normal;
+	line-height				: 1.5;
+	vertical-align			: 1px;
+	cursor					: help;
+}
+
+.wp-quelle-api {
+	color					: #1E40AF;
+	background				: #EFF6FF;
+	border					: 1px solid #BFDBFE;
+}
+
+.wp-quelle-lokal {
+	color					: #166534;
+	background				: #F0FDF4;
+	border					: 1px solid #BBF7D0;
+}
+
+/* Mehrere Einträge (API und Lokal) stehen untereinander */
+.wp-zustaendig {
+	display					: inline-block;
+}
+
+/* Wertungsreferenten als Baum (ab 1.53.0, Classes\Referentengliederung).
+   Allgemeine Seiten, also nicht unter .dewis. Jede Ebene rückt ein, eine
+   feine Linie links zeigt, was zusammengehört */
+.wp-referentenbaum,
+.wp-referentenbaum-ebene,
+.wp-referentenbaum-personen {
+	margin					: 0;
+	padding					: 0;
+	list-style				: none;
+}
+
+.wp-referentenbaum-ebene {
+	margin					: 4px 0 0 6px;
+	padding-left			: 14px;
+	border-left				: 1px solid #D4D4D4;
+}
+
+.wp-referentenbaum .wp-verband {
+	margin					: 0 0 8px;
+}
+
+.wp-referentenbaum .wp-verband-kopf {
+	font-weight				: bold;
+}
+
+.wp-referentenbaum .wp-vkz {
+	font-variant-numeric	: tabular-nums;
+	color					: #555555;
+	margin-right			: 4px;
+}
+
+.wp-referentenbaum-personen {
+	margin					: 2px 0 0;
+}
+
+.wp-referentenbaum-person .wp-referent-email {
+	margin-left				: 6px;
+	overflow-wrap			: anywhere;
+}
+
 /* Wertungsreferenten als Tabelle (ab 1.52.0, Classes\Referententabelle).
    Steht auf allgemeinen Seiten, also NICHT unter .dewis; Schrift und
    Tabellenrahmen kommen aus dem Theme (ce_table) */

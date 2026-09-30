@@ -76,6 +76,79 @@ class Referentenbaum
 	}
 
 	/**
+	 * Verschachtelt die flachen Zeilen aus baum() zu einem Baum (ab 1.53.0).
+	 *
+	 * Jeder Verband hängt unter dem nächsten übergeordneten, der in den Zeilen
+	 * vorkommt: zuerst erste drei Stellen + 00, dann erste zwei Stellen + 000
+	 * (Bezirke in Bayern und Sachsen), dann der Landesverband (erste Stelle +
+	 * 0000) — dieselben Stufen wie Helper::vkzKette(). Wer keinen hat, steht
+	 * oben.
+	 * Weggelassene Kennziffern (vorgegeben: 00000, der DSB) verschwinden samt
+	 * ihrer Referenten; die Landesverbände rücken dann nach oben.
+	 *
+	 * Ohne Contao — die Kette wird hier selbst gebildet, weil Helper nur mit
+	 * Contao zu laden ist (Prüfung in tests/Helper/ReferentenbaumTest.php).
+	 *
+	 * @param array<int,array<string,mixed>> $zeilen    Zeilen aus baum(), nach Kennziffer sortiert
+	 * @param array<int,string>              $weglassen Kennziffern, die nicht erscheinen
+	 *
+	 * @return list<array<string,mixed>> Knoten wie die Zeilen, dazu `kinder`
+	 *                                   (Liste von Knoten); Reihenfolge wie in $zeilen
+	 */
+	public static function verschachtelt(array $zeilen, array $weglassen = array('00000'))
+	{
+		$knoten = array();
+
+		foreach($zeilen as $zeile)
+		{
+			$vkz = (string) ($zeile['vkz'] ?? '');
+
+			if($vkz === '' || in_array($vkz, $weglassen, true)) continue;
+
+			$zeile['vkz'] = $vkz;
+			$zeile['kinder'] = array();
+			$knoten[] = $zeile;
+		}
+
+		$vorhanden = array_flip(array_column($knoten, 'vkz'));
+		$eltern = array();
+
+		foreach($knoten as $k)
+		{
+			$eltern[$k['vkz']] = '';
+
+			if(strlen($k['vkz']) !== 5) continue;
+
+			foreach(array(substr($k['vkz'], 0, 3).'00', substr($k['vkz'], 0, 2).'000', substr($k['vkz'], 0, 1).'0000') as $kandidat)
+			{
+				if($kandidat !== $k['vkz'] && isset($vorhanden[$kandidat]))
+				{
+					$eltern[$k['vkz']] = $kandidat;
+					break;
+				}
+			}
+		}
+
+		$baue = static function ($elter) use (&$baue, $knoten, $eltern)
+		{
+			$liste = array();
+
+			foreach($knoten as $k)
+			{
+				if($eltern[$k['vkz']] === $elter)
+				{
+					$k['kinder'] = $baue($k['vkz']);
+					$liste[] = $k;
+				}
+			}
+
+			return $liste;
+		};
+
+		return $baue('');
+	}
+
+	/**
 	 * Liefert die für eine Kennziffer zuständigen Referenten.
 	 *
 	 * Gesucht wird zuerst die Kennziffer selbst, dann der Bezirk, dann der
@@ -217,6 +290,10 @@ class Referentenbaum
 			// signiert in den Kontext und nie ungeschützt ins Template — auch
 			// dann, wenn sie in der Adressverwaltung nicht öffentlich ist
 			'adresse'  => trim((string) ($row['versandadresse'] ?? '')),
+
+			// Die angezeigten Adressen im Klartext — nur zum Vergleich mit dem
+			// Referenten von nu (Helper\Zustaendigkeit), gehört in KEIN Template
+			'klartext' => array_values((array) ($row['emails'] ?? array())),
 		);
 	}
 
@@ -234,7 +311,9 @@ class Referentenbaum
 
 			try
 			{
-				$objVerbaende = \Contao\Database::getInstance()->execute("SELECT clubVkz, clubName FROM tl_wertungsportal_clubs WHERE clubVkz LIKE '%00' OR clubVkz IN ('L0001','M0001')");
+				// 00000 ist immer der DSB — auf schachbund.de stand dort im
+				// Vereinsbestand ein gewöhnlicher Verein (1.53.0)
+				$objVerbaende = \Contao\Database::getInstance()->execute("SELECT clubVkz, clubName FROM tl_wertungsportal_clubs WHERE (clubVkz LIKE '%00' OR clubVkz IN ('L0001','M0001')) AND clubVkz <> '00000'");
 
 				while($objVerbaende->next())
 				{

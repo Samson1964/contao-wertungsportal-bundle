@@ -420,6 +420,26 @@ Doku `docs/referenten.md`. `tl_wertungsportal_referenten.adresse` verweist auf `
   Überschrift — bewusst unverändert) und seit 1.52.0 `wertungsportal_referententabelle`
   (Classes/Referententabelle): Tabelle Verband/Referent/Kontakt, nur Verbände mit veröffentlichten
   Referenten, rowspan je Verband, Überschrift aus dem Modul — Ersatz für `adressen_wertungen.html`.
+- **Zuständigkeit in den Ausgaben (1.53.0, `Helper/Zustaendigkeit.php`):** Quelle „API" gibt es NUR
+  bei Turnieren (`referentFirstname/Lastname/Email` im Turnierkopf); Karteikarte, Vereinsliste,
+  Verbandsliste und Verbände liefern keinen Referenten (an ~20 Antworten im Zwischenspeicher
+  geprüft). Regeln: ohne API → Lokal; API ≠ jeder lokale (E-Mail oder Vor-+Nachname) → API + Lokal;
+  Reklamation an API, sonst Lokal, sonst Admin. `Referentenbaum::person()` liefert dafür `klartext`
+  (Klartext-Mails, nie ins Template).
+- **Turnierkopf zwei Formen:** Turnierinfo (Ergebnisliste, Spielberichtsbogen) flach in `body`,
+  Turnierauswertung unter `body.tournament`. `Zustaendigkeit::ausTurnier()` und
+  `Reklamation::fuerTurnier()` nehmen beides — bis 1.52.0 bekam die Reklamation auf der
+  Turnierauswertung einen leeren Kopf.
+- `00000` ist IMMER „Deutscher Schachbund": Auf schachbund.de stand ein Verein (SC Lörzweiler) mit
+  `clubVkz = '00000'` im Vereinsbestand und überschrieb die Beschriftung. Beide Abfragen
+  (`Referenten::getVerbaende`, `Referentenbaum::verbandsname`) schließen `00000` aus.
+- `Helper::vkzKette()` hat seit 1.53.0 die Stufe „erste zwei Stellen + 000" (Bayern/Sachsen:
+  27100 → 27000 → 20000). `Referentenbaum::verschachtelt()` (Baum-Modul) nutzt dieselben Stufen,
+  aber selbst gebildet — `Helper` erbt von `Contao\Frontend` und ist in Unit-Tests nicht ladbar.
+- In Templates **immer `\Contao\FrontendTemplate`**, nie `\FrontendTemplate` — die globalen
+  Klassennamen gibt es in Contao 5 nicht (brach bis 1.52.0 die Verbandsrangliste unter 5 ab).
+- Veröffentlichen-Knopf: `'toggle' => true` gehört ans FELD `published`, nicht an die Operation
+  (sonst blendet Contao den Knopf in 4.13 und 5 aus).
 - Verfügbarkeit über `kernel.bundles['ContaoAdressenBundle']`, nicht `class_exists()`. Die DCA
   nimmt das Feld nur dann auf; die SPALTE gibt es immer (Schema unabhängig vom Paketbestand).
   Contao 5 cacht die gemischte DCA — nach Installation des Adressen-Bundles `cache:clear`.

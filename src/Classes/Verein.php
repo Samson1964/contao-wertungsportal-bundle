@@ -289,10 +289,13 @@ class Verein extends \Contao\Module
 			$vereinsliste = new \Schachbulle\ContaoWertungsportalBundle\Helper\Vereinsliste($resultArr, $zps, $order);
 			$this->Template->rangliste = $vereinsliste->Rangliste;
 			$this->Template->daten = $vereinsliste->Daten;
-			$this->Template->referent = ''; // Wertungsreferent zuweisen
+			// Zuständiger Wertungsreferent (ab 1.53.0): nu liefert bei Vereinen
+			// keinen, also der aus „Referenten" über die Vereinskennziffer (Lokal)
+			$zustaendig = \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::lokal((string) $zps);
+			$this->Template->referent = \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::html($zustaendig);
 
-			// Reklamation zur Vereinsliste — an den DSB-Admin
-			$this->Template->reklamation = \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerVerein((string) $vereinsname, (string) $zps, (string) \Contao\Environment::get('uri')));
+			// Reklamation zur Vereinsliste — an den Referenten, ohne ihn an den DSB-Admin
+			$this->Template->reklamation = \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerVerein((string) $vereinsname, (string) $zps, (string) \Contao\Environment::get('uri'), \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::empfaenger($zustaendig)));
 
 			// Untertemplate initialisieren und füllen
 			$this->Subtemplate = new \Contao\FrontendTemplate($this->subTemplate);

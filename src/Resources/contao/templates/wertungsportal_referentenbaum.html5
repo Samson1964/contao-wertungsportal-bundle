@@ -1,0 +1,60 @@
+<?php
+/**
+ * Frontend-Modul: Wertungsreferenten als Baum (ab 1.53.0)
+ *
+ * Verschachtelte Liste der Verbände (ohne den DSB) mit ihren Referenten.
+ * Je Verband: Kennziffer und Name; je Referent: Vor- und Nachname und die
+ * E-Mail-Adressen. Die Adressen kommen als verschleierte Links aus
+ * Helper\Referentenbaum und werden OHNE weiteres Maskieren ausgegeben.
+ *
+ * Die Verschachtelung baut Referentenbaum::verschachtelt(); hier wird sie nur
+ * rekursiv ausgegeben.
+ */
+$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/default.css';
+
+$e = static function ($wert) {
+	return \Contao\StringUtil::specialchars((string) $wert);
+};
+
+$zeige = static function (array $knoten, $wurzel = false) use (&$zeige, $e) {
+	?>
+	<ul class="<?= $wurzel ? 'wp-referentenbaum' : 'wp-referentenbaum-ebene' ?>">
+		<?php foreach($knoten as $k): ?>
+			<li class="wp-verband <?= $e($k['ebene']) ?>">
+				<span class="wp-verband-kopf"><span class="wp-vkz"><?= $e($k['vkz']) ?></span> <span class="wp-verbandsname"><?= $e($k['name']) ?></span></span>
+				<?php if(!empty($k['referenten'])): ?>
+					<ul class="wp-referentenbaum-personen">
+						<?php foreach($k['referenten'] as $r): ?>
+							<li class="wp-referentenbaum-person">
+								<span class="wp-referent-name"><?= $e(trim($r['vorname'].' '.$r['nachname'])) ?></span>
+								<?php foreach($r['emails'] as $email): ?>
+									<span class="wp-referent-email"><?= $email ?></span>
+								<?php endforeach; ?>
+							</li>
+						<?php endforeach; ?>
+					</ul>
+				<?php endif; ?>
+				<?php if(!empty($k['kinder'])): ?>
+					<?php $zeige($k['kinder']); ?>
+				<?php endif; ?>
+			</li>
+		<?php endforeach; ?>
+	</ul>
+	<?php
+};
+?>
+<!-- indexer::stop -->
+<div class="<?= $this->class ?> block"<?= $this->cssID ?><?php if($this->style): ?> style="<?= $this->style ?>"<?php endif; ?>>
+
+	<?php if($this->headline): ?>
+		<<?= $this->hl ?>><?= $this->headline ?></<?= $this->hl ?>>
+	<?php endif; ?>
+
+	<?php if(!$this->baum): ?>
+		<p class="wp-hinweis">Es sind noch keine Wertungsreferenten hinterlegt.</p>
+	<?php else: ?>
+		<?php $zeige($this->baum, true); ?>
+	<?php endif; ?>
+
+</div>
+<!-- indexer::continue -->

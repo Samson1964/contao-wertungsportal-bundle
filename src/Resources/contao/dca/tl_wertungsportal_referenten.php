@@ -80,10 +80,12 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_referenten'] = [
                 'icon'       => 'delete.svg',
                 'attributes' => 'onclick="if(!confirm(\'Diesen Datensatz wirklich löschen?\'))return false;Backend.getScrollOffset()"',
             ],
+            // Das Umschalten braucht 'toggle' => true am FELD published (unten),
+            // nicht hier — sonst blendet Contao den Knopf aus (bis 1.52.0)
             'toggle' => [
-                'href'   => 'act=toggle&amp;field=published',
-                'icon'   => 'visible.svg',
-                'toggle' => true,
+                'href'         => 'act=toggle&amp;field=published',
+                'icon'         => 'visible.svg',
+                'showInHeader' => true,
             ],
             'show' => [
                 'href' => 'act=show',
@@ -187,6 +189,7 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_referenten'] = [
             'label'     => &$GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['published'],
             'exclude'   => true,
             'filter'    => true,
+            'toggle'    => true,
             'flag'      => DataContainer::SORT_INITIAL_LETTER_DESC,
             'inputType' => 'checkbox',
             'eval'      => ['doNotCopy' => true, 'tl_class' => 'w50'],

@@ -280,4 +280,45 @@ class ReklamationTest extends TestCase
 		$this->assertSame('', Reklamation::nuIdAusBogen($bogen, 'gibt-es-nicht'));
 		$this->assertSame('', Reklamation::nuIdAusBogen(array(), 'a'));
 	}
+
+	/**
+	 * Fehler bis 1.52.0: Die Turnierauswertung liefert den Kopf unter
+	 * „tournament". Er muss genauso gelesen werden wie der flache — mit
+	 * Turniername, Zeitraum, Turniercode und dem Auswerter als Empfänger.
+	 */
+	public function testTurnierkopfUnterTournament(): void
+	{
+		$flach = Reklamation::fuerTurnier(self::turnier(), 'turnierauswertung', 'https://x.test/');
+		$verschachtelt = Reklamation::fuerTurnier(array('tournament' => self::turnier(), 'players' => array()), 'turnierauswertung', 'https://x.test/');
+
+		$this->assertSame($flach, $verschachtelt);
+		$this->assertSame('Reklamation zu OWL U10 Verbandsklasse', Reklamation::betreff($verschachtelt));
+		$this->assertContains(array('Turniercode', 'b6739640-a6fb-4720-a384-0035413249eb'), $verschachtelt['angaben']);
+		$this->assertSame(array(array('name' => 'Stefan Muster', 'email' => 'auswerter@example.org')), $verschachtelt['referenten']);
+	}
+
+	/**
+	 * Lokale Referenten (1.53.0): beim Turnier nur, wenn nu keinen Auswerter
+	 * nennt; bei Karteikarte und Verein immer, wenn welche übergeben werden.
+	 */
+	public function testLokaleReferentenAlsEmpfaenger(): void
+	{
+		$lokal = array(array('name' => 'Otto Ohne', 'email' => 'dwz-owl@example.org'));
+
+		$mitAuswerter = Reklamation::fuerTurnier(self::turnier(), 'turnierergebnisse', '', null, $lokal);
+		$this->assertSame('auswerter@example.org', $mitAuswerter['referenten'][0]['email'], 'der Auswerter von nu hat Vorrang');
+
+		$turnier = self::turnier();
+		$turnier['referentLastname'] = '';
+		$this->assertSame($lokal, Reklamation::fuerTurnier($turnier, 'turnierergebnisse', '', null, $lokal)['referenten']);
+		$this->assertSame(array(), Reklamation::fuerTurnier($turnier, 'turnierergebnisse', '')['referenten'], 'ohne beide: Admin');
+
+		$this->assertSame($lokal, Reklamation::fuerKarteikarte('Hendrik Pham', 'NU4481210', '', $lokal)['referenten']);
+		$this->assertSame($lokal, Reklamation::fuerVerein('LSV Turm Lippstadt', '64231', '', $lokal)['referenten']);
+		$this->assertSame(array(), Reklamation::fuerVerein('LSV Turm Lippstadt', '64231', '')['referenten']);
+
+		$e = Reklamation::empfaenger($lokal, self::ADMIN);
+		$this->assertSame(array('dwz-owl@example.org', 'referent'), array($e[0]['email'], $e[0]['art']));
+		$this->assertSame('wertung@example.org', Reklamation::blindkopie($e, self::ADMIN));
+	}
 }

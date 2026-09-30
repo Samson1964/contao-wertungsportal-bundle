@@ -65,7 +65,7 @@
 			<table class="header">
 				<tbody>
 					<tr class="row_0">
-						<td class="col_0" rowspan="2" style="text-align:center;" width="25%">
+						<td class="col_0" rowspan="<?= $this->referent ? 3 : 2 ?>" style="text-align:center;" width="25%">
 							<?php if($this->addImage): ?>
 								<?php if($this->platzhalter): ?>
 									<?php // Mitgeliefertes SVG: liegt nicht in der Dateiverwaltung und
@@ -88,6 +88,14 @@
 						<td class="col_1 top-line">Über den Verein:</td>
 						<td class="col_2 value top-line"><?= $this->info ?></td>
 					</tr>
+					<?php // Zuständiger Wertungsreferent (ab 1.53.0) — fertiges HTML aus
+					      // Helper\Zustaendigkeit, E-Mail-Adressen schon verschleiert ?>
+					<?php if($this->referent): ?>
+						<tr class="row_2">
+							<td class="col_1 top-line">Zuständiger Wertungsreferent:</td>
+							<td class="col_2 value top-line"><?= $this->referent ?></td>
+						</tr>
+					<?php endif; ?>
 				</tbody>
 			</table>
 		</div>

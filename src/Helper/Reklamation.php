@@ -89,22 +89,36 @@ class Reklamation
 	 * Spielberichtsbogen.
 	 *
 	 * Empfänger ist der Auswerter aus dem Turnierkopf von nu — aber nur, wenn
-	 * ein Nachname UND eine gültige Adresse vorliegen. Sonst bleibt die Liste
-	 * leer, und link() setzt den DSB-Admin ein.
+	 * ein Nachname UND eine gültige Adresse vorliegen. Sonst gelten die
+	 * lokalen Referenten aus $ersatz (ab 1.53.0), und fehlen auch die, setzt
+	 * link() den DSB-Admin ein.
 	 *
-	 * @param array<string,mixed>      $turnier Turnierkopf, wie ihn nu liefert
-	 *                                          (label, uuid, startdate, enddate,
-	 *                                          referentFirstname, -Lastname, -Email)
-	 * @param string                   $bereich turnierauswertung, turnierergebnisse
-	 *                                          oder spielberichtsbogen
-	 * @param string                   $url     Vollständige Adresse der Seite
-	 * @param array<string,string>|null $spieler Nur beim Spielberichtsbogen:
-	 *                                          name und id (NU-Nummer, darf leer sein)
+	 * Den Turnierkopf liefert nu je nach Abfrage flach (Turnierinfo) oder
+	 * unter `tournament` (Turnierauswertung). Bis 1.52.0 kam bei der
+	 * Turnierauswertung nur der flache Fall an: Turniername, Zeitraum und
+	 * Turniercode fehlten im vorbelegten Text, und die Reklamation ging an den
+	 * Admin statt an den Auswerter.
+	 *
+	 * @param array<string,mixed>             $turnier Turnierkopf, wie ihn nu liefert
+	 *                                                 (label, uuid, startdate, enddate,
+	 *                                                 referentFirstname, -Lastname, -Email),
+	 *                                                 flach oder unter `tournament`
+	 * @param string                          $bereich turnierauswertung, turnierergebnisse
+	 *                                                 oder spielberichtsbogen
+	 * @param string                          $url     Vollständige Adresse der Seite
+	 * @param array<string,string>|null        $spieler Nur beim Spielberichtsbogen:
+	 *                                                 name und id (NU-Nummer, darf leer sein)
+	 * @param array<int,array<string,string>> $ersatz  Lokale Referenten (name, email), falls
+	 *                                                 nu keinen Auswerter nennt
 	 *
 	 * @return array<string,mixed> Kontext für link()
 	 */
-	public static function fuerTurnier(array $turnier, string $bereich, string $url, ?array $spieler = null): array
+	public static function fuerTurnier(array $turnier, string $bereich, string $url, ?array $spieler = null, array $ersatz = array()): array
 	{
+		if (isset($turnier['tournament']) && is_array($turnier['tournament'])) {
+			$turnier = $turnier['tournament'];
+		}
+
 		$name = self::zeile((string) ($turnier['label'] ?? ''));
 		$uuid = self::zeile((string) ($turnier['uuid'] ?? ''));
 
@@ -150,6 +164,10 @@ class Reklamation
 				'name'  => trim(trim((string) ($turnier['referentFirstname'] ?? '')).' '.$nachname),
 				'email' => $email,
 			);
+		} else {
+			// Kein Auswerter von nu: die lokalen Referenten (empfaenger()
+			// siebt ungültige Adressen aus)
+			$referenten = array_values($ersatz);
 		}
 
 		return array(
@@ -166,16 +184,19 @@ class Reklamation
 	/**
 	 * Baut den Kontext für die DWZ-Karteikarte eines Spielers.
 	 *
-	 * Die Karteikarte nennt keinen Wertungsreferenten, Empfänger ist deshalb
-	 * immer der DSB-Admin.
+	 * nu nennt bei Spielern keinen Wertungsreferenten. Empfänger sind
+	 * deshalb die lokalen Referenten des Verbandes, zu dem der Verein des
+	 * Spielers gehört (ab 1.53.0, Helper\Zustaendigkeit); ohne sie der
+	 * DSB-Admin.
 	 *
-	 * @param string $name Vor- und Nachname
-	 * @param string $nuId NU-Nummer
-	 * @param string $url  Vollständige Adresse der Seite
+	 * @param string                           $name       Vor- und Nachname
+	 * @param string                           $nuId       NU-Nummer
+	 * @param string                           $url        Vollständige Adresse der Seite
+	 * @param array<int,array<string,string>> $referenten Lokale Referenten (name, email)
 	 *
 	 * @return array<string,mixed> Kontext für link()
 	 */
-	public static function fuerKarteikarte(string $name, string $nuId, string $url): array
+	public static function fuerKarteikarte(string $name, string $nuId, string $url, array $referenten = array()): array
 	{
 		$name = self::zeile($name);
 		$nuId = self::zeile($nuId);
@@ -186,7 +207,7 @@ class Reklamation
 			'angaben'    => array(array('Spieler', '' !== $nuId ? $name.' ('.$nuId.')' : $name), array('Ansicht', 'DWZ-Karteikarte')),
 			'turnier'    => array(),
 			'spieler'    => array('id' => $nuId, 'name' => $name),
-			'referenten' => array(),
+			'referenten' => array_values($referenten),
 			'url'        => $url,
 		);
 	}
@@ -194,13 +215,17 @@ class Reklamation
 	/**
 	 * Baut den Kontext für die DWZ-Liste eines Vereins.
 	 *
-	 * @param string $name Vereinsname
-	 * @param string $vkz  Kennziffer des Vereins
-	 * @param string $url  Vollständige Adresse der Seite
+	 * Empfänger sind die lokalen Referenten des Verbandes (ab 1.53.0); ohne
+	 * sie der DSB-Admin.
+	 *
+	 * @param string                           $name       Vereinsname
+	 * @param string                           $vkz        Kennziffer des Vereins
+	 * @param string                           $url        Vollständige Adresse der Seite
+	 * @param array<int,array<string,string>> $referenten Lokale Referenten (name, email)
 	 *
 	 * @return array<string,mixed> Kontext für link()
 	 */
-	public static function fuerVerein(string $name, string $vkz, string $url): array
+	public static function fuerVerein(string $name, string $vkz, string $url, array $referenten = array()): array
 	{
 		$name = self::zeile($name);
 		$vkz = self::zeile($vkz);
@@ -211,7 +236,7 @@ class Reklamation
 			'angaben'    => array(array('Verein', '' !== $vkz ? $name.' ('.$vkz.')' : $name), array('Ansicht', 'DWZ-Liste des Vereins')),
 			'turnier'    => array(),
 			'spieler'    => array(),
-			'referenten' => array(),
+			'referenten' => array_values($referenten),
 			'url'        => $url,
 		);
 	}
@@ -843,7 +868,7 @@ class Reklamation
 	/**
 	 * Liefert Name und Adresse des DSB-Admins aus den Einstellungen.
 	 *
-	 * Ohne Namen gilt der Absendername der Bundle-E-Mails.
+	 * Ohne Namen gilt der Absendername der Reklamationen (absender()).
 	 *
 	 * @return array{name:string,email:string}
 	 */
@@ -853,10 +878,35 @@ class Reklamation
 		$name = trim((string) ($GLOBALS['TL_CONFIG']['wertungsportal_reklamation_name'] ?? ''));
 
 		if ('' === $name && '' !== $email) {
-			$name = \Schachbulle\ContaoWertungsportalBundle\Classes\TokenRegistrierung::absendername();
+			$name = self::absender()['name'];
 		}
 
 		return array('name' => $name, 'email' => $email);
+	}
+
+	/**
+	 * Liefert Absenderadresse und -namen der Reklamationsmails (ab 1.53.0).
+	 *
+	 * Vorrang haben die eigenen Einstellungen unter „Reklamationen"
+	 * (wertungsportal_reklamation_absender, _absendername). Jedes leere Feld
+	 * fällt einzeln auf die Einstellung „E-Mail-Versand" zurück — die gilt
+	 * sonst für alle Mails des Bundles, etwa die Schlüssel-Mail der
+	 * Vereinslisten-Schnittstelle („DSB | Registrierung DWZ-Abfrage"), und
+	 * passt deshalb nicht zu einer Reklamation.
+	 *
+	 * @return array{email:string,name:string} Adresse und Name, nie leer, wenn
+	 *                                         wenigstens die allgemeine
+	 *                                         Einstellung oder adminEmail gesetzt ist
+	 */
+	public static function absender(): array
+	{
+		$email = trim((string) ($GLOBALS['TL_CONFIG']['wertungsportal_reklamation_absender'] ?? ''));
+		$name = trim((string) ($GLOBALS['TL_CONFIG']['wertungsportal_reklamation_absendername'] ?? ''));
+
+		return array(
+			'email' => '' !== $email ? $email : \Schachbulle\ContaoWertungsportalBundle\Classes\TokenRegistrierung::absenderadresse(),
+			'name'  => '' !== $name ? $name : \Schachbulle\ContaoWertungsportalBundle\Classes\TokenRegistrierung::absendername(),
+		);
 	}
 
 	/**
@@ -879,9 +929,10 @@ class Reklamation
 	/**
 	 * Verschickt die Reklamation.
 	 *
-	 * Absender ist die Absenderadresse der Bundle-E-Mails (Einstellung
-	 * „E-Mail-Versand"), Antworten gehen an das Mitglied. Die Empfänger gehen
-	 * als Liste an Contao\Email: So werden Namen nicht an Kommas zerlegt.
+	 * Absender ist der Absender der Reklamationen (absender(): eigene
+	 * Einstellung, sonst „E-Mail-Versand"), Antworten gehen an das Mitglied.
+	 * Die Empfänger gehen als Liste an Contao\Email: So werden Namen nicht an
+	 * Kommas zerlegt.
 	 *
 	 * @param array<int,array<string,string>> $empfaenger Empfänger
 	 * @param string                           $bcc        Adresse für die Blindkopie, '' für keine
@@ -894,9 +945,10 @@ class Reklamation
 	protected static function verschicke(array $empfaenger, string $bcc, array $mitglied, string $betreff, string $text): string
 	{
 		try {
+			$absender = self::absender();
 			$objEmail = new \Contao\Email();
-			$objEmail->from = \Schachbulle\ContaoWertungsportalBundle\Classes\TokenRegistrierung::absenderadresse();
-			$objEmail->fromName = \Schachbulle\ContaoWertungsportalBundle\Classes\TokenRegistrierung::absendername();
+			$objEmail->from = $absender['email'];
+			$objEmail->fromName = $absender['name'];
 			$objEmail->subject = $betreff;
 			$objEmail->text = $text;
 			$objEmail->replyTo(array(self::name((string) $mitglied['name']).' <'.$mitglied['email'].'>'));

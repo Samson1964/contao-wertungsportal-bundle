@@ -125,13 +125,17 @@
 
 		<?php if(!empty($this->referenten['referenten'])): ?>
 			<div class="wp-referenten-block">
-				<h3>Wertungsreferent<?= count($this->referenten['referenten']) > 1 ? 'en' : '' ?></h3>
+				<?php // nu liefert bei Verbänden keinen Referenten — die Angabe stammt
+				      // immer aus „Referenten" (ab 1.53.0 so gekennzeichnet) ?>
+				<h3>Wertungsreferent<?= count($this->referenten['referenten']) > 1 ? 'en' : '' ?> <span class="wp-quelle wp-quelle-lokal" title="Aus der Referentenliste des DSB">Lokal</span></h3>
 				<?php if($this->referenten['ersatzweise']): ?>
 					<p class="wp-meta">Für diesen Verband ist niemand gesondert eingetragen; zuständig ist
 					<?= $this->referenten['name'] ?>.</p>
 				<?php endif; ?>
 				<?php
-					$objReferenten = new \FrontendTemplate('wertungsportal_sub_referenten');
+					// \Contao\FrontendTemplate — den globalen Namen gibt es in
+					// Contao 5 nicht (bis 1.52.0 brach die Rangliste dort ab)
+					$objReferenten = new \Contao\FrontendTemplate('wertungsportal_sub_referenten');
 					$objReferenten->referenten = $this->referenten['referenten'];
 					echo $objReferenten->parse();
 				?>
@@ -159,21 +163,10 @@
 			</div>
 		<?php endif; ?>
 
-		<div class="table_responsiv">
-			<table class="body">
-				<thead>
-					<tr>
-						<th>Zuständiger Wertungsreferent</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr>
-						<td><?= $this->referent ?></td>
-					</tr>
-				</tbody>
-			</table>
-		</div>
-	
+		<?php // Die frühere Tabelle „Zuständiger Wertungsreferent" an dieser Stelle
+		      // gab $this->referent aus, das nie gesetzt wurde — sie stand immer
+		      // leer da. Die Referenten stehen im Block unter der Rangliste (1.53.0) ?>
+
 	<?php $this->endblock(); ?>
 
 </div>

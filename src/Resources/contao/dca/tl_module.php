@@ -22,6 +22,8 @@ $GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_bestenliste'] = '{ti
 $GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_token'] = '{title_legend},name,headline,type;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
 // Wertungsreferenten als Tabelle (ab 1.52.0): Überschrift aus dem Modul, keine Linkleiste
 $GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_referententabelle'] = '{title_legend},name,headline,type;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
+// Wertungsreferenten als Baum (ab 1.53.0), wie die Tabelle
+$GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_referentenbaum'] = '{title_legend},name,headline,type;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
 
 
 $GLOBALS['TL_DCA']['tl_module']['fields']['wertungsportal_searchfield'] = array

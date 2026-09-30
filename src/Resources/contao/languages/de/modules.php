@@ -34,4 +34,5 @@ $GLOBALS['TL_LANG']['MOD']['wp-sperren'] = array('Sperren', 'Besucher, die wegen
 $GLOBALS['TL_LANG']['MOD']['wp-referenten'] = array('Referenten', 'Wertungsreferenten der Verbände verwalten');
 $GLOBALS['TL_LANG']['MOD']['wp-reklamationen'] = array('Reklamationen', 'Reklamationen, die Mitglieder über das Formular im Frontend geschickt haben');
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_referenten'] = array('Wertungsreferenten','Die Wertungsreferenten der Verbände als Gliederung, mit Anschrift und geschützter E-Mail-Adresse');
+$GLOBALS['TL_LANG']['FMD']['wertungsportal_referentenbaum'] = array('Wertungsreferenten (Baum)','Die Verbände als verschachtelte Liste (ohne DSB) mit Kennziffer und Namen, je Referent Vor- und Nachname und E-Mail-Adresse');
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_referententabelle'] = array('Wertungsreferenten (Tabelle)','Die Verbände nach Kennziffer mit ihren veröffentlichten Referenten: Name, Funktions-E-Mail und Kontaktdaten aus der Adressverwaltung. Ohne Linkleiste, Überschrift aus dem Modul — Ersatz für das Modul der Adressverwaltung');

@@ -58,6 +58,28 @@ class Karteikarte
 		$this->daten['Historie']     = '-';
 		$this->daten['Referent']     = '-';
 
+		// Kennziffer, über die der zuständige Wertungsreferent gesucht wird
+		// (ab 1.53.0, Helper\Zustaendigkeit): der Verein der aktiven
+		// Mitgliedschaft, sonst der ersten. nu nennt bei Spielern selbst
+		// keinen Referenten
+		$this->daten['ReferentVkz']  = '';
+
+		if(!empty($body['memberships']))
+		{
+			$stamm = $body['memberships'][0];
+
+			foreach($body['memberships'] as $m)
+			{
+				if(($m['licenceState'] ?? '') == 'ACTIVE')
+				{
+					$stamm = $m;
+					break;
+				}
+			}
+
+			$this->daten['ReferentVkz'] = (string) ($stamm['vkz'] ?? '');
+		}
+
 		/*********************************************************
 		 * Historie: Link zur alten EloBase-Karteikarte (altdwz),
 		 * wenn die Anzeige in den Einstellungen aktiviert ist.

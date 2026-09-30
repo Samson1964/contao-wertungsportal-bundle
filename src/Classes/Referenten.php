@@ -38,10 +38,12 @@ class Referenten extends \Contao\Backend
 	 * Schnittstelle: Das Backend soll auch dann bedienbar bleiben, wenn nu
 	 * gerade nicht antwortet.
 	 *
-	 * Der DSB selbst (00000) steht immer oben (ab 1.51.0). Im Vereinsbestand
-	 * kommt er nicht vor, die Zuständigkeit geht aber bis zu ihm hinauf
-	 * (Helper::vkzKette) — ohne den Eintrag ließ sich kein Referent des
-	 * Bundes zuordnen.
+	 * Der DSB selbst (00000) steht immer oben (ab 1.51.0). Die Zuständigkeit
+	 * geht bis zu ihm hinauf (Helper::vkzKette) — ohne den Eintrag ließ sich
+	 * kein Referent des Bundes zuordnen. Seine Beschriftung ist FEST: Auf
+	 * schachbund.de stand im Vereinsbestand unter 00000 ein gewöhnlicher
+	 * Verein (SC Lörzweiler, 1.53.0) und überschrieb sie. Ein Eintrag 00000 im
+	 * Vereinsbestand wird deshalb nicht gelesen.
 	 *
 	 * @param  \DataContainer|null $dc Von Contao übergeben, hier ungenutzt
 	 * @return array                   VKZ => „VKZ Name", nach VKZ geordnet
@@ -55,8 +57,9 @@ class Referenten extends \Contao\Backend
 		try
 		{
 			// LIKE '%00' entspricht Helper::istVerband(); die beiden
-			// Sonderfälle L0001/M0001 kommen ausdrücklich dazu
-			$objVerbaende = \Contao\Database::getInstance()->execute("SELECT clubVkz, clubName FROM tl_wertungsportal_clubs WHERE clubVkz LIKE '%00' OR clubVkz IN ('L0001','M0001') ORDER BY clubVkz");
+			// Sonderfälle L0001/M0001 kommen ausdrücklich dazu. 00000 ist
+			// der DSB und kommt nie aus dem Vereinsbestand (siehe oben)
+			$objVerbaende = \Contao\Database::getInstance()->execute("SELECT clubVkz, clubName FROM tl_wertungsportal_clubs WHERE (clubVkz LIKE '%00' OR clubVkz IN ('L0001','M0001')) AND clubVkz <> '00000' ORDER BY clubVkz");
 
 			while($objVerbaende->next())
 			{

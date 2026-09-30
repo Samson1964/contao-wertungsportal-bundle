@@ -154,6 +154,8 @@ $GLOBALS['FE_MOD']['wertungsportal'] = array
 	// Wertungsreferenten als schlichte Tabelle für allgemeine Seiten (ab
 	// 1.52.0, Ersatz für das Modul der Adressverwaltung)
 	'wertungsportal_referententabelle' => 'Schachbulle\ContaoWertungsportalBundle\Classes\Referententabelle',
+	// Wertungsreferenten als verschachtelter Baum ohne den DSB (ab 1.53.0)
+	'wertungsportal_referentenbaum'  => 'Schachbulle\ContaoWertungsportalBundle\Classes\Referentengliederung',
 	// Registrierung für die örtliche Vereinslisten-Schnittstelle
 	'wertungsportal_token'           => 'Schachbulle\ContaoWertungsportalBundle\Classes\TokenRegistrierung',
 );

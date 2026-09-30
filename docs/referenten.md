@@ -8,9 +8,11 @@ einzige Quelle dafür. Aus den Referenten entstehen
 - die Tabelle **Wertungsreferenten (Tabelle)** für allgemeine Seiten (ab
   1.52.0, Ersatz für das Modul der Adressverwaltung auf
   `adressen_wertungen.html`),
+- der **Wertungsreferenten (Baum)** (ab 1.53.0),
 - die Gliederung **Wertungsreferenten** im Bereich des Wertungsportals,
-- der Hinweis „Wertungsreferent" unter den Ranglisten eines Verbandes und
-- die Empfänger der [Reklamationen](reklamationen.md) zu diesen Ranglisten.
+- der **zuständige Wertungsreferent** bei Karteikarte, Verein, Verband und
+  Turnier (ab 1.53.0, siehe unten) und
+- die Empfänger der [Reklamationen](reklamationen.md).
 
 Ausgegeben werden nur **veröffentlichte** Referenten.
 
@@ -63,11 +65,40 @@ mit Name und Funktions-E-Mail.
 
 Im Feld **Zuständig für** stehen alle Verbände aus dem Vereinsbestand — alles,
 dessen Kennziffer auf `00` endet, also Landesverbände wie Bezirke — und ganz
-oben der **Deutsche Schachbund** selbst (`00000`).
+oben der **Deutsche Schachbund** selbst (`00000`). Diese Beschriftung ist fest:
+Ein Eintrag mit der Kennziffer `00000` im Vereinsbestand (auf schachbund.de
+stand dort der SC Lörzweiler) wird nicht gelesen.
 
-Ist für einen Bezirk niemand eingetragen, gilt der Referent des
-Landesverbands, danach der des DSB. Unter der Rangliste steht dann „Für diesen
-Verband ist niemand gesondert eingetragen; zuständig ist …".
+Ist für einen Verband niemand eingetragen, gilt der nächste darüber. Die Kette
+für einen Verein, etwa `27105`: `27100` (Kreis Augsburg) → `27000` (Bezirk
+Schwaben) → `20000` (Landesverband) → `00000` (DSB). Die Stufe „erste zwei
+Stellen + 000" gibt es seit 1.53.0 — Bayern und Sachsen gliedern eine Ebene
+tiefer; in den übrigen Landesverbänden fällt sie mit dem Landesverband
+zusammen. Unter der Rangliste steht in solchen Fällen „Für diesen Verband ist
+niemand gesondert eingetragen; zuständig ist …".
+
+## Zuständiger Wertungsreferent in den Ausgaben (ab 1.53.0)
+
+| Ansicht | Angabe von nu | Wo er steht |
+|---|---|---|
+| Turnierauswertung, Ergebnisliste, Spielberichtsbogen | der Auswerter aus dem Turnierkopf | Zeile „Auswerter:" |
+| DWZ-Karteikarte | — | Zeile „Zuständiger Wertungsreferent:" (über den Verein der aktiven Mitgliedschaft) |
+| DWZ-Liste eines Vereins | — | Zeile „Zuständiger Wertungsreferent:" im Vereinskopf |
+| Rangliste eines Verbandes | — | Block „Wertungsreferent" unter der Rangliste |
+
+Jede Angabe trägt ihre Herkunft: **API** (von nu geliefert) oder **Lokal** (aus
+„Referenten"). Regeln:
+
+- Liefert nu keinen Referenten, steht der lokale da.
+- Liefert nu einen, der mit keinem lokalen übereinstimmt, steht der lokale
+  zusätzlich darunter. Übereinstimmend heißt: dieselbe E-Mail-Adresse oder
+  derselbe Vor- und Nachname.
+- nu liefert nur bei Turnieren einen Referenten; bei Spielern, Vereinen und
+  Verbänden ist die Angabe deshalb immer „Lokal".
+
+**Reklamationen** gehen an den Auswerter von nu; nennt nu keinen, an die
+lokalen Referenten, ohne beide an den DSB-Admin. Bei Karteikarte und Verein
+gehen sie an die lokalen Referenten statt wie bisher an den Admin.
 
 Die Zuständigkeit wird **nur hier** gepflegt. Das Feld „Wertungsreferent" der
 Adressverwaltung wird nicht gelesen.
@@ -96,6 +127,19 @@ Umstellen auf schachbund.de:
 Das Modul **Wertungsreferenten** (Gliederung mit Einrückung, Linkleiste des
 Wertungsportals) bleibt für den Bereich des Wertungsportals bestehen.
 
+## Frontend-Modul „Wertungsreferenten (Baum)" (ab 1.53.0)
+
+Die Verbände als verschachtelte Liste: Landesverbände, darunter ihre Bezirke,
+darunter deren Untergliederungen. Der DSB (`00000`) wird weggelassen. Je
+Verband stehen **Kennziffer und Name**, je Referent nur **Vor- und Nachname**
+und die **E-Mail-Adressen** (die Funktions-E-Mail zuerst). Anschrift und
+Telefon erscheinen hier nicht.
+
+Aufgeführt sind Verbände mit veröffentlichten Referenten und ihre
+übergeordneten Ebenen, damit der Baum zusammenhängt. Einstellungen im Modul wie
+bei der Tabelle (Überschrift, geschützt, CSS-ID/Klasse); die Liste trägt die
+Klasse `wp-referentenbaum`, jede tiefere Ebene rückt mit einer feinen Linie ein.
+
 ## Geschichte
 
 - 1.51.0: Zuordnung einer Adresse; Name und Kontakt aus der Adresse, eigene
@@ -106,3 +150,7 @@ Wertungsportals) bleibt für den Bereich des Wertungsportals bestehen.
   E-Mail des Referenten ist jetzt die Funktions-E-Mail. Der Übernahme-Knopf
   ist entfernt, weil das Adressen-Bundle das Feld „Wertungsreferent" verliert.
   Neues Modul „Wertungsreferenten (Tabelle)".
+- 1.53.0: Zuständiger Referent bei Karteikarte, Verein, Verband und Turnier mit
+  Herkunft (API/Lokal); Modul „Wertungsreferenten (Baum)"; 00000 heißt immer
+  „Deutscher Schachbund"; Veröffentlichen-Knopf in der Liste; Zwischenstufe der
+  Verbandskette für Bayern und Sachsen.

@@ -53,7 +53,9 @@
 							<?php
 								// Teiltemplate einbinden — dieselbe Darstellung
 								// wie unter der Verbandsrangliste
-								$objTeil = new \FrontendTemplate('wertungsportal_sub_referenten');
+								// \Contao\FrontendTemplate — den globalen Namen
+								// gibt es in Contao 5 nicht mehr
+								$objTeil = new \Contao\FrontendTemplate('wertungsportal_sub_referenten');
 								$objTeil->referenten = $d['referenten'];
 								echo $objTeil->parse();
 							?>

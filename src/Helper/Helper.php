@@ -1361,6 +1361,14 @@ class Helper extends \Contao\Frontend
 	 * Ist für die Kennziffer selbst niemand eingetragen, gilt der nächste
 	 * darüber.
 	 *
+	 * Seit 1.53.0 mit Zwischenstufe (erste zwei Stellen + 000): Bayern und
+	 * Sachsen gliedern eine Ebene tiefer — unter dem Bezirk Schwaben (27000)
+	 * liegt der Kreis Augsburg (27100), unter dem Bezirk Leipzig (F1000) die
+	 * Stadt Leipzig (F1500). Vorher sprang die Kette von 27100 direkt zu
+	 * 20000, und der Bezirksreferent wurde nie gefunden. In den übrigen
+	 * Landesverbänden fällt die Zwischenstufe mit dem Landesverband zusammen
+	 * (10000) und verschwindet als Wiederholung.
+	 *
 	 * @param  string $vkz Kennziffer, ganz oder verkürzt
 	 * @return array       Kennziffern von unten nach oben, ohne Wiederholungen
 	 */
@@ -1371,7 +1379,8 @@ class Helper extends \Contao\Frontend
 
 		if(strlen($vkz) === 5)
 		{
-			$kette[] = substr($vkz, 0, 3).'00';   // Bezirk
+			$kette[] = substr($vkz, 0, 3).'00';   // Bezirk (in Bayern/Sachsen: Kreis)
+			$kette[] = substr($vkz, 0, 2).'000';  // Bezirk in Bayern/Sachsen
 			$kette[] = substr($vkz, 0, 1).'0000'; // Landesverband
 		}
 

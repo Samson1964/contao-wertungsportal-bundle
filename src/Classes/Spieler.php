@@ -284,10 +284,13 @@ class Spieler extends \Contao\Module
 				$this->Template->fide_nation  = $kartei->FideNation;
 				$this->Template->historie     = $kartei->Historie;
 				$this->Template->vereine      = $kartei->Vereine;
-				$this->Template->referent     = $kartei->Referent;
+				// Zuständiger Wertungsreferent (ab 1.53.0): nu liefert bei Spielern
+				// keinen, also der aus „Referenten" über den Verein (Lokal)
+				$zustaendig = \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::lokal((string) $kartei->ReferentVkz);
+				$this->Template->referent     = \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::html($zustaendig) ?: $kartei->Referent;
 
-				// Reklamation neben dem (leeren) Wertungsreferenten — an den DSB-Admin
-				$this->Template->reklamation  = $gesperrt ? '' : \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerKarteikarte((string) $kartei->Titelname, (string) $id, (string) \Contao\Environment::get('uri')));
+				// Reklamation neben dem Wertungsreferenten — an ihn, ohne ihn an den DSB-Admin
+				$this->Template->reklamation  = $gesperrt ? '' : \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerKarteikarte((string) $kartei->Titelname, (string) $id, (string) \Contao\Environment::get('uri'), \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::empfaenger($zustaendig)));
 				$this->Template->kartei       = $kartei->Kartei;
 				$this->Template->diagramm     = $kartei->Diagramm;
 				$this->Template->diagrammKomplett = $kartei->DiagrammKomplett;

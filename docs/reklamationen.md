@@ -10,11 +10,11 @@ außerdem im Backend-Modul **Wertungsportal → Reklamationen**.
 
 | Ansicht | Stelle | Empfänger |
 |---|---|---|
-| Turnierauswertung | neben dem Auswerter im Turnierkopf | der Auswerter |
-| Ergebnisliste | neben dem Auswerter | der Auswerter |
-| Spielberichtsbogen | neben dem Auswerter | der Auswerter |
-| DWZ-Karteikarte | neben „Zuständiger Wertungsreferent" | DSB-Admin |
-| DWZ-Liste eines Vereins | unter dem Vereinskopf | DSB-Admin |
+| Turnierauswertung | neben dem Auswerter im Turnierkopf | der Auswerter von nu, sonst die lokalen Referenten des Turnierverbandes |
+| Ergebnisliste | neben dem Auswerter | wie Turnierauswertung |
+| Spielberichtsbogen | neben dem Auswerter | wie Turnierauswertung |
+| DWZ-Karteikarte | neben „Zuständiger Wertungsreferent" | die lokalen Referenten des Vereinsverbandes (ab 1.53.0) |
+| DWZ-Liste eines Vereins | unter dem Vereinskopf | die lokalen Referenten des Vereinsverbandes (ab 1.53.0) |
 | Rangliste eines Verbandes | unter der Rangliste | die zuständigen Referenten aus **Wertungsportal → Referenten**, sonst DSB-Admin |
 | Spieler-, Vereins- und Turniersuche | unter der Trefferliste | DSB-Admin |
 
@@ -44,12 +44,15 @@ Der Link erscheint nur,
 | Feld | Bedeutung |
 |---|---|
 | E-Mail-Adresse des DSB-Admins | Bekommt jede Reklamation als Blindkopie und ist Empfänger, wo kein Referent genannt ist. **Ohne Eintrag erscheint der Link nirgends.** |
-| Name des DSB-Admins | Erscheint in Anrede und Empfängerzeile. Ohne Eintrag der Absendername. |
+| Name des DSB-Admins | Erscheint in Anrede und Empfängerzeile. Ohne Eintrag der Absendername der Reklamationen. |
+| Absenderadresse der Reklamationen | Von dieser Adresse gehen die Reklamationen aus (ab 1.53.0). Ohne Eintrag die Adresse unter **E-Mail-Versand**. |
+| Absendername der Reklamationen | Name, der als Absender erscheint, etwa „DSB \| Reklamation DWZ". Ohne Eintrag der Name unter **E-Mail-Versand**. |
 
-Absender der Nachrichten ist die Adresse unter **E-Mail-Versand →
-Absenderadresse** — dieselbe wie bei der Schlüssel-E-Mail der
-Vereinslisten-Schnittstelle. Sie muß zur Domain der Website passen, sonst
-stufen viele Postfächer die Nachricht als Fälschung ein.
+Ohne eigene Angaben kommen die Reklamationen vom Absender unter **E-Mail-Versand**
+— dem der Schlüssel-E-Mail der Vereinslisten-Schnittstelle, der etwa „DSB |
+Registrierung DWZ-Abfrage" heißt. Jedes Feld fällt einzeln zurück. Die Adresse
+muß zur Domain der Website passen, sonst stufen viele Postfächer die Nachricht
+als Fälschung ein.
 
 Nach dem Einspielen:
 
@@ -61,7 +64,7 @@ Nach dem Einspielen:
 
 | Kopffeld | Inhalt |
 |---|---|
-| Von | Absenderadresse der Bundle-E-Mails |
+| Von | Absender der Reklamationen (siehe Einrichten) |
 | An | Wertungsreferent bzw. DSB-Admin |
 | Bcc | DSB-Admin — außer er ist selbst Empfänger |
 | Antwort an | das Mitglied, mit der Adresse aus seinem Konto |
