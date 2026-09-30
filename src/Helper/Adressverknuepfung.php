@@ -7,23 +7,29 @@ namespace Schachbulle\ContaoWertungsportalBundle\Helper;
 /**
  * Verbindet die Wertungsreferenten mit der Adressverwaltung (ab 1.51.0).
  *
- * Ein Referent in tl_wertungsportal_referenten kann einem Datensatz aus
- * tl_adressen zugeordnet werden (Paket schachbulle/contao-adressen-bundle).
- * Dann liefert die Adresse Name, E-Mail, Telefon und Anschrift — bei jeder
- * Ausgabe frisch, damit nichts doppelt gepflegt wird. Die eigenen Felder des
- * Referenten springen nur ein, wo die Adresse nichts liefert.
+ * Ein Referent in tl_wertungsportal_referenten wird einem Datensatz aus
+ * tl_adressen zugeordnet (Paket schachbulle/contao-adressen-bundle). Seit
+ * 1.52.0 kommen die Kontaktdaten AUSSCHLIESSLICH von dort: Anschrift, alle
+ * Telefonnummern und alle E-Mail-Adressen der Adresse, jeweils nur, soweit
+ * die Sichtbarkeitsschalter der Adressverwaltung sie freigeben. Das
+ * Adressen-Bundle ist damit die einzige Quelle für Kontaktdaten.
  *
- * Die Zuständigkeit (welche Verbände) wird dagegen NUR im Wertungsportal
- * gepflegt. Das Feld tl_adressen.wertungsreferent samt Frontend-Modul des
- * Adressen-Bundles ist veraltet (Frank, 30.09.2026) und wird nur einmal
- * gelesen: bei der Übernahme über uebernahmeplan().
+ * Eigene Angaben des Referenten sind nur noch Name, nu-ID und eine
+ * Funktions-E-Mail des Wertungsreferats (etwa dwz@verband.de). Sie steht in
+ * den Ausgaben vor den E-Mail-Adressen der Adresse und empfängt die
+ * Reklamationen. Die alten Spalten telefon, strasse, plz und ort stehen noch
+ * in der Tabelle, werden aber nirgends mehr ausgegeben.
+ *
+ * Die Zuständigkeit (welche Verbände) wird nur im Wertungsportal gepflegt;
+ * das Feld tl_adressen.wertungsreferent wird nicht gelesen.
  *
  * Das Adressen-Bundle ist KEINE Abhängigkeit. Fehlt es, bleibt das Feld aus
- * der Eingabemaske, und alles läuft wie vorher mit den eigenen Feldern.
+ * der Eingabemaske, und die Referenten erscheinen mit Name und
+ * Funktions-E-Mail.
  *
- * Aufteilung: zusammenfuehren(), aktiv(), name() und uebernahmeplan() kommen
- * ohne Contao aus und sind in tests/Helper/AdressverknuepfungTest.php
- * geprüft; verfuegbar(), lade() und auswahl() lesen aus Contao.
+ * Aufteilung: zusammenfuehren(), aktiv(), name() und ohneLeere() kommen ohne
+ * Contao aus und sind in tests/Helper/AdressverknuepfungTest.php geprüft;
+ * verfuegbar(), lade() und auswahl() lesen aus Contao.
  */
 class Adressverknuepfung
 {
@@ -36,7 +42,8 @@ class Adressverknuepfung
 	 * Spalten, die aus tl_adressen gelesen werden.
 	 *
 	 * Bewusst nicht SELECT *: Die Tabelle hat Textfelder und ein Bild, und
-	 * Contaos Database\Result behält jede Zeile im Speicher.
+	 * Contaos Database\Result behält jede Zeile im Speicher. Wer im
+	 * Adressen-Bundle eine dieser Spalten umbenennt, muss sie hier nachziehen.
 	 */
 	public const SPALTEN = 'id, nachname, vorname, titel, firma, plz, ort, ort_view, strasse, strasse_view,'
 		.' telefon1, telefon2, telefon3, telefon4, telefon_view,'
@@ -63,45 +70,53 @@ class Adressverknuepfung
 	/**
 	 * Legt die Daten einer Adresse über einen Referenten.
 	 *
-	 * Regeln, Feld für Feld:
+	 * Das Ergebnis enthält die Kontaktdaten NUR aus der Adresse — die alten
+	 * Spalten des Referenten (telefon, strasse, plz, ort) werden überschrieben,
+	 * auch wenn keine Adresse zugeordnet ist, damit sie nirgends mehr
+	 * durchsickern. Regeln im Einzelnen:
 	 *
-	 * - **Nicht aktiv** (Häkchen „aktiv" in der Adressverwaltung fehlt) oder
-	 *   keine Adresse: Es bleibt alles, wie es im Referenten steht.
-	 * - **Name**: aus der Adresse, sofern dort ein Nachname steht; der Titel
-	 *   kommt dazu (Feld `titel`).
-	 * - **E-Mail, Telefon, Anschrift**: aus der Adresse, sofern dort etwas
-	 *   steht. Ist ein Wert in der Adressverwaltung als nicht öffentlich
-	 *   markiert (`email_view`, `telefon_view`, `ort_view`, `strasse_view`),
-	 *   bleibt er in der Ausgabe LEER — auch wenn im Referenten selbst etwas
-	 *   stünde. Wer seine Nummer dort verbirgt, soll sie nicht über einen
-	 *   Umweg doch veröffentlicht finden. Die eigenen Felder springen also nur
-	 *   ein, wo die Adresse gar nichts hat.
-	 * - **Versandadresse** (`versandadresse`): die erste E-Mail-Adresse der
-	 *   Adresse, auch eine nicht öffentliche. Sie dient nur dem Versand von
-	 *   Reklamationen (Helper\Reklamation) und erscheint nirgends auf der
-	 *   Seite; der Referent erfährt so von der Reklamation, ohne daß seine
-	 *   Adresse veröffentlicht wird.
-	 * - **Anschrift** (Straße, PLZ, Ort) als Ganzes: Hat die Adresse irgendeinen
-	 *   Teil davon, kommen alle drei von dort, damit sich keine Anschrift aus
-	 *   zwei Quellen zusammensetzt. Die Straße erscheint nur, wenn auch PLZ
-	 *   und Ort öffentlich sind — wie im Adressen-Bundle
+	 * - **Name**: aus der aktiven Adresse samt Titel, sofern dort ein Nachname
+	 *   steht; sonst der eigene Name des Referenten.
+	 * - **E-Mail-Adressen** (`emails`): zuerst die Funktions-E-Mail des
+	 *   Referenten (Spalte `email`), danach alle belegten E-Mail-Adressen der
+	 *   Adresse (email1…email6) — diese nur, wenn `email_view` sie freigibt.
+	 *   Doppelte fallen heraus, Groß- und Kleinschreibung zählt dabei nicht.
+	 * - **Telefonnummern** (`telefone`): alle belegten (telefon1…telefon4),
+	 *   nur wenn `telefon_view` sie freigibt.
+	 * - **Anschrift**: PLZ und Ort nur mit `ort_view`, die Straße nur, wenn
+	 *   zusätzlich `strasse_view` gesetzt ist — wie im Adressen-Bundle
 	 *   (Adressdaten::anschrift).
+	 * - **Versandadresse** (`versandadresse`, für Reklamationen): die
+	 *   Funktions-E-Mail; ohne sie die erste E-Mail-Adresse der Adresse, auch
+	 *   eine nicht öffentliche. Sie erscheint nirgends auf der Seite.
+	 * - **Inaktive oder fehlende Adresse**: keine Kontaktdaten außer der
+	 *   Funktions-E-Mail; der Name bleibt der eigene.
 	 *
 	 * @param array<string,mixed>      $referent Zeile aus tl_wertungsportal_referenten
 	 * @param array<string,mixed>|null $adresse  Zeile aus tl_adressen (Spalten wie
 	 *                                           SPALTEN) oder null
 	 *
-	 * @return array<string,mixed> Der Referent mit überlagerten Feldern, dazu
-	 *                             `titel`, `versandadresse` und
-	 *                             `ausAdressverwaltung` (true, wenn eine aktive
-	 *                             Adresse eingeflossen ist)
+	 * @return array<string,mixed> Der Referent mit `titel`, `emails` (Liste),
+	 *                             `telefone` (Liste), `strasse`, `plz`, `ort`,
+	 *                             `versandadresse` und `ausAdressverwaltung`
+	 *                             (true, wenn eine aktive Adresse eingeflossen ist)
 	 */
 	public static function zusammenfuehren(array $referent, ?array $adresse): array
 	{
+		$funktion = trim((string) ($referent['email'] ?? ''));
+
 		$ergebnis = $referent;
 		$ergebnis['titel'] = '';
-		$ergebnis['versandadresse'] = trim((string) ($referent['email'] ?? ''));
+		$ergebnis['emails'] = '' !== $funktion ? array($funktion) : array();
+		$ergebnis['telefone'] = array();
+		$ergebnis['strasse'] = '';
+		$ergebnis['plz'] = '';
+		$ergebnis['ort'] = '';
+		$ergebnis['versandadresse'] = $funktion;
 		$ergebnis['ausAdressverwaltung'] = false;
+
+		// Die alte Einzelspalte gibt es als Ausgabe nicht mehr
+		unset($ergebnis['telefon']);
 
 		if (null === $adresse || !self::aktiv($adresse)) {
 			return $ergebnis;
@@ -115,26 +130,27 @@ class Adressverknuepfung
 			$ergebnis['titel'] = self::wert($adresse, 'titel');
 		}
 
-		$email = self::erster($adresse, 'email', 6);
+		$mails = self::alle($adresse, 'email', 6);
 
-		if ('' !== $email) {
-			$ergebnis['versandadresse'] = $email;
-			$ergebnis['email'] = self::oeffentlich($adresse, 'email_view') ? $email : '';
+		if (self::oeffentlich($adresse, 'email_view')) {
+			$ergebnis['emails'] = self::ohneDoppelte(array_merge($ergebnis['emails'], $mails));
 		}
 
-		$telefon = self::erster($adresse, 'telefon', 4);
-
-		if ('' !== $telefon) {
-			$ergebnis['telefon'] = self::oeffentlich($adresse, 'telefon_view') ? $telefon : '';
+		if ('' === $funktion && $mails) {
+			$ergebnis['versandadresse'] = $mails[0];
 		}
 
-		// Die Anschrift kommt als Ganzes aus EINER Quelle — sonst stünde am Ende
-		// die eigene Straße neben der PLZ aus der Adressverwaltung
-		if ('' !== self::wert($adresse, 'plz') || '' !== self::wert($adresse, 'ort') || '' !== self::wert($adresse, 'strasse')) {
-			$ortSichtbar = self::oeffentlich($adresse, 'ort_view');
-			$ergebnis['plz'] = $ortSichtbar ? self::wert($adresse, 'plz') : '';
-			$ergebnis['ort'] = $ortSichtbar ? self::wert($adresse, 'ort') : '';
-			$ergebnis['strasse'] = $ortSichtbar && self::oeffentlich($adresse, 'strasse_view') ? self::wert($adresse, 'strasse') : '';
+		if (self::oeffentlich($adresse, 'telefon_view')) {
+			$ergebnis['telefone'] = self::alle($adresse, 'telefon', 4);
+		}
+
+		if (self::oeffentlich($adresse, 'ort_view')) {
+			$ergebnis['plz'] = self::wert($adresse, 'plz');
+			$ergebnis['ort'] = self::wert($adresse, 'ort');
+
+			if (self::oeffentlich($adresse, 'strasse_view')) {
+				$ergebnis['strasse'] = self::wert($adresse, 'strasse');
+			}
 		}
 
 		return $ergebnis;
@@ -160,7 +176,7 @@ class Adressverknuepfung
 	}
 
 	/**
-	 * Bildet den Anzeigenamen einer Adresse für Auswahllisten und Meldungen.
+	 * Bildet den Anzeigenamen einer Adresse für Auswahllisten.
 	 *
 	 * „Nachname, Vorname"; ohne Nachnamen die Firma, ohne beides „Adresse
 	 * {ID}", damit keine leere Zeile in der Liste steht.
@@ -178,131 +194,6 @@ class Adressverknuepfung
 		}
 
 		return '' !== $name ? $name : 'Adresse '.(int) ($adresse['id'] ?? 0);
-	}
-
-	/**
-	 * Plant die einmalige Übernahme der Wertungsreferenten aus der
-	 * Adressverwaltung.
-	 *
-	 * Grundlage ist das (veraltete) Feld tl_adressen.wertungsreferent, eine
-	 * serialisierte Liste von Verbandsschlüsseln. Diese Schlüssel sind — bis
-	 * auf wenige Ausnahmen — genau die Kennziffern von nu; übernommen wird
-	 * nur, was unter den bekannten Verbänden steht.
-	 *
-	 * Regeln:
-	 * - Inaktive Adressen und solche ohne Verband bleiben außen vor.
-	 * - Eine Adresse, die schon einem Referenten zugeordnet ist, wird nicht
-	 *   noch einmal angelegt — ein zweiter Lauf verdoppelt nichts. An
-	 *   bestehenden Referenten ändert die Übernahme nichts.
-	 * - Schlüssel, die es im Wertungsportal nicht gibt, werden gezählt und
-	 *   gemeldet. Bleibt einer Person dadurch kein Verband, landet sie unter
-	 *   `ohneVerband` — sie muss von Hand zugeordnet werden.
-	 *
-	 * @param array<int,array<string,mixed>> $adressen   Zeilen aus tl_adressen mit id, nachname,
-	 *                                                   vorname, firma, aktiv, wertungsreferent
-	 * @param array<int|string,string>       $verbaende  Bekannte Verbände: Kennziffer => Bezeichnung
-	 *                                                   (rein numerische Kennziffern macht PHP zu
-	 *                                                   Ganzzahlschlüsseln; isset() findet sie trotzdem)
-	 * @param array<int,int|string>          $verknuepft IDs von Adressen, die schon einem
-	 *                                                   Referenten zugeordnet sind
-	 *
-	 * @return array{neu: list<array{adresse:int,name:string,nachname:string,vorname:string,verbaende:list<string>,unbekannt:list<string>}>,
-	 *               vorhanden: list<array{adresse:int,name:string}>,
-	 *               ohneVerband: list<array{adresse:int,name:string,unbekannt:list<string>}>,
-	 *               inaktiv: int,
-	 *               unbekannt: array<string,int>}
-	 *               `unbekannt` zählt je nicht passendem Schlüssel die Personen
-	 */
-	public static function uebernahmeplan(array $adressen, array $verbaende, array $verknuepft): array
-	{
-		$plan = array('neu' => array(), 'vorhanden' => array(), 'ohneVerband' => array(), 'inaktiv' => 0, 'unbekannt' => array());
-		$verknuepft = array_flip(array_map('intval', $verknuepft));
-
-		foreach ($adressen as $adresse) {
-			$schluessel = self::schluessel($adresse['wertungsreferent'] ?? null);
-
-			if (!$schluessel) {
-				continue;
-			}
-
-			if (!self::aktiv($adresse)) {
-				++$plan['inaktiv'];
-
-				continue;
-			}
-
-			$id = (int) ($adresse['id'] ?? 0);
-			$name = self::name($adresse);
-
-			if (isset($verknuepft[$id])) {
-				$plan['vorhanden'][] = array('adresse' => $id, 'name' => $name);
-
-				continue;
-			}
-
-			$passend = array();
-			$unbekannt = array();
-
-			foreach ($schluessel as $vkz) {
-				if (isset($verbaende[$vkz])) {
-					$passend[] = $vkz;
-				} else {
-					$unbekannt[] = $vkz;
-					$plan['unbekannt'][$vkz] = ($plan['unbekannt'][$vkz] ?? 0) + 1;
-				}
-			}
-
-			if (!$passend) {
-				$plan['ohneVerband'][] = array('adresse' => $id, 'name' => $name, 'unbekannt' => $unbekannt);
-
-				continue;
-			}
-
-			$plan['neu'][] = array(
-				'adresse'   => $id,
-				'name'      => $name,
-				// Für Sortierung und Suche der Backend-Liste; ausgegeben wird der
-				// Name ohnehin aus der Adresse
-				'nachname'  => '' !== self::wert($adresse, 'nachname') ? self::wert($adresse, 'nachname') : $name,
-				'vorname'   => self::wert($adresse, 'vorname'),
-				'verbaende' => $passend,
-				'unbekannt' => $unbekannt,
-			);
-		}
-
-		ksort($plan['unbekannt'], SORT_STRING);
-
-		return $plan;
-	}
-
-	/**
-	 * Liest die Verbandsschlüssel aus tl_adressen.wertungsreferent.
-	 *
-	 * Das Feld ist eine serialisierte Liste (checkboxWizard), kann aber auch
-	 * NULL, leer oder kaputt sein. Objekte werden beim Entpacken nie erzeugt.
-	 *
-	 * @param mixed $wert Rohwert aus der Datenbank
-	 *
-	 * @return list<string> Schlüssel ohne leere und doppelte Einträge, als
-	 *                      Zeichenketten (führende Nullen bleiben erhalten)
-	 */
-	protected static function schluessel($wert): array
-	{
-		if (!is_string($wert) || '' === $wert) {
-			return array();
-		}
-
-		$liste = @unserialize($wert, array('allowed_classes' => false));
-
-		if (!is_array($liste)) {
-			return array();
-		}
-
-		$liste = array_map(static function ($eintrag): string {
-			return trim((string) $eintrag);
-		}, array_filter($liste, 'is_scalar'));
-
-		return array_values(array_unique(self::ohneLeere($liste)));
 	}
 
 	/**
@@ -325,26 +216,49 @@ class Adressverknuepfung
 	}
 
 	/**
-	 * Liefert den ersten nicht leeren Wert einer Feldreihe (email1…email6,
-	 * telefon1…telefon4).
+	 * Liefert alle belegten Werte einer Feldreihe (email1…email6,
+	 * telefon1…telefon4) in ihrer Reihenfolge.
 	 *
 	 * @param array<string,mixed> $adresse Zeile aus tl_adressen
 	 * @param string              $praefix Feldname ohne Nummer
 	 * @param int                 $anzahl  Anzahl der Felder
 	 *
-	 * @return string Wert, '' wenn alle leer sind
+	 * @return list<string> Werte ohne leere und doppelte, leer wenn alle leer sind
 	 */
-	protected static function erster(array $adresse, string $praefix, int $anzahl): string
+	protected static function alle(array $adresse, string $praefix, int $anzahl): array
 	{
-		for ($i = 1; $i <= $anzahl; ++$i) {
-			$wert = self::wert($adresse, $praefix.$i);
+		$werte = array();
 
-			if ('' !== $wert) {
-				return $wert;
+		for ($i = 1; $i <= $anzahl; ++$i) {
+			$werte[] = self::wert($adresse, $praefix.$i);
+		}
+
+		return self::ohneDoppelte(self::ohneLeere($werte));
+	}
+
+	/**
+	 * Entfernt Doppelte aus einer Liste, ohne Groß- und Kleinschreibung zu
+	 * unterscheiden; der erste Eintrag bleibt stehen.
+	 *
+	 * @param array<int|string,string> $liste Zeichenketten
+	 *
+	 * @return list<string> Liste ohne Doppelte, neu durchnummeriert
+	 */
+	protected static function ohneDoppelte(array $liste): array
+	{
+		$gesehen = array();
+		$ergebnis = array();
+
+		foreach ($liste as $eintrag) {
+			$schluessel = mb_strtolower($eintrag);
+
+			if (!isset($gesehen[$schluessel])) {
+				$gesehen[$schluessel] = true;
+				$ergebnis[] = $eintrag;
 			}
 		}
 
-		return '';
+		return $ergebnis;
 	}
 
 	/**
@@ -413,7 +327,7 @@ class Adressverknuepfung
 	 *
 	 * Eine Abfrage für alle noch nicht bekannten IDs; auch „gibt es nicht"
 	 * wird gemerkt. Fehlt das Bundle oder die Tabelle, kommt eine leere Liste
-	 * zurück — die Referenten laufen dann mit ihren eigenen Feldern.
+	 * zurück — die Referenten erscheinen dann mit Name und Funktions-E-Mail.
 	 *
 	 * @param array<int,int|string> $ids IDs aus tl_wertungsportal_referenten.adresse;
 	 *                                   0 und Doppelte werden übergangen

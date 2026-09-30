@@ -1,0 +1,71 @@
+<?php
+/**
+ * Frontend-Modul: Wertungsreferenten als Tabelle (ab 1.52.0)
+ *
+ * Ersatz für das Modul „Wertungsreferenten" der Adressverwaltung: je Verband
+ * (nach Kennziffer) die veröffentlichten Referenten mit Name und Kontakt.
+ * Kontakt = Funktions-E-Mail des Referats, danach die öffentlichen E-Mail-
+ * Adressen, die Anschrift und die Telefonnummern der zugeordneten Adresse.
+ * Die E-Mail-Adressen kommen als verschleierte Links aus Referentenbaum und
+ * werden OHNE weiteres Maskieren ausgegeben.
+ *
+ * Mehrere Referenten eines Verbandes stehen in eigenen Zeilen; die Zelle mit
+ * dem Verband reicht über alle (rowspan). Die Zebrastreifen wechseln je
+ * Verband, nicht je Zeile.
+ */
+$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/default.css';
+$e = static function ($wert) {
+	return \Contao\StringUtil::specialchars((string) $wert);
+};
+?>
+<!-- indexer::stop -->
+<div class="<?= $this->class ?> block"<?= $this->cssID ?><?php if($this->style): ?> style="<?= $this->style ?>"<?php endif; ?>>
+
+	<?php if($this->headline): ?>
+		<<?= $this->hl ?>><?= $this->headline ?></<?= $this->hl ?>>
+	<?php endif; ?>
+
+	<?php if(!$this->zeilen): ?>
+
+		<p class="wp-hinweis">Es sind noch keine Wertungsreferenten hinterlegt.</p>
+
+	<?php else: ?>
+
+		<table class="ce_table wp-referententabelle">
+			<thead>
+				<tr>
+					<th>Verband/Bezirk</th>
+					<th>Referent</th>
+					<th>Kontakt</th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach($this->zeilen as $i => $z): ?>
+					<?php $anzahl = count($z['referenten']); ?>
+					<?php foreach($z['referenten'] as $j => $r): ?>
+						<tr class="<?= ($i % 2) ? 'even' : 'odd' ?> <?= $e($z['ebene']) ?>">
+							<?php if($j === 0): ?>
+								<td class="wp-verband"<?= $anzahl > 1 ? ' rowspan="'.$anzahl.'"' : '' ?>><?= $e($z['name']) ?></td>
+							<?php endif; ?>
+							<td class="wp-referent-name"><?= $e($r['name']) ?></td>
+							<td class="wp-referent-kontakt">
+								<?php foreach($r['emails'] as $email): ?>
+									<span class="wp-referent-email"><?= $email ?></span>
+								<?php endforeach; ?>
+								<?php if($r['strasse'] || $r['plz'] || $r['ort']): ?>
+									<span class="wp-referent-adresse"><?= $e(trim($r['strasse'].', '.trim($r['plz'].' '.$r['ort']), ', ')) ?></span>
+								<?php endif; ?>
+								<?php if($r['telefone']): ?>
+									<span class="wp-referent-telefon">Telefon: <?= $e(implode(', ', $r['telefone'])) ?></span>
+								<?php endif; ?>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+
+	<?php endif; ?>
+
+</div>
+<!-- indexer::continue -->

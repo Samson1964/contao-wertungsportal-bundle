@@ -10,16 +10,22 @@ use Schachbulle\ContaoWertungsportalBundle\Helper\Adressverknuepfung;
 /**
  * Tabelle tl_wertungsportal_referenten
  *
- * Die Wertungsreferenten der Verbände mit Anschrift und Zuständigkeit. Die
- * Auswahl der Verbände wird nicht gepflegt, sondern aus dem Vereinsbestand
- * gelesen (Referenten::getVerbaende) — eine Umgliederung bei nu wandert damit
- * von selbst in die Liste.
+ * Die Wertungsreferenten der Verbände mit Zuständigkeit. Die Auswahl der
+ * Verbände wird nicht gepflegt, sondern aus dem Vereinsbestand gelesen
+ * (Referenten::getVerbaende) — eine Umgliederung bei nu wandert damit von
+ * selbst in die Liste.
  *
- * Ab 1.51.0 kann ein Referent einer Adresse aus der Adressverwaltung
- * (schachbulle/contao-adressen-bundle) zugeordnet werden; dann kommen Name und
- * Kontaktdaten von dort (Helper\Adressverknuepfung). Feld und Übernahme-Knopf
- * erscheinen nur, wenn das Bundle installiert ist — die Spalte gibt es immer,
- * damit das Datenbankschema nicht vom Paketbestand abhängt.
+ * Kontaktdaten kommen seit 1.52.0 nur noch aus der zugeordneten Adresse der
+ * Adressverwaltung (schachbulle/contao-adressen-bundle, Helper\
+ * Adressverknuepfung). Eigene Angaben sind Name, nu-ID und die
+ * Funktions-E-Mail des Referats. Das Feld „Adresse" erscheint nur, wenn das
+ * Bundle installiert ist — die Spalte gibt es immer, damit das
+ * Datenbankschema nicht vom Paketbestand abhängt.
+ *
+ * Die früheren Felder telefon, strasse, plz und ort stehen unten nur noch als
+ * Spalte (ohne Eingabe, ohne Anzeige). Ganz entfernt, schlüge contao:migrate
+ * sie zum Löschen vor — und ein interaktiver Lauf führt DROP-Anweisungen nach
+ * der Bestätigung mit aus. Die Spalten und ihre Daten sollen aber bleiben.
  */
 $GLOBALS['TL_DCA']['tl_wertungsportal_referenten'] = [
     'config' => [
@@ -88,7 +94,7 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_referenten'] = [
 
     'palettes' => [
         '__selector__' => [],
-        'default'      => '{person_legend},nachname,vorname,nuId;{kontakt_legend},email,telefon;{adresse_legend},strasse,plz,ort;{verband_legend},verbaende;{published_legend},published',
+        'default'      => '{person_legend},nachname,vorname,nuId;{kontakt_legend},email;{verband_legend},verbaende;{published_legend},published',
     ],
 
     'fields' => [
@@ -106,7 +112,7 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_referenten'] = [
             'wizard'           => [
                 [Referenten::class, 'adresseBearbeiten'],
             ],
-            'eval'             => ['includeBlankOption' => true, 'blankOptionLabel' => '– keine, nur die Angaben unten –', 'chosen' => true, 'tl_class' => 'w50 wizard'],
+            'eval'             => ['includeBlankOption' => true, 'blankOptionLabel' => '– keine Adresse: nur Name und Funktions-E-Mail –', 'chosen' => true, 'tl_class' => 'w50 wizard'],
             'sql'              => "int(10) unsigned NOT NULL default 0",
         ],
         'nachname' => [
@@ -137,6 +143,9 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_referenten'] = [
             'eval'      => ['maxlength' => 32, 'tl_class' => 'w50 clr'],
             'sql'       => "varchar(32) NOT NULL default ''",
         ],
+        // Funktions-E-Mail des Referats (z. B. dwz@verband.de): steht in den
+        // Ausgaben vor den E-Mail-Adressen der Adresse und empfängt die
+        // Reklamationen (Adressverknuepfung::zusammenfuehren)
         'email' => [
             'label'     => &$GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['email'],
             'exclude'   => true,
@@ -145,37 +154,23 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_referenten'] = [
             'eval'      => ['rgxp' => 'email', 'maxlength' => 255, 'decodeEntities' => true, 'tl_class' => 'w50'],
             'sql'       => "varchar(255) NOT NULL default ''",
         ],
+        // Seit 1.52.0 nur noch Spalten, siehe Kopfkommentar. doNotShow hält
+        // die alten Werte auch aus der Detailansicht (act=show) heraus
         'telefon' => [
-            'label'     => &$GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['telefon'],
-            'exclude'   => true,
-            'search'    => true,
-            'inputType' => 'text',
-            'eval'      => ['rgxp' => 'phone', 'maxlength' => 64, 'tl_class' => 'w50'],
-            'sql'       => "varchar(64) NOT NULL default ''",
+            'eval' => ['doNotShow' => true],
+            'sql'  => "varchar(64) NOT NULL default ''",
         ],
         'strasse' => [
-            'label'     => &$GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['strasse'],
-            'exclude'   => true,
-            'search'    => true,
-            'inputType' => 'text',
-            'eval'      => ['maxlength' => 255, 'tl_class' => 'w50'],
-            'sql'       => "varchar(255) NOT NULL default ''",
+            'eval' => ['doNotShow' => true],
+            'sql'  => "varchar(255) NOT NULL default ''",
         ],
         'plz' => [
-            'label'     => &$GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['plz'],
-            'exclude'   => true,
-            'search'    => true,
-            'inputType' => 'text',
-            'eval'      => ['maxlength' => 16, 'tl_class' => 'w50'],
-            'sql'       => "varchar(16) NOT NULL default ''",
+            'eval' => ['doNotShow' => true],
+            'sql'  => "varchar(16) NOT NULL default ''",
         ],
         'ort' => [
-            'label'     => &$GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['ort'],
-            'exclude'   => true,
-            'search'    => true,
-            'inputType' => 'text',
-            'eval'      => ['maxlength' => 128, 'tl_class' => 'w50'],
-            'sql'       => "varchar(128) NOT NULL default ''",
+            'eval' => ['doNotShow' => true],
+            'sql'  => "varchar(128) NOT NULL default ''",
         ],
         'verbaende' => [
             'label'            => &$GLOBALS['TL_LANG']['tl_wertungsportal_referenten']['verbaende'],
@@ -200,20 +195,13 @@ $GLOBALS['TL_DCA']['tl_wertungsportal_referenten'] = [
     ],
 ];
 
-// Mit Adressverwaltung: Feld „Adresse" vor den Namen und der Knopf für die
-// einmalige Übernahme (Classes\Referentenuebernahme)
+// Mit Adressverwaltung: Feld „Adresse" vor den Namen. Den Knopf „Aus der
+// Adressverwaltung übernehmen" (1.51.0) gibt es seit 1.52.0 nicht mehr — das
+// Adressen-Bundle verliert das Feld wertungsreferent, aus dem er las
 if (Adressverknuepfung::verfuegbar()) {
     $GLOBALS['TL_DCA']['tl_wertungsportal_referenten']['palettes']['default'] = str_replace(
         '{person_legend},nachname,',
         '{person_legend},adresse,nachname,',
         $GLOBALS['TL_DCA']['tl_wertungsportal_referenten']['palettes']['default']
     );
-
-    $GLOBALS['TL_DCA']['tl_wertungsportal_referenten']['list']['global_operations'] = [
-        'uebernehmen' => [
-            'href'       => 'key=uebernehmen',
-            'class'      => 'header_theme_import',
-            'attributes' => 'onclick="Backend.getScrollOffset()"',
-        ],
-    ] + $GLOBALS['TL_DCA']['tl_wertungsportal_referenten']['list']['global_operations'];
 }

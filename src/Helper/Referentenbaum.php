@@ -158,28 +158,46 @@ class Referentenbaum
 	/**
 	 * Bereitet einen Referenten für die Ausgabe auf.
 	 *
-	 * Die E-Mail-Adresse wird als fertiger, verschleierter Link geliefert
-	 * (`email`) und daneben als Klartext (`adresse`) für den Versand einer
-	 * Reklamation — die Klartextfassung gehört in kein Template.
+	 * Die Kontaktdaten stammen seit 1.52.0 nur aus der zugeordneten Adresse
+	 * (Adressverknuepfung::zusammenfuehren()); dazu kommt die Funktions-E-Mail
+	 * des Referats, die in `emails` immer vorn steht. Eine Zeile, die noch
+	 * nicht zusammengeführt ist, wird hier ohne Adresse zusammengeführt — so
+	 * können die alten Spalten telefon, strasse, plz und ort auf keinem Weg in
+	 * eine Ausgabe gelangen.
+	 *
+	 * Geliefert werden:
+	 * - `emails`: verschleierte Links, Funktions-E-Mail zuerst; `email` fasst
+	 *   sie mit Komma zusammen (für ältere, angepasste Templates)
+	 * - `telefone`: Nummern als Text; `telefon` fasst sie mit Komma zusammen
+	 * - `strasse`, `plz`, `ort`: Anschrift, leer wenn nicht öffentlich
+	 * - `adresse`: Klartext-Empfänger einer Reklamation — gehört in KEIN
+	 *   Template
 	 *
 	 * Zur Verschleierung:
-	 * StringUtil::encodeEmail wandelt sie in Entities, sodass sie im Quelltext
-	 * nicht als Adresse zu lesen ist. Sammler, die stumpf nach „@" suchen,
-	 * gehen damit leer aus.
+	 * StringUtil::encodeEmail wandelt die Adressen in Entities, sodass sie im
+	 * Quelltext nicht als Adresse zu lesen sind. Sammler, die stumpf nach „@"
+	 * suchen, gehen damit leer aus.
 	 *
-	 * Erwartet wird die Zeile NACH Adressverknuepfung::zusammenfuehren(): Dort
-	 * stehen Titel und Versandadresse, und eine nicht öffentliche Adresse ist
-	 * in `email` schon leer, in `versandadresse` aber noch vorhanden. Eine
-	 * rohe Zeile geht auch — dann gilt die eigene E-Mail für beides.
-	 *
-	 * @param  array $row Datensatz aus tl_wertungsportal_referenten, mit Adresse überlagert
+	 * @param  array $row Datensatz aus tl_wertungsportal_referenten, möglichst
+	 *                    schon mit der Adresse zusammengeführt
 	 * @return array      Aufbereitete Felder für das Template
 	 */
 	protected static function person($row)
 	{
-		$email = trim((string) ($row['email'] ?? ''));
-		$versand = trim((string) ($row['versandadresse'] ?? $email));
+		if(!array_key_exists('ausAdressverwaltung', $row))
+		{
+			$row = Adressverknuepfung::zusammenfuehren($row, null);
+		}
+
 		$teile = array(trim((string) ($row['titel'] ?? '')), trim((string) ($row['vorname'] ?? '')), trim((string) ($row['nachname'] ?? '')));
+		$emails = array();
+
+		foreach((array) ($row['emails'] ?? array()) as $email)
+		{
+			$emails[] = \Contao\StringUtil::encodeEmail('<a href="mailto:'.$email.'">'.$email.'</a>');
+		}
+
+		$telefone = array_values((array) ($row['telefone'] ?? array()));
 
 		return array
 		(
@@ -190,13 +208,15 @@ class Referentenbaum
 			'strasse'  => (string) ($row['strasse'] ?? ''),
 			'plz'      => (string) ($row['plz'] ?? ''),
 			'ort'      => (string) ($row['ort'] ?? ''),
-			'telefon'  => (string) ($row['telefon'] ?? ''),
-			'email'    => $email !== '' ? \Contao\StringUtil::encodeEmail('<a href="mailto:'.$email.'">'.$email.'</a>') : '',
+			'telefone' => $telefone,
+			'telefon'  => implode(', ', $telefone),
+			'emails'   => $emails,
+			'email'    => implode(', ', $emails),
 
 			// Klartextadresse für die Reklamation (Helper\Reklamation). Sie geht
 			// signiert in den Kontext und nie ungeschützt ins Template — auch
 			// dann, wenn sie in der Adressverwaltung nicht öffentlich ist
-			'adresse'  => $versand,
+			'adresse'  => trim((string) ($row['versandadresse'] ?? '')),
 		);
 	}
 

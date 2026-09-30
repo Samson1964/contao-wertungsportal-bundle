@@ -927,6 +927,24 @@
 	margin					: 0 0 6px;
 }
 
+/* Wertungsreferenten als Tabelle (ab 1.52.0, Classes\Referententabelle).
+   Steht auf allgemeinen Seiten, also NICHT unter .dewis; Schrift und
+   Tabellenrahmen kommen aus dem Theme (ce_table) */
+.wp-referententabelle td {
+	vertical-align			: top;
+}
+
+.wp-referententabelle .wp-verband {
+	font-weight				: bold;
+}
+
+/* Jede Angabe in eine eigene Zeile; lange E-Mail-Adressen dürfen auf
+   schmalen Bildschirmen umbrechen, statt die Tabelle zu sprengen */
+.wp-referententabelle .wp-referent-kontakt span {
+	display					: block;
+	overflow-wrap			: anywhere;
+}
+
 /* ── Reklamationen (ab 1.51.0, Helper\Reklamation, js/reklamation.js) ──────────
    Der Link ist ein <button>, denn er öffnet einen Dialog und führt nirgendwohin.
    Er erscheint nur für angemeldete Mitglieder. Die Farben greifen das Orange der

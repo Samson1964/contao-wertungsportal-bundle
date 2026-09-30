@@ -107,9 +107,6 @@ $GLOBALS['BE_MOD']['wertungsportal'] = array
 		(
 			'tl_wertungsportal_referenten',
 		),
-		// Globale Operation: Referenten aus der Adressverwaltung übernehmen
-		// (key=uebernehmen, ab 1.51.0; nur mit contao-adressen-bundle)
-		'uebernehmen'    => array('Schachbulle\ContaoWertungsportalBundle\Classes\Referentenuebernahme', 'run'),
 	),
 	// Reklamationen aus dem Frontend (ab 1.51.0, Helper\Reklamation)
 	'wp-reklamationen' => array
@@ -154,6 +151,9 @@ $GLOBALS['FE_MOD']['wertungsportal'] = array
 	'wertungsportal_bestenliste'     => 'Schachbulle\ContaoWertungsportalBundle\Classes\Bestenliste',
 	// Wertungsreferenten der Verbände als Gliederung
 	'wertungsportal_referenten'      => 'Schachbulle\ContaoWertungsportalBundle\Classes\Referentenliste',
+	// Wertungsreferenten als schlichte Tabelle für allgemeine Seiten (ab
+	// 1.52.0, Ersatz für das Modul der Adressverwaltung)
+	'wertungsportal_referententabelle' => 'Schachbulle\ContaoWertungsportalBundle\Classes\Referententabelle',
 	// Registrierung für die örtliche Vereinslisten-Schnittstelle
 	'wertungsportal_token'           => 'Schachbulle\ContaoWertungsportalBundle\Classes\TokenRegistrierung',
 );

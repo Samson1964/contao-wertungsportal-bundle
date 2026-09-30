@@ -1,5 +1,33 @@
 # Wertungsportal Changelog
 
+## Version 1.52.0 (2026-09-30)
+
+* Change: **Kontaktdaten der Wertungsreferenten nur noch aus der Adressverwaltung.** Anschrift,
+  Telefonnummern und E-Mail-Adressen kommen allein aus der zugeordneten Adresse (`tl_adressen`), und
+  zwar vollständig — alle öffentlichen E-Mail-Adressen (E-Mail 1–6) und Telefonnummern (Telefon 1–4),
+  nicht mehr nur die erste. Es gelten die Schalter `email_view`, `telefon_view`, `ort_view` und
+  `strasse_view` der Adresse. Inaktive oder gelöschte Adresse: nur Name und Funktions-E-Mail
+* Change: Die Felder **Telefon, Straße, PLZ und Ort** der Referenten sind aus Eingabemaske, Palette,
+  Sprachdateien und allen Ausgaben entfernt. Die Datenbankspalten bleiben samt Inhalt stehen (in der
+  DCA nur noch als Spaltendefinition, damit `contao:migrate` sie nicht zum Löschen vorschlägt)
+* Change: Die E-Mail des Referenten heißt jetzt **Funktions-E-Mail** (Adresse des Wertungsreferats,
+  z. B. `dwz@verband.de`). Sie steht in allen Ausgaben vor den E-Mail-Adressen der Adresse und
+  empfängt die Reklamationen; ohne sie gehen Reklamationen an die erste E-Mail-Adresse der Adresse.
+  Die leere Auswahl heißt „– keine Adresse: nur Name und Funktions-E-Mail –"
+* Add: Frontend-Modul **Wertungsreferenten (Tabelle)** (`wertungsportal_referententabelle`) als Ersatz
+  für das Modul der Adressverwaltung auf `adressen_wertungen.html`: Verbände nach Kennziffer, je
+  Verband die veröffentlichten Referenten mit Name, Funktions-E-Mail und den Daten der Adresse;
+  Überschrift aus dem Modul, ohne Linkleiste. Doku: `docs/referenten.md`
+* Remove: Knopf **„Aus der Adressverwaltung übernehmen"** (1.51.0, auf schachbund.de ausgeführt) —
+  das Adressen-Bundle verliert das Feld `wertungsreferent`, aus dem er las. Das Wertungsportal liest
+  dieses Feld nicht mehr
+* **Einspielen:** Beim Kopieren des Ordners auf dem Server von Hand löschen:
+  `src/Classes/Referentenuebernahme.php` und
+  `src/Resources/contao/templates/be_wp_referentenuebernahme.html5`. Danach `contao:assets:install`
+  (Stile in `css/default.css` und `css/backend.css`) und `cache:clear`. `contao:migrate` ist nicht
+  nötig — das Schema ändert sich nicht. Anschließend das neue Modul anlegen und auf
+  `adressen_wertungen.html` gegen das der Adressverwaltung tauschen
+
 ## Version 1.51.0 (2026-09-30)
 
 * Add: **Reklamationen.** Angemeldete Mitglieder sehen neben dem Wertungsreferenten einer Ansicht einen

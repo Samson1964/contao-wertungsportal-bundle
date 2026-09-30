@@ -376,8 +376,9 @@ Signatur, Bereinigung) ohne Contao, geprüft in `tests/Helper/ReklamationTest.ph
 - Empfänger: Turnierseiten → Auswerter aus dem nu-Turnierkopf (nur mit Nachname UND gültiger Adresse),
   Verbandsrangliste → `Referentenbaum::zustaendig()` (Klartext in `adresse`), sonst DSB-Admin
   (`wertungsportal_reklamation_email`/`_name`). Ohne Admin-Adresse erscheint kein Link. Absender ist
-  `TokenRegistrierung::absenderadresse()`. Frank am 30.09.2026: In „Referenten" steht noch niemand —
-  heute geht also fast alles an den Admin (bis die Übernahme aus der Adressverwaltung gelaufen ist).
+  `TokenRegistrierung::absenderadresse()`. Auf schachbund.de sind die Referenten seit 30.09.2026
+  per Übernahme aus der Adressverwaltung angelegt (Frank: erledigt); Empfänger ist seit 1.52.0 die
+  Funktions-E-Mail des Referenten, sonst die erste E-Mail seiner Adresse.
 - **Fremde Antworten auf den POST:** Weist Contao das Anfragetoken ab (abgelaufene Sitzung), antwortet
   es selbst mit 400 — in 4.13 als HTML-Seite, in **5.7 als JSON** (Symfony-Fehlerbeschreibung
   `{type,title,status,detail}`, weil das Skript `Accept: application/json` schickt). Das Skript deutet
@@ -393,23 +394,34 @@ Signatur, Bereinigung) ohne Contao, geprüft in `tests/Helper/ReklamationTest.ph
   fuer…(…))`, im Template `<?= $this->reklamation ?>` an die Stelle des Referenten oder die Zeile
   `p.wp-reklamation-zeile` in `<?php if($this->reklamation): ?>`.
 
-## Referenten und Adressverwaltung (ab 1.51.0)
+## Referenten und Adressverwaltung (ab 1.51.0, Kontaktdaten nur aus der Adresse ab 1.52.0)
 
 Doku `docs/referenten.md`. `tl_wertungsportal_referenten.adresse` verweist auf `tl_adressen.id`
 (Paket `schachbulle/contao-adressen-bundle`, nur `suggest`, KEINE Abhängigkeit). Logik in
 `Helper/Adressverknuepfung.php`, reine Teile geprüft in `tests/Helper/AdressverknuepfungTest.php`.
 
 - **Frank am 30.09.2026:** Das Referenten-Modul und das Feld `tl_adressen.wertungsreferent` des
-  Adressen-Bundles sind veraltet — die Zuständigkeit wird NUR hier gepflegt. Das Feld wird genau
-  einmal gelesen: von der Übernahme (`Classes/Referentenuebernahme`, BE_MOD-Schlüssel `uebernehmen`).
-  Nichts anderes darf sich darauf stützen.
-- Die Adresse liefert Name/E-Mail/Telefon/Anschrift **live** (`Referentenbaum::alle()` →
-  `Adressverknuepfung::lade()` mit einer Abfrage → `zusammenfuehren()`). Sichtbarkeitsschalter der
-  Adresse (`email_view` …) gelten: verborgen = leer, OHNE Rückfall auf die eigenen Felder. Nur für
-  den Versand (`versandadresse` → `Referentenbaum` `adresse`) zählt auch eine verborgene E-Mail.
-  Anschrift immer als Ganzes aus einer Quelle. Inaktiv/gelöscht → eigene Felder.
+  Adressen-Bundles sind veraltet und werden dort entfernt — die Zuständigkeit wird NUR hier
+  gepflegt. Seit 1.52.0 liest das Wertungsportal `wertungsreferent` nirgends mehr (der
+  Übernahme-Knopf aus 1.51.0 ist entfernt, er lief auf schachbund.de einmal).
+- **Kontaktdaten kommen NUR aus der Adresse** (1.52.0, Franks Auftrag): Anschrift, ALLE
+  Telefonnummern (1–4), ALLE E-Mails (1–6), jeweils nach `*_view` der Adresse; verborgen = leer.
+  Eigene Angaben: Name, nu-ID, **Funktions-E-Mail** (Spalte `email`) — die steht in `emails` immer
+  vorn und ist Empfänger der Reklamationen (`versandadresse`); ohne sie die erste E-Mail der Adresse,
+  auch eine verborgene. Inaktiv/gelöscht → nur Name + Funktions-E-Mail.
+- **Die Spalten `telefon`, `strasse`, `plz`, `ort` bleiben in der DCA als reine `sql`-Einträge mit
+  `doNotShow`** — NICHT ganz entfernen: `contao:migrate` interaktiv führt DROP-Anweisungen nach der
+  Bestätigung mit aus (nur `--no-interaction` ohne `--with-deletes` lässt sie weg), und Frank will
+  die Spalten samt Daten behalten. `zusammenfuehren()` überschreibt sie, `Referentenbaum::person()`
+  führt auch eine rohe Zeile erst zusammen — so kommt kein Altwert in eine Ausgabe.
+- `person()` liefert `emails`/`telefone` als Listen und `email`/`telefon` zusammengefasst (Komma) für
+  angepasste Templates auf dem Server.
+- Frontend: `wertungsportal_referenten` (Referentenliste, Gliederung mit Linkleiste, fester
+  Überschrift — bewusst unverändert) und seit 1.52.0 `wertungsportal_referententabelle`
+  (Classes/Referententabelle): Tabelle Verband/Referent/Kontakt, nur Verbände mit veröffentlichten
+  Referenten, rowspan je Verband, Überschrift aus dem Modul — Ersatz für `adressen_wertungen.html`.
 - Verfügbarkeit über `kernel.bundles['ContaoAdressenBundle']`, nicht `class_exists()`. Die DCA
-  nimmt Feld und Knopf nur dann auf; die SPALTE gibt es immer (Schema unabhängig vom Paketbestand).
+  nimmt das Feld nur dann auf; die SPALTE gibt es immer (Schema unabhängig vom Paketbestand).
   Contao 5 cacht die gemischte DCA — nach Installation des Adressen-Bundles `cache:clear`.
 - `Referenten::getVerbaende()` stellt `00000` (DSB) voran — vorher ließ sich kein Bundesreferent
   zuordnen. PHP macht aus „10000" einen Ganzzahlschlüssel; `isset($liste['10000'])` findet ihn.
@@ -417,10 +429,10 @@ Doku `docs/referenten.md`. `tl_wertungsportal_referenten.adresse` verweist auf `
   `act=edit`); `nameUebernehmen` (onsubmit) schreibt den Namen der Adresse für Sortierung/Suche.
 - Suchbare Auswahl: `chosen => true` wird in 5.7 zu `div.tl_select_wrapper[data-controller=
   contao--choices]`, nicht zur Klasse `tl_chosen` — beim Prüfen der Ausgabe nicht verwechseln.
-- Prüfstand `referenten_probe.php` (Scratchpad-Muster): Testadresse/-referenten auf freien IDs
-  990001/990002, Übernahme echt gegen die Testdatenbank und gefiltert zurückgenommen
-  (`id > MAX vorher AND adresse IN (…)`). In contao_test (5.7) ist `tl_wertungsportal_clubs` LEER —
-  dort kennt die Übernahme nur `00000`; aussagekräftig ist contao_test_413 (103 von 104 übernommen).
+- Prüfstand `referenten_probe.php` (Scratchpad-Muster): Testadresse und drei Testreferenten auf
+  freien IDs 990001–990003, Altspalten ABSICHTLICH gefüllt und in jeder Ausgabe gesucht, Modul über
+  `new Referententabelle($modell)->generate()` mit `ModuleModel::setRow()`. In contao_test (5.7)
+  ist `tl_wertungsportal_clubs` LEER — Prüfungen mit Verbandsnamen nur unter 4.13 aussagekräftig.
 
 ## Fallstricke / Besonderheiten
 

@@ -11,8 +11,8 @@ Ersetzt die SOAP-Schnittstelle von DeWIS und kommuniziert mit der REST-Schnittst
 * [Zugang zur Schnittstelle: zwei Kennungen](docs/zugang.md) — Anmeldung per OAuth2 für
   Turniere und Personen und (seit 1.46.0) für die DWZ-Liste: Einstellungen, Tokendateien,
   Verhalten vor und nach der Umstellung bei nu, Zip-Downloads
-* [Wertungsreferenten](docs/referenten.md) — Zuständigkeit je Verband; Name und Kontaktdaten auf
-  Wunsch aus der Adressverwaltung (contao-adressen-bundle), samt einmaliger Übernahme von dort
+* [Wertungsreferenten](docs/referenten.md) — Zuständigkeit je Verband, Funktions-E-Mail, Kontaktdaten
+  aus der Adressverwaltung (contao-adressen-bundle); Frontend-Modul „Wertungsreferenten (Tabelle)"
 * [Reklamationen zu den DWZ-Daten](docs/reklamationen.md) — Formular in einer Lightbox für angemeldete
   Mitglieder, an den Wertungsreferenten der Ansicht oder den DSB-Admin, mit Backend-Modul
 * [Beispielskript für eigene Anwendungen](docs/oauth2-beispiel.md) — eine eigenständige

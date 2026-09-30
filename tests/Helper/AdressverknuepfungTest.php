@@ -9,16 +9,17 @@ use Schachbulle\ContaoWertungsportalBundle\Helper\Adressverknuepfung;
 
 /**
  * Prüft den Teil der Verknüpfung mit der Adressverwaltung, der ohne Contao
- * auskommt: welche Daten aus der Adresse kommen, was verborgen bleibt, und
- * wie die Übernahme der Wertungsreferenten geplant wird.
+ * auskommt: welche Kontaktdaten aus der Adresse kommen, was verborgen bleibt,
+ * und dass die alten Kontaktspalten des Referenten nirgends mehr erscheinen.
  *
  * Alle Namen und Adressen sind erfunden.
  */
 class AdressverknuepfungTest extends TestCase
 {
 	/**
-	 * Referent, wie er in tl_wertungsportal_referenten stünde — mit eigenen
-	 * Angaben, die bei zugeordneter Adresse nur Ersatz sind.
+	 * Referent, wie er in tl_wertungsportal_referenten stünde — mit der
+	 * Funktions-E-Mail und Resten in den alten Spalten, die seit 1.52.0 nicht
+	 * mehr ausgegeben werden dürfen.
 	 *
 	 * @return array<string,mixed>
 	 */
@@ -30,7 +31,7 @@ class AdressverknuepfungTest extends TestCase
 			'nachname' => 'Alt',
 			'vorname'  => 'Anton',
 			'nuId'     => 'NU1234567',
-			'email'    => 'alt@example.org',
+			'email'    => 'dwz@verband.example.org',
 			'telefon'  => '030 111',
 			'strasse'  => 'Alte Straße 1',
 			'plz'      => '10115',
@@ -58,13 +59,13 @@ class AdressverknuepfungTest extends TestCase
 			'strasse_view' => '1',
 			'telefon1'     => '',
 			'telefon2'     => '0341 222',
-			'telefon3'     => '',
+			'telefon3'     => '0171 333',
 			'telefon4'     => '',
 			'telefon_view' => '1',
 			'email1'       => '',
 			'email2'       => 'neu@example.org',
-			'email3'       => '',
-			'email4'       => '',
+			'email3'       => 'nora@example.org',
+			'email4'       => 'DWZ@verband.example.org',
 			'email5'       => '',
 			'email6'       => '',
 			'email_view'   => '1',
@@ -73,53 +74,71 @@ class AdressverknuepfungTest extends TestCase
 	}
 
 	/**
-	 * Ohne Adresse und mit inaktiver Adresse bleibt der Referent, wie er ist;
-	 * die Versandadresse ist dann seine eigene.
+	 * Ohne Adresse und mit inaktiver Adresse: nur Name und Funktions-E-Mail.
+	 * Die alten Spalten telefon, strasse, plz und ort erscheinen NICHT.
 	 */
-	public function testOhneOderInaktiveAdresseGeltenDieEigenenAngaben(): void
+	public function testOhneOderInaktiveAdresseNurNameUndFunktionsadresse(): void
 	{
 		foreach (array(null, array('aktiv' => 0) + self::adresse(), array('aktiv' => '') + self::adresse()) as $adresse) {
 			$r = Adressverknuepfung::zusammenfuehren(self::referent(), $adresse);
 
 			$this->assertFalse($r['ausAdressverwaltung']);
-			$this->assertSame('Alt', $r['nachname']);
-			$this->assertSame('alt@example.org', $r['email']);
-			$this->assertSame('alt@example.org', $r['versandadresse']);
-			$this->assertSame('030 111', $r['telefon']);
-			$this->assertSame('', $r['titel']);
+			$this->assertSame(array('Alt', 'Anton', ''), array($r['nachname'], $r['vorname'], $r['titel']));
+			$this->assertSame(array('dwz@verband.example.org'), $r['emails']);
+			$this->assertSame('dwz@verband.example.org', $r['versandadresse']);
+			$this->assertSame(array(), $r['telefone']);
+			$this->assertSame(array('', '', ''), array($r['strasse'], $r['plz'], $r['ort']));
+			$this->assertArrayNotHasKey('telefon', $r, 'die alte Einzelspalte bleibt draußen');
 		}
 	}
 
 	/**
-	 * Eine aktive Adresse liefert Name mit Titel, die erste belegte E-Mail und
-	 * Telefonnummer und die Anschrift. Die nu-ID bleibt die eigene.
+	 * Eine aktive Adresse liefert Name mit Titel, ALLE öffentlichen
+	 * E-Mail-Adressen hinter der Funktions-E-Mail (Doppelte ohne Rücksicht
+	 * auf Großschreibung entfernt), alle Telefonnummern und die Anschrift.
 	 */
-	public function testAktiveAdresseLiefertDieDaten(): void
+	public function testAktiveAdresseLiefertAlleKontaktdaten(): void
 	{
 		$r = Adressverknuepfung::zusammenfuehren(self::referent(), self::adresse());
 
 		$this->assertTrue($r['ausAdressverwaltung']);
 		$this->assertSame(array('Neu', 'Nora', 'Dr.'), array($r['nachname'], $r['vorname'], $r['titel']));
-		$this->assertSame('neu@example.org', $r['email']);
-		$this->assertSame('neu@example.org', $r['versandadresse']);
-		$this->assertSame('0341 222', $r['telefon']);
+		$this->assertSame(array('dwz@verband.example.org', 'neu@example.org', 'nora@example.org'), $r['emails']);
+		$this->assertSame('dwz@verband.example.org', $r['versandadresse'], 'Reklamationen an die Funktions-E-Mail');
+		$this->assertSame(array('0341 222', '0171 333'), $r['telefone']);
 		$this->assertSame(array('Neue Straße 2', '04109', 'Leipzig'), array($r['strasse'], $r['plz'], $r['ort']));
 		$this->assertSame('NU1234567', $r['nuId']);
 	}
 
 	/**
-	 * Was in der Adressverwaltung nicht öffentlich ist, bleibt leer — auch
-	 * wenn der Referent selbst etwas hätte. Die E-Mail-Adresse bleibt aber
-	 * Versandadresse für Reklamationen.
+	 * Ohne Funktions-E-Mail stehen nur die Adressen der Adresse da, und
+	 * Reklamationen gehen an die erste davon.
+	 */
+	public function testOhneFunktionsadresse(): void
+	{
+		$referent = array('email' => '') + self::referent();
+		$r = Adressverknuepfung::zusammenfuehren($referent, self::adresse());
+
+		$this->assertSame(array('neu@example.org', 'nora@example.org', 'DWZ@verband.example.org'), $r['emails']);
+		$this->assertSame('neu@example.org', $r['versandadresse']);
+	}
+
+	/**
+	 * Was in der Adressverwaltung nicht öffentlich ist, bleibt leer. Die
+	 * Funktions-E-Mail bleibt sichtbar; ohne sie geht eine Reklamation an die
+	 * erste — verborgene — Adresse, die aber nicht angezeigt wird.
 	 */
 	public function testNichtOeffentlichesBleibtVerborgen(): void
 	{
 		$a = array('email_view' => '0', 'telefon_view' => '') + self::adresse();
 		$r = Adressverknuepfung::zusammenfuehren(self::referent(), $a);
 
-		$this->assertSame('', $r['email']);
+		$this->assertSame(array('dwz@verband.example.org'), $r['emails']);
+		$this->assertSame(array(), $r['telefone']);
+
+		$r = Adressverknuepfung::zusammenfuehren(array('email' => '') + self::referent(), $a);
+		$this->assertSame(array(), $r['emails']);
 		$this->assertSame('neu@example.org', $r['versandadresse']);
-		$this->assertSame('', $r['telefon']);
 
 		// Ohne öffentlichen Ort auch keine Straße
 		$r = Adressverknuepfung::zusammenfuehren(self::referent(), array('ort_view' => '0') + self::adresse());
@@ -131,28 +150,21 @@ class AdressverknuepfungTest extends TestCase
 	}
 
 	/**
-	 * Wo die Adresse gar nichts hat, springen die eigenen Felder ein. Die
-	 * Anschrift wird dabei nie aus beiden Quellen gemischt.
+	 * Hat die Adresse selbst keine Kontaktdaten, springen die alten Spalten
+	 * des Referenten NICHT ein — die Adressverwaltung ist die einzige Quelle.
 	 */
-	public function testEigeneFelderSpringenNurBeiLeererAdresseEin(): void
+	public function testKeinRueckfallAufDieAltenSpalten(): void
 	{
 		$a = self::adresse();
-		$a['email2'] = '';
-		$a['telefon2'] = '';
+		$a['email2'] = $a['email3'] = $a['email4'] = '';
+		$a['telefon2'] = $a['telefon3'] = '';
 		$a['plz'] = $a['ort'] = $a['strasse'] = '';
 
 		$r = Adressverknuepfung::zusammenfuehren(self::referent(), $a);
 
-		$this->assertSame('alt@example.org', $r['email']);
-		$this->assertSame('alt@example.org', $r['versandadresse']);
-		$this->assertSame('030 111', $r['telefon']);
-		$this->assertSame(array('Alte Straße 1', '10115', 'Berlin'), array($r['strasse'], $r['plz'], $r['ort']));
-
-		// Nur ein Ort in der Adresse: die eigene Straße fällt weg, statt neben
-		// einem fremden Ort zu stehen
-		$a['ort'] = 'Leipzig';
-		$r = Adressverknuepfung::zusammenfuehren(self::referent(), $a);
-		$this->assertSame(array('', '', 'Leipzig'), array($r['strasse'], $r['plz'], $r['ort']));
+		$this->assertSame(array('dwz@verband.example.org'), $r['emails']);
+		$this->assertSame(array(), $r['telefone']);
+		$this->assertSame(array('', '', ''), array($r['strasse'], $r['plz'], $r['ort']));
 
 		// Adresse ohne Nachnamen (etwa eine Geschäftsstelle): Name bleibt der eigene
 		$a['nachname'] = '';
@@ -178,7 +190,8 @@ class AdressverknuepfungTest extends TestCase
 	}
 
 	/**
-	 * Anzeigename: „Nachname, Vorname", sonst Firma, sonst die ID.
+	 * Anzeigename für die Auswahl: „Nachname, Vorname", sonst Firma, sonst
+	 * die ID.
 	 */
 	public function testName(): void
 	{
@@ -194,69 +207,5 @@ class AdressverknuepfungTest extends TestCase
 	public function testOhneLeere(): void
 	{
 		$this->assertSame(array(0 => 'Dr.', 2 => '0', 3 => 'Neu'), Adressverknuepfung::ohneLeere(array('Dr.', '', '0', 'Neu')));
-	}
-
-	/**
-	 * Die Übernahme: passende Verbände werden übernommen, fremde Schlüssel
-	 * gemeldet, schon verknüpfte und inaktive Adressen übergangen.
-	 */
-	public function testUebernahmeplan(): void
-	{
-		// So liefert Referenten::getVerbaende() die Liste: PHP hat die
-		// numerischen Kennziffern zu Ganzzahlen gemacht
-		$verbaende = array('00000' => '00000 Deutscher Schachbund', 10000 => '10000 Baden', 10100 => '10100 Mannheim', 'C0000' => 'C0000 Niedersachsen');
-
-		$adressen = array(
-			array('id' => 1, 'nachname' => 'Eins', 'vorname' => 'Ella', 'aktiv' => '1', 'wertungsreferent' => serialize(array('10000', '10100'))),
-			array('id' => 2, 'nachname' => 'Zwei', 'vorname' => 'Zoe', 'aktiv' => '1', 'wertungsreferent' => serialize(array('C0000', 'L0000', 'C0000'))),
-			array('id' => 3, 'nachname' => 'Drei', 'vorname' => 'Dirk', 'aktiv' => '1', 'wertungsreferent' => serialize(array('61600'))),
-			array('id' => 4, 'nachname' => 'Vier', 'vorname' => 'Vera', 'aktiv' => '0', 'wertungsreferent' => serialize(array('10000'))),
-			array('id' => 5, 'nachname' => 'Fünf', 'vorname' => 'Fritz', 'aktiv' => '1', 'wertungsreferent' => serialize(array('00000'))),
-			array('id' => 6, 'nachname' => 'Sechs', 'vorname' => 'Sina', 'aktiv' => '1', 'wertungsreferent' => serialize(array('10000'))),
-			array('id' => 7, 'nachname' => 'Sieben', 'aktiv' => '1', 'wertungsreferent' => null),
-			array('id' => 8, 'nachname' => 'Acht', 'aktiv' => '1', 'wertungsreferent' => 'kaputt'),
-			array('id' => 9, 'nachname' => 'Neun', 'aktiv' => '1', 'wertungsreferent' => serialize(array())),
-		);
-
-		$plan = Adressverknuepfung::uebernahmeplan($adressen, $verbaende, array('6', 99));
-
-		$this->assertSame(array(1, 2, 5), array_column($plan['neu'], 'adresse'));
-		$this->assertSame(array('10000', '10100'), $plan['neu'][0]['verbaende']);
-		$this->assertSame(array('C0000'), $plan['neu'][1]['verbaende'], 'doppelter Schlüssel nur einmal');
-		$this->assertSame(array('L0000'), $plan['neu'][1]['unbekannt']);
-		$this->assertSame(array('00000'), $plan['neu'][2]['verbaende'], 'der DSB selbst');
-		$this->assertSame(array('Eins', 'Ella'), array($plan['neu'][0]['nachname'], $plan['neu'][0]['vorname']));
-
-		$this->assertSame(array(array('adresse' => 3, 'name' => 'Drei, Dirk', 'unbekannt' => array('61600'))), $plan['ohneVerband']);
-		$this->assertSame(array(array('adresse' => 6, 'name' => 'Sechs, Sina')), $plan['vorhanden']);
-		$this->assertSame(1, $plan['inaktiv']);
-		$this->assertSame(array('61600' => 1, 'L0000' => 1), $plan['unbekannt']);
-	}
-
-	/**
-	 * Ein zweiter Lauf, nachdem alle angelegt sind, plant nichts Neues.
-	 */
-	public function testZweiterLaufLegtNichtsDoppeltAn(): void
-	{
-		$adressen = array(array('id' => 1, 'nachname' => 'Eins', 'aktiv' => '1', 'wertungsreferent' => serialize(array('10000'))));
-		$erst = Adressverknuepfung::uebernahmeplan($adressen, array(10000 => 'Baden'), array());
-		$dann = Adressverknuepfung::uebernahmeplan($adressen, array(10000 => 'Baden'), array_column($erst['neu'], 'adresse'));
-
-		$this->assertCount(1, $erst['neu']);
-		$this->assertSame(array(), $dann['neu']);
-		$this->assertCount(1, $dann['vorhanden']);
-	}
-
-	/**
-	 * Das Feld wird ohne Objekte entpackt: Ein untergeschobenes Objekt
-	 * erzeugt keine Instanz und zählt nicht als Schlüssel.
-	 */
-	public function testKeineObjekteAusDemFeld(): void
-	{
-		$adressen = array(array('id' => 1, 'nachname' => 'Eins', 'aktiv' => '1', 'wertungsreferent' => serialize(array(new \ArrayObject(), '10000'))));
-		$plan = Adressverknuepfung::uebernahmeplan($adressen, array(10000 => 'Baden'), array());
-
-		$this->assertSame(array('10000'), $plan['neu'][0]['verbaende']);
-		$this->assertSame(array(), $plan['unbekannt']);
 	}
 }

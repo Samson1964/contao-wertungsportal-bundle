@@ -3,23 +3,25 @@
  * Teiltemplate: Anschriften von Wertungsreferenten
  *
  * Erwartet in $this->referenten eine Liste aufbereiteter Personen aus
- * Helper\Referentenbaum. Die E-Mail-Adresse kommt bereits als verschleierter
- * Link — deshalb OHNE weiteres Maskieren ausgeben.
+ * Helper\Referentenbaum. Die E-Mail-Adressen kommen bereits als verschleierte
+ * Links — deshalb OHNE weiteres Maskieren ausgeben. Die Funktions-E-Mail des
+ * Referats steht in `emails` vorn, danach die der Adresse (ab 1.52.0).
+ * Anschrift und Telefon kommen nur noch aus der Adressverwaltung.
  */
 ?>
 <?php if(!empty($this->referenten)): ?>
 	<ul class="wp-referenten">
 		<?php foreach($this->referenten as $r): ?>
 			<li class="wp-referent">
-				<span class="wp-referent-name"><?= $r['name'] ?></span>
+				<span class="wp-referent-name"><?= \Contao\StringUtil::specialchars($r['name']) ?></span>
+				<?php foreach($r['emails'] as $email): ?>
+					<span class="wp-referent-email"><?= $email ?></span>
+				<?php endforeach; ?>
 				<?php if($r['strasse'] || $r['plz'] || $r['ort']): ?>
-					<span class="wp-referent-adresse"><?= trim($r['strasse'].', '.trim($r['plz'].' '.$r['ort']), ', ') ?></span>
+					<span class="wp-referent-adresse"><?= \Contao\StringUtil::specialchars(trim($r['strasse'].', '.trim($r['plz'].' '.$r['ort']), ', ')) ?></span>
 				<?php endif; ?>
-				<?php if($r['telefon']): ?>
-					<span class="wp-referent-telefon">Telefon: <?= $r['telefon'] ?></span>
-				<?php endif; ?>
-				<?php if($r['email']): ?>
-					<span class="wp-referent-email"><?= $r['email'] ?></span>
+				<?php if($r['telefone']): ?>
+					<span class="wp-referent-telefon">Telefon: <?= \Contao\StringUtil::specialchars(implode(', ', $r['telefone'])) ?></span>
 				<?php endif; ?>
 			</li>
 		<?php endforeach; ?>

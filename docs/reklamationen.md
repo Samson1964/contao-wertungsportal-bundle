@@ -25,11 +25,11 @@ gültige Adresse des Auswerters liefert.
 
 Solange unter **Referenten** niemand eingetragen ist, gehen auch Reklamationen
 zu Ranglisten an den DSB-Admin. Sobald dort Referenten stehen, bekommen sie die
-Reklamationen zu „ihren" Verbänden — ohne weitere Einstellung. Die Referenten
-lassen sich auf einen Schlag aus der Adressverwaltung übernehmen, siehe
-[Wertungsreferenten](referenten.md). Ist ein Referent einer Adresse zugeordnet,
-geht die Reklamation an deren erste E-Mail-Adresse — auch dann, wenn sie dort
-nicht öffentlich ist; zu sehen ist sie dabei nirgends.
+Reklamationen zu „ihren" Verbänden — ohne weitere Einstellung, siehe
+[Wertungsreferenten](referenten.md). Empfänger ist die **Funktions-E-Mail** des
+Referenten; fehlt sie, die erste E-Mail-Adresse seiner Adresse in der
+Adressverwaltung — auch dann, wenn sie dort nicht öffentlich ist; zu sehen ist
+sie dabei nirgends.
 
 Der Link erscheint nur,
 

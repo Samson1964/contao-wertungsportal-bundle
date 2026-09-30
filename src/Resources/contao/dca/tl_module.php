@@ -20,6 +20,8 @@ $GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_verband'] = '{title_
 $GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_turnier'] = '{title_legend},name,headline,type;{wertungsportal_navigation_legend},wertungsportal_ohneNavigation;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
 $GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_bestenliste'] = '{title_legend},name,headline,type;{bestenliste_legend},dwz_topcount,dwz_gender;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
 $GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_token'] = '{title_legend},name,headline,type;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
+// Wertungsreferenten als Tabelle (ab 1.52.0): Überschrift aus dem Modul, keine Linkleiste
+$GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_referententabelle'] = '{title_legend},name,headline,type;{protected_legend:hide},protected;{expert_legend:hide},cssID,align';
 
 
 $GLOBALS['TL_DCA']['tl_module']['fields']['wertungsportal_searchfield'] = array
