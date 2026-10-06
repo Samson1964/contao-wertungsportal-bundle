@@ -106,6 +106,7 @@ class Zustaendigkeit
 				'vorname'     => trim((string) ($person['vorname'] ?? '')),
 				'nachname'    => trim((string) ($person['nachname'] ?? '')),
 				'emails'      => array_values((array) ($person['klartext'] ?? array())),
+				'abgleich'    => array_values((array) ($person['abgleich'] ?? $person['klartext'] ?? array())),
 				'html'        => array_values((array) ($person['emails'] ?? array())),
 				'versand'     => trim((string) ($person['adresse'] ?? '')),
 				'verband'     => $verband,
@@ -119,7 +120,8 @@ class Zustaendigkeit
 	/**
 	 * Prüft, ob der Referent von nu derselbe ist wie ein lokaler.
 	 *
-	 * Gleich heißt: dieselbe E-Mail-Adresse (eine der angezeigten oder die
+	 * Gleich heißt: dieselbe E-Mail-Adresse (die Funktions-E-Mail, eine der
+	 * Adressen aus der Adressverwaltung in `abgleich` oder die
 	 * Versandadresse) oder derselbe Vor- und Nachname — jeweils ohne Groß-
 	 * und Kleinschreibung und mit zusammengefasstem Leerraum. Ein Titel
 	 * („Dr.") zählt nicht mit, er steht nur im lokalen Namen.
@@ -135,8 +137,10 @@ class Zustaendigkeit
 			return self::normal((string) $wert);
 		};
 
+		// Lokal zählen alle bekannten Adressen der Person (`abgleich`), auch
+		// die nie angezeigten privaten — nu nennt meist gerade die
 		$apiMails = array_map($normal, array_merge((array) $api['emails'], array((string) $api['versand'])));
-		$lokalMails = array_map($normal, array_merge((array) $lokal['emails'], array((string) $lokal['versand'])));
+		$lokalMails = array_map($normal, array_merge((array) $lokal['emails'], (array) ($lokal['abgleich'] ?? array()), array((string) $lokal['versand'])));
 
 		if (array_intersect(array_filter($apiMails), array_filter($lokalMails))) {
 			return true;

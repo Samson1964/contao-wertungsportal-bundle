@@ -42,6 +42,23 @@
 		var verschickt = false;
 
 		/**
+		 * Vergleicht eine Eingabe mit ihrer Vorbelegung, ohne auf Zeilenenden
+		 * (Textfelder liefern je nach Browser \r\n) und Leerraum am Rand zu
+		 * achten.
+		 *
+		 * @param {string}      eingabe     Aktueller Wert des Feldes
+		 * @param {string|null} vorbelegung Wert aus dem data-Attribut des Links
+		 * @returns {boolean} true, wenn nichts geändert wurde
+		 */
+		function gleich(eingabe, vorbelegung) {
+			var normal = function (wert) {
+				return String(wert || '').replace(/\r\n?/g, '\n').trim();
+			};
+
+			return normal(eingabe) === normal(vorbelegung);
+		}
+
+		/**
 		 * Zeigt eine Meldung im Dialog.
 		 *
 		 * @param {string} text Meldung
@@ -136,6 +153,17 @@
 			if (!felder.namedItem('betreff').value.trim()) {
 				zeige('Bitte geben Sie einen Betreff an.', 'fehler');
 				felder.namedItem('betreff').focus();
+
+				return;
+			}
+
+			// Unverändert: nichts senden (ab 1.54.0). Der Server prüft dasselbe
+			// noch einmal — hier geht nur gar keine Anfrage erst hinaus
+			if (aufrufer
+				&& gleich(felder.namedItem('betreff').value, aufrufer.getAttribute('data-betreff'))
+				&& gleich(felder.namedItem('text').value, aufrufer.getAttribute('data-text'))) {
+				zeige('Sie haben das Formular noch nicht verändert. Bitte ergänzen Sie, was nicht stimmt.', 'fehler');
+				felder.namedItem('text').focus();
 
 				return;
 			}

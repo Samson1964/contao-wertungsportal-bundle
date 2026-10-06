@@ -404,11 +404,12 @@ Doku `docs/referenten.md`. `tl_wertungsportal_referenten.adresse` verweist auf `
   Adressen-Bundles sind veraltet und werden dort entfernt — die Zuständigkeit wird NUR hier
   gepflegt. Seit 1.52.0 liest das Wertungsportal `wertungsreferent` nirgends mehr (der
   Übernahme-Knopf aus 1.51.0 ist entfernt, er lief auf schachbund.de einmal).
-- **Kontaktdaten kommen NUR aus der Adresse** (1.52.0, Franks Auftrag): Anschrift, ALLE
-  Telefonnummern (1–4), ALLE E-Mails (1–6), jeweils nach `*_view` der Adresse; verborgen = leer.
-  Eigene Angaben: Name, nu-ID, **Funktions-E-Mail** (Spalte `email`) — die steht in `emails` immer
-  vorn und ist Empfänger der Reklamationen (`versandadresse`); ohne sie die erste E-Mail der Adresse,
-  auch eine verborgene. Inaktiv/gelöscht → nur Name + Funktions-E-Mail.
+- **Anschrift und Telefon kommen NUR aus der Adresse** (1.52.0, Franks Auftrag): Anschrift und ALLE
+  Telefonnummern (1–4), jeweils nach `*_view` der Adresse; verborgen = leer. Eigene Angaben: Name,
+  nu-ID, **Funktions-E-Mail** (Spalte `email`) — seit 1.54.0 die EINZIGE E-Mail in `emails` (die
+  E-Mails der Adresse erscheinen nie, siehe „Referenten-E-Mail" unten). Sie ist Empfänger der
+  Reklamationen (`versandadresse`); ohne sie die erste E-Mail der Adresse. Inaktiv/gelöscht → nur
+  Name + Funktions-E-Mail.
 - **Die Spalten `telefon`, `strasse`, `plz`, `ort` bleiben in der DCA als reine `sql`-Einträge mit
   `doNotShow`** — NICHT ganz entfernen: `contao:migrate` interaktiv führt DROP-Anweisungen nach der
   Bestätigung mit aus (nur `--no-interaction` ohne `--with-deletes` lässt sie weg), und Frank will
@@ -453,6 +454,38 @@ Doku `docs/referenten.md`. `tl_wertungsportal_referenten.adresse` verweist auf `
   freien IDs 990001–990003, Altspalten ABSICHTLICH gefüllt und in jeder Ausgabe gesucht, Modul über
   `new Referententabelle($modell)->generate()` mit `ModuleModel::setRow()`. In contao_test (5.7)
   ist `tl_wertungsportal_clubs` LEER — Prüfungen mit Verbandsnamen nur unter 4.13 aussagekräftig.
+
+## Änderungsmeldungen und Mitgliedergruppe (ab 1.54.0)
+
+Doku `docs/aenderungen.md`, `docs/mitgliedergruppe.md`.
+
+- **„Foto ändern" / „Logo/Infos ändern":** `Helper/Aenderung.php` (erbt von `Reklamation` — Signatur,
+  Mitglied, Admin, Absender, Bremse, Ablage), `Controller/AenderungController`
+  (`POST /wertungsportal-api/aenderung`, multipart), `public/js/aenderung.js`. Empfänger IMMER der
+  DSB-Admin; Cc nur an die Kontoadresse des Mitglieds. Das Bundle ändert an Spielern/Vereinen nichts.
+- **Datei:** Typ und Maße am INHALT (`finfo`, `getimagesize`), nie Endung oder Browserangabe; nur
+  `DATEITYPEN` (kein SVG); wird nirgends abgelegt, sondern per `attachFileFromString()` unter
+  gebildetem Namen angehängt. Scheitert der Versand, ist die Datei weg — die Antwort sagt das.
+- **Vereinsdialog ist NICHT modal** (`data-nichtmodal`, `dialog.show()` + eigenes Abdunkel-Element):
+  TinyMCE hängt Menüs/Fenster ans Seitenende; unter `showModal()` (oberste Ebene) wären sie
+  unsichtbar. TinyMCE wird beim Öffnen aus `assets/tinymce4/js` nachgeladen (4.13: Fassung 5.10,
+  5.7: Fassung 8 — `license_key: 'gpl'` nötig, von 5 ignoriert).
+- **„Nichts geändert → nichts senden":** Reklamation: `Reklamation::unveraendert()` bildet die
+  Vorbelegung aus dem signierten Kontext neu. Vereinsdaten: `vereinsaenderungen()`; ob die
+  Beschreibung angefasst wurde, weiß nur das Skript (`info_angefasst`) — der Editor schreibt HTML
+  beim Laden um, ein Server-Vergleich allein meldete immer „geändert".
+- HTML aus dem Editor: `bereinigeHtml()` (DOMDocument, feste Liste) und NUR als Quelltext in einer
+  Textmail. Nie eine HTML-Mail daraus bauen (`Contao\Email` bettet sonst lokale Bilder ein).
+- **Referenten-E-Mail (Frank, 06.10.2026):** In ALLEN Ausgaben nur die Funktions-E-Mail; Adressen
+  aus `tl_adressen` nie anzeigen. Sie stehen nur in `versandadresse` (Notanker) und `abgleich`
+  (Wiedererkennen des Auswerters von nu). Wer eine neue Ausgabe baut: `emails` nehmen, nie `abgleich`.
+- **Unbesetzte Verbände** stehen in `Referentenbaum::baum()` (alle veröffentlichten, nicht
+  gelöschten Verbände + DSB); rechnerische Kettenstufen ohne Verband (`L0000`) nicht.
+- **Mitgliedergruppe:** `Helper/Mitgliedergruppe.php`, Cron `monthly` (ohne @), Befehl
+  `wertungsportal:mitgliedergruppe [--dry-run] [--ids]`. Regel wörtlich nach Frank: E-Mail in
+  `persons.email1/2` → Gruppe, sonst weg — unabhängig vom Lizenzstatus. Sicherung „leer": ohne eine
+  einzige Adresse im Spielerbestand wird nichts geändert. Prüfstand: Der echte Lauf trifft auch
+  echte Mitglieder der Testdatenbank → Gruppenlisten vorher sichern und zurückschreiben.
 
 ## Fallstricke / Besonderheiten
 

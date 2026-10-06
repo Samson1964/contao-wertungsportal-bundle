@@ -23,7 +23,7 @@ Ausgegeben werden nur **veröffentlichte** Referenten.
 | Adresse aus der Adressverwaltung | Die Person in der Adressverwaltung (Auswahl mit Suche; das Stift-Symbol öffnet sie zum Nachsehen oder Berichtigen) |
 | Nachname, Vorname | Nur nötig ohne Adresse; mit Adresse wird beim Speichern deren Name eingetragen |
 | nu-ID | Kennung der Person bei nu |
-| Funktions-E-Mail | Adresse des Wertungsreferats, z. B. `dwz@verband.de` |
+| Funktions-E-Mail | Adresse des Wertungsreferats, z. B. `dwz@verband.de` — die einzige E-Mail-Adresse, die beim Referenten erscheint |
 | Zuständig für | Die Verbände (siehe unten) |
 | Veröffentlichen | Nur veröffentlichte Referenten erscheinen |
 
@@ -36,14 +36,14 @@ nirgends mehr angezeigt oder ausgegeben.
 | Angabe | Herkunft |
 |---|---|
 | Name | Titel, Vorname, Nachname der Adresse; ohne Adresse der eigene Name |
-| E-Mail | zuerst die **Funktions-E-Mail**, danach **alle** E-Mail-Adressen der Adresse (E-Mail 1 bis 6), doppelte nur einmal |
+| E-Mail | **nur die Funktions-E-Mail** (ab 1.54.0). Die E-Mail-Adressen der Adresse — meist private — erscheinen in keiner Ausgabe; ohne Funktions-E-Mail steht keine E-Mail-Adresse da |
 | Anschrift | Straße, PLZ und Ort der Adresse |
 | Telefon | **alle** Telefonnummern der Adresse (Telefon 1 bis 4) |
 
-Es gilt, was in der Adressverwaltung **als öffentlich markiert** ist (die
-Häkchen „anzeigen" bei E-Mail, Telefon, Ort und Straße). Die Straße erscheint
-nur, wenn auch PLZ und Ort öffentlich sind. Die Funktions-E-Mail erscheint
-immer.
+Für Anschrift und Telefon gilt, was in der Adressverwaltung **als öffentlich
+markiert** ist (die Häkchen „anzeigen" bei Telefon, Ort und Straße). Die Straße
+erscheint nur, wenn auch PLZ und Ort öffentlich sind. Die Funktions-E-Mail
+erscheint immer.
 
 Ist die Adresse **nicht aktiv** oder gelöscht, erscheinen nur der eigene Name
 und die Funktions-E-Mail. Die Liste im Backend zeigt das an:
@@ -55,8 +55,9 @@ und die Funktions-E-Mail. Die Liste im Backend zeigt das an:
 | `[Adresse fehlt]` (rot) | Adresse gelöscht — nur Name und Funktions-E-Mail |
 
 **Reklamationen** gehen an die Funktions-E-Mail. Fehlt sie, gehen sie an die
-erste E-Mail-Adresse der Adresse — auch an eine nicht öffentliche; zu sehen
-ist sie dabei nirgends.
+erste E-Mail-Adresse der Adresse — zu sehen ist die dabei nirgends. Dieselben
+Adressen dienen dazu, den Auswerter von nu als denselben Referenten
+wiederzuerkennen (siehe unten); auch dabei werden sie nicht ausgegeben.
 
 Ohne Adressen-Bundle fehlt das Feld „Adresse"; die Referenten erscheinen dann
 mit Name und Funktions-E-Mail.
@@ -107,8 +108,9 @@ Adressverwaltung wird nicht gelesen.
 
 Für allgemeine Seiten wie `adressen_wertungen.html`: eine Tabelle mit den
 Spalten **Verband/Bezirk**, **Referent** und **Kontakt**, die Verbände in der
-Reihenfolge ihrer Kennziffer (der DSB zuerst). Aufgeführt sind nur Verbände,
-unter denen ein veröffentlichter Referent steht. Stehen mehrere unter einem
+Reihenfolge ihrer Kennziffer (der DSB zuerst). Aufgeführt sind **alle
+Verbände** des Vereinsbestands; unbesetzte tragen den Vermerk „nicht besetzt"
+(ab 1.54.0, vorher fehlten sie). Stehen mehrere Referenten unter einem
 Verband, bekommt jeder eine Zeile; die Verbandszelle reicht über alle.
 
 Einstellungen im Modul: Name, **Überschrift** (erscheint so, wie sie im Modul
@@ -132,11 +134,10 @@ Wertungsportals) bleibt für den Bereich des Wertungsportals bestehen.
 Die Verbände als verschachtelte Liste: Landesverbände, darunter ihre Bezirke,
 darunter deren Untergliederungen. Der DSB (`00000`) wird weggelassen. Je
 Verband stehen **Kennziffer und Name**, je Referent nur **Vor- und Nachname**
-und die **E-Mail-Adressen** (die Funktions-E-Mail zuerst). Anschrift und
-Telefon erscheinen hier nicht.
+und die **Funktions-E-Mail**. Anschrift und Telefon erscheinen hier nicht.
 
-Aufgeführt sind Verbände mit veröffentlichten Referenten und ihre
-übergeordneten Ebenen, damit der Baum zusammenhängt. Einstellungen im Modul wie
+Aufgeführt sind **alle Verbände**; unbesetzte tragen den Vermerk „nicht
+besetzt" (ab 1.54.0). Einstellungen im Modul wie
 bei der Tabelle (Überschrift, geschützt, CSS-ID/Klasse); die Liste trägt die
 Klasse `wp-referentenbaum`, jede tiefere Ebene rückt mit einer feinen Linie ein.
 
@@ -154,3 +155,6 @@ Klasse `wp-referentenbaum`, jede tiefere Ebene rückt mit einer feinen Linie ein
   Herkunft (API/Lokal); Modul „Wertungsreferenten (Baum)"; 00000 heißt immer
   „Deutscher Schachbund"; Veröffentlichen-Knopf in der Liste; Zwischenstufe der
   Verbandskette für Bayern und Sachsen.
+- 1.54.0: In den Ausgaben erscheint nur noch die Funktions-E-Mail, keine
+  Adresse aus der Adressverwaltung; Tabelle, Baum und Gliederung führen auch
+  die unbesetzten Verbände auf.

@@ -2,10 +2,11 @@
 /**
  * Frontend-Modul: Wertungsreferenten als Baum (ab 1.53.0)
  *
- * Verschachtelte Liste der Verbände (ohne den DSB) mit ihren Referenten.
+ * Verschachtelte Liste ALLER Verbände (ohne den DSB) mit ihren Referenten;
+ * unbesetzte tragen den Vermerk „nicht besetzt" (ab 1.54.0).
  * Je Verband: Kennziffer und Name; je Referent: Vor- und Nachname und die
- * E-Mail-Adressen. Die Adressen kommen als verschleierte Links aus
- * Helper\Referentenbaum und werden OHNE weiteres Maskieren ausgegeben.
+ * Funktions-E-Mail. Sie kommt als verschleierter Link aus
+ * Helper\Referentenbaum und wird OHNE weiteres Maskieren ausgegeben.
  *
  * Die Verschachtelung baut Referentenbaum::verschachtelt(); hier wird sie nur
  * rekursiv ausgegeben.
@@ -20,8 +21,12 @@ $zeige = static function (array $knoten, $wurzel = false) use (&$zeige, $e) {
 	?>
 	<ul class="<?= $wurzel ? 'wp-referentenbaum' : 'wp-referentenbaum-ebene' ?>">
 		<?php foreach($knoten as $k): ?>
-			<li class="wp-verband <?= $e($k['ebene']) ?>">
+			<li class="wp-verband <?= $e($k['ebene']) ?><?= empty($k['referenten']) ? ' wp-unbesetzt' : '' ?>">
 				<span class="wp-verband-kopf"><span class="wp-vkz"><?= $e($k['vkz']) ?></span> <span class="wp-verbandsname"><?= $e($k['name']) ?></span></span>
+				<?php // Unbesetzte Verbände stehen seit 1.54.0 mit im Baum ?>
+				<?php if(empty($k['referenten'])): ?>
+					<span class="wp-unbesetzt-text">nicht besetzt</span>
+				<?php endif; ?>
 				<?php if(!empty($k['referenten'])): ?>
 					<ul class="wp-referentenbaum-personen">
 						<?php foreach($k['referenten'] as $r): ?>

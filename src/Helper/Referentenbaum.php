@@ -7,11 +7,11 @@ namespace Schachbulle\ContaoWertungsportalBundle\Helper;
  *
  * Zwei Betriebsarten:
  *
- * 1. `baum()` liefert alle Referenten als Gliederung — DSB, darunter die
+ * 1. `baum()` liefert alle Verbände als Gliederung — DSB, darunter die
  *    Landesverbände, darunter deren Bezirke, jeweils mit den zuständigen
- *    Personen. Aufgeführt werden nur Verbände, unter denen tatsächlich jemand
- *    steht, samt ihrer übergeordneten Ebenen; sonst stünden 197 leere Zeilen
- *    in der Liste.
+ *    Personen. Seit 1.54.0 stehen auch die unbesetzten Verbände darin
+ *    (Frank, 06.10.2026: „Auch unbesetzte Verbände mit ausgeben"); bis
+ *    1.53.0 nur die, unter denen jemand eingetragen war.
  *
  * 2. `zustaendig()` beantwortet die Frage „wer ist für diese Kennziffer
  *    zuständig?" — und geht dabei die Gliederung hinauf: Hat ein Bezirk
@@ -29,27 +29,49 @@ class Referentenbaum
 	protected static $namen = null;
 
 	/**
-	 * Liefert alle veröffentlichten Referenten als Gliederung.
+	 * Kennziffern der Verbände, die in den Ausgaben erscheinen dürfen:
+	 * veröffentlicht und nicht gelöscht. Einmal je Aufruf gelesen.
+	 * @var array|null
+	 */
+	protected static $aktiv = null;
+
+	/**
+	 * Liefert alle Verbände als Gliederung, mit ihren veröffentlichten
+	 * Referenten — auch die Verbände, für die niemand eingetragen ist.
+	 *
+	 * Aufgeführt werden
+	 * - der DSB (00000),
+	 * - alle Verbände des Vereinsbestands, die veröffentlicht und nicht
+	 *   gelöscht sind (auch unbesetzte, seit 1.54.0), und
+	 * - jeder Verband, für den ein Referent eingetragen ist — selbst wenn es
+	 *   ihn im Vereinsbestand nicht (mehr) gibt, sonst verschwände der
+	 *   Referent aus der Ausgabe.
+	 *
+	 * Rechnerische Zwischenstufen der Kette, die es als Verband nicht gibt
+	 * (L0000 über dem Sonderfall L0001), erscheinen nicht.
 	 *
 	 * @return array Liste von Zeilen mit vkz, name, ebene (level_0…3) und
-	 *               referenten (aufbereitete Personen)
+	 *               referenten (aufbereitete Personen, leer bei unbesetzten),
+	 *               nach Kennziffer sortiert; leer nur ohne Vereinsbestand
+	 *               und ohne Referenten
 	 */
 	public static function baum()
 	{
 		$referenten = self::alle();
+		$aktiv = self::aktiveVerbaende();
 
-		if(!count($referenten)) return array();
+		if(!count($referenten) && !count($aktiv)) return array();
 
-		// Alle beteiligten Kennziffern samt übergeordneter Ebenen sammeln,
-		// damit die Gliederung keine Lücke bekommt
-		$vkzListe = array();
+		$vkzListe = array('00000' => true);
+
+		foreach($aktiv as $vkz)
+		{
+			$vkzListe[$vkz] = true;
+		}
 
 		foreach(array_keys($referenten) as $vkz)
 		{
-			foreach(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::vkzKette($vkz) as $stufe)
-			{
-				$vkzListe[$stufe] = true;
-			}
+			$vkzListe[(string) $vkz] = true;
 		}
 
 		// array_keys liefert numerische Schlüssel als Ganzzahlen zurück — aus
@@ -291,9 +313,15 @@ class Referentenbaum
 			// dann, wenn sie in der Adressverwaltung nicht öffentlich ist
 			'adresse'  => trim((string) ($row['versandadresse'] ?? '')),
 
-			// Die angezeigten Adressen im Klartext — nur zum Vergleich mit dem
-			// Referenten von nu (Helper\Zustaendigkeit), gehört in KEIN Template
+			// Die angezeigten Adressen im Klartext (seit 1.54.0 nur die
+			// Funktions-E-Mail) — gehört in KEIN Template, dort stehen die
+			// verschleierten Links aus `emails`
 			'klartext' => array_values((array) ($row['emails'] ?? array())),
+
+			// Alle bekannten Adressen der Person, auch die privaten aus der
+			// Adressverwaltung — NUR zum Wiedererkennen des Referenten von nu
+			// (Helper\Zustaendigkeit::gleich). Nie ausgeben
+			'abgleich' => array_values((array) ($row['abgleich'] ?? $row['emails'] ?? array())),
 		);
 	}
 
@@ -305,28 +333,64 @@ class Referentenbaum
 	 */
 	protected static function verbandsname($vkz)
 	{
-		if(self::$namen === null)
-		{
-			self::$namen = array('00000' => 'Deutscher Schachbund');
-
-			try
-			{
-				// 00000 ist immer der DSB — auf schachbund.de stand dort im
-				// Vereinsbestand ein gewöhnlicher Verein (1.53.0)
-				$objVerbaende = \Contao\Database::getInstance()->execute("SELECT clubVkz, clubName FROM tl_wertungsportal_clubs WHERE (clubVkz LIKE '%00' OR clubVkz IN ('L0001','M0001')) AND clubVkz <> '00000'");
-
-				while($objVerbaende->next())
-				{
-					self::$namen[(string) $objVerbaende->clubVkz] = (string) $objVerbaende->clubName;
-				}
-			}
-			catch(\Throwable $e)
-			{
-				// Ohne Vereinsbestand bleiben die Kennziffern stehen
-			}
-		}
+		self::ladeVerbaende();
 
 		return self::$namen[$vkz] ?? $vkz;
+	}
+
+	/**
+	 * Liefert die Kennziffern der Verbände, die in den Ausgaben erscheinen:
+	 * veröffentlicht und nicht gelöscht (der CSV-Import bildet den Status
+	 * „Archiv" auf das Löschkennzeichen ab). Der DSB (00000) ist nicht dabei —
+	 * baum() setzt ihn selbst.
+	 *
+	 * @return array Liste von Kennziffern als Zeichenketten, leer ohne Vereinsbestand
+	 */
+	protected static function aktiveVerbaende()
+	{
+		self::ladeVerbaende();
+
+		return self::$aktiv;
+	}
+
+	/**
+	 * Liest Namen und Zustand aller Verbände aus dem Vereinsbestand — einmal
+	 * je Aufruf, für verbandsname() und aktiveVerbaende() gemeinsam.
+	 *
+	 * Verband ist, wessen Kennziffer auf „00" endet (wie Helper::istVerband),
+	 * dazu die Sonderfälle L0001 und M0001. 00000 ist immer der DSB und kommt
+	 * nie aus dem Vereinsbestand: Auf schachbund.de stand dort ein
+	 * gewöhnlicher Verein (1.53.0). Die Namen umfassen ALLE Verbände, auch
+	 * gelöschte — ein Referent, der noch für einen solchen eingetragen ist,
+	 * soll dessen Namen behalten.
+	 *
+	 * @return void
+	 */
+	protected static function ladeVerbaende()
+	{
+		if(self::$namen !== null) return;
+
+		self::$namen = array('00000' => 'Deutscher Schachbund');
+		self::$aktiv = array();
+
+		try
+		{
+			$objVerbaende = \Contao\Database::getInstance()->execute("SELECT clubVkz, clubName, published, state FROM tl_wertungsportal_clubs WHERE (clubVkz LIKE '%00' OR clubVkz IN ('L0001','M0001')) AND clubVkz <> '00000'");
+
+			while($objVerbaende->next())
+			{
+				self::$namen[(string) $objVerbaende->clubVkz] = (string) $objVerbaende->clubName;
+
+				if((string) $objVerbaende->published === '1' && (string) $objVerbaende->state !== 'DELETE_STATE_TRUE')
+				{
+					self::$aktiv[] = (string) $objVerbaende->clubVkz;
+				}
+			}
+		}
+		catch(\Throwable $e)
+		{
+			// Ohne Vereinsbestand bleiben die Kennziffern stehen
+		}
 	}
 
 	/**
@@ -337,5 +401,6 @@ class Referentenbaum
 	public static function zuruecksetzen()
 	{
 		self::$namen = null;
+		self::$aktiv = null;
 	}
 }

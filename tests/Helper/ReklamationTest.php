@@ -282,6 +282,27 @@ class ReklamationTest extends TestCase
 	}
 
 	/**
+	 * „Wird nichts im Formular verändert, dann soll auch nichts abgesendet
+	 * werden" (1.54.0): Betreff und Text wie vorbelegt gelten als unverändert
+	 * — auch mit Windows-Zeilenenden und Leerraum am Rand, wie Browser sie
+	 * schicken. Eine Ergänzung im Text oder ein anderer Betreff genügt.
+	 */
+	public function testUnveraendertesFormular(): void
+	{
+		$kontext = Reklamation::fuerTurnier(self::turnier(), 'turnierauswertung', 'https://x.test/');
+		$kontext['empfaenger'] = Reklamation::empfaenger($kontext['referenten'], self::ADMIN);
+		$betreff = Reklamation::betreff($kontext);
+		$text = Reklamation::vorlage($kontext, $kontext['empfaenger'], 'Torsten Tester')['text'];
+
+		$this->assertTrue(Reklamation::unveraendert($kontext, 'Torsten Tester', $betreff, $text));
+		$this->assertTrue(Reklamation::unveraendert($kontext, 'Torsten Tester', ' '.$betreff.' ', str_replace("\n", "\r\n", $text)."\r\n"));
+
+		$ergaenzt = str_replace(Reklamation::MARKE, Reklamation::MARKE."\nDie Partie gegen Pugachova fehlt.", $text);
+		$this->assertFalse(Reklamation::unveraendert($kontext, 'Torsten Tester', $betreff, $ergaenzt));
+		$this->assertFalse(Reklamation::unveraendert($kontext, 'Torsten Tester', $betreff.' – Runde 3', $text));
+	}
+
+	/**
 	 * Fehler bis 1.52.0: Die Turnierauswertung liefert den Kopf unter
 	 * „tournament". Er muss genauso gelesen werden wie der flache — mit
 	 * Turniername, Zeitraum, Turniercode und dem Auswerter als Empfänger.

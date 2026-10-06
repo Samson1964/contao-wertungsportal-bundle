@@ -564,6 +564,36 @@ class Reklamation
 	}
 
 	/**
+	 * Prüft, ob das Formular unverändert abgeschickt wurde (ab 1.54.0).
+	 *
+	 * „Wird nichts im Formular verändert, dann soll auch nichts abgesendet
+	 * werden" (Frank, 06.10.2026): Stimmen Betreff UND Text mit der Vorbelegung
+	 * überein, enthält die Nachricht nichts, was der Empfänger nicht schon
+	 * wüsste. Die Vorbelegung wird hier aus dem signierten Kontext neu
+	 * gebildet — so wie link() sie erzeugt hat —, statt sie aus dem Formular
+	 * zu übernehmen. Verglichen wird nach derselben Bereinigung wie beim
+	 * Versand; Zeilenenden und Leerraum am Rand zählen also nicht.
+	 *
+	 * Das Skript prüft dasselbe schon im Browser; hier steht die Regel, damit
+	 * sie sich nicht umgehen lässt.
+	 *
+	 * @param array<string,mixed> $kontext      Entschlüsselter Kontext (mit `empfaenger`)
+	 * @param string              $mitgliedName Name des Mitglieds, wie in der Grußzeile
+	 * @param string              $betreff      Abgeschickter Betreff
+	 * @param string              $text         Abgeschickter Text
+	 *
+	 * @return bool true, wenn weder Betreff noch Text geändert wurden
+	 */
+	public static function unveraendert(array $kontext, string $mitgliedName, string $betreff, string $text): bool
+	{
+		$empfaenger = array_values(array_filter((array) ($kontext['empfaenger'] ?? array()), 'is_array'));
+		$vorlage = self::vorlage($kontext, $empfaenger, $mitgliedName);
+
+		return self::bereinigeBetreff($betreff) === self::bereinigeBetreff(self::betreff($kontext))
+			&& self::bereinigeText($text) === self::bereinigeText($vorlage['text']);
+	}
+
+	/**
 	 * Signiert einen Kontext für die Reise durch den Browser.
 	 *
 	 * Der Kontext wird als JSON in Base64 (URL-sicher) verpackt und mit HMAC-
@@ -765,7 +795,8 @@ class Reklamation
 	 *
 	 * 1. Admin-Adresse eingestellt? Sonst 503.
 	 * 2. Kontext echt (Signatur)? Sonst 400.
-	 * 3. Betreff und Text brauchbar? Sonst 422.
+	 * 3. Betreff und Text brauchbar und gegenüber der Vorbelegung verändert?
+	 *    Sonst 422.
 	 * 4. Bremse: höchstens self::HOECHSTZAHL je self::ZEITFENSTER? Sonst 429.
 	 * 5. Verschicken — an die Empfänger aus dem Kontext, Blindkopie an den
 	 *    Admin (sofern er nicht selbst Empfänger ist), Antwort an das Mitglied.
@@ -804,6 +835,11 @@ class Reklamation
 
 		if (null !== $fehler) {
 			return self::antwort(422, $fehler);
+		}
+
+		// Unverändert abgeschickt: nichts senden (ab 1.54.0)
+		if (self::unveraendert($kontext, (string) ($mitglied['name'] ?? ''), $betreff, $text)) {
+			return self::antwort(422, 'Sie haben das Formular nicht verändert. Bitte ergänzen Sie unter „'.self::MARKE.'“, was nicht stimmt.');
 		}
 
 		$bisher = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalReklamationenModel::countBy(

@@ -13,7 +13,7 @@ $GLOBALS['TL_LANG']['tl_wertungsportal_reklamationen']['memberEmail'] = array('A
 $GLOBALS['TL_LANG']['tl_wertungsportal_reklamationen']['empfaengerName'] = array('Empfänger', 'An wen die Reklamation ging.');
 $GLOBALS['TL_LANG']['tl_wertungsportal_reklamationen']['empfaengerEmail'] = array('Empfängeradresse', 'E-Mail-Adresse(n) der Empfänger.');
 $GLOBALS['TL_LANG']['tl_wertungsportal_reklamationen']['empfaengerArt'] = array('Empfänger ist', 'Wertungsreferent oder — wenn keiner genannt war — der DSB-Admin.');
-$GLOBALS['TL_LANG']['tl_wertungsportal_reklamationen']['bcc'] = array('Blindkopie an', 'Adresse der Blindkopie; leer, wenn der Admin selbst Empfänger war.');
+$GLOBALS['TL_LANG']['tl_wertungsportal_reklamationen']['bcc'] = array('Kopie an', 'Bei Reklamationen die Adresse der Blindkopie (leer, wenn der Admin selbst Empfänger war); bei „Foto ändern“ und „Logo/Infos ändern“ die Adresse des Mitglieds, wenn es eine Kopie wollte.');
 $GLOBALS['TL_LANG']['tl_wertungsportal_reklamationen']['bereich'] = array('Ansicht', 'Seite, von der aus die Reklamation abgeschickt wurde.');
 $GLOBALS['TL_LANG']['tl_wertungsportal_reklamationen']['url'] = array('Adresse der Seite', '');
 $GLOBALS['TL_LANG']['tl_wertungsportal_reklamationen']['turnierUuid'] = array('Turniercode', '');
@@ -44,6 +44,9 @@ $GLOBALS['TL_LANG']['tl_wertungsportal_reklamationen']['bereiche'] = array
 	'spielersuche'       => 'Spielersuche',
 	'vereinssuche'       => 'Vereinssuche',
 	'turniersuche'       => 'Turniersuche',
+	// Änderungsmeldungen (ab 1.54.0, Helper\Aenderung) — an den DSB-Admin
+	'foto'               => 'Foto ändern (Karteikarte)',
+	'vereinsdaten'       => 'Logo/Infos ändern (Verein)',
 );
 
 $GLOBALS['TL_LANG']['tl_wertungsportal_reklamationen']['edit'] = 'Reklamation ID %s bearbeiten';

@@ -85,6 +85,7 @@ class AdressverknuepfungTest extends TestCase
 			$this->assertFalse($r['ausAdressverwaltung']);
 			$this->assertSame(array('Alt', 'Anton', ''), array($r['nachname'], $r['vorname'], $r['titel']));
 			$this->assertSame(array('dwz@verband.example.org'), $r['emails']);
+			$this->assertSame(array('dwz@verband.example.org'), $r['abgleich']);
 			$this->assertSame('dwz@verband.example.org', $r['versandadresse']);
 			$this->assertSame(array(), $r['telefone']);
 			$this->assertSame(array('', '', ''), array($r['strasse'], $r['plz'], $r['ort']));
@@ -93,9 +94,10 @@ class AdressverknuepfungTest extends TestCase
 	}
 
 	/**
-	 * Eine aktive Adresse liefert Name mit Titel, ALLE öffentlichen
-	 * E-Mail-Adressen hinter der Funktions-E-Mail (Doppelte ohne Rücksicht
-	 * auf Großschreibung entfernt), alle Telefonnummern und die Anschrift.
+	 * Eine aktive Adresse liefert Name mit Titel, alle Telefonnummern und die
+	 * Anschrift. Angezeigt wird NUR die Funktions-E-Mail (1.54.0); die
+	 * Adressen der Adresse stehen allein in `abgleich` (Doppelte ohne
+	 * Rücksicht auf Großschreibung entfernt).
 	 */
 	public function testAktiveAdresseLiefertAlleKontaktdaten(): void
 	{
@@ -103,7 +105,8 @@ class AdressverknuepfungTest extends TestCase
 
 		$this->assertTrue($r['ausAdressverwaltung']);
 		$this->assertSame(array('Neu', 'Nora', 'Dr.'), array($r['nachname'], $r['vorname'], $r['titel']));
-		$this->assertSame(array('dwz@verband.example.org', 'neu@example.org', 'nora@example.org'), $r['emails']);
+		$this->assertSame(array('dwz@verband.example.org'), $r['emails']);
+		$this->assertSame(array('dwz@verband.example.org', 'neu@example.org', 'nora@example.org'), $r['abgleich']);
 		$this->assertSame('dwz@verband.example.org', $r['versandadresse'], 'Reklamationen an die Funktions-E-Mail');
 		$this->assertSame(array('0341 222', '0171 333'), $r['telefone']);
 		$this->assertSame(array('Neue Straße 2', '04109', 'Leipzig'), array($r['strasse'], $r['plz'], $r['ort']));
@@ -111,22 +114,25 @@ class AdressverknuepfungTest extends TestCase
 	}
 
 	/**
-	 * Ohne Funktions-E-Mail stehen nur die Adressen der Adresse da, und
-	 * Reklamationen gehen an die erste davon.
+	 * Ohne Funktions-E-Mail wird KEINE E-Mail-Adresse angezeigt — die
+	 * privaten Adressen der Adresse erscheinen nie. Reklamationen gehen
+	 * trotzdem an die erste davon.
 	 */
 	public function testOhneFunktionsadresse(): void
 	{
 		$referent = array('email' => '') + self::referent();
 		$r = Adressverknuepfung::zusammenfuehren($referent, self::adresse());
 
-		$this->assertSame(array('neu@example.org', 'nora@example.org', 'DWZ@verband.example.org'), $r['emails']);
+		$this->assertSame(array(), $r['emails']);
+		$this->assertSame(array('neu@example.org', 'nora@example.org', 'DWZ@verband.example.org'), $r['abgleich']);
 		$this->assertSame('neu@example.org', $r['versandadresse']);
 	}
 
 	/**
 	 * Was in der Adressverwaltung nicht öffentlich ist, bleibt leer. Die
 	 * Funktions-E-Mail bleibt sichtbar; ohne sie geht eine Reklamation an die
-	 * erste — verborgene — Adresse, die aber nicht angezeigt wird.
+	 * erste Adresse der Adresse, die aber nie angezeigt wird — auf den
+	 * Schalter email_view kommt es dafür nicht mehr an.
 	 */
 	public function testNichtOeffentlichesBleibtVerborgen(): void
 	{

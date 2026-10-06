@@ -11,25 +11,34 @@
 	<fieldset class="tl_box">
 		<legend>CSV-Datei ausw&auml;hlen</legend>
 		<div class="widget">
-			<p>Unterst&uuml;tzte Exportdateien (Semikolon-getrennt, UTF-8, mit Kopfzeile;
-			die Zuordnung erfolgt &uuml;ber die Spaltennamen):</p>
-			<ul>
-				<li><b>Vereine__Vereinsmitglieder__...csv</b> &mdash; kompletter Mitgliederbestand
-				(Pflichtspalten: <?= $this->pflichtspalten ?>)</li>
-				<li><b>Spielgenehmigungen__Angemeldete_im_Zeitraum__...csv</b> und
-				<b>Spielgenehmigungen__Abgemeldete_im_Zeitraum__...csv</b> &mdash; Genehmigungshistorie
-				(Pflichtspalten: <?= $this->pflichtspaltenGenehmigungen ?>). Vervollst&auml;ndigt
-				Spieler (externe Nummer, Name, Geburtsdatum) und legt fehlende Spieler an
-				(z.&nbsp;B. Abgemeldete); je Genehmigung werden Verein, Lizenzstatus,
-				Zeitraum und Antragsdaten in den Mitgliedschaften gespeichert.</li>
-			</ul>
+			<?php // Dateinamen und Reihenfolge wie im Mitgliederportal exportiert
+			      // (Originalnamen vom 02.10.2026, Frank). Die Erkennung des
+			      // Dateityps hängt an den Namensteilen „Vereinsmitglieder",
+			      // „Abgemeldete_im_Zeitraum" und „Angemeldete_im_Zeitraum"
+			      // (PersonenImport::typAusDateiname und das Skript unten) ?>
+			<p>Die drei Exportdateien des Mitgliederportals <b>in dieser Reihenfolge</b> importieren
+			(Semikolon-getrennt, UTF-8, mit Kopfzeile; die Zuordnung erfolgt über die Spaltennamen).
+			Der Zeitstempel am Ende des Namens (JJJJMMTTHHMMSS) ist der Zeitpunkt des Exports:</p>
+			<ol>
+				<li><b>Vereine__Vereinsmitglieder__JJJJMMTTHHMMSS.csv</b><br>
+				Beispiel: <code>Vereine__Vereinsmitglieder__20261002125738.csv</code><br>
+				Kompletter Mitgliederbestand (Pflichtspalten: <?= $this->pflichtspalten ?>).</li>
+				<li><b>Spielgenehmigungen__Abgemeldete_im_Zeitraum__JJJJMMTTHHMMSS.csv</b><br>
+				Beispiel: <code>Spielgenehmigungen__Abgemeldete_im_Zeitraum__20261002125555.csv</code><br>
+				Beendete Spielgenehmigungen.</li>
+				<li><b>Spielgenehmigungen__Angemeldete_im_Zeitraum__JJJJMMTTHHMMSS.csv</b><br>
+				Beispiel: <code>Spielgenehmigungen__Angemeldete_im_Zeitraum__20261002125648.csv</code><br>
+				Laufende Spielgenehmigungen (leeres Bis-Datum).</li>
+			</ol>
+			<p>Die beiden Spielgenehmigungs-Dateien (Pflichtspalten:
+			<?= $this->pflichtspaltenGenehmigungen ?>) vervollständigen die Spieler (externe Nummer,
+			Name, Geburtsdatum) und legen fehlende an, etwa Abgemeldete; je Genehmigung werden
+			Verein, Lizenzstatus, Zeitraum und Antragsdaten in den Mitgliedschaften gespeichert.
+			<b>Abgemeldete vor Angemeldeten</b>, weil bei gleicher Genehmigungsnummer der spätere
+			Import gewinnt.</p>
 			<p>Spieler werden anhand der InterneNr (nuLiga-Personen-ID) angelegt bzw.
-			aktualisiert; Datum/Uhrzeit aus dem Dateinamen wird als &Auml;nderungszeitpunkt
-			der Datens&auml;tze gesetzt.</p>
-			<p><b>Empfohlene Reihenfolge bei den Spielgenehmigungen: zuerst die
-			Abmeldungen, danach die Anmeldungen importieren</b> &mdash; bei gleicher
-			Genehmigungsnummer gewinnt der sp&auml;tere Import, und die Anmeldungen-Datei
-			enth&auml;lt die laufenden Genehmigungen (leeres Bis-Datum).</p>
+			aktualisiert; Datum und Uhrzeit aus dem Dateinamen werden als Änderungszeitpunkt
+			der Datensätze gesetzt.</p>
 			<p>
 				<select id="wpTyp" class="tl_select" style="width:auto">
 					<option value="auto">Dateityp automatisch erkennen (aus dem Dateinamen)</option>

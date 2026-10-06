@@ -31,6 +31,11 @@ Referenten; fehlt sie, die erste E-Mail-Adresse seiner Adresse in der
 Adressverwaltung — auch dann, wenn sie dort nicht öffentlich ist; zu sehen ist
 sie dabei nirgends.
 
+**Wird nichts im Formular verändert, wird auch nichts abgesendet** (ab
+1.54.0): Stimmen Betreff und Text noch mit der Vorbelegung überein, meldet das
+Formular „Sie haben das Formular noch nicht verändert" — der Empfänger erführe
+sonst nichts, was nicht schon auf der Seite steht.
+
 Der Link erscheint nur,
 
 - wenn ein Mitglied angemeldet ist **und** in seinem Konto eine gültige

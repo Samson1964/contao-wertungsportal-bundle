@@ -13,6 +13,10 @@ Ersetzt die SOAP-Schnittstelle von DeWIS und kommuniziert mit der REST-Schnittst
   Verhalten vor und nach der Umstellung bei nu, Zip-Downloads
 * [Wertungsreferenten](docs/referenten.md) — Zuständigkeit je Verband, Funktions-E-Mail, Kontaktdaten
   aus der Adressverwaltung (contao-adressen-bundle); Frontend-Modul „Wertungsreferenten (Tabelle)"
+* [Foto ändern, Logo/Infos ändern](docs/aenderungen.md) — Formulare mit Dateianhang für angemeldete
+  Mitglieder, an den DSB-Admin; ersetzen „Foto senden" und „Logo senden"
+* [Mitgliedergruppe für DSB-Mitglieder](docs/mitgliedergruppe.md) — monatlicher Abgleich der
+  Contao-Mitglieder mit dem Spielerbestand, auch als Befehl mit `--dry-run`
 * [Reklamationen zu den DWZ-Daten](docs/reklamationen.md) — Formular in einer Lightbox für angemeldete
   Mitglieder, an den Wertungsreferenten der Ansicht oder den DSB-Admin, mit Backend-Modul
 * [Beispielskript für eigene Anwendungen](docs/oauth2-beispiel.md) — eine eigenständige

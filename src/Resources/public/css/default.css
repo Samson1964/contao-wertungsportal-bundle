@@ -959,6 +959,22 @@
 	display					: inline-block;
 }
 
+/* Unbesetzte Verbände in Tabelle, Baum und Gliederung (ab 1.54.0): der
+   Vermerk tritt zurück, bleibt aber lesbar (#595959 auf Weiß: 7,0:1) */
+.wp-unbesetzt-text {
+	color					: #595959;
+	font-style				: italic;
+	font-weight				: normal;
+}
+
+.wp-referentenbaum .wp-unbesetzt > .wp-verband-kopf {
+	font-weight				: normal;
+}
+
+.wp-referentenbaum .wp-unbesetzt-text {
+	margin-left				: 6px;
+}
+
 /* Wertungsreferenten als Baum (ab 1.53.0, Classes\Referentengliederung).
    Allgemeine Seiten, also nicht unter .dewis. Jede Ebene rückt ein, eine
    feine Linie links zeigt, was zusammengehört */
@@ -1220,4 +1236,127 @@ dialog.wp-reklamation::backdrop
 	{
 		min-height			: 14rem;
 	}
+}
+
+/* ── Änderungsmeldungen (ab 1.54.0, Helper\Aenderung, js/aenderung.js) ─────────
+   „Foto ändern" unter dem Spielerbild, „Logo/Infos ändern" unter dem
+   Vereinslogo — nur für angemeldete Mitglieder. Die Dialoge tragen zusätzlich
+   die Klasse wp-reklamation und erben deren Aussehen; hier steht nur, was
+   abweicht. Der Link sieht aus wie der Reklamationslink, steht aber als
+   eigene Zeile unter dem Bild. */
+.wp-aenderung-link
+{
+	display					: inline-block;
+	margin					: .4em 0 0;
+	padding					: .05em .6em;
+	font					: inherit;
+	font-size				: .8em;
+	line-height				: 1.5;
+	color					: #9A3412;
+	background				: #FFF7ED;
+	border					: 1px solid #FDBA74;
+	border-radius			: 3px;
+	cursor					: pointer;
+}
+
+.wp-aenderung-link:hover,
+.wp-aenderung-link:focus-visible
+{
+	background				: #FFEDD5;
+	border-color			: #EA580C;
+	outline					: none;
+}
+
+/* Textfelder der neuen Dialoge sind Fließtext, keine ausgerichtete Vorlage */
+.wp-aenderung textarea
+{
+	min-height				: 6rem;
+	font-family				: inherit;
+	font-size				: inherit;
+}
+
+.wp-aenderung input[type="url"],
+.wp-aenderung input[type="file"]
+{
+	box-sizing				: border-box;
+	width					: 100%;
+	padding					: .5rem .6rem;
+	font					: inherit;
+	color					: inherit;
+	background				: #FFF;
+	border					: 1px solid #9AA5AA;
+	border-radius			: 3px;
+}
+
+.wp-aenderung input[type="url"]:focus,
+.wp-aenderung input[type="file"]:focus
+{
+	border-color			: #004F6E;
+	outline					: 2px solid rgba(0, 79, 110, .25);
+	outline-offset			: 0;
+}
+
+/* #44555C auf Weiß: 7,6:1 */
+.wp-aenderung-hilfe
+{
+	margin					: .3rem 0 0;
+	font-size				: .85em;
+	color					: #44555C;
+}
+
+.wp-aenderung-optional
+{
+	font-weight				: normal;
+	color					: #44555C;
+}
+
+.wp-aenderung-kopie
+{
+	margin					: 1rem 0 0;
+}
+
+.wp-reklamation .wp-aenderung-kopie label
+{
+	display					: inline;
+	margin					: 0;
+	font-weight				: normal;
+}
+
+/* Der Vereinsdialog ist NICHT modal (data-nichtmodal), weil der Editor seine
+   Menüs und Fenster ans Seitenende hängt — unter einem modalen Dialog lägen
+   sie unsichtbar dahinter. Also selbst mittig stellen und selbst abdunkeln;
+   TinyMCE legt seine Fenster auf z-index 1300, also darüber */
+dialog.wp-aenderung[data-nichtmodal][open]
+{
+	position				: fixed;
+	top						: 50%;
+	left					: 50%;
+	z-index					: 1000;
+	margin					: 0;
+	overflow				: auto;
+	transform				: translate(-50%, -50%);
+}
+
+.wp-aenderung-hintergrund
+{
+	position				: fixed;
+	inset					: 0;
+	z-index					: 999;
+	background				: rgba(0, 37, 51, .55);
+}
+
+.wp-aenderung-hintergrund[hidden]
+{
+	display					: none;
+}
+
+/* Solange der nicht modale Dialog offen ist, rollt die Seite dahinter nicht */
+html.wp-aenderung-offen
+{
+	overflow				: hidden;
+}
+
+dialog.wp-aenderung-breit
+{
+	width					: min(52rem, calc(100vw - 2rem));
 }

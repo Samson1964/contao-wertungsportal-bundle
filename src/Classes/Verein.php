@@ -294,6 +294,17 @@ class Verein extends \Contao\Module
 			$zustaendig = \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::lokal((string) $zps);
 			$this->Template->referent = \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::html($zustaendig);
 
+			// „Logo/Infos ändern" unter dem Vereinslogo (ab 1.54.0) — Formular an
+			// den DSB-Admin, vorbelegt mit Homepage und Vereinsinfo aus dem
+			// Backend; nur für angemeldete Mitglieder
+			$this->Template->datenlink = \Schachbulle\ContaoWertungsportalBundle\Helper\Aenderung::linkVereinsdaten(
+				(string) $vereinsname,
+				(string) $zps,
+				(string) \Contao\Environment::get('uri'),
+				($objClub && $objClub->homepage != '') ? (string) $objClub->homepage : '',
+				($objClub && $objClub->info != '') ? (string) $objClub->info : ''
+			);
+
 			// Reklamation zur Vereinsliste — an den Referenten, ohne ihn an den DSB-Admin
 			$this->Template->reklamation = \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerVerein((string) $vereinsname, (string) $zps, (string) \Contao\Environment::get('uri'), \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::empfaenger($zustaendig)));
 

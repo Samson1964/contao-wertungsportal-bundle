@@ -21,12 +21,21 @@ namespace Schachbulle\ContaoWertungsportalBundle\Classes;
 class Systemmeldungen
 {
 	/**
-	 * Warnt auf der Backend-Startseite, wenn der letzte Personen-Import
-	 * (Abgleich mit dem Mitgliederportal) länger als 31 Tage zurückliegt
-	 * oder noch nie erfasst wurde. Ohne den monatlichen Abgleich veralten
-	 * die lokalen Personendaten — die nu-Schnittstelle liefert abgemeldete
-	 * Spieler nicht mehr, Abmeldungen kommen also nur über die Importe an;
-	 * betroffen sind die lokale Teilstring-Spielersuche und die Bestenliste.
+	 * Nach so vielen Tagen ohne Spieler-Import erscheint der Hinweis.
+	 *
+	 * Bis 1.53.0 erst ab dem 32. Tag (`> 31`); der Abgleich ist monatlich
+	 * fällig, also ab dem 30. Tag (Frank, 06.10.2026).
+	 */
+	public const FRIST_TAGE = 30;
+
+	/**
+	 * Warnt auf der Backend-Startseite, wenn der letzte Spieler-Import
+	 * (Abgleich mit dem Mitgliederportal) mindestens FRIST_TAGE Tage
+	 * zurückliegt oder noch nie erfasst wurde. Ohne den monatlichen Abgleich
+	 * veralten die lokalen Spielerdaten — die nu-Schnittstelle liefert
+	 * abgemeldete Spieler nicht mehr, Abmeldungen kommen also nur über die
+	 * Importe an; betroffen sind die lokale Teilstring-Spielersuche und die
+	 * Bestenliste.
 	 *
 	 * Der Datenstand wird beim Abschluss des CSV-Imports gespeichert
 	 * (wertungsportal_personimport = Exportdatum aus dem Dateinamen).
@@ -37,16 +46,36 @@ class Systemmeldungen
 	{
 		$stand = isset($GLOBALS['TL_CONFIG']['wertungsportal_personimport']) ? (int) $GLOBALS['TL_CONFIG']['wertungsportal_personimport'] : 0;
 
+		return self::meldung($stand, time());
+	}
+
+	/**
+	 * Bildet den Hinweis zum Spieler-Import für einen Datenstand.
+	 *
+	 * Ohne Contao, damit Frist und Wortlaut prüfbar sind
+	 * (tests/Classes/SystemmeldungenTest.php). Der Menüpunkt heißt im Backend
+	 * „Spieler", nicht „Personen" — so steht es jetzt auch im Hinweis.
+	 *
+	 * @param  int $stand Datenstand des letzten Imports als Zeitstempel, 0 für „noch nie"
+	 * @param  int $jetzt Aktuelle Zeit als Zeitstempel
+	 * @return string     Meldung als HTML; '' solange der Import jünger als
+	 *                    FRIST_TAGE Tage ist
+	 */
+	public static function meldung($stand, $jetzt)
+	{
+		$wohin = 'Bitte unter Wertungsportal &rarr; Spieler &rarr; CSV-Import die aktuellen Exportdateien des Mitgliederportals importieren';
+		$reihenfolge = 'Reihenfolge: Vereinsmitglieder, Abgemeldete im Zeitraum, Angemeldete im Zeitraum';
+
 		if(!$stand)
 		{
-			return '<p class="tl_error">Wertungsportal: Es ist noch kein Mitgliederdaten-Import erfasst. Bitte unter Wertungsportal &rarr; Personen &rarr; CSV-Import die aktuellen Exportdateien des Mitgliederportals importieren (Reihenfolge: Vereine, Abmeldungen, Anmeldungen).</p>';
+			return '<p class="tl_error">Wertungsportal: Es ist noch kein Spieler-Import erfasst. '.$wohin.' ('.$reihenfolge.').</p>';
 		}
 
-		$tage = (int) floor((time() - $stand) / 86400);
+		$tage = (int) floor(($jetzt - $stand) / 86400);
 
-		if($tage > 31)
+		if($tage >= self::FRIST_TAGE)
 		{
-			return '<p class="tl_error">Wertungsportal: Der letzte Mitgliederdaten-Import liegt '.$tage.' Tage zurück (Datenstand '.date('d.m.Y', $stand).'). Bitte unter Wertungsportal &rarr; Personen &rarr; CSV-Import die aktuellen Exportdateien des Mitgliederportals importieren, sonst veralten die lokalen Personendaten (Abmeldungen kommen nur über die Importe an).</p>';
+			return '<p class="tl_error">Wertungsportal: Der letzte Spieler-Import liegt '.$tage.' Tage zurück (Datenstand '.date('d.m.Y', $stand).'). '.$wohin.' ('.$reihenfolge.'), sonst veralten die lokalen Spielerdaten (Abmeldungen kommen nur über die Importe an).</p>';
 		}
 
 		return '';

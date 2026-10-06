@@ -80,7 +80,12 @@
 					<?php else: ?>
 						<?php $this->insert('image', $this->arrData); ?>
 					<?php endif; ?>
-					<br><a href="mailto:webmaster@schachbund.com" style="font-size:10px;">Foto senden</a>
+					<?php // „Foto ändern" (ab 1.54.0) ersetzt den mailto-Link „Foto senden":
+					      // ein Formular mit Dateianhang, nur für angemeldete Mitglieder
+					      // (Helper\Aenderung::linkFoto). Gäste sehen hier nichts ?>
+					<?php if($this->fotolink): ?>
+						<br><?= $this->fotolink ?>
+					<?php endif; ?>
 				</div>
 			<?php endif; ?>
 			<div class="karteikarte-daten table_responsiv">

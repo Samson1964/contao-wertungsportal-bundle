@@ -90,6 +90,16 @@ class ZustaendigkeitTest extends TestCase
 		$this->assertTrue(Zustaendigkeit::gleich($api, $perVersand));
 		$this->assertTrue(Zustaendigkeit::gleich($api, $perName));
 		$this->assertFalse(Zustaendigkeit::gleich($api, $fremd));
+
+		// 1.54.0: Angezeigt wird nur die Funktions-E-Mail. Die private Adresse
+		// aus der Adressverwaltung steht in `abgleich` — sie erkennt die Person
+		// wieder, taucht aber in den angezeigten Adressen nicht auf
+		$person = self::person('Ria', 'Anders', array('dwz@example.org'), 'dwz@example.org');
+		$person['abgleich'] = array('dwz@example.org', 'RITA@example.org');
+		$perPrivat = Zustaendigkeit::ausReferenten(array($person))[0];
+
+		$this->assertTrue(Zustaendigkeit::gleich($api, $perPrivat));
+		$this->assertSame(array('dwz@example.org'), $perPrivat['emails']);
 	}
 
 	/**

@@ -21,3 +21,14 @@ wertungsportal_reklamation:
         _controller: Schachbulle\ContaoWertungsportalBundle\Controller\ReklamationController
         _scope: frontend
         _token_check: true
+
+# Änderungsmeldungen „Foto ändern" und „Logo/Infos ändern" (ab 1.54.0), mit
+# Dateianhang. Wie die Reklamation: Frontend-Bereich für die Anmeldung des
+# Mitglieds und Tokenprüfung
+wertungsportal_aenderung:
+    path: /wertungsportal-api/aenderung
+    methods: [POST]
+    defaults:
+        _controller: Schachbulle\ContaoWertungsportalBundle\Controller\AenderungController
+        _scope: frontend
+        _token_check: true

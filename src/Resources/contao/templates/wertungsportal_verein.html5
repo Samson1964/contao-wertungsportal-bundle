@@ -74,7 +74,13 @@
 								<?php else: ?>
 									<?php $this->insert('image', $this->arrData); ?>
 								<?php endif; ?>
-								<br><a href="mailto:webmaster@schachbund.com" style="font-size:10px;">Logo senden</a>
+								<?php // „Logo/Infos ändern" (ab 1.54.0) ersetzt den mailto-Link
+								      // „Logo senden": Formular für Logo, Homepage und „Über den
+								      // Verein", nur für angemeldete Mitglieder
+								      // (Helper\Aenderung::linkVereinsdaten) ?>
+								<?php if($this->datenlink): ?>
+									<br><?= $this->datenlink ?>
+								<?php endif; ?>
 							<?php endif; ?>
 						</td>
 						<td class="col_1 top-line" width="25%">Homepage:</td>

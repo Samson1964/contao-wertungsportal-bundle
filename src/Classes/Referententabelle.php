@@ -11,13 +11,16 @@ use Schachbulle\ContaoWertungsportalBundle\Helper\Referentenbaum;
  * Ersetzt das Frontend-Modul „Wertungsreferenten" des Adressen-Bundles
  * (schachbund.de/adressen_wertungen.html): die Verbände in der Reihenfolge
  * ihrer Kennziffer, je Verband die veröffentlichten Referenten mit Name,
- * Funktions-E-Mail und den Daten ihrer Adresse aus der Adressverwaltung.
+ * Funktions-E-Mail und Anschrift/Telefon ihrer Adresse aus der
+ * Adressverwaltung.
  *
  * Anders als das Modul „Wertungsreferenten" (Referentenliste) ist es für
- * allgemeine Seiten gedacht: ohne Linkleiste des Wertungsportals, mit der
- * Überschrift aus dem Modul, und nur mit Verbänden, unter denen jemand
- * steht — die übergeordneten Ebenen ohne eigenen Referenten, die die
- * Gliederung dort zum Einrücken braucht, fallen weg.
+ * allgemeine Seiten gedacht: ohne Linkleiste des Wertungsportals und mit der
+ * Überschrift aus dem Modul.
+ *
+ * Seit 1.54.0 stehen auch die unbesetzten Verbände in der Tabelle, mit dem
+ * Vermerk „nicht besetzt" (Frank, 06.10.2026) — bis 1.53.0 nur die Verbände,
+ * unter denen jemand eingetragen war.
  *
  * Die Daten stehen vollständig in den eigenen Tabellen und in der
  * Adressverwaltung; nu wird nicht gefragt.
@@ -52,27 +55,18 @@ class Referententabelle extends \Contao\Module
 	}
 
 	/**
-	 * Befüllt das Template mit den Verbänden, unter denen veröffentlichte
-	 * Referenten stehen.
+	 * Befüllt das Template mit allen Verbänden und ihren veröffentlichten
+	 * Referenten.
 	 *
 	 * Die Überschrift setzt Module::generate() aus dem Modulfeld; hier wird
-	 * keine eigene vergeben. Die Reihenfolge kommt aus Referentenbaum::baum()
-	 * (nach Kennziffer sortiert, der DSB mit 00000 zuerst).
+	 * keine eigene vergeben. Reihenfolge und Auswahl der Verbände kommen aus
+	 * Referentenbaum::baum() (nach Kennziffer sortiert, der DSB mit 00000
+	 * zuerst, unbesetzte eingeschlossen).
 	 *
 	 * @return void
 	 */
 	protected function compile()
 	{
-		$zeilen = array();
-
-		foreach(Referentenbaum::baum() as $zeile)
-		{
-			if(!empty($zeile['referenten']))
-			{
-				$zeilen[] = $zeile;
-			}
-		}
-
-		$this->Template->zeilen = $zeilen;
+		$this->Template->zeilen = Referentenbaum::baum();
 	}
 }

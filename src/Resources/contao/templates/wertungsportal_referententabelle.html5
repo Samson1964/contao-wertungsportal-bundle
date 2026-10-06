@@ -4,14 +4,16 @@
  *
  * Ersatz für das Modul „Wertungsreferenten" der Adressverwaltung: je Verband
  * (nach Kennziffer) die veröffentlichten Referenten mit Name und Kontakt.
- * Kontakt = Funktions-E-Mail des Referats, danach die öffentlichen E-Mail-
- * Adressen, die Anschrift und die Telefonnummern der zugeordneten Adresse.
- * Die E-Mail-Adressen kommen als verschleierte Links aus Referentenbaum und
- * werden OHNE weiteres Maskieren ausgegeben.
+ * Kontakt = Funktions-E-Mail des Referats (die einzige E-Mail-Adresse, die
+ * erscheint — seit 1.54.0 keine aus der Adressverwaltung mehr), dazu
+ * Anschrift und Telefonnummern der zugeordneten Adresse. Die E-Mail-Adresse
+ * kommt als verschleierter Link aus Referentenbaum und wird OHNE weiteres
+ * Maskieren ausgegeben.
  *
  * Mehrere Referenten eines Verbandes stehen in eigenen Zeilen; die Zelle mit
  * dem Verband reicht über alle (rowspan). Die Zebrastreifen wechseln je
- * Verband, nicht je Zeile.
+ * Verband, nicht je Zeile. Unbesetzte Verbände stehen seit 1.54.0 mit dem
+ * Vermerk „nicht besetzt" in der Tabelle (Klasse wp-unbesetzt an der Zeile).
  */
 $GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/default.css';
 $e = static function ($wert) {
@@ -27,7 +29,7 @@ $e = static function ($wert) {
 
 	<?php if(!$this->zeilen): ?>
 
-		<p class="wp-hinweis">Es sind noch keine Wertungsreferenten hinterlegt.</p>
+		<p class="wp-hinweis">Es sind noch keine Verbände und Wertungsreferenten hinterlegt.</p>
 
 	<?php else: ?>
 
@@ -42,6 +44,12 @@ $e = static function ($wert) {
 			<tbody>
 				<?php foreach($this->zeilen as $i => $z): ?>
 					<?php $anzahl = count($z['referenten']); ?>
+					<?php if(!$anzahl): ?>
+						<tr class="<?= ($i % 2) ? 'even' : 'odd' ?> <?= $e($z['ebene']) ?> wp-unbesetzt">
+							<td class="wp-verband"><?= $e($z['name']) ?></td>
+							<td class="wp-referent-name" colspan="2"><span class="wp-unbesetzt-text">nicht besetzt</span></td>
+						</tr>
+					<?php endif; ?>
 					<?php foreach($z['referenten'] as $j => $r): ?>
 						<tr class="<?= ($i % 2) ? 'even' : 'odd' ?> <?= $e($z['ebene']) ?>">
 							<?php if($j === 0): ?>

@@ -289,6 +289,10 @@ class Spieler extends \Contao\Module
 				$zustaendig = \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::lokal((string) $kartei->ReferentVkz);
 				$this->Template->referent     = \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::html($zustaendig) ?: $kartei->Referent;
 
+				// „Foto ändern" unter dem Spielerbild (ab 1.54.0) — Formular mit
+				// Dateianhang an den DSB-Admin, nur für angemeldete Mitglieder
+				$this->Template->fotolink     = $gesperrt ? '' : \Schachbulle\ContaoWertungsportalBundle\Helper\Aenderung::linkFoto((string) $kartei->Titelname, (string) $id, (string) \Contao\Environment::get('uri'));
+
 				// Reklamation neben dem Wertungsreferenten — an ihn, ohne ihn an den DSB-Admin
 				$this->Template->reklamation  = $gesperrt ? '' : \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerKarteikarte((string) $kartei->Titelname, (string) $id, (string) \Contao\Environment::get('uri'), \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::empfaenger($zustaendig)));
 				$this->Template->kartei       = $kartei->Kartei;

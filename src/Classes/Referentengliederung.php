@@ -11,12 +11,12 @@ use Schachbulle\ContaoWertungsportalBundle\Helper\Referentenbaum;
  * Die Wertungsreferenten als verschachtelte Liste: Landesverbände, darunter
  * ihre Bezirke, darunter deren Untergliederungen — der DSB (00000) wird
  * weggelassen (Franks Vorgabe). Je Verband stehen nur Kennziffer und Name,
- * je Referent nur Vor- und Nachname und die E-Mail-Adressen (die
- * Funktions-E-Mail zuerst, wie in allen Ausgaben).
+ * je Referent nur Vor- und Nachname und die Funktions-E-Mail (seit 1.54.0
+ * die einzige E-Mail-Adresse in den Ausgaben).
  *
  * Wie beim Tabellen-Modul: ohne Linkleiste, Überschrift aus dem Modul, nur
- * veröffentlichte Referenten. Aufgeführt werden Verbände mit Referenten und
- * ihre übergeordneten Ebenen, damit der Baum zusammenhängt.
+ * veröffentlichte Referenten. Aufgeführt werden seit 1.54.0 ALLE Verbände,
+ * unbesetzte mit dem Vermerk „nicht besetzt".
  */
 class Referentengliederung extends \Contao\Module
 {

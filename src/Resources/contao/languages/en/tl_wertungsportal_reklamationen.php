@@ -44,6 +44,8 @@ $GLOBALS['TL_LANG']['tl_wertungsportal_reklamationen']['bereiche'] = array
 	'spielersuche'       => 'Player search',
 	'vereinssuche'       => 'Club search',
 	'turniersuche'       => 'Tournament search',
+	'foto'               => 'Change photo (rating card)',
+	'vereinsdaten'       => 'Change logo/info (club)',
 );
 
 $GLOBALS['TL_LANG']['tl_wertungsportal_reklamationen']['edit'] = 'Edit complaint ID %s';

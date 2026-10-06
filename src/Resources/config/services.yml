@@ -13,6 +13,13 @@ services:
         arguments:
             - '@contao.framework'
 
+    # Änderungsmeldungen „Foto ändern" und „Logo/Infos ändern" (Route in
+    # routing.yml, ab 1.54.0). Öffentlich aus demselben Grund wie oben
+    Schachbulle\ContaoWertungsportalBundle\Controller\AenderungController:
+        public: true
+        arguments:
+            - '@contao.framework'
+
     # Nächtlicher Cronjob: lädt Turnierdaten der letzten Wochen vor, damit
     # nicht jeder erste Besucher auf die Schnittstelle warten muss.
     # Alle 10 Minuten zwischen 1 und 3 Uhr; jeder Lauf macht dort weiter, wo
@@ -32,6 +39,14 @@ services:
     Schachbulle\ContaoWertungsportalBundle\Cron\Aufraeumer:
         tags:
             - { name: contao.cronjob, interval: '0 4 * * *' }
+
+    # Ordnet monatlich die Mitgliedergruppe für DSB-Mitglieder zu (ab 1.54.0):
+    # Wessen E-Mail-Adresse im Spielerbestand vorkommt, bekommt sie, die
+    # übrigen verlieren sie. 'monthly' OHNE @ — Contao ersetzt das Schlagwort
+    # per str_replace, aus '@monthly' würde ein ungültiger Ausdruck
+    Schachbulle\ContaoWertungsportalBundle\Cron\Mitgliedergruppenabgleich:
+        tags:
+            - { name: contao.cronjob, interval: 'monthly' }
 
     # Stößt das Vorladen von Hand an: wertungsportal:vorladen.
     # Nötig, weil contao:cron nur ausführt, was nach Zeitplan fällig ist — und
@@ -84,6 +99,14 @@ services:
             - '@contao.framework'
         tags:
             - { name: console.command, command: 'wertungsportal:swisschess' }
+
+    # Gleicht die Mitgliedergruppe für DSB-Mitglieder von Hand ab:
+    # wertungsportal:mitgliedergruppe, mit --dry-run zum Ansehen
+    Schachbulle\ContaoWertungsportalBundle\Command\MitgliedergruppeCommand:
+        arguments:
+            - '@contao.framework'
+        tags:
+            - { name: console.command, command: 'wertungsportal:mitgliedergruppe' }
 
     # Füllt die Suchalias-Felder des Bestands beim contao:migrate.
     # Ausdrücklich registriert, weil dieses Bundle ohne Autoconfigure arbeitet

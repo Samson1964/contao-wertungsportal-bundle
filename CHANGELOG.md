@@ -1,5 +1,35 @@
 # Wertungsportal Changelog
 
+## Version 1.54.0 (2026-10-06)
+
+* Add: **„Foto ändern"** unter dem Spielerbild der Karteikarte und **„Logo/Infos ändern"** unter dem
+  Vereinslogo — Formulare im Dialog wie die Reklamation, nur für angemeldete Mitglieder. Sie ersetzen
+  die mailto-Links „Foto senden" und „Logo senden". Empfänger ist der DSB-Admin, auf Wunsch geht eine
+  Kopie an das Mitglied. Foto: Betreff, Bilddatei, Nachricht. Verein: Betreff, Logo, Homepage und
+  „Über den Verein" (TinyMCE), vorbelegt mit den hinterlegten Angaben. Doku: `docs/aenderungen.md`
+* Add: Dateianhänge nur als Bild (JPEG, PNG, GIF, WebP — am Inhalt geprüft), höchstens 5 MB; die Datei
+  wird nirgends abgelegt, sondern unter einem vom Bundle gebildeten Namen an die Mail gehängt. Neue
+  Route `POST /wertungsportal-api/aenderung`; die Meldungen stehen im Backend unter „Reklamationen"
+* Add: **Mitgliedergruppe für DSB-Mitglieder** (Einstellungen): Ein monatlicher Cronjob gibt sie jedem
+  Mitglied, dessen E-Mail-Adresse im Spielerbestand vorkommt (`email1` oder `email2`), und nimmt sie
+  den übrigen. Von Hand: `wertungsportal:mitgliedergruppe`, mit `--dry-run` zum Ansehen. Bei leerem
+  Spielerbestand geschieht nichts. Doku: `docs/mitgliedergruppe.md`
+* Change: Beim Referenten erscheint in allen Ausgaben **nur noch die Funktions-E-Mail**. Die
+  E-Mail-Adressen aus der Adressverwaltung (meist private) werden nirgends mehr angezeigt; ohne
+  Funktions-E-Mail steht keine E-Mail-Adresse da. Reklamationen erreichen den Referenten weiterhin
+* Change: Tabelle, Baum und Gliederung der Referenten führen **auch die unbesetzten Verbände** auf,
+  mit dem Vermerk „nicht besetzt"
+* Change: **Reklamation:** Wird im Formular nichts verändert, wird nichts abgesendet (geprüft im
+  Browser und auf dem Server); dasselbe gilt für „Logo/Infos ändern"
+* Change: Der Hinweis auf den fälligen Spieler-Import erscheint nach **30 Tagen** (bisher ab dem 32.)
+  und spricht von „Spieler" statt „Personen"
+* Change: Hilfetext des Spieler-Imports nennt die drei Exportdateien mit ihren Originalnamen in der
+  Reihenfolge des Imports (Vereinsmitglieder, Abgemeldete, Angemeldete)
+* **Einspielen:** `contao:assets:install` (neues Skript `js/aenderung.js`, Stile) und `cache:clear`
+  (neue Route, neuer Cronjob, neuer Befehl). Kein migrate. Danach unter Einstellungen die
+  Mitgliedergruppe wählen und einmal `wertungsportal:mitgliedergruppe --dry-run` ansehen. Bei den
+  Referenten die Funktions-E-Mail eintragen — sonst steht dort keine E-Mail-Adresse mehr
+
 ## Version 1.53.0 (2026-09-30)
 
 * Add: **Zuständiger Wertungsreferent bei Spielern, Vereinen, Verbänden und Turnieren**, jeweils mit

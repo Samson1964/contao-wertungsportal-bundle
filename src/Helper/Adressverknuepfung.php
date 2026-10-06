@@ -9,16 +9,18 @@ namespace Schachbulle\ContaoWertungsportalBundle\Helper;
  *
  * Ein Referent in tl_wertungsportal_referenten wird einem Datensatz aus
  * tl_adressen zugeordnet (Paket schachbulle/contao-adressen-bundle). Seit
- * 1.52.0 kommen die Kontaktdaten AUSSCHLIESSLICH von dort: Anschrift, alle
- * Telefonnummern und alle E-Mail-Adressen der Adresse, jeweils nur, soweit
- * die Sichtbarkeitsschalter der Adressverwaltung sie freigeben. Das
- * Adressen-Bundle ist damit die einzige Quelle für Kontaktdaten.
+ * 1.52.0 kommen Anschrift und Telefonnummern AUSSCHLIESSLICH von dort,
+ * jeweils nur, soweit die Sichtbarkeitsschalter der Adressverwaltung sie
+ * freigeben.
  *
  * Eigene Angaben des Referenten sind nur noch Name, nu-ID und eine
- * Funktions-E-Mail des Wertungsreferats (etwa dwz@verband.de). Sie steht in
- * den Ausgaben vor den E-Mail-Adressen der Adresse und empfängt die
- * Reklamationen. Die alten Spalten telefon, strasse, plz und ort stehen noch
- * in der Tabelle, werden aber nirgends mehr ausgegeben.
+ * Funktions-E-Mail des Wertungsreferats (etwa dwz@verband.de). Sie ist seit
+ * 1.54.0 die EINZIGE E-Mail-Adresse, die in Ausgaben erscheint, und sie
+ * empfängt die Reklamationen. Die E-Mail-Adressen der Adresse (meist
+ * private) werden nie gezeigt; sie dienen nur als Notanker für den Versand
+ * und zum Wiedererkennen des Referenten von nu. Die alten Spalten telefon,
+ * strasse, plz und ort stehen noch in der Tabelle, werden aber nirgends
+ * mehr ausgegeben.
  *
  * Die Zuständigkeit (welche Verbände) wird nur im Wertungsportal gepflegt;
  * das Feld tl_adressen.wertungsreferent wird nicht gelesen.
@@ -77,10 +79,15 @@ class Adressverknuepfung
 	 *
 	 * - **Name**: aus der aktiven Adresse samt Titel, sofern dort ein Nachname
 	 *   steht; sonst der eigene Name des Referenten.
-	 * - **E-Mail-Adressen** (`emails`): zuerst die Funktions-E-Mail des
-	 *   Referenten (Spalte `email`), danach alle belegten E-Mail-Adressen der
-	 *   Adresse (email1…email6) — diese nur, wenn `email_view` sie freigibt.
-	 *   Doppelte fallen heraus, Groß- und Kleinschreibung zählt dabei nicht.
+	 * - **E-Mail-Adressen** (`emails`): AUSSCHLIESSLICH die Funktions-E-Mail
+	 *   des Referenten (Spalte `email`). Die E-Mail-Adressen der Adresse
+	 *   (email1…email6) erscheinen seit 1.54.0 in keiner Ausgabe mehr — es
+	 *   sind meist private Adressen (Frank, 06.10.2026). Ohne Funktions-E-Mail
+	 *   steht beim Referenten keine E-Mail-Adresse.
+	 * - **Abgleich** (`abgleich`): Funktions-E-Mail und alle E-Mail-Adressen
+	 *   der Adresse, auch nicht öffentliche — nur, um den Referenten von nu
+	 *   als dieselbe Person zu erkennen (Helper\Zustaendigkeit::gleich). Nie
+	 *   ausgeben.
 	 * - **Telefonnummern** (`telefone`): alle belegten (telefon1…telefon4),
 	 *   nur wenn `telefon_view` sie freigibt.
 	 * - **Anschrift**: PLZ und Ort nur mit `ort_view`, die Straße nur, wenn
@@ -97,9 +104,10 @@ class Adressverknuepfung
 	 *                                           SPALTEN) oder null
 	 *
 	 * @return array<string,mixed> Der Referent mit `titel`, `emails` (Liste),
-	 *                             `telefone` (Liste), `strasse`, `plz`, `ort`,
-	 *                             `versandadresse` und `ausAdressverwaltung`
-	 *                             (true, wenn eine aktive Adresse eingeflossen ist)
+	 *                             `abgleich` (Liste), `telefone` (Liste),
+	 *                             `strasse`, `plz`, `ort`, `versandadresse`
+	 *                             und `ausAdressverwaltung` (true, wenn eine
+	 *                             aktive Adresse eingeflossen ist)
 	 */
 	public static function zusammenfuehren(array $referent, ?array $adresse): array
 	{
@@ -108,6 +116,7 @@ class Adressverknuepfung
 		$ergebnis = $referent;
 		$ergebnis['titel'] = '';
 		$ergebnis['emails'] = '' !== $funktion ? array($funktion) : array();
+		$ergebnis['abgleich'] = $ergebnis['emails'];
 		$ergebnis['telefone'] = array();
 		$ergebnis['strasse'] = '';
 		$ergebnis['plz'] = '';
@@ -130,11 +139,10 @@ class Adressverknuepfung
 			$ergebnis['titel'] = self::wert($adresse, 'titel');
 		}
 
+		// Die Adressen der Adresse dienen nur dem Abgleich und als Notanker
+		// für den Versand — angezeigt wird allein die Funktions-E-Mail
 		$mails = self::alle($adresse, 'email', 6);
-
-		if (self::oeffentlich($adresse, 'email_view')) {
-			$ergebnis['emails'] = self::ohneDoppelte(array_merge($ergebnis['emails'], $mails));
-		}
+		$ergebnis['abgleich'] = self::ohneDoppelte(array_merge($ergebnis['emails'], $mails));
 
 		if ('' === $funktion && $mails) {
 			$ergebnis['versandadresse'] = $mails[0];
