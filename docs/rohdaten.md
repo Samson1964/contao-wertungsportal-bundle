@@ -87,8 +87,9 @@ Bewusst **anders als ein Abruf im Frontend**:
 * **kein Zwischenspeicher** — abgerufen wird immer frisch;
 * **kein Abgleich** mit den Spiegeltabellen — das Werkzeug verändert nichts;
 * **keine Nachbesserung** — bei „Vereinsdaten" und „Alle Vereine und Verbände"
-  ergänzt das Frontend Verbände, die nu nicht liefert (`BugfixVerbaende`); in
-  der Rohdatei fehlen sie so, wie sie bei nu fehlen;
+  ergänzt das Frontend Verbände, die nu nicht liefert (`BugfixVerbaende`,
+  siehe [Verbände, die nu nicht liefert](verbaende.md)); in der Rohdatei
+  fehlen sie so, wie sie bei nu fehlen — seit dem 07.10.2026 alle;
 * **keine Zählung** in der Abrufstatistik.
 
 ## Voraussetzungen und Grenzen

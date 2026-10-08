@@ -167,6 +167,53 @@ class Lokal
 	}
 
 	/**
+	 * Liefert die Verbandseinträge des örtlichen Bestands — Landesverbände,
+	 * Bezirke und Kreise — in der Feldform der Schnittstelle.
+	 *
+	 * Gebraucht von API::BugfixVerbaende(): Seit dem 07.10.2026 liefert nu
+	 * unter /dwz/dwzliste/clubs keine Verbandseinträge mehr; der örtliche
+	 * Bestand ist seitdem die einzige Quelle für Bezirke und Kreise. Anders
+	 * als abfrage() ist das kein Notbetrieb, sondern läuft bei jedem
+	 * frischen Abruf der Vereinsliste mit (nicht bei Treffern im
+	 * Zwischenspeicher).
+	 *
+	 * Verband ist, wessen Kennziffer auf „00" endet. Nicht dabei sind
+	 * - 00000 (immer der DSB; auf schachbund.de stand dort ein Verein),
+	 * - L0001/M0001 (nu führt sie als Vereine mit Mitgliedern und liefert
+	 *   sie weiterhin selbst),
+	 * - unveröffentlichte, gelöschte und namenlose Zeilen — so läßt sich
+	 *   ein Bezirk im Backend unter „Vereine" abschalten oder umbenennen.
+	 *
+	 * @param  string $nurVkz  nur diese Kennziffer (Einzelabfrage); leer = alle.
+	 *                         Endet sie nicht auf „00", kommt ohne Abfrage
+	 *                         eine leere Liste zurück — ein Verein ist gefragt
+	 * @return array           Liste von Einträgen mit clubVkz, clubName,
+	 *                         federation, parentFederation, state; leer, wenn
+	 *                         der Bestand keine Verbände kennt
+	 * @throws \Throwable       wenn die Tabelle fehlt (vor contao:migrate) —
+	 *                         der Aufrufer fängt das ab
+	 */
+	public static function verbandseintraege($nurVkz = '')
+	{
+		$nurVkz = trim((string) $nurVkz);
+
+		if($nurVkz !== '' && substr($nurVkz, -2) !== '00') return array();
+
+		$bedingungen = array("c.published = '1'", "c.clubVkz LIKE '%00'", "c.clubVkz <> '00000'", "c.state <> 'DELETE_STATE_TRUE'", "c.clubName <> ''");
+		$werte = array();
+
+		if($nurVkz !== '')
+		{
+			$bedingungen[] = 'c.clubVkz = ?';
+			$werte[] = $nurVkz;
+		}
+
+		$ergebnis = self::clubs($bedingungen, $werte);
+
+		return is_array($ergebnis) ? $ergebnis['body']['data'] : array();
+	}
+
+	/**
 	 * Gemeinsame Vereinsabfrage für verbaende() und vereinsname().
 	 *
 	 * @param  array $bedingungen  WHERE-Teile (mit Präfix c.)

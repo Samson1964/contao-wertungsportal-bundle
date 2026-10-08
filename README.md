@@ -27,6 +27,8 @@ Ersetzt die SOAP-Schnittstelle von DeWIS und kommuniziert mit der REST-Schnittst
   Erwartungswert je Partie im Spielberichtsbogen zustande kommt
 * [Vereinslisten-Schnittstelle](docs/vereinslisten-api.md) — Mitgliederlisten als
   JSON für Vereinswebsites: Abruf, Zugangsschlüssel, Verwaltung und Sperren
+* [Verbände, die nu nicht liefert](docs/verbaende.md) — Landesverbände aus einer festen Liste,
+  Bezirke und Kreise aus dem örtlichen Vereinsbestand; was das für die Pflege im Backend heißt
 * [Zwischenspeicher gezielt leeren](docs/zwischenspeicher.md) — Backend-Modul, das
   die Cache-Einträge eines einzelnen Turniers, Spielers oder Vereins löscht
 * [Rohdaten der Schnittstelle herunterladen](docs/rohdaten.md) — Backend-Modul, das

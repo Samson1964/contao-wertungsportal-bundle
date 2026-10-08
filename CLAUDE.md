@@ -487,6 +487,31 @@ Doku `docs/aenderungen.md`, `docs/mitgliedergruppe.md`.
   einzige Adresse im Spielerbestand wird nichts geändert. Prüfstand: Der echte Lauf trifft auch
   echte Mitglieder der Testdatenbank → Gruppenlisten vorher sichern und zurückschreiben.
 
+## Verbände kommen nicht mehr von nu (ab 1.54.1)
+
+Doku `docs/verbaende.md`. Seit dem 07.10.2026 liefert `/dwz/dwzliste/clubs` KEINE Einträge mit
+Kennziffer auf `00` mehr (gemessen 08.10.2026: 2.190 Einträge, 195 fehlten gegenüber dem Bestand;
+`clubs?vkz=10100` → leere Liste, HTTP 200). Bis dahin fehlten nur 14 Landesverbände.
+
+- `API::BugfixVerbaende($antwort, $nurVkz, $lokale = null)` ergänzt aus ZWEI Quellen: zuerst dem
+  örtlichen Bestand (`Lokal::verbandseintraege()` — veröffentlicht, nicht `DELETE_STATE_TRUE`, Name
+  nicht leer, VKZ auf `00`, nie `00000`), dann der festen Liste der 17 Landesverbände. Bezirke und
+  Kreise gibt es NUR im Bestand; keine feste Liste dafür anlegen, sie veraltet.
+- Der Bestand geht der festen Liste vor — sonst überschriebe der Abgleich (`syncClubs` läuft direkt
+  danach) einen im Backend berichtigten Namen bei jedem frischen Abruf. Für ergänzte Einträge
+  schreibt der Abgleich nichts (geprüft: Prüfsumme der Tabelle vor/nach `syncList`).
+- `00000` nie aus dem Bestand: `Verbandsnavigation` legt Einträge unter den ersten drei Zeichen ab,
+  ein Verein mit `00000` (auf schachbund.de: SC Lörzweiler) ersetzte dort den DSB.
+- `$lokale` als Argument gibt es nur für die Prüfungen (`tests/Helper/ApiVerbaendeTest.php`); im
+  Betrieb `null` lassen. Das Lesen steht in try/catch — ohne Tabelle bleibt die feste Liste.
+- Die Liste aller Vereine und Verbände liegt unter dem Cache-Schlüssel `00000` (Funktion
+  `Verbaende`, bis zu einer Woche). `Cachesuche::regeln('verein')` erfaßt sie seit 1.54.1 — nach
+  Änderungen an den Verbänden im Backend dort mit `00000` verwerfen.
+- `Verbandsnavigation`: Baden hat keine Zwischenebene, 10100 … 10B00 erscheinen als `level_3`;
+  `level_2` sind Kennziffern mit `0` an dritter Stelle (21000). Beim Prüfen nicht verwechseln.
+- Prüfen ohne nu: „Antwort" = Bestand ohne Verbandszeilen, dann `BugfixVerbaende()`; Schreibprobe
+  des Abgleichs in einer Transaktion mit `rollBack()` (`database_connection`).
+
 ## Fallstricke / Besonderheiten
 
 - **Überschrift und Linkleiste der Suchmodule (ab 1.50.0):** Spieler, Verein, Verband und Turnier

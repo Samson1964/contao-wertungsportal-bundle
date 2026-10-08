@@ -1664,15 +1664,50 @@ class API
 	 * /dwz/dwzliste/clubs und damit vor Abgleich und Zwischenspeicherung —
 	 * so kennen lokale Tabelle, Cache und Frontend dieselben Verbände.
 	 *
-	 * @param       Array  $resultArr  API-Antwort
-	 * @param       String $nurVkz     nur diesen Verband ergänzen (bei
-	 *                                 gefilterter Abfrage); leer = alle
-	 * @return      Array              ergänzte Antwort
+	 * Bis zum 06.10.2026 fehlten in der Antwort nur 14 Landesverbände. Seit
+	 * dem 07.10.2026 liefert nu GAR KEINE Verbandseinträge mehr (gemessen am
+	 * 08.10.2026: 2.190 Einträge, keiner mit einer Kennziffer auf „00" —
+	 * gegenüber dem örtlichen Bestand fehlten 195, darunter Baden, Hessen und
+	 * Sachsen sowie sämtliche Bezirke und Kreise). Ergänzt wird deshalb aus
+	 * zwei Quellen, in dieser Rangfolge:
+	 *
+	 * 1. dem örtlichen Vereinsbestand (Lokal::verbandseintraege()) — er
+	 *    trägt den letzten Stand, den nu geliefert hat, und das, was im
+	 *    Backend unter „Vereine" berichtigt wurde. Von dort kommen die
+	 *    Bezirke und Kreise; eine feste Liste dafür gibt es nicht.
+	 * 2. der festen Liste der 17 Landesverbände unten — das Netz für
+	 *    Installationen ohne Bestand. Ein Landesverband steht damit immer
+	 *    in der Antwort, auch wenn er im Backend abgeschaltet ist.
+	 *
+	 * Was nu selbst liefert, bleibt unangetastet; liefert nu die Verbände
+	 * wieder, tut die Funktion nichts mehr. Der Eintrag 00000 wird nie aus
+	 * dem Bestand übernommen: Auf schachbund.de stand dort ein gewöhnlicher
+	 * Verein, der in der Verbandsnavigation den DSB ersetzt hätte.
+	 *
+	 * @param       Array      $resultArr  API-Antwort
+	 * @param       String     $nurVkz     nur diesen Verband ergänzen (bei
+	 *                                     gefilterter Abfrage); leer = alle
+	 * @param       Array|null $lokale     Verbandseinträge des örtlichen
+	 *                                     Bestands in der Feldform der
+	 *                                     Schnittstelle; null = selbst aus
+	 *                                     der Datenbank lesen (Regelfall),
+	 *                                     eine Liste nur in Prüfungen
+	 * @return      Array                  ergänzte Antwort, nach Kennziffer
+	 *                                     sortiert; Fehlerantworten und
+	 *                                     Antworten ohne Liste unverändert
 	 */
-	public static function BugfixVerbaende($resultArr, $nurVkz = '')
+	public static function BugfixVerbaende($resultArr, $nurVkz = '', $lokale = null)
 	{
 		$missingFederations = array
 		(
+			array
+			(
+				'clubVkz'          => '10000',
+				'clubName'         => 'Badischer Schachverband e.V.',
+				'federation'       => '1',
+				'parentFederation' => '100',
+				'state'            => 'DELETE_STATE_FALSE',
+			),
 			array
 			(
 				'clubVkz'          => '20000',
@@ -1695,6 +1730,14 @@ class API
 				'clubName'         => 'Hamburger Schachverband',
 				'federation'       => '4',
 				'parentFederation' => '400',
+				'state'            => 'DELETE_STATE_FALSE',
+			),
+			array
+			(
+				'clubVkz'          => '50000',
+				'clubName'         => 'Hessischer Schachverband e. V.',
+				'federation'       => '5',
+				'parentFederation' => '500',
 				'state'            => 'DELETE_STATE_FALSE',
 			),
 			array
@@ -1771,6 +1814,14 @@ class API
 			),
 			array
 			(
+				'clubVkz'          => 'F0000',
+				'clubName'         => 'Schachverband Sachsen e.V.',
+				'federation'       => 'F',
+				'parentFederation' => 'F00',
+				'state'            => 'DELETE_STATE_FALSE',
+			),
+			array
+			(
 				'clubVkz'          => 'G0000',
 				'clubName'         => 'LSV Sachsen-Anhalt',
 				'federation'       => 'G',
@@ -1790,14 +1841,67 @@ class API
 		// Fehlerhafte oder leere Antworten unverändert zurückgeben
 		if(!is_array($resultArr) || !isset($resultArr['body']['data']) || !is_array($resultArr['body']['data'])) return $resultArr;
 
+		$nurVkz = (string) $nurVkz;
+
+		// Örtlicher Bestand: im Regelfall selbst lesen. Scheitert das (Tabelle
+		// fehlt vor dem ersten contao:migrate, keine Datenbank), bleibt es bei
+		// der festen Liste — die Antwort der Schnittstelle darf daran nicht
+		// hängen
+		if($lokale === null)
+		{
+			try
+			{
+				$lokale = \Schachbulle\ContaoWertungsportalBundle\Helper\Lokal::verbandseintraege($nurVkz);
+			}
+			catch(\Throwable $e)
+			{
+				$lokale = array();
+			}
+		}
+
+		// Der Bestand geht der festen Liste vor (siehe Kommentarblock). Was
+		// kein Verband ist, keinen Namen hat oder 00000 trägt, bleibt draußen —
+		// die Abfrage filtert das schon, hier gilt es auch für übergebene Listen
+		$ergaenzungen = array();
+
+		foreach(is_array($lokale) ? $lokale : array() as $verband)
+		{
+			if(!is_array($verband)) continue;
+
+			$vkz = (string) ($verband['clubVkz'] ?? '');
+
+			if($vkz === '' || $vkz === '00000' || substr($vkz, -2) !== '00') continue;
+			if(trim((string) ($verband['clubName'] ?? '')) === '') continue;
+			if(isset($ergaenzungen[' '.$vkz])) continue;
+
+			// Das Leerzeichen hält PHP davon ab, aus „10000" einen
+			// Ganzzahlschlüssel zu machen
+			$ergaenzungen[' '.$vkz] = array
+			(
+				'clubVkz'          => $vkz,
+				'clubName'         => (string) $verband['clubName'],
+				'federation'       => (string) ($verband['federation'] ?? ''),
+				'parentFederation' => (string) ($verband['parentFederation'] ?? ''),
+				'state'            => (string) ($verband['state'] ?? 'DELETE_STATE_FALSE'),
+			);
+		}
+
+		foreach($missingFederations as $federation)
+		{
+			if(!isset($ergaenzungen[' '.$federation['clubVkz']])) $ergaenzungen[' '.$federation['clubVkz']] = $federation;
+		}
+
+		$missingFederations = array_values($ergaenzungen);
+
 		// Bei gefilterter Abfrage (eine bestimmte VKZ) nur den passenden
 		// Verband ergänzen — sonst lieferte eine Vereinsabfrage plötzlich
-		// sämtliche Landesverbände mit
-		if($nurVkz !== '' && $nurVkz !== null)
+		// sämtliche Landesverbände mit. Verglichen wird als Zeichenkette:
+		// „10000" und „1e4" sind für == dieselbe Zahl
+		if($nurVkz !== '')
 		{
 			$missingFederations = array_values(array_filter($missingFederations, function($federation) use ($nurVkz)
 			{
-				return $federation['clubVkz'] == $nurVkz;
+				return (string) $federation['clubVkz'] === $nurVkz;
 			}));
 
 			if(!count($missingFederations)) return $resultArr;

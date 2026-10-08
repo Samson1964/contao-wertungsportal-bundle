@@ -25,13 +25,20 @@ Vereinswechsel.
 Für einen **Verband** die dreistellige Nummer mit zwei Nullen eingeben, also
 `40000` für 400 — so lautet dort der Schlüssel.
 
+Mit dem Wert **`00000`** wird die **Liste aller Vereine und Verbände**
+verworfen (ab 1.54.1). Aus ihr entstehen die Verbandsnavigation und die
+Verbandsauswahl der Turniersuche; sie liegt bis zur „Cachezeit Verbände" im
+Zwischenspeicher, üblich ist eine Woche. Nötig ist das, wenn sich an den
+Verbänden etwas geändert hat — siehe [Verbände, die nu nicht
+liefert](verbaende.md).
+
 ## Was jeweils betroffen ist
 
 | Suchart | Gelöschte Funktionen |
 |---|---|
 | Turnier | Turnierinfo, Turnierauswertung, Turnierergebnisse und **alle** Spielberichtsbögen dieses Turniers |
 | Spieler | Karteikarte, Turnierhistorie und die Spielberichtsbögen dieses Spielers |
-| Verein | Mitgliederliste (auch die der Vereinslisten-Schnittstelle) und Vereinsname |
+| Verein | Mitgliederliste (auch die der Vereinslisten-Schnittstelle) und Vereinsname; mit `00000` die Liste aller Vereine und Verbände |
 
 **Nicht betroffen sind die Suchen** — Spielerliste, Turnierliste und
 Verbandsrangliste. Deren Schlüssel bestehen aus Suchbegriffen, Zeiträumen und

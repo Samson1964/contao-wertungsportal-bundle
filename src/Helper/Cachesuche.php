@@ -75,6 +75,14 @@ class Cachesuche
 					// Deckt auch Verbände ab: dort lautet der Schlüssel
 					// <dreistellige zps>00, ist also ebenfalls fünfstellig
 					'Vereinsname'  => array('typ' => 'exakt'),
+					// Die Liste ALLER Vereine und Verbände liegt unter dem
+					// Schlüssel 00000 (API::Verbandsliste) und bis zu einer Woche
+					// im Zwischenspeicher. Mit der VKZ 00000 läßt sie sich seit
+					// 1.54.1 gezielt verwerfen — nötig, wenn sich an den Verbänden
+					// etwas geändert hat (nu liefert sie nicht mehr, sie kommen
+					// aus dem örtlichen Bestand). Für jede andere VKZ gibt es
+					// unter dieser Funktion keinen Eintrag
+					'Verbaende'    => array('typ' => 'exakt'),
 				);
 		}
 

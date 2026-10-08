@@ -1,5 +1,25 @@
 # Wertungsportal Changelog
 
+## Version 1.54.1 (2026-10-08)
+
+* Fix: **Verbände fehlten in Navigation und Auswahl.** Seit dem 07.10.2026 liefert nu unter
+  `/dwz/dwzliste/clubs` keinen einzigen Verbandseintrag mehr (gemessen am 08.10.: 2.190 Einträge,
+  keiner mit Kennziffer auf `00`; 195 fehlten). Die Ergänzung `API::BugfixVerbaende()` kannte nur die
+  14 Landesverbände, die schon immer fehlten — jetzt auch **Baden (10000), Hessen (50000) und
+  Sachsen (F0000)**
+* Fix: **Bezirke und Kreise** (10100 Mannheim, 21000 Mittelfranken …) kommen jetzt aus dem örtlichen
+  Vereinsbestand, der den letzten Stand von nu trägt — nur veröffentlichte, nicht gelöschte
+  Einträge, nie `00000`. Der Bestand geht der festen Liste vor: Ein im Backend berichtigter Name
+  bleibt stehen. Liefert nu die Verbände wieder, tut die Ergänzung nichts. Doku: `docs/verbaende.md`
+* Add: **Wertungsportal → Zwischenspeicher**, Suchart „Verein" mit dem Wert `00000` verwirft die
+  Liste aller Vereine und Verbände (liegt bis zu einer Woche im Zwischenspeicher) — bisher ging das
+  nur über das Leeren des gesamten Zwischenspeichers
+* Change: Die Einzelabfrage eines Verbandes vergleicht die Kennziffer als Zeichenkette
+* **Einspielen:** Ordner kopieren (kein migrate, kein assets:install). Danach unter
+  **Wertungsportal → Zwischenspeicher** Suchart „Verein", Wert `00000`, „Gefundene Einträge
+  löschen" — sonst zeigt das Frontend noch bis zu einer Woche die Liste ohne Verbände. Bezirke und
+  Kreise pflegt nu nicht mehr: Änderungen künftig unter **Wertungsportal → Vereine** nachziehen
+
 ## Version 1.54.0 (2026-10-06)
 
 * Add: **„Foto ändern"** unter dem Spielerbild der Karteikarte und **„Logo/Infos ändern"** unter dem

@@ -120,7 +120,7 @@ class Cacheverwaltung extends \Contao\BackendModule
 		(
 			'turnier' => 'Die UUID des Turniers, wie sie in der Adresse der Turnierseite steht (z. B. 381efcec-11f4-4fb5-b2d5-051bfcdbaf07). Betroffen sind Kopfdaten, Auswertung, Ergebnisse und alle Spielberichtsbögen dieses Turniers.',
 			'spieler' => 'Die nu-Nummer des Spielers (z. B. NU4093214). Betroffen sind Karteikarte, Turnierhistorie und die Spielberichtsbögen dieses Spielers.',
-			'verein'  => 'Die fünfstellige Vereinskennziffer (z. B. 30052). Betroffen sind Mitgliederliste und Vereinsname. Für einen Verband die dreistellige Nummer mit zwei Nullen, also 40000 für 400.',
+			'verein'  => 'Die fünfstellige Vereinskennziffer (z. B. 30052). Betroffen sind Mitgliederliste und Vereinsname. Für einen Verband die dreistellige Nummer mit zwei Nullen, also 40000 für 400. Mit 00000 wird die Liste aller Vereine und Verbände verworfen (Verbandsnavigation, Verbandsauswahl der Turniersuche).',
 		);
 	}
 
