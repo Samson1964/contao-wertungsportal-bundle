@@ -29,6 +29,14 @@ class API
 	protected static $notdaten = array();
 
 	/**
+	 * Die Verbandsstruktur von nu (/dwz/dwzliste/federations) für diesen
+	 * Seitenaufruf: null = noch nicht geholt, sonst die Liste (leer, wenn
+	 * sie nicht zu bekommen war). Ohne den Merker fragte bei abgeschaltetem
+	 * Zwischenspeicher jede Einzelabfrage eines Verbandes erneut bei nu an.
+	 */
+	protected static $strukturMerker = null;
+
+	/**
 	 * Bereits protokollierte Störungsgründe dieses Aufrufs, als Schlüssel.
 	 *
 	 * Verhindert, dass ein und derselbe Grund so viele Protokollzeilen erzeugt,
@@ -674,6 +682,9 @@ class API
 
 			case 'Verbaende': // alle Vereine und Verbände
 				return '/dwz/dwzliste/clubs';
+
+			case 'Verbandsstruktur': // Landesverbände, Bezirke und Kreise (ab 1.55.0)
+				return '/dwz/dwzliste/federations';
 		}
 
 		return null;
@@ -781,6 +792,12 @@ class API
 						// unvollständige Antwort und erst danach wurde ergänzt)
 						$result = self::BugfixVerbaende($result);
 						self::syncClubs($result); // Abgleich mit tl_wertungsportal_clubs
+						break;
+
+					case 'Verbandsstruktur':
+						// Kein eigener Abgleich: Die Verbände gelangen als Ergänzung
+						// der Vereinsliste (BugfixVerbaende) in den Vereinsbestand —
+						// dort in der Feldform, die alle übrigen Stellen erwarten
 						break;
 				}
 			}
@@ -1260,6 +1277,7 @@ class API
 			'Vereinsliste',
 			'Vereinsname',
 			'Verbaende',
+			'Verbandsstruktur',
 			'Verbandsliste',
 			'Turnierliste',
 			'Turnierinfo',
@@ -1355,6 +1373,7 @@ class API
 			'Karteikarte'          => '/dwz/dwzliste/persons/{id}',
 			'Vereinsname'          => '/dwz/dwzliste/clubs',
 			'Verbaende'            => '/dwz/dwzliste/clubs',
+			'Verbandsstruktur'     => '/dwz/dwzliste/federations',
 			// /dwz/persons
 			'Karteikarte_Turniere' => '/dwz/persons/{id}/history',
 			// /dwz/tournaments
@@ -1436,6 +1455,9 @@ class API
 			'Vereinsname'          => 'wertungsportal_cachezeit_vereine',
 			'Verbandsliste'        => 'wertungsportal_cachezeit_vereine',
 			'Verbaende'            => 'wertungsportal_cachezeit_verbaende',
+			// Ändert sich so selten wie die Liste der Vereine und Verbände und
+			// wird mit ihr zusammen gebraucht
+			'Verbandsstruktur'     => 'wertungsportal_cachezeit_verbaende',
 			'Turnierliste'         => 'wertungsportal_cachezeit_turniersuche',
 			// Turnierinfo gehört zu den Turnierdaten, nicht zur Suche: Es sind
 			// die Kopfdaten EINES Turniers und damit genauso stabil wie
@@ -1658,275 +1680,336 @@ class API
 	}
 
 	/**
-	 * Ergänzt die Verbände, die die Schnittstelle nicht liefert (laut
-	 * Andreas Filmann sind Verbände in nu nicht vorgesehen, alles muss als
-	 * Verein angelegt werden). Der Aufruf erfolgt DIREKT nach dem Abruf von
-	 * /dwz/dwzliste/clubs und damit vor Abgleich und Zwischenspeicherung —
-	 * so kennen lokale Tabelle, Cache und Frontend dieselben Verbände.
+	 * Die 17 Landesverbände als feste Liste, in der Feldform von
+	 * /dwz/dwzliste/clubs.
 	 *
-	 * Bis zum 06.10.2026 fehlten in der Antwort nur 14 Landesverbände. Seit
-	 * dem 07.10.2026 liefert nu GAR KEINE Verbandseinträge mehr (gemessen am
-	 * 08.10.2026: 2.190 Einträge, keiner mit einer Kennziffer auf „00" —
-	 * gegenüber dem örtlichen Bestand fehlten 195, darunter Baden, Hessen und
-	 * Sachsen sowie sämtliche Bezirke und Kreise). Ergänzt wird deshalb aus
-	 * zwei Quellen, in dieser Rangfolge:
+	 * Sie ist das letzte Netz der Verbandsergänzung (siehe
+	 * ergaenzeVerbaende()) und zugleich der Maßstab dafür, ob die
+	 * Verbandsstruktur von nu vollständig ist. Die Namen sind die, unter
+	 * denen die Landesverbände bis Oktober 2026 in der Vereinsliste standen;
+	 * angezeigt werden sie nur noch, wenn die Struktur von nu nicht zu
+	 * bekommen ist — sonst gelten deren Namen („Baden", „Bayern" …).
 	 *
-	 * 1. dem örtlichen Vereinsbestand (Lokal::verbandseintraege()) — er
-	 *    trägt den letzten Stand, den nu geliefert hat, und das, was im
-	 *    Backend unter „Vereine" berichtigt wurde. Von dort kommen die
-	 *    Bezirke und Kreise; eine feste Liste dafür gibt es nicht.
-	 * 2. der festen Liste der 17 Landesverbände unten — das Netz für
-	 *    Installationen ohne Bestand. Ein Landesverband steht damit immer
-	 *    in der Antwort, auch wenn er im Backend abgeschaltet ist.
-	 *
-	 * Was nu selbst liefert, bleibt unangetastet; liefert nu die Verbände
-	 * wieder, tut die Funktion nichts mehr. Der Eintrag 00000 wird nie aus
-	 * dem Bestand übernommen: Auf schachbund.de stand dort ein gewöhnlicher
-	 * Verein, der in der Verbandsnavigation den DSB ersetzt hätte.
-	 *
-	 * @param       Array      $resultArr  API-Antwort
-	 * @param       String     $nurVkz     nur diesen Verband ergänzen (bei
-	 *                                     gefilterter Abfrage); leer = alle
-	 * @param       Array|null $lokale     Verbandseinträge des örtlichen
-	 *                                     Bestands in der Feldform der
-	 *                                     Schnittstelle; null = selbst aus
-	 *                                     der Datenbank lesen (Regelfall),
-	 *                                     eine Liste nur in Prüfungen
-	 * @return      Array                  ergänzte Antwort, nach Kennziffer
-	 *                                     sortiert; Fehlerantworten und
-	 *                                     Antworten ohne Liste unverändert
+	 * @return array Liste von 17 Einträgen mit clubVkz, clubName, federation,
+	 *               parentFederation und state, nach Kennziffer sortiert
 	 */
-	public static function BugfixVerbaende($resultArr, $nurVkz = '', $lokale = null)
+	public static function landesverbaende()
 	{
-		$missingFederations = array
+		return array
 		(
-			array
-			(
-				'clubVkz'          => '10000',
-				'clubName'         => 'Badischer Schachverband e.V.',
-				'federation'       => '1',
-				'parentFederation' => '100',
-				'state'            => 'DELETE_STATE_FALSE',
-			),
-			array
-			(
-				'clubVkz'          => '20000',
-				'clubName'         => 'Bayerischer Schachbund e.V.',
-				'federation'       => '2',
-				'parentFederation' => '200',
-				'state'            => 'DELETE_STATE_FALSE',
-			),
-			array
-			(
-				'clubVkz'          => '30000',
-				'clubName'         => 'Berliner Schachverband',
-				'federation'       => '3',
-				'parentFederation' => '300',
-				'state'            => 'DELETE_STATE_FALSE',
-			),
-			array
-			(
-				'clubVkz'          => '40000',
-				'clubName'         => 'Hamburger Schachverband',
-				'federation'       => '4',
-				'parentFederation' => '400',
-				'state'            => 'DELETE_STATE_FALSE',
-			),
-			array
-			(
-				'clubVkz'          => '50000',
-				'clubName'         => 'Hessischer Schachverband e. V.',
-				'federation'       => '5',
-				'parentFederation' => '500',
-				'state'            => 'DELETE_STATE_FALSE',
-			),
-			array
-			(
-				'clubVkz'          => '60000',
-				'clubName'         => 'Schachbund Nordrhein-Westfalen e.V.',
-				'federation'       => '6',
-				'parentFederation' => '600',
-				'state'            => 'DELETE_STATE_FALSE',
-			),
-			array
-			(
-				'clubVkz'          => '70000',
-				'clubName'         => 'Niedersächsischer Schachverband e.V.',
-				'federation'       => '7',
-				'parentFederation' => '700',
-				'state'            => 'DELETE_STATE_FALSE',
-			),
-			array
-			(
-				'clubVkz'          => '80000',
-				'clubName'         => 'Schachbund Rheinland-Pfalz e.V.',
-				'federation'       => '8',
-				'parentFederation' => '800',
-				'state'            => 'DELETE_STATE_FALSE',
-			),
-			array
-			(
-				'clubVkz'          => '90000',
-				'clubName'         => 'Saarländischer Schachverband',
-				'federation'       => '9',
-				'parentFederation' => '900',
-				'state'            => 'DELETE_STATE_FALSE',
-			),
-			array
-			(
-				'clubVkz'          => 'A0000',
-				'clubName'         => 'Schachverband Schleswig-Holstein',
-				'federation'       => 'A',
-				'parentFederation' => 'A00',
-				'state'            => 'DELETE_STATE_FALSE',
-			),
-			array
-			(
-				'clubVkz'          => 'B0000',
-				'clubName'         => 'Landesschachbund Bremen',
-				'federation'       => 'B',
-				'parentFederation' => 'B00',
-				'state'            => 'DELETE_STATE_FALSE',
-			),
-			array
-			(
-				'clubVkz'          => 'C0000',
-				'clubName'         => 'Schachverband Württemberg e.V.',
-				'federation'       => 'C',
-				'parentFederation' => 'C00',
-				'state'            => 'DELETE_STATE_FALSE',
-			),
-			array
-			(
-				'clubVkz'          => 'D0000',
-				'clubName'         => 'Landesschachbund Brandenburg',
-				'federation'       => 'D',
-				'parentFederation' => 'D00',
-				'state'            => 'DELETE_STATE_FALSE',
-			),
-			array
-			(
-				'clubVkz'          => 'E0000',
-				'clubName'         => 'LSV Mecklenburg-Vorpommern',
-				'federation'       => 'E',
-				'parentFederation' => 'E00',
-				'state'            => 'DELETE_STATE_FALSE',
-			),
-			array
-			(
-				'clubVkz'          => 'F0000',
-				'clubName'         => 'Schachverband Sachsen e.V.',
-				'federation'       => 'F',
-				'parentFederation' => 'F00',
-				'state'            => 'DELETE_STATE_FALSE',
-			),
-			array
-			(
-				'clubVkz'          => 'G0000',
-				'clubName'         => 'LSV Sachsen-Anhalt',
-				'federation'       => 'G',
-				'parentFederation' => 'G00',
-				'state'            => 'DELETE_STATE_FALSE',
-			),
-			array
-			(
-				'clubVkz'          => 'H0000',
-				'clubName'         => 'Thüringer Schachbund',
-				'federation'       => 'H',
-				'parentFederation' => 'H00',
-				'state'            => 'DELETE_STATE_FALSE',
-			),
+			array('clubVkz' => '10000', 'clubName' => 'Badischer Schachverband e.V.', 'federation' => '1', 'parentFederation' => '100', 'state' => 'DELETE_STATE_FALSE'),
+			array('clubVkz' => '20000', 'clubName' => 'Bayerischer Schachbund e.V.', 'federation' => '2', 'parentFederation' => '200', 'state' => 'DELETE_STATE_FALSE'),
+			array('clubVkz' => '30000', 'clubName' => 'Berliner Schachverband', 'federation' => '3', 'parentFederation' => '300', 'state' => 'DELETE_STATE_FALSE'),
+			array('clubVkz' => '40000', 'clubName' => 'Hamburger Schachverband', 'federation' => '4', 'parentFederation' => '400', 'state' => 'DELETE_STATE_FALSE'),
+			array('clubVkz' => '50000', 'clubName' => 'Hessischer Schachverband e. V.', 'federation' => '5', 'parentFederation' => '500', 'state' => 'DELETE_STATE_FALSE'),
+			array('clubVkz' => '60000', 'clubName' => 'Schachbund Nordrhein-Westfalen e.V.', 'federation' => '6', 'parentFederation' => '600', 'state' => 'DELETE_STATE_FALSE'),
+			array('clubVkz' => '70000', 'clubName' => 'Niedersächsischer Schachverband e.V.', 'federation' => '7', 'parentFederation' => '700', 'state' => 'DELETE_STATE_FALSE'),
+			array('clubVkz' => '80000', 'clubName' => 'Schachbund Rheinland-Pfalz e.V.', 'federation' => '8', 'parentFederation' => '800', 'state' => 'DELETE_STATE_FALSE'),
+			array('clubVkz' => '90000', 'clubName' => 'Saarländischer Schachverband', 'federation' => '9', 'parentFederation' => '900', 'state' => 'DELETE_STATE_FALSE'),
+			array('clubVkz' => 'A0000', 'clubName' => 'Schachverband Schleswig-Holstein', 'federation' => 'A', 'parentFederation' => 'A00', 'state' => 'DELETE_STATE_FALSE'),
+			array('clubVkz' => 'B0000', 'clubName' => 'Landesschachbund Bremen', 'federation' => 'B', 'parentFederation' => 'B00', 'state' => 'DELETE_STATE_FALSE'),
+			array('clubVkz' => 'C0000', 'clubName' => 'Schachverband Württemberg e.V.', 'federation' => 'C', 'parentFederation' => 'C00', 'state' => 'DELETE_STATE_FALSE'),
+			array('clubVkz' => 'D0000', 'clubName' => 'Landesschachbund Brandenburg', 'federation' => 'D', 'parentFederation' => 'D00', 'state' => 'DELETE_STATE_FALSE'),
+			array('clubVkz' => 'E0000', 'clubName' => 'LSV Mecklenburg-Vorpommern', 'federation' => 'E', 'parentFederation' => 'E00', 'state' => 'DELETE_STATE_FALSE'),
+			array('clubVkz' => 'F0000', 'clubName' => 'Schachverband Sachsen e.V.', 'federation' => 'F', 'parentFederation' => 'F00', 'state' => 'DELETE_STATE_FALSE'),
+			array('clubVkz' => 'G0000', 'clubName' => 'LSV Sachsen-Anhalt', 'federation' => 'G', 'parentFederation' => 'G00', 'state' => 'DELETE_STATE_FALSE'),
+			array('clubVkz' => 'H0000', 'clubName' => 'Thüringer Schachbund', 'federation' => 'H', 'parentFederation' => 'H00', 'state' => 'DELETE_STATE_FALSE'),
 		);
+	}
 
+	/**
+	 * Wandelt die Verbandsstruktur von nu (/dwz/dwzliste/federations) in
+	 * Verbandseinträge der Feldform von /dwz/dwzliste/clubs um.
+	 *
+	 * nu liefert je Verband federationNumber (drei Stellen, z. B. „F11"),
+	 * federation (Kennbuchstabe des Landesverbands), parentFederation
+	 * (Nummer des übergeordneten Verbands) und federationName. Daraus wird:
+	 * clubVkz = Nummer + „00", clubName = Name, federation unverändert,
+	 * parentFederation = die eigene Nummer — so stand es bis zum 06.10.2026
+	 * in der Vereinsliste, und so erwarten es Vereinsbestand,
+	 * Verbandsnavigation und Verbandskette. Den übergeordneten Verband
+	 * errechnen sie weiterhin aus der Kennziffer.
+	 *
+	 * Nicht übernommen wird:
+	 * - alles außerhalb der 17 Landesverbände: „Deutschland" (000) und die
+	 *   Schachjugend (001), „Ausland" (K00), DBSB (L00) und Schwalbe (M00).
+	 *   Der DSB ist überall fest eingebaut; DBSB und Schwalbe laufen weiter
+	 *   über ihre Vereinseinträge L0001/M0001 (Helper::istVerband()) — ein
+	 *   zweiter Eintrag L0000 stünde in den Referentenlisten doppelt da;
+	 * - Einträge, die sich selbst als übergeordnet nennen. Das sind die
+	 *   Kreise in Württemberg: Sie haben laut DSB-Orga-Struktur keine eigene
+	 *   Kennziffer und tragen die ihres Bezirks (C01 … C06 kommen dadurch
+	 *   mehrfach vor). Unter einer Kennziffer kann nur ein Verband stehen —
+	 *   das ist der Bezirk;
+	 * - Einträge ohne dreistellige Nummer oder ohne Namen.
+	 *
+	 * Kommt eine Nummer danach noch mehrfach vor, gilt der erste Eintrag.
+	 *
+	 * @param  array $struktur Liste aus body.data von /dwz/dwzliste/federations;
+	 *                         unbrauchbare Einträge werden übersprungen
+	 * @return array           Liste von Verbandseinträgen (clubVkz, clubName,
+	 *                         federation, parentFederation, state), in der
+	 *                         Reihenfolge der Struktur; leer bei leerer Eingabe
+	 */
+	public static function verbaendeAusStruktur(array $struktur)
+	{
+		// Kennbuchstaben der 17 Landesverbände, als Schlüssel
+		$kennungen = array();
+
+		foreach(self::landesverbaende() as $landesverband)
+		{
+			$kennungen[' '.$landesverband['federation']] = true;
+		}
+
+		$verbaende = array();
+
+		foreach($struktur as $eintrag)
+		{
+			if(!is_array($eintrag)) continue;
+
+			$nummer = (string) ($eintrag['federationNumber'] ?? '');
+			$name = trim((string) ($eintrag['federationName'] ?? ''));
+			$eltern = (string) ($eintrag['parentFederation'] ?? '');
+
+			if(!preg_match('/^[0-9A-Z]{3}$/', $nummer) || $name === '') continue;
+			if(!isset($kennungen[' '.substr($nummer, 0, 1)])) continue;
+
+			// Ohne übergeordneten Verband steht bei nu nur, was nicht zur
+			// Gliederung der Landesverbände gehört; wer sich selbst nennt, hat
+			// keine eigene Kennziffer (Kreise in Württemberg)
+			if($eltern === '' || $eltern === $nummer) continue;
+
+			// Das Leerzeichen hält PHP davon ab, aus „100" einen
+			// Ganzzahlschlüssel zu machen
+			if(isset($verbaende[' '.$nummer])) continue;
+
+			$verbaende[' '.$nummer] = array
+			(
+				'clubVkz'          => $nummer.'00',
+				'clubName'         => $name,
+				'federation'       => (string) ($eintrag['federation'] ?? substr($nummer, 0, 1)),
+				'parentFederation' => $nummer,
+				'state'            => 'DELETE_STATE_FALSE',
+			);
+		}
+
+		return array_values($verbaende);
+	}
+
+	/**
+	 * Holt die Verbandsstruktur von nu (/dwz/dwzliste/federations) — über
+	 * autoQuery(), also mit Zwischenspeicher (Schlüssel 00000, Cachezeit
+	 * „Verbände"), Abrufstatistik und Notreserve.
+	 *
+	 * Seit dem Release von nu am 07.10.2026 liefert /dwz/dwzliste/clubs
+	 * ausschließlich Vereine; die Verbände aller Ebenen stehen unter diesem
+	 * eigenen Endpunkt (Auskunft von nu vom 12.10.2026, Vorgang SPS-34590).
+	 *
+	 * Je Seitenaufruf wird höchstens einmal gefragt. Einen örtlichen Ersatz
+	 * für diese Abfrage gibt es nicht (Lokal::abfrage() kennt sie nicht): Ist
+	 * die Struktur weder frisch noch aus dem Zwischenspeicher zu bekommen,
+	 * kommt eine leere Liste zurück, und ergaenzeVerbaende() greift auf den
+	 * Vereinsbestand zurück.
+	 *
+	 * @return array Liste aus body.data (Einträge mit federationNumber,
+	 *               federation, parentFederation, federationName); leer, wenn
+	 *               die Struktur nicht zu bekommen war
+	 */
+	public static function verbandsstruktur()
+	{
+		if(self::$strukturMerker !== null) return self::$strukturMerker;
+
+		$liste = array();
+
+		try
+		{
+			$antwort = static::autoQuery(array('funktion' => 'Verbandsstruktur', 'cachekey' => '00000'));
+
+			// body kann eine Zeichenkette sein (HTML-Fehlerseite von nu)
+			if(is_array($antwort) && empty($antwort['error']) && is_array($antwort['body'] ?? null) && is_array($antwort['body']['data'] ?? null))
+			{
+				$liste = $antwort['body']['data'];
+			}
+		}
+		catch(\Throwable $e)
+		{
+			// Die Vereinsliste darf an der Struktur nicht hängen: Ohne sie
+			// bleibt es beim Vereinsbestand und der festen Liste
+		}
+
+		return self::$strukturMerker = $liste;
+	}
+
+	/**
+	 * Ergänzt die Antwort von /dwz/dwzliste/clubs um die Verbände, die die
+	 * Schnittstelle dort nicht liefert. Der Aufruf erfolgt DIREKT nach dem
+	 * Abruf und damit vor Abgleich und Zwischenspeicherung — so kennen
+	 * Vereinsbestand, Zwischenspeicher und Frontend dieselben Verbände.
+	 *
+	 * Bis zum 06.10.2026 fehlten in der Vereinsliste nur 14 Landesverbände;
+	 * seit dem 07.10.2026 liefert sie ausschließlich Vereine. Diese Funktion
+	 * besorgt nur die Quellen, die Arbeit macht ergaenzeVerbaende():
+	 *
+	 * - die Verbandsstruktur von nu (verbandsstruktur()),
+	 * - den Vereinsbestand (Lokal::verbandseintraege()) als Rückfall.
+	 *
+	 * Bei der Einzelabfrage eines Vereins oder des DSB (00000) gibt es nichts
+	 * zu ergänzen; dann wird keine Quelle angefaßt — sonst zöge jede
+	 * Vereinsseite die Verbandsstruktur nach.
+	 *
+	 * @param  array  $resultArr API-Antwort von /dwz/dwzliste/clubs
+	 * @param  string $nurVkz    nur diesen Verband ergänzen (bei gefilterter
+	 *                           Abfrage); leer = alle
+	 * @return array             ergänzte Antwort, nach Kennziffer sortiert;
+	 *                           Fehlerantworten und Antworten ohne Liste
+	 *                           unverändert
+	 */
+	public static function BugfixVerbaende($resultArr, $nurVkz = '')
+	{
 		// Fehlerhafte oder leere Antworten unverändert zurückgeben
 		if(!is_array($resultArr) || !isset($resultArr['body']['data']) || !is_array($resultArr['body']['data'])) return $resultArr;
 
 		$nurVkz = (string) $nurVkz;
 
-		// Örtlicher Bestand: im Regelfall selbst lesen. Scheitert das (Tabelle
-		// fehlt vor dem ersten contao:migrate, keine Datenbank), bleibt es bei
-		// der festen Liste — die Antwort der Schnittstelle darf daran nicht
-		// hängen
-		if($lokale === null)
+		if($nurVkz !== '' && ($nurVkz === '00000' || substr($nurVkz, -2) !== '00')) return $resultArr;
+
+		$struktur = self::verbandsstruktur();
+
+		// Der Vereinsbestand wird auch dann gelesen, wenn die Struktur da ist:
+		// Ob sie vollständig ist, entscheidet erst ergaenzeVerbaende(), und
+		// die eine kleine Abfrage fällt nur bei einem frischen Abruf an.
+		// Scheitert sie (Tabelle fehlt vor dem ersten contao:migrate), bleibt
+		// die feste Liste
+		try
 		{
-			try
+			$bestand = \Schachbulle\ContaoWertungsportalBundle\Helper\Lokal::verbandseintraege($nurVkz);
+		}
+		catch(\Throwable $e)
+		{
+			$bestand = array();
+		}
+
+		return self::ergaenzeVerbaende($resultArr, $nurVkz, $struktur, $bestand);
+	}
+
+	/**
+	 * Ergänzt die Vereinsliste um die fehlenden Verbände — der rechnende Teil
+	 * von BugfixVerbaende(), ohne Datenbank und ohne Schnittstelle.
+	 *
+	 * Rangfolge der Quellen:
+	 *
+	 * 1. Die Verbandsstruktur von nu, wenn sie VOLLSTÄNDIG ist, also alle 17
+	 *    Landesverbände enthält. Dann gilt nur sie, mit den Namen von nu
+	 *    (Franks Entscheidung vom 13.10.2026): Umbenennungen, neue und
+	 *    aufgelöste Verbände kommen damit von selbst an. Der Vereinsbestand
+	 *    zählt in diesem Fall nicht — sonst käme ein aufgelöster Verband über
+	 *    ihn zurück.
+	 * 2. Sonst (Struktur nicht zu bekommen oder lückenhaft) der
+	 *    Vereinsbestand: Er trägt den zuletzt abgeglichenen Stand. Übernommen
+	 *    wird daraus nur, was ein Verband ist (Kennziffer auf „00"), einen
+	 *    Namen hat und nicht 00000 heißt — dort stand auf schachbund.de ein
+	 *    gewöhnlicher Verein, der in der Verbandsnavigation den DSB ersetzt
+	 *    hätte.
+	 * 3. Darunter die feste Liste der 17 Landesverbände (landesverbaende()).
+	 *
+	 * Eine lückenhafte Struktur wird bewußt verworfen: Die ergänzte Liste
+	 * liegt bis zu einer Woche im Zwischenspeicher, und eine abgebrochene
+	 * Antwort von nu nähme dem Frontend so lange die Verbände.
+	 *
+	 * Was nu in der Vereinsliste selbst liefert, bleibt unangetastet.
+	 *
+	 * @param  mixed  $resultArr Antwort von /dwz/dwzliste/clubs
+	 * @param  string $nurVkz    nur diesen Verband ergänzen (Einzelabfrage);
+	 *                           leer = alle. Verglichen wird als Zeichenkette:
+	 *                           „10000" und „1e4" sind für == dieselbe Zahl
+	 * @param  array  $struktur  Verbandsstruktur von nu (body.data von
+	 *                           /dwz/dwzliste/federations), leer wenn nicht
+	 *                           vorhanden
+	 * @param  array  $bestand   Verbandseinträge des Vereinsbestands in der
+	 *                           Feldform von /clubs, leer wenn nicht vorhanden
+	 * @return mixed             ergänzte Antwort, nach Kennziffer sortiert;
+	 *                           Fehlerantworten und Antworten ohne Liste
+	 *                           unverändert
+	 */
+	public static function ergaenzeVerbaende($resultArr, $nurVkz, array $struktur, array $bestand)
+	{
+		if(!is_array($resultArr) || !isset($resultArr['body']['data']) || !is_array($resultArr['body']['data'])) return $resultArr;
+
+		$nurVkz = (string) $nurVkz;
+		$landesverbaende = self::landesverbaende();
+
+		// Kandidaten unter ihrer Kennziffer sammeln; das Leerzeichen hält PHP
+		// davon ab, aus „10000" einen Ganzzahlschlüssel zu machen
+		$kandidaten = array();
+
+		foreach(self::verbaendeAusStruktur($struktur) as $verband)
+		{
+			$kandidaten[' '.$verband['clubVkz']] = $verband;
+		}
+
+		$vollstaendig = count($kandidaten) > 0;
+
+		foreach($landesverbaende as $landesverband)
+		{
+			if(!isset($kandidaten[' '.$landesverband['clubVkz']])) $vollstaendig = false;
+		}
+
+		if(!$vollstaendig)
+		{
+			$kandidaten = array();
+
+			foreach($bestand as $verband)
 			{
-				$lokale = \Schachbulle\ContaoWertungsportalBundle\Helper\Lokal::verbandseintraege($nurVkz);
+				if(!is_array($verband)) continue;
+
+				$vkz = (string) ($verband['clubVkz'] ?? '');
+
+				if($vkz === '' || $vkz === '00000' || substr($vkz, -2) !== '00') continue;
+				if(trim((string) ($verband['clubName'] ?? '')) === '') continue;
+				if(isset($kandidaten[' '.$vkz])) continue;
+
+				$kandidaten[' '.$vkz] = array
+				(
+					'clubVkz'          => $vkz,
+					'clubName'         => (string) $verband['clubName'],
+					'federation'       => (string) ($verband['federation'] ?? ''),
+					'parentFederation' => (string) ($verband['parentFederation'] ?? ''),
+					'state'            => (string) ($verband['state'] ?? 'DELETE_STATE_FALSE'),
+				);
 			}
-			catch(\Throwable $e)
+
+			foreach($landesverbaende as $landesverband)
 			{
-				$lokale = array();
+				if(!isset($kandidaten[' '.$landesverband['clubVkz']])) $kandidaten[' '.$landesverband['clubVkz']] = $landesverband;
 			}
 		}
-
-		// Der Bestand geht der festen Liste vor (siehe Kommentarblock). Was
-		// kein Verband ist, keinen Namen hat oder 00000 trägt, bleibt draußen —
-		// die Abfrage filtert das schon, hier gilt es auch für übergebene Listen
-		$ergaenzungen = array();
-
-		foreach(is_array($lokale) ? $lokale : array() as $verband)
-		{
-			if(!is_array($verband)) continue;
-
-			$vkz = (string) ($verband['clubVkz'] ?? '');
-
-			if($vkz === '' || $vkz === '00000' || substr($vkz, -2) !== '00') continue;
-			if(trim((string) ($verband['clubName'] ?? '')) === '') continue;
-			if(isset($ergaenzungen[' '.$vkz])) continue;
-
-			// Das Leerzeichen hält PHP davon ab, aus „10000" einen
-			// Ganzzahlschlüssel zu machen
-			$ergaenzungen[' '.$vkz] = array
-			(
-				'clubVkz'          => $vkz,
-				'clubName'         => (string) $verband['clubName'],
-				'federation'       => (string) ($verband['federation'] ?? ''),
-				'parentFederation' => (string) ($verband['parentFederation'] ?? ''),
-				'state'            => (string) ($verband['state'] ?? 'DELETE_STATE_FALSE'),
-			);
-		}
-
-		foreach($missingFederations as $federation)
-		{
-			if(!isset($ergaenzungen[' '.$federation['clubVkz']])) $ergaenzungen[' '.$federation['clubVkz']] = $federation;
-		}
-
-		$missingFederations = array_values($ergaenzungen);
 
 		// Bei gefilterter Abfrage (eine bestimmte VKZ) nur den passenden
 		// Verband ergänzen — sonst lieferte eine Vereinsabfrage plötzlich
-		// sämtliche Landesverbände mit. Verglichen wird als Zeichenkette:
-		// „10000" und „1e4" sind für == dieselbe Zahl
+		// sämtliche Verbände mit
 		if($nurVkz !== '')
 		{
-			$missingFederations = array_values(array_filter($missingFederations, function($federation) use ($nurVkz)
-			{
-				return (string) $federation['clubVkz'] === $nurVkz;
-			}));
+			if(!isset($kandidaten[' '.$nurVkz])) return $resultArr;
 
-			if(!count($missingFederations)) return $resultArr;
+			$kandidaten = array(' '.$nurVkz => $kandidaten[' '.$nurVkz]);
 		}
 
-		// Vereine umbauen mit der VKZ als Index für eine schnellere Suche
-		$vkzArr = array(); // Array[vkz] = Index
-		for($x = 0; $x < count($resultArr['body']['data']); $x++)
+		// Was die Antwort schon enthält, wird nicht noch einmal angehängt
+		$vorhanden = array();
+
+		foreach($resultArr['body']['data'] as $eintrag)
 		{
-			$vkz = $resultArr['body']['data'][$x]['clubVkz'];
-			$vkzArr[$vkz] = $x;
+			if(is_array($eintrag) && isset($eintrag['clubVkz'])) $vorhanden[' '.$eintrag['clubVkz']] = true;
 		}
 
-		foreach($missingFederations as $federation)
+		foreach($kandidaten as $schluessel => $verband)
 		{
-			if(!isset($vkzArr[$federation['clubVkz']]))
-			{
-				$resultArr['body']['data'][] = $federation;
-				$vkzArr[$federation['clubVkz']] = count($resultArr['body']['data']) - 1;
-			}
+			if(!isset($vorhanden[$schluessel])) $resultArr['body']['data'][] = $verband;
 		}
 
 		usort($resultArr['body']['data'], function($a, $b)
 		{
-			return strcmp($a['clubVkz'], $b['clubVkz']);
+			return strcmp((string) ($a['clubVkz'] ?? ''), (string) ($b['clubVkz'] ?? ''));
 		});
 
 		return $resultArr;

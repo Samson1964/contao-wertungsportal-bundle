@@ -107,6 +107,21 @@ class ApiAdresseTest extends TestCase
 	}
 
 	/**
+	 * Die Verbandsstruktur (ab 1.55.0): Seit dem 07.10.2026 liefert nu die
+	 * Verbände nicht mehr in der Vereinsliste, sondern unter einem eigenen
+	 * Endpunkt — ohne Parameter. Sie hat denselben Zwischenspeicher-Zeitraum
+	 * wie die Vereinsliste und gehört zu den Speichern, die „Cache leeren"
+	 * wegräumt.
+	 */
+	public function testVerbandsstruktur(): void
+	{
+		$this->assertSame('/dwz/dwzliste/federations', API::adresse(array('funktion' => 'Verbandsstruktur')));
+		$this->assertSame('/dwz/dwzliste/federations', API::endpunkte()['Verbandsstruktur']);
+		$this->assertSame(API::cacheGruppen()['Verbaende'], API::cacheGruppen()['Verbandsstruktur']);
+		$this->assertContains('Verbandsstruktur', API::cacheSpeicher());
+	}
+
+	/**
 	 * Verbandsrangliste mit den Werten, die `Classes\Verband` übergibt.
 	 *
 	 * Wichtig ist die Wahrheitsprüfung: Ein Alter von 0 und eine VKZ `false`

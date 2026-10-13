@@ -175,7 +175,8 @@ Jeder API-Case in `Helper/API.php::getAPI()` ruft nach `callApiWithRefresh()` ei
 WICHTIG: `autoQuery()` cached (24 h, `wertungsportal_cache`). Bei Cache-Treffer läuft KEIN Sync.
 Fehlgeschlagene Abfragen (HTTP != 200) werden nicht gecached.
 
-**Adressen (ab 1.42.0):** Pfad und Abfragezeichenkette aller zwölf Funktionen baut
+**Adressen (ab 1.42.0):** Pfad und Abfragezeichenkette aller dreizehn Funktionen (seit 1.55.0 mit
+`Verbandsstruktur`) baut
 `API::adresse($params)` — die einzige Stelle. `getAPI()` ruft sie und erledigt danach nur
 noch den Abgleich. Die Adressen sind in `tests/Helper/ApiAdresseTest.php` festgehalten, bis
 zum abschließenden `&` und zur Wahrheitsprüfung (Alter 0 = nicht angegeben); Pfadteile werden
@@ -186,7 +187,8 @@ direkt auf: kein Cache, kein Abgleich, kein `BugfixVerbaende()`, keine Statistik
 
 ## Örtlicher Datenbestand und Zugriffs-Log (ab 1.8.0)
 
-`Helper/Lokal.php` beantwortet alle zwölf API-Funktionen aus den Spiegeltabellen
+`Helper/Lokal.php` beantwortet zwölf der dreizehn API-Funktionen aus den Spiegeltabellen
+(nicht `Verbandsstruktur` — dafür hat `API::ergaenzeVerbaende()` eine eigene Rückfallebene)
 — dritte Stufe nach dem Zwischenspeicher (Aufruf in `API::notdaten()`).
 Reihenfolge: gültiger Cache → abgelaufener Cache → `Lokal::abfrage()` → Meldung.
 
@@ -487,26 +489,57 @@ Doku `docs/aenderungen.md`, `docs/mitgliedergruppe.md`.
   einzige Adresse im Spielerbestand wird nichts geändert. Prüfstand: Der echte Lauf trifft auch
   echte Mitglieder der Testdatenbank → Gruppenlisten vorher sichern und zurückschreiben.
 
-## Verbände kommen nicht mehr von nu (ab 1.54.1)
+## Verbände aus /dwz/dwzliste/federations (ab 1.55.0; Zwischenlösung 1.54.1)
 
-Doku `docs/verbaende.md`. Seit dem 07.10.2026 liefert `/dwz/dwzliste/clubs` KEINE Einträge mit
-Kennziffer auf `00` mehr (gemessen 08.10.2026: 2.190 Einträge, 195 fehlten gegenüber dem Bestand;
-`clubs?vkz=10100` → leere Liste, HTTP 200). Bis dahin fehlten nur 14 Landesverbände.
+Doku `docs/verbaende.md`. Seit dem Release von nu am 07.10.2026 liefert `/dwz/dwzliste/clubs` MIT
+ABSICHT nur noch Vereine (nu, 12.10.2026, Vorgang SPS-34590 — Folge von Franks Meldung SPS-34411,
+Verbände nicht als Vereine auszugeben). Die Verbände aller Ebenen stehen unter
+`/dwz/dwzliste/federations`: `federationNumber` (3 Stellen), `federation`, `parentFederation`,
+`federationName`. Gemessen 13.10.2026: 218 Einträge → 196 Verbände (195 des alten Bestands + 61600);
+Rohantwort in `tests/fixtures/federations_20261013.json`.
 
-- `API::BugfixVerbaende($antwort, $nurVkz, $lokale = null)` ergänzt aus ZWEI Quellen: zuerst dem
-  örtlichen Bestand (`Lokal::verbandseintraege()` — veröffentlicht, nicht `DELETE_STATE_TRUE`, Name
-  nicht leer, VKZ auf `00`, nie `00000`), dann der festen Liste der 17 Landesverbände. Bezirke und
-  Kreise gibt es NUR im Bestand; keine feste Liste dafür anlegen, sie veraltet.
+- Abfrage `Verbandsstruktur` (13. Funktion): `adresse()`, `endpunkte()`, `cacheGruppen()` (Cachezeit
+  „Verbände"), `cacheSpeicher()`, `Rohabfrage::FUNKTIONEN`; im Verteiler `getAPI()` OHNE Abgleich.
+  `API::verbandsstruktur()` holt sie über `autoQuery()` (Schlüssel `00000`), höchstens einmal je
+  Seitenaufruf (`$strukturMerker`).
+- `BugfixVerbaende($antwort, $nurVkz)` lädt nur die Quellen; gerechnet wird in
+  `ergaenzeVerbaende($antwort, $nurVkz, $struktur, $bestand)` (ohne Datenbank, geprüft in
+  `tests/Helper/ApiVerbaendeTest.php`). Rangfolge: Struktur von nu, WENN vollständig (alle 17
+  Landesverbände) → gilt allein; sonst Vereinsbestand, darunter `landesverbaende()`. Eine lückenhafte
+  Struktur wird verworfen, weil die ergänzte Liste bis zu einer Woche im Zwischenspeicher liegt.
+- **Namen von nu** (Franks Entscheidung, 13.10.2026): „Baden" statt „Badischer Schachverband e.V.".
+  Der Abgleich (`syncClubs`) benennt den Vereinsbestand mit um; ein im Backend geänderter Name hält
+  nur, solange die Struktur fehlt.
+- `verbaendeAusStruktur()`: clubVkz = Nummer + `00`, `parentFederation` = die EIGENE Nummer (alte
+  Feldform von /clubs — Navigation und Verbandskette rechnen den Elternverband aus der Kennziffer).
+  Nicht übernommen: alles außerhalb der 17 Landesverbände (000, 001, K00, L00, M00 — L0000/M0000
+  stünden neben L0001/M0001 doppelt in den Referentenlisten) und Einträge mit `parentFederation` =
+  eigene Nummer. Das sind die 17 Kreise in Württemberg: keine eigene Kennziffer, sie tragen die des
+  Bezirks (C01–C06 mehrfach). Bis 06.10.2026 standen 14 davon mit VIERSTELLIGER Nummer (4156–4171)
+  in der Vereinsliste — keine Kürzung, nu führte sie so; es gibt sie dort nicht mehr.
+- Einzelabfrage eines Vereins oder von 00000: `BugfixVerbaende()` faßt keine Quelle an (sonst zöge
+  jede Vereinsseite die Struktur nach).
+- Aufgelöste Verbände verschwinden aus der ergänzten Liste, bleiben aber im Vereinsbestand (und in
+  den Referentenlisten), bis sie im Backend abgeschaltet werden — das Bundle löscht dort nichts.
+- Prüfstand: Struktur echt über `autoQuery()` (schreibt nur Zwischenspeicher und Statistik);
+  ganzer Weg `API::getAPI(['funktion' => 'Verbaende'])` in einer Transaktion mit `rollBack()`.
+  contao-test (5.7) hat KEINEN Zugang eingerichtet → dort die Prüfdatei in `$strukturMerker` setzen.
+
+Stand 1.54.1 (gilt weiter als Rückfall): Gemessen 08.10.2026 hatte `/clubs` 2.190 Einträge, 195
+fehlten gegenüber dem Bestand; `clubs?vkz=10100` → leere Liste, HTTP 200.
+
+- Rückfall ohne Struktur: zuerst der örtliche Bestand (`Lokal::verbandseintraege()` — veröffentlicht,
+  nicht `DELETE_STATE_TRUE`, Name nicht leer, VKZ auf `00`, nie `00000`), dann die feste Liste der 17
+  Landesverbände. Keine feste Liste für Bezirke und Kreise anlegen, sie veraltet.
 - Der Bestand geht der festen Liste vor — sonst überschriebe der Abgleich (`syncClubs` läuft direkt
   danach) einen im Backend berichtigten Namen bei jedem frischen Abruf. Für ergänzte Einträge
   schreibt der Abgleich nichts (geprüft: Prüfsumme der Tabelle vor/nach `syncList`).
 - `00000` nie aus dem Bestand: `Verbandsnavigation` legt Einträge unter den ersten drei Zeichen ab,
   ein Verein mit `00000` (auf schachbund.de: SC Lörzweiler) ersetzte dort den DSB.
-- `$lokale` als Argument gibt es nur für die Prüfungen (`tests/Helper/ApiVerbaendeTest.php`); im
-  Betrieb `null` lassen. Das Lesen steht in try/catch — ohne Tabelle bleibt die feste Liste.
-- Die Liste aller Vereine und Verbände liegt unter dem Cache-Schlüssel `00000` (Funktion
-  `Verbaende`, bis zu einer Woche). `Cachesuche::regeln('verein')` erfaßt sie seit 1.54.1 — nach
-  Änderungen an den Verbänden im Backend dort mit `00000` verwerfen.
+- Das Lesen des Bestands steht in try/catch — ohne Tabelle bleibt die feste Liste.
+- Die Liste aller Vereine und Verbände (Funktion `Verbaende`) und die Struktur (`Verbandsstruktur`)
+  liegen unter dem Cache-Schlüssel `00000`, bis zu einer Woche. `Cachesuche::regeln('verein')`
+  erfaßt beide — immer ZUSAMMEN verwerfen, sonst entsteht die Liste aus der alten Struktur neu.
 - `Verbandsnavigation`: Baden hat keine Zwischenebene, 10100 … 10B00 erscheinen als `level_3`;
   `level_2` sind Kennziffern mit `0` an dritter Stelle (21000). Beim Prüfen nicht verwechseln.
 - Prüfen ohne nu: „Antwort" = Bestand ohne Verbandszeilen, dann `BugfixVerbaende()`; Schreibprobe

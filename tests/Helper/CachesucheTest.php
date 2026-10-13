@@ -21,7 +21,9 @@ class CachesucheTest extends TestCase
 	 * Unter „Verein" liegen Mitgliederliste und Name — und seit 1.54.1 die
 	 * Liste aller Vereine und Verbände, die unter dem Schlüssel 00000 steht.
 	 * Ohne sie ließ sich eine Änderung an den Verbänden nur sichtbar machen,
-	 * indem man den ganzen Zwischenspeicher leerte.
+	 * indem man den ganzen Zwischenspeicher leerte. Seit 1.55.0 gehört die
+	 * Verbandsstruktur von nu dazu (derselbe Schlüssel): Aus ihr wird die
+	 * Liste ergänzt, beide müssen zusammen weg.
 	 */
 	public function testVereinErfasstDieVerbandsliste(): void
 	{
@@ -30,6 +32,7 @@ class CachesucheTest extends TestCase
 				'Vereinsliste' => array('typ' => 'exakt'),
 				'Vereinsname' => array('typ' => 'exakt'),
 				'Verbaende' => array('typ' => 'exakt'),
+				'Verbandsstruktur' => array('typ' => 'exakt'),
 			),
 			Cachesuche::regeln('verein')
 		);

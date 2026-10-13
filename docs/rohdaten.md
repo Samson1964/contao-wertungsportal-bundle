@@ -59,7 +59,8 @@ Kleinschreibung vor.
 | Mitgliederliste eines Vereins | `/dwz/dwzliste/persons` | VKZ |
 | Rangliste eines Verbands | `/dwz/dwzliste/persons` | VKZ oder Höchstzahl, dazu Geschlecht und Alter |
 | Vereinsdaten | `/dwz/dwzliste/clubs` | VKZ |
-| Alle Vereine und Verbände | `/dwz/dwzliste/clubs` | — |
+| Alle Vereine | `/dwz/dwzliste/clubs` | — |
+| Alle Verbände (Landesverbände, Bezirke, Kreise) | `/dwz/dwzliste/federations` | — |
 
 Die Turnierergebnisse liefert nu seitenweise. Heruntergeladen wird, was der
 eine Aufruf zurückgibt — dasselbe, was auch das Frontend bekommt.
@@ -86,10 +87,10 @@ Bewusst **anders als ein Abruf im Frontend**:
 
 * **kein Zwischenspeicher** — abgerufen wird immer frisch;
 * **kein Abgleich** mit den Spiegeltabellen — das Werkzeug verändert nichts;
-* **keine Nachbesserung** — bei „Vereinsdaten" und „Alle Vereine und Verbände"
-  ergänzt das Frontend Verbände, die nu nicht liefert (`BugfixVerbaende`,
-  siehe [Verbände, die nu nicht liefert](verbaende.md)); in der Rohdatei
-  fehlen sie so, wie sie bei nu fehlen — seit dem 07.10.2026 alle;
+* **keine Nachbesserung** — bei „Vereinsdaten" und „Alle Vereine" ergänzt
+  das Frontend die Verbände (`BugfixVerbaende`, siehe
+  [Verbände](verbaende.md)); in der Rohdatei fehlen sie so, wie sie bei nu
+  fehlen — seit dem 07.10.2026 alle. Sie stehen in „Alle Verbände";
 * **keine Zählung** in der Abrufstatistik.
 
 ## Voraussetzungen und Grenzen
@@ -131,7 +132,7 @@ Abruf, Dateiname und Aufbereitung — und kommt ohne Contao aus.
 `be_wp_rohdaten.html5`).
 
 Die Adressen baut **`API::adresse()`**, dieselbe Methode, die auch das Frontend
-über `getAPI()` benutzt. Sie ist die einzige Stelle, an der die zwölf Adressen
+über `getAPI()` benutzt. Sie ist die einzige Stelle, an der die dreizehn Adressen
 entstehen; `tests/Helper/ApiAdresseTest.php` hält jede fest. Pfadteile werden
 dort kodiert, damit eine Eingabe nicht aus dem Pfad ausbricht und mit dem
 Zugangstoken einen anderen Endpunkt anspricht.

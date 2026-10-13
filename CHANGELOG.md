@@ -1,5 +1,35 @@
 # Wertungsportal Changelog
 
+## Version 1.55.0 (2026-10-13)
+
+* Add: **Verbände kommen wieder von nu** — über den neuen Endpunkt `/dwz/dwzliste/federations`
+  (Auskunft von nu vom 12.10.2026: Die Vereinsliste liefert seit dem Release am 07.10.2026 mit Absicht
+  nur noch Vereine). Landesverbände, Bezirke und Kreise erscheinen damit wieder in Verbandsnavigation,
+  Turniersuche, Vereinssuche und den Überschriften der Ranglisten — auch dort, wo der örtliche
+  Vereinsbestand sie nicht mehr hatte. Umbenennungen, neue und aufgelöste Verbände kommen von selbst an.
+  Doku: `docs/verbaende.md`
+* Change: **Die Verbände tragen die Namen von nu.** Die Landesverbände heißen „Baden", „Bayern",
+  „Sachsen" … statt „Badischer Schachverband e.V." usw. — in Navigation, Ranglisten und den Listen der
+  Wertungsreferenten. Der Vereinsbestand wird beim nächsten Abgleich mit umbenannt
+* Change: Rangfolge der Verbandsquellen: Struktur von nu (wenn sie alle 17 Landesverbände enthält),
+  sonst örtlicher Vereinsbestand, darunter die feste Liste. Die Zwischenlösung aus 1.54.1 ist damit
+  nur noch der Rückfall bei gestörter Schnittstelle
+* Change: Die 17 Kreise in Württemberg haben bei nu keine eigene Kennziffer (sie tragen die ihres
+  Bezirks) und werden deshalb nicht als eigene Verbände geführt. `000` Deutschland, `001` Schachjugend,
+  `K00` Ausland, `L00` DBSB und `M00` Schwalbe werden nicht übernommen — DBSB und Schwalbe laufen
+  weiter über `L0001`/`M0001`
+* Add: Rohdaten-Download „Alle Verbände (Landesverbände, Bezirke, Kreise)"; „Alle Vereine und
+  Verbände" heißt jetzt „Alle Vereine"
+* Change: **Wertungsportal → Zwischenspeicher**, Suchart „Verein" mit `00000` verwirft neben der
+  Vereinsliste auch die Verbandsstruktur
+* Change: **Spielersuche:** Der Hinweis unter dem Feld nennt die Schreibweise ausdrücklich — Nachname
+  oder dessen Anfang, optional nach einem Komma der Vorname („Müller", „Mül", „Müller, Karsten")
+* **Einspielen:** Ordner kopieren (kein migrate, kein assets:install). Danach unter
+  **Wertungsportal → Zwischenspeicher** Suchart „Verein", Wert `00000`, „Gefundene Einträge löschen" —
+  sonst zeigt das Frontend noch bis zu einer Woche die Liste ohne Bezirke und Kreise. Der erste Aufruf
+  einer Verbands- oder Turniersuchseite danach holt Vereinsliste und Verbandsstruktur neu und legt die
+  fehlenden Verbände im Vereinsbestand an
+
 ## Version 1.54.1 (2026-10-08)
 
 * Fix: **Verbände fehlten in Navigation und Auswahl.** Seit dem 07.10.2026 liefert nu unter

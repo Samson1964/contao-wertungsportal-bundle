@@ -115,7 +115,15 @@ class Rohabfrage
 		),
 		'Verbaende' => array
 		(
-			'titel'   => 'Alle Vereine und Verbände',
+			// Seit dem 07.10.2026 liefert nu hier nur noch Vereine; die
+			// Verbände stehen unter „Verbandsstruktur"
+			'titel'   => 'Alle Vereine',
+			'felder'  => array(),
+			'pflicht' => array(),
+		),
+		'Verbandsstruktur' => array
+		(
+			'titel'   => 'Alle Verbände (Landesverbände, Bezirke, Kreise)',
 			'felder'  => array(),
 			'pflicht' => array(),
 		),

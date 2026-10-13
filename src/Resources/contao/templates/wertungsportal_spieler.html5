@@ -27,8 +27,11 @@
 					<div class="wp-suche-felder">
 						<div class="wp-feld wp-feld--breit">
 							<label class="wp-label" for="ctrl_search">Spielername</label>
-							<input id="ctrl_search" type="text" class="tl_input_text wp-input" autofocus name="search" maxlength="30" placeholder="Name, Vorname oder nur Name" value="<?= $this->search ?>">
-							<p class="wp-hilfe">Auch ein Namensanfang genügt, z.&nbsp;B. „mann".</p>
+							<input id="ctrl_search" type="text" class="tl_input_text wp-input" autofocus name="search" maxlength="30" placeholder="Nachname oder Nachname, Vorname" aria-describedby="ctrl_search_hilfe" value="<?= $this->search ?>">
+							<?php // Die Schreibweise steht ausdrücklich da (Frank, 13.10.2026): Ohne
+							      // Komma gilt die ganze Eingabe als Nachname — „Karsten Müller"
+							      // sucht einen Nachnamen dieses Wortlauts und findet bei nu nichts ?>
+							<p class="wp-hilfe" id="ctrl_search_hilfe">Bitte so eingeben: <strong>Nachname</strong> oder dessen Anfang, optional nach einem <strong>Komma</strong> der Vorname&nbsp;– z.&nbsp;B. „Müller", „Mül" oder „Müller, Karsten".</p>
 						</div>
 					</div>
 					<?php if($this->fehler): ?>

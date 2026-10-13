@@ -1,111 +1,146 @@
-# Verbände, die nu nicht liefert
+# Verbände: Landesverbände, Bezirke, Kreise
 
-Landesverbände, Bezirke und Kreise sind in nu keine eigene Art von Datensatz —
-sie standen als „Vereine" mit einer Kennziffer auf `00` in der Vereinsliste
-(`/dwz/dwzliste/clubs`). Das Frontend braucht sie für die Verbandsnavigation,
-die Verbandsauswahl der Turniersuche, die Vereinssuche und die Überschrift
-der Verbandsranglisten.
+Das Frontend braucht die Verbände für die Verbandsnavigation, die
+Verbandsauswahl der Turniersuche, die Vereinssuche und die Überschrift der
+Verbandsranglisten; das Backend für die Zuständigkeit der Wertungsreferenten.
 
-## Was sich geändert hat
+## Woher sie kommen
 
-| Zeitraum | Was nu lieferte |
+| Zeitraum | Quelle |
 |---|---|
-| bis 06.10.2026 | Baden (10000), Hessen (50000) und Sachsen (F0000) samt aller Bezirke und Kreise; die übrigen 14 Landesverbände fehlten schon immer |
-| seit 07.10.2026 | **keinen einzigen Verbandseintrag** mehr |
+| bis 06.10.2026 | Die Vereinsliste von nu (`/dwz/dwzliste/clubs`) führte Verbände als „Vereine" mit einer Kennziffer auf `00`. 14 Landesverbände fehlten dort immer und kamen aus einer festen Liste im Code. |
+| 07.10. bis zur Fassung 1.55.0 | Seit dem Release von nu am 07.10.2026 liefert die Vereinsliste **ausschließlich Vereine**. Das Bundle behalf sich mit dem örtlichen Vereinsbestand (1.54.1). |
+| ab 1.55.0 | nu stellt die Verbände aller Ebenen unter einem eigenen Endpunkt bereit: `/dwz/dwzliste/federations` (Auskunft von nu vom 12.10.2026, Vorgang SPS-34590). |
 
-Gemessen am 08.10.2026: Die Vereinsliste hatte 2.190 Einträge, keiner mit
-einer Kennziffer auf `00`. Gegenüber dem örtlichen Bestand fehlten 195
-Einträge — die drei Landesverbände und sämtliche Bezirke und Kreise (10100
-Mannheim, 21000 Mittelfranken, 27100 Augsburg …). Die Einzelabfrage
-(`clubs?vkz=10100`) antwortet mit einer leeren Liste.
+Gemessen am 13.10.2026: Die Vereinsliste hat 2.190 Einträge, keiner mit einer
+Kennziffer auf `00`. Die Verbandsstruktur hat 218 Einträge; daraus werden 196
+Verbände — alle 195 des früheren Bestands und ein neuer (`61600`).
 
-## Wie das Bundle ergänzt
+## Was nu liefert
 
-`API::BugfixVerbaende()` ergänzt die Antwort unmittelbar nach dem Abruf — vor
-dem Abgleich mit dem Vereinsbestand und vor dem Zwischenspeichern. Seit 1.54.1
-aus zwei Quellen, in dieser Rangfolge:
+Jeder Eintrag der Verbandsstruktur hat
 
-1. **Der örtliche Vereinsbestand** (Backend **Wertungsportal → Vereine**,
-   Tabelle `tl_wertungsportal_clubs`). Er trägt den letzten Stand, den nu
-   geliefert hat. Von hier kommen die Bezirke und Kreise.
-2. **Die feste Liste der 17 Landesverbände** im Code — das Netz für
-   Installationen ohne Bestand.
+| Feld | Bedeutung | Beispiel |
+|---|---|---|
+| `federationNumber` | dreistellige Nummer des Verbandes | `F11` |
+| `federation` | Kennbuchstabe des Landesverbandes | `F` |
+| `parentFederation` | Nummer des übergeordneten Verbandes | `F10` |
+| `federationName` | Name | `Landkreis Delitzsch` |
 
-Regeln:
+Der Wert `parentFederation` eines **Vereins** in der Vereinsliste ist die
+`federationNumber` seines Verbandes.
 
-- Was nu selbst liefert, bleibt unangetastet. Liefert nu die Verbände wieder,
-  tut die Ergänzung nichts mehr.
-- Aus dem Bestand kommt nur, was **veröffentlicht** ist, nicht das
-  Löschkennzeichen trägt, einen Namen hat und dessen Kennziffer auf `00` endet.
-- `00000` wird nie übernommen. Das ist der Deutsche Schachbund; auf
-  schachbund.de stand unter dieser Kennziffer ein gewöhnlicher Verein.
-- Bei der Einzelabfrage kommt nur der angefragte Verband dazu.
+## Was das Bundle daraus macht
+
+`API::BugfixVerbaende()` ergänzt die Vereinsliste unmittelbar nach dem Abruf um
+die Verbände — vor dem Abgleich mit dem Vereinsbestand und vor dem
+Zwischenspeichern. Vereinsbestand, Zwischenspeicher und Frontend kennen damit
+dieselben Verbände, und alle übrigen Stellen des Bundles arbeiten wie bisher
+mit fünfstelligen Kennziffern.
+
+Aus einem Eintrag der Struktur wird: Kennziffer = Nummer + `00`, Name wie von
+nu geliefert.
+
+**Die Namen sind die von nu.** Die Landesverbände heißen damit „Baden",
+„Bayern", „Sachsen" … (bis 1.54.1: „Badischer Schachverband e.V." usw.) — in
+der Navigation, in den Überschriften der Ranglisten und in den Listen der
+Wertungsreferenten. Umbenennungen bei nu kommen von selbst an.
+
+Nicht übernommen wird:
+
+| Einträge | Warum |
+|---|---|
+| `000` Deutschland, `001` Deutsche Schachjugend | Der DSB ist im Bundle fest eingebaut (`00000`); die Schachjugend hatte nie einen Eintrag. |
+| `K00` Ausland, `L00` DBSB, `M00` Schwalbe | Gehören nicht zu den 17 Landesverbänden. DBSB und Schwalbe laufen wie bisher über ihre Vereinseinträge `L0001` und `M0001`. |
+| die 17 Kreise in Württemberg | Sie haben laut DSB-Orga-Struktur keine eigene Kennziffer und tragen die ihres Bezirks (`C01` bis `C06` kommen in der Struktur mehrfach vor). Unter einer Kennziffer kann nur ein Verband stehen — das ist der Bezirk. |
+
+Die Württemberger Kreise standen bis zum 06.10.2026 mit vierstelligen Nummern
+(`4156` bis `4171`) in der Vereinsliste und zählten deshalb als Vereine. Diese
+Nummern gibt es bei nu nicht mehr.
+
+## Rangfolge der Quellen
+
+1. **Die Verbandsstruktur von nu**, wenn sie vollständig ist — also alle 17
+   Landesverbände enthält. Dann gilt nur sie.
+2. Sonst der **örtliche Vereinsbestand** (Backend **Wertungsportal →
+   Vereine**): veröffentlichte, nicht gelöschte Einträge mit Kennziffer auf
+   `00`, nie `00000`.
+3. Darunter die **feste Liste der 17 Landesverbände** im Code.
+
+Die Stufen 2 und 3 greifen, wenn die Struktur nicht zu bekommen ist
+(Schnittstelle gestört, Zugang nicht eingerichtet) oder Lücken hat. Eine
+lückenhafte Struktur wird bewußt verworfen: Die ergänzte Liste liegt bis zu
+einer Woche im Zwischenspeicher, und eine abgebrochene Antwort nähme dem
+Frontend so lange die Verbände.
+
+Was nu in der Vereinsliste selbst liefert, bleibt unangetastet.
 
 ## Was das für die Pflege heißt
 
-Die Bezirke und Kreise werden **nicht mehr von nu aktualisiert**. Was sich dort
-ändert, muß im Backend unter **Wertungsportal → Vereine** nachgezogen werden:
+Verbände werden **bei nu gepflegt**, nicht mehr im Backend:
 
-| Fall | Was zu tun ist |
+| Fall | Was geschieht |
 |---|---|
-| Bezirk oder Kreis umbenannt | Den Vereinsnamen des Eintrags ändern |
-| Bezirk oder Kreis aufgelöst | Den Eintrag abschalten (Veröffentlichen aus) |
-| neuer Bezirk oder Kreis | Einen Eintrag anlegen: VKZ auf `00` (z. B. `10C00`), Name, „Verband (VKZ)" = erstes Zeichen (`1`), „Übergeordneter Verband (VKZ)" = die ersten drei Zeichen (`10C`), veröffentlichen |
+| Verband umbenannt | Der neue Name erscheint nach Ablauf des Zwischenspeichers; der Vereinsbestand wird beim Abgleich mitgeändert. |
+| neuer Verband | Erscheint von selbst und wird im Vereinsbestand angelegt. |
+| Verband aufgelöst | Verschwindet aus Navigation und Auswahl. **Im Vereinsbestand bleibt er stehen** — und damit in der Auswahl „Zuständig für" und in den Listen der Wertungsreferenten —, bis er unter **Wertungsportal → Vereine** abgeschaltet wird. Das Bundle löscht dort nichts. |
 
-Ein **Landesverband** steht durch die feste Liste immer in der Ausgabe, auch
-wenn sein Eintrag im Backend abgeschaltet ist. Sein Name läßt sich im Backend
-ändern — der Bestand geht der festen Liste vor.
-
-Danach den Zwischenspeicher der Verbandsliste verwerfen (nächster Abschnitt),
-sonst zeigt das Frontend bis zu einer Woche den alten Stand.
+Ein im Backend geänderter Verbandsname hält nur, solange die Struktur von nu
+nicht zu bekommen ist; der nächste Abgleich setzt den Namen von nu.
 
 ## Zwischenspeicher
 
-Die Liste aller Vereine und Verbände liegt bis zur eingestellten „Cachezeit
-Verbände" im Zwischenspeicher (üblich: eine Woche), der Name eines einzelnen
-Verbandes bis zur „Cachezeit Vereine" (ohne Auswahl: ein Tag).
+Die Verbandsstruktur und die Liste aller Vereine und Verbände liegen bis zur
+eingestellten „Cachezeit Verbände" im Zwischenspeicher (üblich: eine Woche),
+der Name eines einzelnen Verbandes bis zur „Cachezeit Vereine" (ohne Auswahl:
+ein Tag).
 
 Gezielt verwerfen unter **Wertungsportal → Zwischenspeicher**, Suchart
 **Verein**:
 
 | Wert | Verworfen wird |
 |---|---|
-| `00000` | die Liste aller Vereine und Verbände (ab 1.54.1) |
+| `00000` | die Liste aller Vereine und Verbände **und** die Verbandsstruktur |
 | `10100` | Name und Mitgliederliste dieses einen Verbandes oder Vereins |
 
 Siehe [Zwischenspeicher gezielt leeren](zwischenspeicher.md).
 
 ## Prüfen
 
-Wie viele Verbandseinträge der Bestand ergänzen kann:
+Was nu tatsächlich liefert, zeigt der [Rohdaten-Download](rohdaten.md):
+„Alle Verbände (Landesverbände, Bezirke, Kreise)" für die Struktur, „Alle
+Vereine" für die Vereinsliste. Dort wird nichts ergänzt.
+
+Wie viele Verbände der Vereinsbestand kennt:
 
 ```sql
 SELECT COUNT(*) FROM tl_wertungsportal_clubs
-WHERE clubVkz LIKE '%00' AND clubVkz <> '00000'
-  AND published = '1' AND state <> 'DELETE_STATE_TRUE' AND clubName <> '';
+WHERE clubVkz LIKE '%00' AND clubVkz <> '00000' AND published = '1';
 ```
 
-Auf einer Installation, die bis zum 06.10.2026 lief, sind es rund 195. Bei 0
-gibt es nur die 17 Landesverbände — Bezirke und Kreise müßten dann von Hand
-angelegt oder aus einer Sicherung geholt werden.
-
-Was nu tatsächlich liefert, zeigt der [Rohdaten-Download](rohdaten.md)
-(„Alle Vereine und Verbände"): Dort wird nichts ergänzt.
+Nach dem ersten frischen Abruf der Vereinsliste sind es 196 (Stand 13.10.2026).
 
 ## Für Entwickler
 
 | Teil | Datei |
 |---|---|
-| Ergänzung, feste Liste der Landesverbände | `Helper/API.php`, `BugfixVerbaende()` |
-| Verbandseinträge des Bestands | `Helper/Lokal.php`, `verbandseintraege()` |
-| Aufrufe | `API::getAPI()`, Zweige `Verbaende` und `Vereinsname` |
-| Prüfungen | `tests/Helper/ApiVerbaendeTest.php` |
+| Abfrage `Verbandsstruktur` (Adresse, Zwischenspeicher, Statistik) | `Helper/API.php`: `adresse()`, `endpunkte()`, `cacheGruppen()`, `verbandsstruktur()` |
+| Umwandlung der Struktur in Verbandseinträge | `API::verbaendeAusStruktur()` |
+| Ergänzung der Vereinsliste, Rangfolge der Quellen | `API::BugfixVerbaende()` (lädt die Quellen), `API::ergaenzeVerbaende()` (rechnet) |
+| feste Liste der Landesverbände | `API::landesverbaende()` |
+| Verbandseinträge des Vereinsbestands | `Lokal::verbandseintraege()` |
+| Prüfungen | `tests/Helper/ApiVerbaendeTest.php`, Rohantwort vom 13.10.2026 in `tests/fixtures/` |
 
-`BugfixVerbaende()` nimmt die Einträge des Bestands als drittes Argument; ohne
-Angabe liest es sie selbst. Scheitert das Lesen (Tabelle fehlt vor dem ersten
-`contao:migrate`), bleibt es bei der festen Liste. Der Abgleich nach der
-Ergänzung (`syncClubs`) schreibt für die ergänzten Einträge nichts — sie
-stammen aus derselben Tabelle.
-
-Im Notbetrieb (Schnittstelle nicht erreichbar) kommt die ganze Liste ohnehin
-aus dem Bestand (`Lokal::abfrage()`); die Ergänzung läuft dann nicht.
+- Die Struktur wird über `API::autoQuery()` geholt (Funktion
+  `Verbandsstruktur`, Schlüssel `00000`) und je Seitenaufruf höchstens einmal.
+  Einen örtlichen Ersatz für diese Abfrage gibt es nicht — dafür ist die
+  Rangfolge oben da.
+- Geladen wird sie nur, wenn ein Verband gefragt ist: Bei der Einzelabfrage
+  eines Vereins oder des DSB faßt `BugfixVerbaende()` keine Quelle an.
+- Ein ergänzter Eintrag trägt als `parentFederation` wie früher seine eigenen
+  drei Stellen. Den übergeordneten Verband errechnen Verbandsnavigation und
+  Verbandskette weiterhin aus der Kennziffer; das Feld `parentFederation` der
+  Struktur wird nur gebraucht, um die Württemberger Kreise zu erkennen (sie
+  nennen sich selbst).
+- Im Notbetrieb (Schnittstelle nicht erreichbar) kommt die ganze Vereinsliste
+  aus dem Vereinsbestand (`Lokal::abfrage()`); die Ergänzung läuft dann nicht.

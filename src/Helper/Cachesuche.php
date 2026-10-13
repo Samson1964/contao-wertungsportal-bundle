@@ -79,10 +79,14 @@ class Cachesuche
 					// Schlüssel 00000 (API::Verbandsliste) und bis zu einer Woche
 					// im Zwischenspeicher. Mit der VKZ 00000 läßt sie sich seit
 					// 1.54.1 gezielt verwerfen — nötig, wenn sich an den Verbänden
-					// etwas geändert hat (nu liefert sie nicht mehr, sie kommen
-					// aus dem örtlichen Bestand). Für jede andere VKZ gibt es
-					// unter dieser Funktion keinen Eintrag
+					// etwas geändert hat. Für jede andere VKZ gibt es unter
+					// dieser Funktion keinen Eintrag
 					'Verbaende'    => array('typ' => 'exakt'),
+					// Die Verbandsstruktur von nu (/dwz/dwzliste/federations, ab
+					// 1.55.0) liegt unter demselben Schlüssel und ebenso lange.
+					// Aus ihr wird die Liste oben ergänzt — wer nur die Liste
+					// verwirft, bekäme sie aus der alten Struktur neu gebaut
+					'Verbandsstruktur' => array('typ' => 'exakt'),
 				);
 		}
 
