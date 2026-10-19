@@ -1125,6 +1125,13 @@ class Helper extends \Contao\Frontend
 	 *
 	 * Zwei Sonderfälle kommen aus der Schnittstelle: L0001 und M0001.
 	 *
+	 * **Jede dreistellige Kennziffer ist ein Verband** (ab 1.55.1): Die
+	 * Verbandsnavigation verlinkt auf die Vereinsseite mit der dreistelligen
+	 * Verbandsnummer („Vereine" hinter 284 Maindreieck → /verein/284). Bis
+	 * 1.55.0 galt nur die Endung „00" — „100" war damit ein Verband, „284"
+	 * aber nicht: Die Seite holte die Mitglieder per Präfixsuche und zeigte
+	 * sie unter dem Namen des ersten Treffers (SV Würzburg).
+	 *
 	 * Diese Regel stand bisher nur in API::Verbandsliste(); sie liegt jetzt
 	 * hier, damit Anzeige und Aufteilung nicht auseinanderlaufen können.
 	 *
@@ -1137,6 +1144,7 @@ class Helper extends \Contao\Frontend
 
 		if($vkz === '') return false;
 		if($vkz === 'L0001' || $vkz === 'M0001') return true;
+		if(strlen($vkz) === 3) return true;
 
 		return substr($vkz, -2) === '00';
 	}

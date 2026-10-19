@@ -124,6 +124,19 @@ Referenten. Erledigte Reklamationen sollten nicht unbegrenzt liegen bleiben.
 - Die Klartextadresse eines Referenten steht nur im signierten Kontext, und den
   bekommen nur angemeldete Mitglieder zu sehen.
 
+## Vorbelegter Text und Markup-Minimierung
+
+Der vorbelegte Text reist im Attribut `data-text` des Knopfes. Contao kann das
+Markup einer Seite minimieren (auf schachbund.de eingeschaltet); dabei werden
+außerhalb von `pre`, `textarea`, `script` und `style` Einrückungen gestrichen
+und Leerzeilen zusammengezogen — auch in Attributwerten. Bis 1.55.0 stand der
+Text deshalb ohne Leerzeilen im Formular, und die Schreibmarke landete in „Mit
+freundlichen Grüßen".
+
+Seit 1.55.1 gehen Zeilenumbrüche und Tabulatoren als Zeichenreferenz
+(`&#10;`, `&#9;`) ins Attribut, und das Skript sucht die Zeile „Was stimmt
+nicht?", um die Schreibmarke zu setzen. Die Prüfung „unverändert" übersieht
+Leerzeilen und Einrückungen, im Browser wie auf dem Server.
 ## Für Entwickler
 
 | Teil | Datei |

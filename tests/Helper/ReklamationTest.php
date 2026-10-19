@@ -342,4 +342,55 @@ class ReklamationTest extends TestCase
 		$this->assertSame(array('dwz-owl@example.org', 'referent'), array($e[0]['email'], $e[0]['art']));
 		$this->assertSame('wertung@example.org', Reklamation::blindkopie($e, self::ADMIN));
 	}
+
+	/**
+	 * Fehler bis 1.55.0 (BUGREPORT vom 14.10.2026): Der vorbereitete Text
+	 * reist im Attribut `data-text`. Contaos Markup-Minimierung
+	 * (`Template::minifyHtml()`) macht außerhalb von pre/textarea/script/style
+	 * aus jedem „\n\n" ein „\n" und streicht Einrückungen — auch in
+	 * Attributwerten. Das Formular stand dann ohne Leerzeilen da, und die
+	 * Schreibmarke rutschte in „Mit freundlichen Grüßen".
+	 *
+	 * Zeilenumbrüche und Tabulatoren gehen deshalb als Zeichenreferenz ins
+	 * Attribut; der Browser macht beim Lesen wieder echte daraus.
+	 */
+	public function testAttributUebersteheMarkupminimierung(): void
+	{
+		$attribut = new \ReflectionMethod(Reklamation::class, 'attribut');
+		$attribut->setAccessible(true);
+
+		$wert = "Guten Tag,\n\nzu folgenden Daten:\n\n\tSeite:   https://x.test/\r\nWas stimmt nicht?\n\n\n{{insert}} <b>\"&'";
+		$maskiert = $attribut->invoke(null, $wert);
+
+		$this->assertStringNotContainsString("\n", $maskiert);
+		$this->assertStringNotContainsString("\r", $maskiert);
+		$this->assertStringNotContainsString("\t", $maskiert);
+		$this->assertStringNotContainsString('{', $maskiert);
+
+		// Genau die Regel aus Contao\Template::minifyHtml() (4.13 und 5)
+		$minimiert = preg_replace(array('/^[\t ]+/m', '/[\t ]+$/m', '/\n\n+/'), array('', '', "\n"), $maskiert);
+		$this->assertSame($maskiert, $minimiert);
+
+		// So liest der Browser das Attribut zurück (\r\n wird zu \n)
+		$this->assertSame(str_replace("\r\n", "\n", $wert), html_entity_decode($minimiert, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+	}
+
+	/**
+	 * Eine Seite, die noch mit der alten Fassung ausgeliefert und minimiert
+	 * wurde, schickt den Text ohne Leerzeilen und ohne Einrückung zurück.
+	 * Unverändert ist er trotzdem — sonst ginge eine Reklamation ohne Inhalt
+	 * durch.
+	 */
+	public function testUnveraendertAuchOhneLeerzeilen(): void
+	{
+		$kontext = Reklamation::fuerTurnier(self::turnier(), 'turnierauswertung', 'https://x.test/');
+		$kontext['empfaenger'] = Reklamation::empfaenger($kontext['referenten'], self::ADMIN);
+		$betreff = Reklamation::betreff($kontext);
+		$text = Reklamation::vorlage($kontext, $kontext['empfaenger'], 'Torsten Tester')['text'];
+		$minimiert = preg_replace(array('/^[\t ]+/m', '/[\t ]+$/m', '/\n\n+/'), array('', '', "\n"), $text);
+
+		$this->assertNotSame($text, $minimiert);
+		$this->assertTrue(Reklamation::unveraendert($kontext, 'Torsten Tester', $betreff, $minimiert));
+		$this->assertFalse(Reklamation::unveraendert($kontext, 'Torsten Tester', $betreff, str_replace(Reklamation::MARKE, Reklamation::MARKE."\nEs fehlt Runde 3.", $minimiert)));
+	}
 }

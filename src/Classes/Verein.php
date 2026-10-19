@@ -226,8 +226,11 @@ class Verein extends \Contao\Module
 			}
 			elseif(!empty($GLOBALS['TL_CONFIG']['wertungsportal_clubDefaultImage']))
 			{
-				// In den Einstellungen hinterlegtes Standardlogo
+				// In den Einstellungen hinterlegtes Standardlogo. Es zählt wie der
+				// Platzhalter als „kein Logo" und fällt in schmalen Fenstern weg
+				// (ab 1.55.1, Klasse wp-kopf-bild--platzhalter)
 				$objFile = \Contao\FilesModel::findByUuid($GLOBALS['TL_CONFIG']['wertungsportal_clubDefaultImage']);
+				$this->Template->ohneBild = true;
 			}
 
 			// Fall-Abfrage eingebaut, weil trotz vorhandenem Bild $objFile = NULL ist

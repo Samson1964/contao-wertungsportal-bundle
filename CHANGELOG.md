@@ -1,5 +1,28 @@
 # Wertungsportal Changelog
 
+## Version 1.55.1 (2026-10-19)
+
+* Fix: **Reklamation ohne Leerzeilen, Schreibmarke mitten in „Mit freundlichen Grüßen"** (Fehlerbericht
+  vom 14.10.2026). Der vorbereitete Text reist im Attribut `data-text`; Contaos Markup-Minimierung macht
+  außerhalb von pre/textarea/script/style aus jedem `\n\n` ein `\n` — auch in Attributen. Zeilenumbrüche
+  und Tabulatoren gehen jetzt als Zeichenreferenz (`&#10;`, `&#9;`) ins Attribut. Das Skript setzt die
+  Schreibmarke außerdem unter die Zeile „Was stimmt nicht?" statt auf eine feste Zeichenzahl. Betrifft
+  auch `data-info` bei „Logo/Infos ändern"
+* Fix: Die Prüfung „unverändert abgeschickt" auf dem Server übersieht Leerzeilen und Einrückungen — eine
+  Seite, die noch mit der alten Fassung ausgeliefert wurde, kommt sonst mit einer leeren Reklamation durch
+* Fix: **„Vereine" hinter einem Bezirk** in der Verbandsnavigation (z. B. 284 Maindreieck) zeigte die
+  Mitglieder aller Vereine unter dem Namen des ersten Treffers (SV Würzburg). Jede dreistellige
+  Kennziffer gilt jetzt als Verband; die Seite listet die Vereine darunter
+* Change: **Logo und Spielerbild in schmalen Fenstern** (unter 620 px) stehen kleiner (höchstens 140 px)
+  ÜBER den Angaben statt daneben; die Kopftabellen zeigen „Bezeichnung – Wert" untereinander — kein
+  seitliches Scrollen mehr. Ohne eigenes Bild (Platzhalter oder Standardbild aus den Einstellungen)
+  fällt das Bild dort weg; „Foto ändern" / „Logo/Infos ändern" bleibt für angemeldete Mitglieder stehen.
+  Der Kopf der Vereinsseite ist dafür wie die Karteikarte aufgebaut (Flex statt rowspan-Zelle), beide mit
+  den gemeinsamen Klassen `wp-kopf`, `wp-kopf-bild`, `wp-kopf-daten`
+* **Einspielen:** Ordner kopieren, `contao:assets:install` (geänderte `default.css` und `reklamation.js`),
+  kein migrate. Wer `wertungsportal_verein.html5` oder `wertungsportal_spieler.html5` im Theme angepasst
+  hat: Die Kopfbereiche haben neues Markup
+
 ## Version 1.55.0 (2026-10-13)
 
 * Add: **Verbände kommen wieder von nu** — über den neuen Endpunkt `/dwz/dwzliste/federations`

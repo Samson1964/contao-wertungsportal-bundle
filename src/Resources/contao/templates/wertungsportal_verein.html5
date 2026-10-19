@@ -61,49 +61,56 @@
 
 		<div class="listenlink"><?= $this->listenlink ?></div>
 
-		<div class="table_responsiv">
-			<table class="header">
-				<tbody>
-					<tr class="row_0">
-						<td class="col_0" rowspan="<?= $this->referent ? 3 : 2 ?>" style="text-align:center;" width="25%">
-							<?php if($this->addImage): ?>
-								<?php if($this->platzhalter): ?>
-									<?php // Mitgeliefertes SVG: liegt nicht in der Dateiverwaltung und
-									      // kann deshalb nicht über das image-Template laufen ?>
-									<img src="<?= $this->platzhalter ?>" alt="Kein Vereinslogo hinterlegt" class="wp-platzhalter" width="120" height="120" loading="lazy">
-								<?php else: ?>
-									<?php $this->insert('image', $this->arrData); ?>
-								<?php endif; ?>
-								<?php // „Logo/Infos ändern" (ab 1.54.0) ersetzt den mailto-Link
-								      // „Logo senden": Formular für Logo, Homepage und „Über den
-								      // Verein", nur für angemeldete Mitglieder
-								      // (Helper\Aenderung::linkVereinsdaten) ?>
-								<?php if($this->datenlink): ?>
-									<br><?= $this->datenlink ?>
-								<?php endif; ?>
-							<?php endif; ?>
-						</td>
-						<td class="col_1 top-line" width="25%">Homepage:</td>
-						<td class="col_2 value top-line">
-							<?php if($this->homepage): ?>
-								<a href="<?= $this->homepage ?>" target="_blank"><?= $this->homepage ?></a>
-							<?php endif; ?>
-						</td>
-					</tr>
-					<tr class="row_1">
-						<td class="col_1 top-line">Über den Verein:</td>
-						<td class="col_2 value top-line"><?= $this->info ?></td>
-					</tr>
-					<?php // Zuständiger Wertungsreferent (ab 1.53.0) — fertiges HTML aus
-					      // Helper\Zustaendigkeit, E-Mail-Adressen schon verschleiert ?>
-					<?php if($this->referent): ?>
-						<tr class="row_2">
-							<td class="col_1 top-line">Zuständiger Wertungsreferent:</td>
-							<td class="col_2 value top-line"><?= $this->referent ?></td>
-						</tr>
+		<?php // Kopf als Flex-Layout wie bei der Karteikarte (ab 1.55.1): Logo links,
+		      // Angaben rechts; in schmalen Fenstern steht das Logo kleiner ÜBER den
+		      // Angaben, und der Platzhalter für „kein Logo" fällt weg (default.css,
+		      // .wp-kopf). Bis 1.55.0 stand das Logo in einer rowspan-Zelle derselben
+		      // Tabelle — auf dem Handy musste man dadurch seitwärts scrollen ?>
+		<div class="wp-kopf verein-kopf">
+			<?php if($this->addImage): ?>
+				<div class="wp-kopf-bild<?= ($this->platzhalter || $this->ohneBild) ? ' wp-kopf-bild--platzhalter' : '' ?>">
+					<?php if($this->platzhalter): ?>
+						<?php // Mitgeliefertes SVG: liegt nicht in der Dateiverwaltung und
+						      // kann deshalb nicht über das image-Template laufen ?>
+						<img src="<?= $this->platzhalter ?>" alt="Kein Vereinslogo hinterlegt" class="wp-platzhalter" width="120" height="120" loading="lazy">
+					<?php else: ?>
+						<?php $this->insert('image', $this->arrData); ?>
 					<?php endif; ?>
-				</tbody>
-			</table>
+					<?php // „Logo/Infos ändern" (ab 1.54.0) ersetzt den mailto-Link
+					      // „Logo senden": Formular für Logo, Homepage und „Über den
+					      // Verein", nur für angemeldete Mitglieder
+					      // (Helper\Aenderung::linkVereinsdaten) ?>
+					<?php if($this->datenlink): ?>
+						<div class="wp-kopf-aenderung"><?= $this->datenlink ?></div>
+					<?php endif; ?>
+				</div>
+			<?php endif; ?>
+			<div class="wp-kopf-daten table_responsiv">
+				<table class="header">
+					<tbody>
+						<tr class="row_0">
+							<td class="col_1 top-line" width="30%">Homepage:</td>
+							<td class="col_2 value top-line">
+								<?php if($this->homepage): ?>
+									<a href="<?= $this->homepage ?>" target="_blank"><?= $this->homepage ?></a>
+								<?php endif; ?>
+							</td>
+						</tr>
+						<tr class="row_1">
+							<td class="col_1 top-line">Über den Verein:</td>
+							<td class="col_2 value top-line"><?= $this->info ?></td>
+						</tr>
+						<?php // Zuständiger Wertungsreferent (ab 1.53.0) — fertiges HTML aus
+						      // Helper\Zustaendigkeit, E-Mail-Adressen schon verschleiert ?>
+						<?php if($this->referent): ?>
+							<tr class="row_2">
+								<td class="col_1 top-line">Zuständiger Wertungsreferent:</td>
+								<td class="col_2 value top-line"><?= $this->referent ?></td>
+							</tr>
+						<?php endif; ?>
+					</tbody>
+				</table>
+			</div>
 		</div>
 
 		<?php if($this->reklamation): ?>

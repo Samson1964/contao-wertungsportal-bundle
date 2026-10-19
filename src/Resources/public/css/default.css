@@ -444,6 +444,120 @@
 	min-width				: 0;
 }
 
+/* Kopf von Karteikarte und Vereinsseite (ab 1.55.1, gemeinsame Klassen
+   wp-kopf*): Bild bzw. Logo links, Angaben rechts. Die karteikarte-*-Regeln
+   oben bleiben für angepasste Vorlagen bestehen */
+.dewis .wp-kopf {
+	display					: flex;
+	align-items				: flex-start;
+	gap						: 12px;
+	margin-bottom			: 10px;
+}
+
+.dewis .wp-kopf-bild {
+	flex					: 0 0 auto;
+	max-width				: 40%;
+	text-align				: center;
+}
+
+.dewis .wp-kopf-bild img {
+	max-width				: 100%;
+	height					: auto;
+}
+
+.dewis .wp-kopf-bild figure,
+.dewis .wp-kopf-bild .image_container {
+	margin					: 0;
+}
+
+.dewis .wp-kopf-aenderung {
+	margin-top				: 4px;
+}
+
+.dewis .wp-kopf-daten {
+	flex					: 1 1 auto;
+	min-width				: 0;
+}
+
+.dewis .wp-kopf-daten table.header {
+	margin-top				: 0;
+}
+
+/* Schmale Fenster: Bild bzw. Logo kleiner ÜBER den Angaben statt daneben —
+   daneben blieb den Angaben so wenig Breite, dass man seitwärts scrollen
+   musste. Ohne hinterlegtes Bild entfällt der Platzhalter; der Link „Foto
+   ändern" / „Logo/Infos ändern" bleibt für angemeldete Mitglieder stehen */
+@media (max-width: 619px) {
+	.dewis .wp-kopf {
+		flex-direction		: column;
+		align-items			: stretch;
+		gap					: 8px;
+	}
+
+	.dewis .wp-kopf-bild {
+		max-width			: none;
+		text-align			: left;
+	}
+
+	.dewis .wp-kopf-bild img {
+		max-width			: 140px;
+		max-height			: 140px;
+		width				: auto;
+	}
+
+	/* Platzhalter-SVG oder Standardbild aus den Einstellungen: alles außer
+	   dem Änderungslink ausblenden */
+	.dewis .wp-kopf-bild--platzhalter > :not(.wp-kopf-aenderung) {
+		display				: none;
+	}
+
+	.dewis .wp-kopf-bild--platzhalter:not(:has(.wp-kopf-aenderung)) {
+		display				: none;
+	}
+
+	.dewis .wp-kopf-bild--platzhalter .wp-kopf-aenderung {
+		margin-top			: 0;
+	}
+
+	/* Die Kopftabelle der Karteikarte hat sechs Spalten (DWZ, Geschlecht,
+	   Geburtsjahr nebeneinander) und war auch in voller Breite noch zu
+	   breit. In schmalen Fenstern stehen die Paare „Bezeichnung – Wert"
+	   deshalb untereinander; die width-Angaben der Zellen gelten hier nicht */
+	.dewis .wp-kopf-daten table.header,
+	.dewis .wp-kopf-daten table.header tbody {
+		display				: block;
+		width				: 100%;
+	}
+
+	.dewis .wp-kopf-daten table.header tr {
+		display				: flex;
+		flex-wrap			: wrap;
+	}
+
+	.dewis .wp-kopf-daten table.header td {
+		display				: block;
+		box-sizing			: border-box;
+		width				: auto;
+		min-width			: 0;
+		overflow-wrap		: anywhere;
+	}
+
+	.dewis .wp-kopf-daten table.header td.col_1,
+	.dewis .wp-kopf-daten table.header td.col_3:not(.value),
+	.dewis .wp-kopf-daten table.header td.col_5:not(.value) {
+		flex				: 0 0 40%;
+	}
+
+	.dewis .wp-kopf-daten table.header td.value {
+		flex				: 0 0 60%;
+	}
+
+	/* Füllzellen der Karteikarte (Zeile „Nation") haben untereinander keinen Platz */
+	.dewis .wp-kopf-daten table.header td.wp-leer {
+		display				: none;
+	}
+}
+
 /* Karteikarte: DWZ-Umstufungen (upgrades) in der Turnierliste hervorheben */
 .dewis table.body tr.upgrade td {
 	background-color		: #FFF3D9;

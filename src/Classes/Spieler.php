@@ -241,8 +241,11 @@ class Spieler extends \Contao\Module
 
 				if(!$objFile && !empty($GLOBALS['TL_CONFIG']['wertungsportal_playerDefaultImage']))
 				{
-					// In den Einstellungen hinterlegtes Standardbild
+					// In den Einstellungen hinterlegtes Standardbild. Es zählt wie der
+					// Platzhalter als „kein Foto" und fällt in schmalen Fenstern weg
+					// (ab 1.55.1, Klasse wp-kopf-bild--platzhalter)
 					$objFile = \Contao\FilesModel::findByUuid($GLOBALS['TL_CONFIG']['wertungsportal_playerDefaultImage']);
+					$this->Template->ohneBild = true;
 				}
 
 				// Fall-Abfrage eingebaut, weil trotz vorhandenem Bild $objFile = NULL sein kann

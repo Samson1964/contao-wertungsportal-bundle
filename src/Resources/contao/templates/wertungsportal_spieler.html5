@@ -74,9 +74,12 @@
 		<?php // Kopf als Flex-Layout: Bild links, Datentabelle rechts. So rutschen
 		      // die Spalten auch bei vielen Vereinsmitgliedschaften nicht mehr unter
 		      // das Spielerbild (früher rowspan="6" fest an der Bildzelle). ?>
-		<div class="karteikarte-kopf">
+		<?php // Seit 1.55.1 zusätzlich mit den gemeinsamen Klassen wp-kopf* (wie die
+		      // Vereinsseite): In schmalen Fenstern steht das Bild kleiner ÜBER den
+		      // Angaben, der Platzhalter für „kein Foto" fällt weg ?>
+		<div class="karteikarte-kopf wp-kopf">
 			<?php if($this->addImage): ?>
-				<div class="karteikarte-bild">
+				<div class="karteikarte-bild wp-kopf-bild<?= ($this->platzhalter || $this->ohneBild) ? ' wp-kopf-bild--platzhalter' : '' ?>">
 					<?php if($this->platzhalter): ?>
 						<?php // Mitgeliefertes SVG, siehe wertungsportal_verein.html5 ?>
 						<img src="<?= $this->platzhalter ?>" alt="Kein Spielerbild hinterlegt" class="wp-platzhalter" width="120" height="120" loading="lazy">
@@ -87,11 +90,11 @@
 					      // ein Formular mit Dateianhang, nur für angemeldete Mitglieder
 					      // (Helper\Aenderung::linkFoto). Gäste sehen hier nichts ?>
 					<?php if($this->fotolink): ?>
-						<br><?= $this->fotolink ?>
+						<div class="wp-kopf-aenderung"><?= $this->fotolink ?></div>
 					<?php endif; ?>
 				</div>
 			<?php endif; ?>
-			<div class="karteikarte-daten table_responsiv">
+			<div class="karteikarte-daten wp-kopf-daten table_responsiv">
 				<table class="header">
 					<tbody>
 						<tr class="row_0">
@@ -141,12 +144,12 @@
 						</tr>
 						<?php $row++; ?>
 						<tr class="row_<?= $row ?> fide">
-							<td class="col_1 bottom-line">&nbsp;</td>
-							<td class="col_2 bottom-line">&nbsp;</td>
+							<td class="col_1 bottom-line wp-leer">&nbsp;</td>
+							<td class="col_2 bottom-line wp-leer">&nbsp;</td>
 							<td class="col_3 bottom-line">Nation:</td>
 							<td class="col_4 bottom-line value"><?= $this->fide_nation ?></td>
-							<td class="col_5 bottom-line">&nbsp;</td>
-							<td class="col_6 bottom-line">&nbsp;</td>
+							<td class="col_5 bottom-line wp-leer">&nbsp;</td>
+							<td class="col_6 bottom-line wp-leer">&nbsp;</td>
 						</tr>
 						<?php $row++; ?>
 						<tr class="row_<?= $row ?> historie">

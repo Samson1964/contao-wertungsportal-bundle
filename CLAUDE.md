@@ -545,6 +545,25 @@ fehlten gegenüber dem Bestand; `clubs?vkz=10100` → leere Liste, HTTP 200.
 - Prüfen ohne nu: „Antwort" = Bestand ohne Verbandszeilen, dann `BugfixVerbaende()`; Schreibprobe
   des Abgleichs in einer Transaktion mit `rollBack()` (`database_connection`).
 
+## Korrekturen 1.55.1 (Fehlerbericht und TODO vom 14.–19.10.2026)
+
+- **Mehrzeilige Werte in HTML-Attributen** (`data-text`, `data-info`) überleben Contaos
+  Markup-Minimierung nicht: `Template::minifyHtml()` streicht außerhalb von pre/textarea/script/style
+  Einrückungen und zieht `\n\n+` zu `\n` zusammen — auch in Attributen. `Reklamation::attribut()`
+  schreibt deshalb `\n` → `&#10;`, `\t` → `&#9;`. Wer neue Attribute mit Text baut: über `attribut()`.
+  Im Debug-Modus ist die Minimierung aus — dort sieht man den Fehler NICHT. Prüfstand: Knopf erzeugen,
+  `minifyHtml()` per Reflection, mit DOMDocument zurücklesen (Gegenprobe mit alter Fassung zeigt den Fehler).
+- `Reklamation::unveraendert()` vergleicht über `vergleichstext()` (ohne Leerzeilen/Einrückung), das
+  Skript `gleich()` genauso; die Schreibmarke setzt das Skript über die Zeile „Was stimmt nicht?".
+- **`Helper::istVerband()`: jede dreistellige Kennziffer ist ein Verband.** Die Verbandsnavigation
+  verlinkt „Vereine" mit der dreistelligen Nummer (`/verein/284`); bis 1.55.0 zählten nur Endungen auf
+  `00`, und 284 wurde als Verein per Präfixsuche ausgegeben.
+- **Kopf von Karteikarte und Vereinsseite:** gemeinsame Klassen `wp-kopf` / `wp-kopf-bild` /
+  `wp-kopf-daten` (die alten `karteikarte-*` bleiben daneben). Unter 620 px: Bild darüber, max. 140 px;
+  Kopftabelle als Paare (Zellen `display:block`, Bezeichnung 40 %, `.value` 60 %; Füllzellen `wp-leer`
+  ausgeblendet). `wp-kopf-bild--platzhalter` steht bei Platzhalter-SVG UND beim Standardbild aus den
+  Einstellungen (Template-Variable `ohneBild`); dort bleibt in schmalen Fenstern nur der Änderungslink.
+
 ## Fallstricke / Besonderheiten
 
 - **Überschrift und Linkleiste der Suchmodule (ab 1.50.0):** Spieler, Verein, Verband und Turnier

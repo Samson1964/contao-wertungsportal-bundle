@@ -572,7 +572,10 @@ class Reklamation
 	 * wüsste. Die Vorbelegung wird hier aus dem signierten Kontext neu
 	 * gebildet — so wie link() sie erzeugt hat —, statt sie aus dem Formular
 	 * zu übernehmen. Verglichen wird nach derselben Bereinigung wie beim
-	 * Versand; Zeilenenden und Leerraum am Rand zählen also nicht.
+	 * Versand; Zeilenenden und Leerraum am Rand zählen also nicht. Leerzeilen
+	 * und Einrückungen zählen ebenfalls nicht (vergleichstext()): Eine Seite,
+	 * die noch vor 1.55.1 ausgeliefert und minimiert wurde, schickt den Text
+	 * ohne sie zurück — unverändert ist er trotzdem.
 	 *
 	 * Das Skript prüft dasselbe schon im Browser; hier steht die Regel, damit
 	 * sie sich nicht umgehen lässt.
@@ -590,7 +593,24 @@ class Reklamation
 		$vorlage = self::vorlage($kontext, $empfaenger, $mitgliedName);
 
 		return self::bereinigeBetreff($betreff) === self::bereinigeBetreff(self::betreff($kontext))
-			&& self::bereinigeText($text) === self::bereinigeText($vorlage['text']);
+			&& self::vergleichstext($text) === self::vergleichstext($vorlage['text']);
+	}
+
+	/**
+	 * Bringt einen Nachrichtentext in die Form, in der unveraendert() ihn
+	 * vergleicht: bereinigt wie beim Versand, dazu ohne Leerraum am Anfang und
+	 * Ende jeder Zeile und ohne Leerzeilen. Genau das entfernt Contaos
+	 * Markup-Minimierung aus einem Attributwert (siehe attribut()).
+	 *
+	 * @param string $text Nachrichtentext
+	 *
+	 * @return string Vergleichsform; nur für den Vergleich, nie für den Versand
+	 */
+	protected static function vergleichstext(string $text): string
+	{
+		$text = (string) preg_replace(array('/^[\t ]+/m', '/[\t ]+$/m'), '', self::bereinigeText($text));
+
+		return (string) preg_replace('/\n{2,}/', "\n", $text);
 	}
 
 	/**
@@ -1118,13 +1138,27 @@ class Reklamation
 	 * geschrieben: Contao ersetzt in der fertigen Seite Insert-Tags, und ein
 	 * „{{" in einem Turniernamen würde sonst als solcher gelesen.
 	 *
+	 * Zeilenumbrüche und Tabulatoren gehen als Zeichenreferenz hinaus (ab
+	 * 1.55.1): Contaos Markup-Minimierung (Template::minifyHtml()) streicht
+	 * außerhalb von pre, textarea, script und style Einrückungen und macht aus
+	 * jedem „\n\n" ein „\n" — auch in Attributwerten. Auf schachbund.de stand
+	 * der vorbereitete Reklamationstext deshalb ohne Leerzeilen im Formular,
+	 * und die Schreibmarke (data-cursor) rutschte in „Mit freundlichen
+	 * Grüßen". Beim Lesen des Attributs macht der Browser aus &#10; wieder
+	 * einen echten Zeilenumbruch.
+	 *
 	 * @param string $wert Wert
 	 *
-	 * @return string Maskierter Wert
+	 * @return string Maskierter Wert, ohne Zeilenumbrüche und Tabulatoren
 	 */
 	protected static function attribut(string $wert): string
 	{
-		return str_replace(array('{', '}'), array('&#123;', '&#125;'), htmlspecialchars($wert, ENT_QUOTES, 'UTF-8'));
+		return str_replace
+		(
+			array('{', '}', "\r\n", "\r", "\n", "\t"),
+			array('&#123;', '&#125;', '&#10;', '&#10;', '&#10;', '&#9;'),
+			htmlspecialchars($wert, ENT_QUOTES, 'UTF-8')
+		);
 	}
 
 	/**

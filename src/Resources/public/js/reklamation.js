@@ -51,8 +51,10 @@
 		 * @returns {boolean} true, wenn nichts geändert wurde
 		 */
 		function gleich(eingabe, vorbelegung) {
+			// Wie Reklamation::vergleichstext(): Leerraum am Zeilenrand und
+			// Leerzeilen zählen nicht
 			var normal = function (wert) {
-				return String(wert || '').replace(/\r\n?/g, '\n').trim();
+				return String(wert || '').replace(/\r\n?/g, '\n').replace(/^[\t ]+|[\t ]+$/gm, '').replace(/\n{2,}/g, '\n').trim();
 			};
 
 			return normal(eingabe) === normal(vorbelegung);
@@ -105,6 +107,18 @@
 
 			var text = felder.namedItem('text');
 			var marke = parseInt(link.getAttribute('data-cursor') || '0', 10);
+
+			// Die Zeile „Was stimmt nicht?" (Reklamation::MARKE) suchen statt der
+			// festen Zeichenzahl zu trauen: Fehlen im Text Leerzeilen (bis 1.55.0
+			// strich Contaos Markup-Minimierung sie aus dem Attribut) oder
+			// enthält er Zeichen, die JavaScript doppelt zählt (Emoji im Namen),
+			// landete die Marke sonst mitten im Gruß
+			var zeile = 'Was stimmt nicht?\n';
+			var fund = text.value.indexOf(zeile);
+
+			if (fund >= 0) {
+				marke = fund + zeile.length;
+			}
 
 			text.focus();
 
