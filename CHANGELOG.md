@@ -1,5 +1,25 @@
 # Wertungsportal Changelog
 
+## Version 1.56.0 (2026-11-02)
+
+* Fix: **Spielersuche mit kurzem Nachnamen und Vornamensanfang fand nichts** („Li, Nat", „Ma, Yu").
+  nu vergleicht den Vornamen nur vollständig (Vorgang SPS-33996), und die örtliche Suche springt erst
+  ab drei Zeichen Nachname ein. Bei kürzeren Nachnamen wird jetzt nur nach dem Nachnamen gefragt und
+  der Vornamensanfang im Portal gefiltert (ohne Rücksicht auf Groß-/Kleinschreibung und Umlaute)
+* Add: Spielersuche ohne Treffer zeigt „Keine Spieler gefunden." mit Tipps (Nachnamensanfang, andere
+  Schreibweise bei Umlauten und Doppelnamen) — bisher blieb die Seite unter dem Formular leer
+* Fix: **Spielberichtsbogen bei Sonderwertung:** Hatte ein Spieler für seine Gegner mit seiner
+  Turnierleistung gezählt, stimmten die Schwarzpartien nicht (`1 − expected` gilt nur ohne
+  Sonderwertung). Die Zeilen ergaben z. B. 3,026 statt 2,368. Schwarzpartien werden jetzt mit der
+  eigenen DWZ gegen den Wert von Weiß gerechnet; ob Weiß mit seiner Leistung zählte, entscheidet die
+  Summe `winsExpected`. Die DWZ-Spalte zeigt in diesem Fall die Leistung, hervorgehoben und mit Hinweis
+* Fix: **Karteikarte zeigte bei Vereinen des Bezirks Neckar-Fils „Verband: Kreis Esslingen/Göppingen"**.
+  Die Mitgliederverwaltung führt diesen Kreis mit der VereinNr `C03`, der Nummer seines Bezirks; der
+  CSV-Vereinsimport legt daraus eine dreistellige Zeile an, und die Abfrage nahm ohne Sortierung die
+  erste passende Zeile. Bei gleicher Nummer gewinnt jetzt die fünfstellige Verbandszeile von nu
+* Fix: Fußzeile der Formularmails endete ohne Namen im Mitgliedskonto mit „Eine Antwort auf diese
+  E-Mail geht direkt an ." — jetzt steht dort die Adresse
+
 ## Version 1.55.1 (2026-10-19)
 
 * Fix: **Reklamation ohne Leerzeilen, Schreibmarke mitten in „Mit freundlichen Grüßen"** (Fehlerbericht

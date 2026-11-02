@@ -88,6 +88,14 @@ Verbände werden **bei nu gepflegt**, nicht mehr im Backend:
 Ein im Backend geänderter Verbandsname hält nur, solange die Struktur von nu
 nicht zu bekommen ist; der nächste Abgleich setzt den Namen von nu.
 
+Die Zeile „Verband:" der Karteikarte liest den Vereinsbestand. Stehen dort zu
+einer Nummer eine dreistellige und eine fünfstellige Zeile (`C03` und
+`C0300`), gilt seit 1.56.0 die fünfstellige — sie kommt von nu. Die
+dreistellige kann aus dem CSV-Vereinsimport stammen: Die Mitgliederverwaltung
+führt den „Kreis Esslingen/Göppingen" mit der VereinNr `C03`, alle anderen
+Württemberger Kreise mit internen Nummern (4156–4171). Bis 1.55.1 zeigte die
+Karteikarte deshalb bei Vereinen des Bezirks Neckar-Fils den Kreis.
+
 ## Zwischenspeicher
 
 Die Verbandsstruktur und die Liste aller Vereine und Verbände liegen bis zur

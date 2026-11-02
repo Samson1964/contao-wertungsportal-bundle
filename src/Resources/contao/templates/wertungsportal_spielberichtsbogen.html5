@@ -108,7 +108,7 @@
 						<th width="30" class="right-line">Runde</th>
 						<th class="" title="Name des Gegners mit Link zur Karteikarte">Gegner</th>
 						<th class="right-line" title="Link zum Spielberichtsbogen des Spielers">Scoresheet</th>
-						<th width="60" class="right-line" title="DWZ des Gegners vor dem Turnier; bei Nichtmitgliedern die Eingangswertung, mit der sie gezählt haben (meist eine Elo, bei Teilnehmern ohne Wertung die errechnete Zahl). Hervorgehoben: Erst-DWZ aus diesem Turnier, mit der ein Gegner ohne DWZ nachträglich gewertet wurde">DWZ</th>
+						<th width="60" class="right-line" title="DWZ des Gegners vor dem Turnier; bei Nichtmitgliedern die Eingangswertung, mit der sie gezählt haben (meist eine Elo, bei Teilnehmern ohne Wertung die errechnete Zahl). Hervorgehoben: Erst-DWZ aus diesem Turnier, mit der ein Gegner ohne DWZ nachträglich gewertet wurde, oder die Turnierleistung eines Gegners mit Sonderwertung">DWZ</th>
 						<th width="60" class="right-line">Ergebnis</th>
 						<th width="60" class="" title="Erwartungswert, Punkterwartung in dieser Partie">We</th>
 					</tr>
@@ -120,7 +120,10 @@
 							<td class="align-center right-line<?= $class ?>"><?= $d['Runde'] ?></td>
 							<td class="right-line<?= $class ?>"><?= $d['Gegner_Name'] ?></td>
 							<td class="right-line<?= $class ?>"><?= $d['Gegner_Scoresheet'] ?></td>
-							<?php if(!empty($d['Gegner_ErstDWZ'])): ?>
+							<?php if(!empty($d['Gegner_Leistung'])): ?>
+								<?php // Gegner mit Sonderwertung: zählte mit seiner Turnierleistung statt mit der DWZ ?>
+								<td class="right-line<?= $class ?> erst-dwz" title="<?= \Contao\StringUtil::specialchars($d['Gegner_Leistung']) ?>"><?= $d['Gegner_DWZ'] ?></td>
+							<?php elseif(!empty($d['Gegner_ErstDWZ'])): ?>
 								<?php // Gegner ohne alte DWZ, der mit seiner hier erworbenen Erst-DWZ gezählt hat ?>
 								<td class="right-line<?= $class ?> erst-dwz" title="<?= \Contao\StringUtil::specialchars($d['Gegner_ErstDWZ']) ?>"><?= $d['Gegner_DWZ'] ?></td>
 							<?php else: ?>

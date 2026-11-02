@@ -314,6 +314,135 @@ class Spielerwertung
 	}
 
 	/**
+	 * Liefert die Gewinnerwartung aller Partien eines Spielberichtsbogens —
+	 * samt der Angabe, ob der Gegner mit seiner Turnierleistung gezählt hat.
+	 *
+	 * Hintergrund (Badischer Mannschaftspokal 2025/26, gemeldet 02.11.2026):
+	 * Bei einer Sonderwertung zählt ein Spieler für seine GEGNER nicht mit der
+	 * alten DWZ, sondern mit seiner Turnierleistung (Naß: DWZ 2082, Leistung
+	 * 2500). `expected` ist die Erwartung des Weißspielers gegen den Wert, mit
+	 * dem Schwarz für ihn zählt. Die Erwartung des Schwarzspielers rechnet nu
+	 * dagegen mit dessen alter DWZ gegen den Wert, mit dem WEISS für ihn
+	 * zählt. 1 − expected stimmt deshalb nur, wenn keiner der beiden eine
+	 * Sonderwertung hat. Nachgemessen: Naß als Schwarz gegen Huber (1887)
+	 * bekam 1 − 0,0151 = 0,985 statt Φ(2082 − 1887) = 0,755; Wegmer als
+	 * Schwarz gegen Naß 1 − 0,514 = 0,486 statt Φ(2072 − 2500) = 0,065.
+	 *
+	 * Ob ein Gegner mit Weiß eine Sonderwertung hatte, steht in keinem Feld.
+	 * Entschieden wird über die Summe: Die Zeilen müssen `winsExpected` des
+	 * Spielers ergeben. Für jede Schwarzpartie, deren Gegner eine von der DWZ
+	 * abweichende Leistung hat, werden beide Möglichkeiten durchprobiert.
+	 * Paßt genau eine Verteilung, gilt sie; sonst bleiben die bisherigen
+	 * Werte (1 − expected). Bei Weißpartien zeigt `expected` selbst, ob der
+	 * Gegner mit seiner Leistung gezählt hat.
+	 *
+	 * @param mixed  $partien     matches des Spielberichtsbogens
+	 * @param string $spielerUuid playerUuid des Spielers, dessen Bogen es ist
+	 *
+	 * @return array<int|string,array{wert:float|null,geschaetzt:bool,leistung:int}>
+	 *         je Schlüssel der Partie das Ergebnis von partieerwartung(),
+	 *         ergänzt um `leistung`: die Turnierleistung, mit der der Gegner
+	 *         gezählt hat, 0 wenn er mit seiner DWZ gezählt hat oder es sich
+	 *         nicht feststellen ließ
+	 */
+	public static function partiewerte($partien, string $spielerUuid): array
+	{
+		// Abweichung, ab der zwei Erwartungen als verschieden gelten. nu
+		// liefert `expected` auf sechs und `winsExpected` auf fünf Stellen
+		$toleranz = 0.001;
+
+		$werte = array();
+		$summe = 0.0;
+		$ziel = false;
+		$offen = array();
+
+		foreach (\is_array($partien) ? $partien : array() as $i => $partie) {
+			if (!\is_array($partie)) {
+				continue;
+			}
+
+			$weiss = (string) ($partie['whitePlayer']['playerUuid'] ?? '') === $spielerUuid;
+			$eigen = self::aufbereiten($weiss ? ($partie['whitePlayer'] ?? null) : ($partie['blackPlayer'] ?? null));
+			$gegnerRoh = ($weiss ? ($partie['blackPlayer'] ?? null) : ($partie['whitePlayer'] ?? null)) ?: array();
+			$gegner = self::aufbereiten($gegnerRoh);
+			$leistung = self::ganzzahl($gegnerRoh['tournamentPerformance'] ?? 0);
+
+			if (false === $ziel) {
+				$ziel = $eigen['winsExpected'];
+			}
+
+			// Bisheriger Weg: Weiß expected, Schwarz 1 − expected
+			$wert = self::partieerwartung($partie, $weiss, $eigen['ratingOld'], $gegner['ratingOld']) + array('leistung' => 0);
+
+			$sonder = !$gegner['nichtmitglied'] && $leistung > 0 && $gegner['ratingOld'] > 0 && $leistung !== $gegner['ratingOld'];
+
+			if ($weiss && $sonder && null !== $wert['wert'] && !$wert['geschaetzt']) {
+				// expected verrät die Sonderwertung des Schwarzspielers selbst
+				$mitLeistung = self::gewinnerwartung($eigen['ratingOld'], $leistung);
+				$mitDwz = self::gewinnerwartung($eigen['ratingOld'], $gegner['ratingOld']);
+
+				if (null !== $mitLeistung && null !== $mitDwz && abs($wert['wert'] - $mitLeistung) < $toleranz && abs($wert['wert'] - $mitDwz) >= $toleranz) {
+					$wert['leistung'] = $leistung;
+				}
+			} elseif (!$weiss && null !== $wert['wert'] && !$wert['geschaetzt'] && $eigen['ratingOld'] > 0 && $gegner['ratingOld'] > 0) {
+				// Schwarz: eigene alte DWZ gegen die Wertung des Gegners
+				$mitDwz = self::gewinnerwartung($eigen['ratingOld'], $gegner['ratingOld']);
+				$mitLeistung = $sonder ? self::gewinnerwartung($eigen['ratingOld'], $leistung) : null;
+
+				// Liegen Leistung und DWZ fast gleichauf, ließe die Summe beide
+				// Lesarten zu — dann zählt die DWZ
+				if (null !== $mitLeistung && null !== $mitDwz && abs($mitLeistung - $mitDwz) < $toleranz) {
+					$mitLeistung = null;
+				}
+
+				$offen[$i] = array('dwz' => $mitDwz, 'leistung' => $mitLeistung, 'zahl' => $leistung);
+			}
+
+			$werte[$i] = $wert;
+
+			if (null !== $wert['wert'] && !isset($offen[$i])) {
+				$summe += $wert['wert'];
+			}
+		}
+
+		// Ohne Schwarzpartien mit Wertungen auf beiden Seiten gibt es nichts
+		// nachzurechnen; mehr als zwölf Möglichkeiten werden nicht probiert
+		$kandidaten = array_keys(array_filter($offen, static function ($o) { return null !== $o['leistung']; }));
+
+		if (!$offen || false === $ziel || \count($kandidaten) > 12) {
+			return $werte;
+		}
+
+		$treffer = array();
+
+		for ($maske = 0; $maske < (1 << \count($kandidaten)); ++$maske) {
+			$gesamt = $summe;
+
+			foreach ($offen as $i => $o) {
+				$bit = array_search($i, $kandidaten, true);
+				$gesamt += (false !== $bit && ($maske >> $bit) & 1) ? $o['leistung'] : $o['dwz'];
+			}
+
+			if (abs($gesamt - $ziel) < $toleranz) {
+				$treffer[] = $maske;
+			}
+		}
+
+		if (1 !== \count($treffer)) {
+			return $werte;
+		}
+
+		foreach ($offen as $i => $o) {
+			$bit = array_search($i, $kandidaten, true);
+			$mitLeistung = false !== $bit && ($treffer[0] >> $bit) & 1;
+			$werte[$i]['wert'] = $mitLeistung ? $o['leistung'] : $o['dwz'];
+			$werte[$i]['leistung'] = $mitLeistung ? $o['zahl'] : 0;
+		}
+
+		return $werte;
+	}
+
+	/**
 	 * Liefert die Erst-DWZ, mit der ein Gegner ohne alte DWZ in einer Partie
 	 * gezählt hat — oder 0, wenn das nicht der Fall ist.
 	 *

@@ -121,6 +121,17 @@ class Spieler extends \Contao\Module
 				$nachname = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::slugName($check_search['nachname']);
 				$vorname  = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::slugName($check_search['vorname']);
 
+				// nu vergleicht den Vornamen nur vollständig, und die örtliche
+				// Suche springt erst ab drei Zeichen Nachname ein. Bei kürzeren
+				// Nachnamen („Li, Nat") deshalb nur nach dem Nachnamen fragen
+				// und den Vornamensanfang unten selbst filtern
+				$vornameFiltern = '';
+				if($vorname !== '' && mb_strlen($check_search['nachname']) < \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::KURZER_NACHNAME)
+				{
+					$vornameFiltern = $check_search['vorname'];
+					$vorname = '';
+				}
+
 				// Spielersuche
 				$param = array
 				(
@@ -140,6 +151,7 @@ class Spieler extends \Contao\Module
 			if(isset($param))
 			{
 				$resultArr = \Schachbulle\ContaoWertungsportalBundle\Helper\API::autoQuery($param); // Abfrage ausführen
+				if(!empty($vornameFiltern)) $resultArr = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::filterVornamenAnfang($resultArr, $vornameFiltern);
 
 				// Trefferliste für das Template aufbereiten
 				$suche = new \Schachbulle\ContaoWertungsportalBundle\Helper\Spielersuche($resultArr, 'API');
@@ -309,6 +321,9 @@ class Spieler extends \Contao\Module
 		$this->Subtemplate->daten = isset($daten) ? $daten : false;
 		$this->Subtemplate->anzahl = isset($daten) ? count($daten) : 0;
 		$this->Subtemplate->lokal = isset($lokaleSuche) ? $lokaleSuche : false;
+		// Eine Suche ohne Treffer bekommt Tipps — aber nicht, wenn schon eine
+		// Fehlermeldung erklärt, warum die Liste leer ist
+		$this->Subtemplate->keineTreffer = isset($daten) && !count($daten) && empty($this->Template->fehler);
 		$this->Template->searchresult = $this->Subtemplate->parse();
 		$this->Template->searchform = true;
 	}

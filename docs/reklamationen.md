@@ -88,7 +88,10 @@ DSB-Admin gerichtet ist.
 Angehängt wird eine **Fußzeile**, die das Mitglied weder sieht noch ändern
 kann: Name, Adresse und Mitgliedsnummer aus dem Konto, die Seite, Datum und
 Uhrzeit. Weil Betreff und Text frei sind, ist sie der Teil, auf den sich der
-Empfänger verlassen kann.
+Empfänger verlassen kann. Ihr letzter Satz nennt, an wen eine Antwort geht —
+hat das Mitgliedskonto keinen Namen, steht dort die Adresse (ab 1.56.0; vorher
+endete er mit „geht direkt an ."). Dieselbe Fußzeile tragen die Formulare
+unter [Änderungsmeldungen](aenderungen.md).
 
 ## Das Backend-Modul
 

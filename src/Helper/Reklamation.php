@@ -495,7 +495,8 @@ class Reklamation
 			$zeilen[] = 'Seite: '.(string) $kontext['url'];
 		}
 
-		$zeilen[] = 'Eine Antwort auf diese E-Mail geht direkt an '.$name.'.';
+		// Viele Mitgliedskonten haben keinen Namen — dann die Adresse nennen
+		$zeilen[] = 'Eine Antwort auf diese E-Mail geht direkt an '.('' !== $name ? $name : self::zeile((string) ($mitglied['email'] ?? ''))).'.';
 
 		return implode("\n", $zeilen);
 	}

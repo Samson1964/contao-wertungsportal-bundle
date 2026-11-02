@@ -564,4 +564,139 @@ class SpielerwertungTest extends TestCase
 
 		$this->assertSame(0, Spielerwertung::gezaehlteErstDwz(Spielerwertung::aufbereiten($gegner), array('wert' => 0.29, 'geschaetzt' => false)));
 	}
+
+	/**
+	 * Baut einen Spieler eines Spielberichtsbogens mit den Feldern, die
+	 * partiewerte() liest.
+	 *
+	 * @param string     $uuid     playerUuid
+	 * @param int        $dwz      alte DWZ, 0 = keine
+	 * @param int        $leistung Turnierleistung, 0 = nicht geliefert
+	 * @param float|null $erwartet winsExpected, null = nicht geliefert
+	 *
+	 * @return array<string,mixed>
+	 */
+	private static function bogenspieler(string $uuid, int $dwz, int $leistung = 0, ?float $erwartet = null): array
+	{
+		$spieler = array('playerUuid' => $uuid, 'nuLigaPersonId' => 'NU'.crc32($uuid), 'member' => true, 'ratingOld' => $dwz, 'indexOld' => 10);
+
+		if ($leistung > 0) {
+			$spieler['tournamentPerformance'] = $leistung;
+		}
+
+		if (null !== $erwartet) {
+			$spieler['winsExpected'] = $erwartet;
+		}
+
+		return $spieler;
+	}
+
+	/**
+	 * Summe der Werte, wie sie die Σ-Zeile zeigen müßte.
+	 *
+	 * @param array<int|string,array{wert:float|null}> $werte Ergebnis von partiewerte()
+	 *
+	 * @return float Summe aller Werte, fehlende als 0 gezählt
+	 */
+	private static function summe(array $werte): float
+	{
+		return array_sum(array_map(static function ($w) { return (float) $w['wert']; }, $werte));
+	}
+
+	/**
+	 * Der Spieler mit Sonderwertung selbst (DWZ 2082, Leistung 2500): Als
+	 * Schwarz zählt seine eigene DWZ, nicht 1 − expected. Badischer
+	 * Mannschaftspokal 2025/26, Zahlen von nu, Namen weggelassen.
+	 */
+	public function testSonderwertungEigeneSchwarzpartien(): void
+	{
+		$ich = self::bogenspieler('ich', 2082, 2500, 2.36821);
+		$partien = array(
+			array('result' => 'WHITE_WINS', 'expected' => 0.514102, 'whitePlayer' => $ich, 'blackPlayer' => self::bogenspieler('a', 2072)),
+			array('result' => 'BLACK_WINS', 'expected' => 0.0151067, 'whitePlayer' => self::bogenspieler('b', 1887), 'blackPlayer' => $ich),
+			array('result' => 'WHITE_WINS', 'expected' => 0.351291, 'whitePlayer' => $ich, 'blackPlayer' => self::bogenspieler('c', 2190)),
+			array('result' => 'BLACK_WINS', 'expected' => 0.0687819, 'whitePlayer' => self::bogenspieler('d', 2080), 'blackPlayer' => $ich),
+			array('result' => 'REMIS', 'expected' => 0.245277, 'whitePlayer' => $ich, 'blackPlayer' => self::bogenspieler('e', 2277)),
+		);
+
+		$werte = Spielerwertung::partiewerte($partien, 'ich');
+
+		$this->assertEqualsWithDelta(0.755, $werte[1]['wert'], 0.001);
+		$this->assertEqualsWithDelta(0.503, $werte[3]['wert'], 0.001);
+		$this->assertEqualsWithDelta(2.36821, self::summe($werte), 0.001);
+		$this->assertSame(array(0, 0, 0, 0, 0), array_column($werte, 'leistung'));
+	}
+
+	/**
+	 * Der Gegner des Spielers mit Sonderwertung, mit Schwarz: Er rechnet gegen
+	 * die Leistung 2500, und die DWZ-Spalte bekommt sie gezeigt.
+	 */
+	public function testSonderwertungDesWeissenGegners(): void
+	{
+		$partien = array(
+			array('result' => 'WHITE_WINS', 'expected' => 0.514102, 'whitePlayer' => self::bogenspieler('x', 2082, 2500, 2.36821), 'blackPlayer' => self::bogenspieler('ich', 2072, 0, 0.0650416)),
+		);
+
+		$werte = Spielerwertung::partiewerte($partien, 'ich');
+
+		$this->assertEqualsWithDelta(0.065, $werte[0]['wert'], 0.001);
+		$this->assertSame(2500, $werte[0]['leistung']);
+	}
+
+	/**
+	 * Mit Weiß gegen den Spieler mit Sonderwertung: expected stimmt schon,
+	 * verrät aber die Leistung des Gegners — die DWZ-Spalte zeigt sie.
+	 */
+	public function testSonderwertungDesSchwarzenGegners(): void
+	{
+		$partien = array(
+			array('result' => 'BLACK_WINS', 'expected' => 0.0151067, 'whitePlayer' => self::bogenspieler('ich', 1887, 0, 0.0150851), 'blackPlayer' => self::bogenspieler('x', 2082, 2500)),
+		);
+
+		$werte = Spielerwertung::partiewerte($partien, 'ich');
+
+		$this->assertEqualsWithDelta(0.0151067, $werte[0]['wert'], 0.000001);
+		$this->assertSame(2500, $werte[0]['leistung']);
+	}
+
+	/**
+	 * Gegenprobe ohne Sonderwertung (4. SGL-Open): Werte und Summe wie bisher,
+	 * obwohl die Gegner eigene, von der DWZ abweichende Leistungen haben —
+	 * auch einer ohne DWZ, für den nur expected einen Wert liefert.
+	 */
+	public function testOhneSonderwertungBleibtAllesBeimAlten(): void
+	{
+		$ich = self::bogenspieler('ich', 1893, 1867, 2.63255);
+		$partien = array(
+			array('result' => 'BLACK_WINS', 'expected' => 0.0208517, 'whitePlayer' => self::bogenspieler('a', 1317), 'blackPlayer' => $ich),
+			array('result' => 'WHITE_WINS', 'expected' => 0.615411, 'whitePlayer' => $ich, 'blackPlayer' => self::bogenspieler('b', 0)),
+			array('result' => 'WHITE_WINS', 'expected' => 0.853964, 'whitePlayer' => self::bogenspieler('c', 2191, 2436), 'blackPlayer' => $ich),
+			array('result' => 'REMIS', 'expected' => 0.420144, 'whitePlayer' => $ich, 'blackPlayer' => self::bogenspieler('d', 1950, 1962)),
+			array('result' => 'WHITE_WINS', 'expected' => 0.528186, 'whitePlayer' => self::bogenspieler('e', 1913, 1918), 'blackPlayer' => $ich),
+		);
+
+		$werte = Spielerwertung::partiewerte($partien, 'ich');
+
+		$this->assertEqualsWithDelta(1 - 0.0208517, $werte[0]['wert'], 0.0001);
+		$this->assertEqualsWithDelta(0.615411, $werte[1]['wert'], 0.000001);
+		$this->assertEqualsWithDelta(1 - 0.853964, $werte[2]['wert'], 0.0001);
+		$this->assertEqualsWithDelta(2.63255, self::summe($werte), 0.001);
+		$this->assertSame(array(0, 0, 0, 0, 0), array_column($werte, 'leistung'));
+	}
+
+	/**
+	 * Geht die Summe mit keiner Verteilung auf, bleibt es bei 1 − expected —
+	 * geraten wird nicht.
+	 */
+	public function testOhnePassendeSummeKeineSonderwertung(): void
+	{
+		$partien = array(
+			array('result' => 'WHITE_WINS', 'expected' => 0.514102, 'whitePlayer' => self::bogenspieler('x', 2082, 2500), 'blackPlayer' => self::bogenspieler('ich', 2072, 0, 0.3)),
+		);
+
+		$werte = Spielerwertung::partiewerte($partien, 'ich');
+
+		$this->assertEqualsWithDelta(1 - 0.514102, $werte[0]['wert'], 0.000001);
+		$this->assertSame(0, $werte[0]['leistung']);
+	}
 }

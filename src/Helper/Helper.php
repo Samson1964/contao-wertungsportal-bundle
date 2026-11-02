@@ -13,6 +13,13 @@ namespace Schachbulle\ContaoWertungsportalBundle\Helper;
 class Helper extends \Contao\Frontend
 {
 	/**
+	 * Mindestlänge des Nachnamens für die örtliche Spielersuche. Kürzere
+	 * Nachnamen fragt Spieler.php ohne Vornamen bei nu an und filtert den
+	 * Vornamen selbst (siehe filterVornamenAnfang)
+	 */
+	const KURZER_NACHNAME = 3;
+
+	/**
 	 * Current object instance
 	 * @var object
 	 */
@@ -885,6 +892,14 @@ class Helper extends \Contao\Frontend
 	 * Verbände liegen in tl_wertungsportal_clubs 3-stellig oder 5-stellig
 	 * (?00-Auffüllung) vor.
 	 *
+	 * Gibt es beide, gewinnt die fünfstellige Zeile (ab 1.56.0). Sie stammt
+	 * aus der Verbandsstruktur von nu; eine dreistellige kann aus dem
+	 * CSV-Vereinsimport kommen und einen anderen Verband meinen: Die
+	 * Mitgliederverwaltung führt den „Kreis Esslingen/Göppingen" mit der
+	 * VereinNr C03, der Nummer seines Bezirks. Bis 1.55.1 nahm die Abfrage
+	 * ohne Sortierung die erste Zeile, und die Karteikarte zeigte bei allen
+	 * Vereinen des Bezirks Neckar-Fils den Kreis.
+	 *
 	 * @param     String $vkz  VKZ des Vereins
 	 * @return    array        array('vkz' => '552', 'name' => '...')
 	 */
@@ -905,9 +920,9 @@ class Helper extends \Contao\Frontend
 		{
 			if(strlen($kand) < 3) continue;
 
-			$objClub = \Contao\Database::getInstance()->prepare("SELECT clubName FROM tl_wertungsportal_clubs WHERE clubVkz = ? OR clubVkz = ?")
+			$objClub = \Contao\Database::getInstance()->prepare("SELECT clubName FROM tl_wertungsportal_clubs WHERE clubVkz = ? OR clubVkz = ? ORDER BY clubVkz = ? DESC, id")
 			                                   ->limit(1)
-			                                   ->execute($kand, $kand.'00');
+			                                   ->execute($kand, $kand.'00', $kand.'00');
 
 			if($objClub->numRows) return array('vkz' => $kand, 'name' => $objClub->clubName);
 		}
@@ -2047,6 +2062,45 @@ class Helper extends \Contao\Frontend
 	}
 
 	/**
+	 * Behält in einer Trefferliste der Funktion Spielerliste nur die Spieler,
+	 * deren Vorname mit der Eingabe beginnt.
+	 *
+	 * nu vergleicht den Vornamen nur vollständig („Li, Nat" findet dort
+	 * keinen „Nathan", Vorgang SPS-33996). Ab KURZER_NACHNAME Zeichen gleicht
+	 * die örtliche Suche das aus; bei kürzeren Nachnamen wie „Li" oder „Ma"
+	 * fragt Spieler.php deshalb nur mit dem Nachnamen an und filtert hier.
+	 * Verglichen wird über Helper::alias(), also ohne Rücksicht auf Groß-
+	 * und Kleinschreibung und Umlautschreibweise („Jörg" passt zu „jo" und
+	 * zu „joe").
+	 *
+	 * @param mixed  $resultArr Antwort von API::autoQuery() mit body.data;
+	 *                          alles andere (Fehler, Notbetrieb ohne Liste)
+	 *                          kommt unverändert zurück
+	 * @param string $vorname   Eingegebener Vornamensanfang, Rohstring; leer
+	 *                          = nicht filtern
+	 *
+	 * @return mixed Die Antwort, in body.data nur noch passende Spieler
+	 *               (neu durchnumeriert); totalCount in den Metadaten wird
+	 *               angepaßt, falls vorhanden
+	 */
+	public static function filterVornamenAnfang($resultArr, $vorname)
+	{
+		$anfang = self::alias($vorname);
+
+		// Ohne verwertbare Zeichen ("-") gäbe es nichts zu vergleichen
+		if($anfang === '' || $anfang === '-' || !isset($resultArr['body']['data']) || !is_array($resultArr['body']['data'])) return $resultArr;
+
+		$resultArr['body']['data'] = array_values(array_filter($resultArr['body']['data'], function($person) use ($anfang)
+		{
+			return strpos(self::alias($person['firstname'] ?? ''), $anfang) === 0;
+		}));
+
+		if(isset($resultArr['body']['metadata']['totalCount'])) $resultArr['body']['metadata']['totalCount'] = count($resultArr['body']['data']);
+
+		return $resultArr;
+	}
+
+	/**
 	 * Lokale Spielersuche in tl_wertungsportal_persons als Namensanfang-Suche.
 	 * Wird als Fallback genutzt, wenn die Wertungsportal-API keine Treffer
 	 * liefert (die API vergleicht nur komplette Felder — "müll" findet dort
@@ -2083,7 +2137,7 @@ class Helper extends \Contao\Frontend
 		// Eingaben liefern zehntausende Zeilen, und eine Suche nur über den
 		// Vornamen könnte den Namensindex nicht nutzen (Tabellendurchlauf).
 		// Der Vorname verfeinert lediglich das Ergebnis
-		if(mb_strlen($nachname) < 3) return false;
+		if(mb_strlen($nachname) < self::KURZER_NACHNAME) return false;
 
 		// Suchbegriffe in Aliase umwandeln (Umlaute, Groß-/Kleinschreibung).
 		// "-" bedeutet: keine verwertbaren Zeichen — damit ist nicht zu suchen

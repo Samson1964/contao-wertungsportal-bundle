@@ -1,3 +1,7 @@
+<?php if($this->keineTreffer): ?>
+	<p class="lokalhinweis"><strong>Keine Spieler gefunden.</strong><br>Tipps: Nur den Nachnamen oder seinen Anfang eingeben, etwa „Mül“ statt „Müller, Karsten“. Eine andere Schreibweise versuchen – bei Umlauten „ü“ oder „ue“, „ß“ oder „ss“, bei Doppelnamen nur einen der Namen.</p>
+<?php endif; ?>
+
 <?php if($this->daten): ?>
 	<table class="header">
 		<tbody>

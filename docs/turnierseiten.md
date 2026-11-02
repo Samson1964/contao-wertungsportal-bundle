@@ -62,7 +62,8 @@ Bogen eines Nichtmitglieds heißt es „Eingangswertung 1554" statt „DWZ 1554"
 
 Die Schnittstelle gibt zu jeder Partie das Feld **`expected`** mit — und zwar
 **immer aus Sicht von Weiß**, gleichgültig, wessen Bogen abgerufen wurde. Hatte
-der Spieler Schwarz, gilt `1 − expected`.
+der Spieler Schwarz, gilt `1 − expected` — es sei denn, einer der beiden hatte
+eine Sonderwertung (siehe unten).
 
 Nachgemessen am Bogen, mit dem der Fehler gemeldet wurde: vier Partien mit
 Weiß, drei mit Schwarz, Summe 3,890983 — geliefert wird `winsExpected` 3,89098,
@@ -92,6 +93,40 @@ Drei Regeln folgen daraus:
 
 Bis 1.44.1 wurde **jede** Zeile mit der Elo-Formel geschätzt. Gegner ohne DWZ
 blieben leer, und die Summe der Zeilen ergab nie den Wert darunter.
+
+### Sonderwertung: Gegner zählt mit seiner Turnierleistung (ab 1.56.0)
+
+Bei einer Sonderwertung zählt ein Spieler für seine **Gegner** nicht mit der
+alten DWZ, sondern mit seiner Turnierleistung. Seine eigene Erwartung rechnet
+nu weiter mit seiner DWZ. Gemeldet am 02.11.2026 (Badischer Mannschaftspokal
+2025/26): Ein Spieler mit DWZ 2082 und Leistung 2500 (4,5 aus 5).
+
+`expected` ist die Erwartung des Weißspielers gegen den Wert, mit dem Schwarz
+für ihn zählt — bei einer Sonderwertung von Schwarz also gegen dessen
+Leistung. Für Schwarz ist `1 − expected` dann falsch:
+
+| Bogen | Partie | bis 1.55.1 | richtig | nachgerechnet |
+|---|---|---|---|---|
+| Spieler mit Sonderwertung, Schwarz | gegen 1887 | 0,985 | 0,755 | Φ((2082 − 1887) / 282,8) |
+| Spieler mit Sonderwertung, Schwarz | gegen 2080 | 0,931 | 0,503 | Φ((2082 − 2080) / 282,8) |
+| sein Gegner (2072), Schwarz | gegen ihn | 0,486 | 0,065 | Φ((2072 − 2500) / 282,8) |
+
+Die Zeilen ergaben bis 1.55.1 3,026 statt der 2,368 darunter.
+
+Ob ein Gegner mit Weiß eine Sonderwertung hatte, steht in keinem Feld.
+`Spielerwertung::partiewerte()` entscheidet deshalb über die **Summe**: Jede
+Schwarzpartie wird mit der eigenen DWZ gegen die DWZ von Weiß gerechnet; hat
+Weiß eine abweichende Leistung, wird auch diese Lesart probiert. Ergibt genau
+eine Verteilung `winsExpected`, wird sie übernommen; sonst bleibt es bei
+`1 − expected` — geraten wird nicht. Bei Weißpartien verrät `expected` selbst, ob
+Schwarz mit seiner Leistung gezählt hat. In beiden Fällen steht in der
+DWZ-Spalte die Leistung, hervorgehoben wie eine Erst-DWZ, mit dem Hinweis:
+
+> Turnierleistung 2500 statt DWZ 2082 – der Gegner zählte in diesem Turnier
+> für seine Gegner mit seiner Leistung (Sonderwertung).
+
+Gegenprobe ohne Sonderwertung (4. SGL-Open, Summe 2,633): Werte unverändert,
+auch wo Gegner eine von ihrer DWZ abweichende Leistung haben.
 
 ## Erst-DWZ des Gegners im Spielberichtsbogen (ab 1.49.0)
 

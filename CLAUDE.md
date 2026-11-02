@@ -334,7 +334,8 @@ alle drei Ansichten.
 - **Keine Klammern in der Ausgabe** (Frank, 17.09.2026: „ohne Klammern") — weder um Wertungen noch um
   K. `zerlege()` meldet die Klammer nur noch, damit `eingangswertung()` die errechnete Zahl erkennt;
   `textzahl()` liest Anzeigetexte als Zahl, damit Text und Zahlenfeld gleich aussehen.
-- **`matches[].expected` gilt aus Sicht von WEISS**, egal wessen Bogen. Schwarz = `1 − expected`.
+- **`matches[].expected` gilt aus Sicht von WEISS**, egal wessen Bogen. Schwarz = `1 − expected`,
+  außer bei Sonderwertung (siehe „Korrekturen 1.56.0").
   Steht nirgends, ist aber gemessen (Summe = `winsExpected`, 94 % von 10.927 Bögen; die umgekehrte
   Lesart erklärt einen einzigen weiteren). Kampflose Partien (`PLUS`/`MINUS` im Code) bekommen
   keinen We, obwohl nu einen liefert.
@@ -563,6 +564,33 @@ fehlten gegenüber dem Bestand; `clubs?vkz=10100` → leere Liste, HTTP 200.
   Kopftabelle als Paare (Zellen `display:block`, Bezeichnung 40 %, `.value` 60 %; Füllzellen `wp-leer`
   ausgeblendet). `wp-kopf-bild--platzhalter` steht bei Platzhalter-SVG UND beim Standardbild aus den
   Einstellungen (Template-Variable `ohneBild`); dort bleibt in schmalen Fenstern nur der Änderungslink.
+
+## Korrekturen 1.56.0 (Portalfehler vom 02.11.2026)
+
+- **nu vergleicht bei `/dwz/dwzliste/persons` Nach- UND Vorname nur vollständig** (gemessen
+  02.11.2026: `lastname=li` → 82 Treffer, alle „Li"/„LI"; `lastname=li&firstname=nat` → 0; Vorgang
+  SPS-33996). Die örtliche Suche gleicht das erst ab `Helper::KURZER_NACHNAME` (3) Zeichen aus.
+  Kürzere Nachnamen mit Vorname fragt `Spieler.php` deshalb nur mit dem Nachnamen an und filtert mit
+  `Helper::filterVornamenAnfang()` (Vergleich über `alias()`, also umlaut- und großschreibungsfest).
+  Cacheschlüssel ist dann der des reinen Nachnamens.
+- Spielersuche ohne Treffer: `keineTreffer` in der Untervorlage, Hinweis im Stil `lokalhinweis`. Nicht
+  bei einer Fehlermeldung (die erklärt die leere Liste selbst).
+- **Sonderwertung im Spielberichtsbogen:** `expected` = Erwartung von Weiß gegen den Wert, mit dem
+  Schwarz für ihn zählt (DWZ oder, bei Sonderwertung, Turnierleistung). Schwarz rechnet nu mit eigener
+  DWZ gegen den Wert von Weiß — `1 − expected` stimmt nur ohne Sonderwertung. `Spielerwertung::partiewerte()`
+  rechnet Schwarzpartien neu und probiert für Weiß-Gegner mit abweichender Leistung beide Lesarten; nur
+  wenn genau eine Verteilung `winsExpected` ergibt, gilt sie (sonst bisheriger Weg). Ergebnis-Schlüssel
+  `leistung` (0 = keine Sonderwertung) → DWZ-Spalte zeigt die Leistung, Klasse `erst-dwz`, Tooltip aus
+  `Scoresheet::leistungHinweis()`. Tests mit den echten Zahlen in `SpielerwertungTest`.
+  `/dwz/tournaments/3ced63d5-…` (4. SGL-Open) liefert bei nu 404, der Bogen dazu aber 200 —
+  Gegenprobe deshalb direkt auf der Rohantwort.
+- Fußzeile der Formularmails: ohne Namen im Konto die Adresse statt „geht direkt an .".
+- **Karteikarte zeigte „Kreis Esslingen/Göppingen" statt „Bezirk Neckar-Fils".** `Helper::getVerband()`
+  las `clubVkz = 'C03' OR 'C0300'` mit `LIMIT 1` ohne `ORDER BY`; jetzt gewinnt die fünfstellige
+  Zeile (Franks Entscheidung 02.11.2026). Ursache: Die Vereins-CSV der Mitgliederverwaltung führt „Kreis Esslingen/Göppingen" mit
+  der VereinNr `C03` (alle anderen Württemberger Kreise haben interne Nummern 4156–4171), der
+  Vereinsimport legt daraus `clubVkz = 'C03'` an — und die dreistellige Nummer trifft vor `C0300`.
+  Gegenbeweis: eine Zeile `C03` in zurückgerollter Transaktion → Karteikarte zeigt den Kreis.
 
 ## Fallstricke / Besonderheiten
 

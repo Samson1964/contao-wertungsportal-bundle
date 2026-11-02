@@ -193,6 +193,17 @@ class ReklamationTest extends TestCase
 	}
 
 	/**
+	 * Viele Mitgliedskonten haben keinen Namen. Dann endete jede Formularmail
+	 * mit „… geht direkt an ." — statt des leeren Namens steht die Adresse da.
+	 */
+	public function testFusszeileOhneNamen(): void
+	{
+		$f = Reklamation::fusszeile(array('id' => 4711, 'name' => ' ', 'email' => 'max@example.org'), array(), 'www.schachbund.de', time());
+
+		$this->assertStringEndsWith('Eine Antwort auf diese E-Mail geht direkt an max@example.org.', $f);
+	}
+
+	/**
 	 * Ein Zeilenumbruch im Betreff wäre ein Einfallstor für untergeschobene
 	 * Mailkopfzeilen („Bcc: …"). Er wird zum Leerzeichen, der Betreff bleibt
 	 * einzeilig und höchstens 200 Zeichen lang.
