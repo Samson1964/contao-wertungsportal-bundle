@@ -749,7 +749,10 @@ mit angelegt (2.168 Vereine in der Datei). Spielgenehmigung → licenceState-Map
 Aktiv/Passiv/Sondermitgliedschaft/ohne Spielgenehmigung → ACTIVE/PASSIVE/SONDER/OHNE
 (SONDER/OHNE sind neue Optionen); SpielgenehmigungVon/Bis → neue Felder.
 Bewusste Entscheidungen: Geschlecht m/w/d/unbekannt → MALE/FEMALE/DIVERSE/'';
-Geburtsdatum voll nach birthyear (API-Sync überschreibt es dank applyBirthyear-Jahresregel
+GeschlechtImSpielbetrieb bleibt Kürzel m/w/d, alles andere '' (ab 1.56.1: „unbekannt" passte
+nicht in varchar(8) → Contaos Verbindung läuft mit TRADITIONAL/STRICT_ALL_TABLES, ein einziger zu
+langer Wert wirft „Data too long" und der ganze Schritt endet mit 500 — Import stand bei 43 %).
+Neue Werte im Export daher zuerst gegen die Spaltenlängen prüfen; Geburtsdatum voll nach birthyear (API-Sync überschreibt es dank applyBirthyear-Jahresregel
 nicht); Mehrfachzeilen einer Person sind laut Analyse identisch, die erste gewinnt;
 218 Zeilen ohne VereinNr/Mitgliedernummer ergeben nur Personen ohne Mitgliedschafts-Import.
 ACHTUNG möglicher Ping-Pong: Die CSV nennt den Verband anders als die nu-API

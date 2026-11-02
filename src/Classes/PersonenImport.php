@@ -303,6 +303,14 @@ class PersonenImport extends \Contao\Backend
 	 * Liefert null, wenn die Zeile keine InterneNr enthält;
 	 * 'mitgliedschaft' ist null, wenn VereinNr oder Mitgliedernummer fehlen.
 	 *
+	 * Werte, die nicht in ihre Spalte passen, bringen den ganzen Schritt zu
+	 * Fall (strikter SQL-Modus von Contao). Geschlecht und Geschlecht im
+	 * Spielbetrieb werden deshalb auf bekannte Kürzel abgebildet, alles
+	 * andere bleibt leer.
+	 *
+	 * @param array $row     Eine Zeile aus fgetcsv()
+	 * @param array $spalten Spaltenname => Index aus der Kopfzeile
+	 *
 	 * @return array|null array('nuLigaPersonId' => ..., 'felder' => array(...), 'mitgliedschaft' => array|null)
 	 */
 	public static function mappeZeile($row, $spalten)
@@ -321,6 +329,14 @@ class PersonenImport extends \Contao\Backend
 		elseif($geschlecht == 'w') $geschlecht = 'FEMALE';
 		elseif($geschlecht == 'd') $geschlecht = 'DIVERSE';
 		else $geschlecht = ''; // 'unbekannt' u.ä.
+
+		// Geschlecht im Spielbetrieb bleibt als Kürzel stehen (m/w/d). Im
+		// Export vom 02.11.2026 kam erstmals „unbekannt" vor — neun Zeichen
+		// für eine Spalte varchar(8): Contaos strikter SQL-Modus brach das
+		// ganze Paket mit „Data too long" ab, der Import stand bei 43 % mit
+		// einem 500er. Alles außer den Kürzeln wird deshalb leer
+		$geschlechtSpielbetrieb = $wert('GeschlechtImSpielbetrieb');
+		if(!in_array($geschlechtSpielbetrieb, array('m', 'w', 'd'), true)) $geschlechtSpielbetrieb = '';
 
 		// Spielgenehmigung auf den Lizenzstatus der API abbilden
 		$lizenz = self::mappeLizenz($wert('Spielgenehmigung'));
@@ -365,7 +381,7 @@ class PersonenImport extends \Contao\Backend
 				'nation'                  => $wert('Nation'),
 				'fideNation'              => $wert('FideNation'),
 				'gender'                  => $geschlecht,
-				'geschlechtSpielbetrieb'  => $wert('GeschlechtImSpielbetrieb'),
+				'geschlechtSpielbetrieb'  => $geschlechtSpielbetrieb,
 				'strasse'                 => $wert('AdresseStrasse'),
 				'plz'                     => $wert('AdressePLZ'),
 				'ort'                     => $wert('AdresseOrt'),

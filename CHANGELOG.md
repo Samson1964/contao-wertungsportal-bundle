@@ -1,5 +1,12 @@
 # Wertungsportal Changelog
 
+## Version 1.56.1 (2026-11-02)
+
+* Fix: **Spieler-Import aus der Vereinsmitglieder-CSV brach bei 43 % mit einem 500er ab.** Im Export
+  vom 02.11.2026 steht bei zwei Personen „unbekannt" als Geschlecht im Spielbetrieb — neun Zeichen für
+  eine Spalte mit acht. Contaos strikter SQL-Modus verwirft dann den ganzen Schritt („Data too long").
+  Übernommen werden jetzt nur die Kürzel m/w/d, alles andere bleibt leer
+
 ## Version 1.56.0 (2026-11-02)
 
 * Fix: **Spielersuche mit kurzem Nachnamen und Vornamensanfang fand nichts** („Li, Nat", „Ma, Yu").
