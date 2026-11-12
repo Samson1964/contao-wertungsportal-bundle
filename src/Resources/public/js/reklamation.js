@@ -87,7 +87,7 @@
 			felder.namedItem('text').value = link.getAttribute('data-text') || '';
 			empfaenger.textContent = link.getAttribute('data-empfaenger') || '';
 
-			// Geht die Reklamation direkt an den Admin, gibt es keine Blindkopie
+			// Geht die Reklamation direkt an den Admin, gibt es keine Kopie
 			if (kopie) {
 				kopie.hidden = '0' === link.getAttribute('data-kopie');
 			}

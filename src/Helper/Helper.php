@@ -1567,6 +1567,11 @@ class Helper extends \Contao\Frontend
 	 * Turnier noch nie berechnet wurde und lastCalculated fehlt), wird der
 	 * Standardwert zurückgegeben statt einen Fehler auszulösen.
 	 *
+	 * Nachkommastellen der Sekunden werden übergangen: nu liefert
+	 * lastCalculated inzwischen auch als „2026-11-12T08:44:09.363". Das Format
+	 * 'Y-m-d\TH:i:s' paßte darauf nicht, und „Letzte Berechnung am" stand bei
+	 * solchen Turnieren auf „unbekannt" (gemessen 12.11.2026).
+	 *
 	 * @param       String $wert      Datumswert aus der API (kann fehlen/leer sein)
 	 * @param       String $informat  Eingabeformat, z. B. 'Y-m-d' oder 'Y-m-d\TH:i:s'
 	 * @param       String $outformat Ausgabeformat, z. B. 'd.m.Y' oder 'd.m.Y H:i'
@@ -1577,7 +1582,7 @@ class Helper extends \Contao\Frontend
 	{
 		if(!$wert || !is_string($wert)) return $default;
 
-		$datum = \DateTime::createFromFormat($informat, $wert);
+		$datum = \DateTime::createFromFormat($informat, preg_replace('/(\d{2}:\d{2}:\d{2})\.\d+$/', '$1', $wert));
 
 		return $datum ? $datum->format($outformat) : $default;
 	}

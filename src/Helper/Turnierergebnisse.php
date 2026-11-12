@@ -52,7 +52,7 @@ class Turnierergebnisse
 		$this->daten['Turnierauswertunglink']  = sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">Turnierauswertung</a>', $this->apiTurnierinfo['body']['uuid']);
 		$this->daten['Turniercode']           = $this->apiTurnierinfo['body']['uuid'];
 		$this->daten['Turnierende']           = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::ApiDatum($this->apiTurnierinfo['body']['enddate'] ?? null, 'Y-m-d', 'd.m.Y');
-		$this->daten['Berechnet']             = 'unbekannt';
+		$this->daten['Berechnet']             = ''; // nu liefert nur lastCalculated, kein Datum der ersten Berechnung — leer blendet die Zeile aus
 		$this->daten['Nachberechnet']         = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::ApiDatum($this->apiTurnierinfo['body']['lastCalculated'] ?? null, 'Y-m-d\TH:i:s', 'd.m.Y H:i');
 		$this->daten['Auswerter1']            = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Gesperrt() ? 'Sie müssen sich anmelden, um diese Daten sehen zu können.' : $this->apiTurnierinfo['body']['referentFirstname'].' '.$this->apiTurnierinfo['body']['referentLastname'].' / {{email::'.$this->apiTurnierinfo['body']['referentEmail'].'}}';
 		$this->daten['Auswerter2']            = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Gesperrt() ? 'Sie müssen sich anmelden, um diese Daten sehen zu können.' : $this->apiTurnierinfo['body']['additionalReferentFirstname'].' '.$this->apiTurnierinfo['body']['additionalReferentLastname'];

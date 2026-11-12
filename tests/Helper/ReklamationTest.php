@@ -132,22 +132,23 @@ class ReklamationTest extends TestCase
 	}
 
 	/**
-	 * „Der Admin bekommt auch von jeder Reklamation eine Kopie als Bcc" — außer
+	 * „Der Admin bekommt auch von jeder Reklamation eine Kopie" (seit 1.57.0 als
+	 * Cc statt Bcc) — außer
 	 * er ist selbst Empfänger: als Ersatz für fehlende Referenten oder weil ein
 	 * Referent dieselbe Adresse hat (in anderer Schreibweise).
 	 */
-	public function testBlindkopieNurWennDerAdminNichtEmpfaengerIst(): void
+	public function testKopieNurWennDerAdminNichtEmpfaengerIst(): void
 	{
 		$referent = Reklamation::empfaenger(array(array('name' => 'Anna Beispiel', 'email' => 'anna@example.org')), self::ADMIN);
-		$this->assertSame('wertung@example.org', Reklamation::blindkopie($referent, self::ADMIN));
+		$this->assertSame('wertung@example.org', Reklamation::kopie($referent, self::ADMIN));
 
 		$admin = Reklamation::empfaenger(array(), self::ADMIN);
-		$this->assertSame('', Reklamation::blindkopie($admin, self::ADMIN));
+		$this->assertSame('', Reklamation::kopie($admin, self::ADMIN));
 
 		$gleich = Reklamation::empfaenger(array(array('name' => 'Referat', 'email' => 'Wertung@Example.org')), self::ADMIN);
-		$this->assertSame('', Reklamation::blindkopie($gleich, self::ADMIN));
+		$this->assertSame('', Reklamation::kopie($gleich, self::ADMIN));
 
-		$this->assertSame('', Reklamation::blindkopie($referent, array('name' => 'X', 'email' => 'kaputt')));
+		$this->assertSame('', Reklamation::kopie($referent, array('name' => 'X', 'email' => 'kaputt')));
 	}
 
 	/**
@@ -351,7 +352,7 @@ class ReklamationTest extends TestCase
 
 		$e = Reklamation::empfaenger($lokal, self::ADMIN);
 		$this->assertSame(array('dwz-owl@example.org', 'referent'), array($e[0]['email'], $e[0]['art']));
-		$this->assertSame('wertung@example.org', Reklamation::blindkopie($e, self::ADMIN));
+		$this->assertSame('wertung@example.org', Reklamation::kopie($e, self::ADMIN));
 	}
 
 	/**

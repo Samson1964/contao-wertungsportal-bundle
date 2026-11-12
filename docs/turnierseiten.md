@@ -214,3 +214,10 @@ Erwartung null.
 Zahlen des gemeldeten Turniers. Die Rohantworten der Schnittstelle liefert das
 Backend-Modul [Rohdaten](rohdaten.md) — Funktionen „Turnierauswertung" und
 „Spielberichtsbogen".
+
+## Berechnungsdaten im Kopf der Turnierseiten (ab 1.57.0)
+
+| Zeile | Quelle |
+|---|---|
+| Erste Berechnung am | nu liefert dieses Datum nicht — die Zeile erscheint nur, wenn ein Datum vorliegt, derzeit also nie. Bis 1.56.1 stand dort immer „unbekannt". |
+| Letzte Berechnung am | `lastCalculated` der Schnittstelle. nu liefert den Wert inzwischen mit Millisekunden („2026-11-12T08:44:09.363"); sie werden übergangen. Fehlt der Wert (nie berechnetes Turnier), steht „unbekannt" da. |

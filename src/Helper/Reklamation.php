@@ -370,12 +370,15 @@ class Reklamation
 	}
 
 	/**
-	 * Bestimmt die Adresse für die Blindkopie an den DSB-Admin.
+	 * Bestimmt die Adresse für die Kopie (Cc) an den DSB-Admin.
 	 *
 	 * Der Admin bekommt jede Reklamation in Kopie — außer er ist ohnehin
 	 * Empfänger, sei es als Ersatz für fehlende Referenten oder weil seine
 	 * Adresse zugleich die eines Referenten ist. Sonst läge die Mail bei ihm
 	 * doppelt im Postfach. Groß- und Kleinschreibung zählen dabei nicht.
+	 *
+	 * Bis 1.56.1 ging die Kopie als Bcc; seit 1.57.0 offen als Cc, damit der
+	 * Referent sieht, daß der DSB mitliest (Wunsch Frank Binding, 12.11.2026).
 	 *
 	 * Dieselbe Regel entscheidet im Dialog, ob der Hinweis „Eine Kopie erhält
 	 * der Deutsche Schachbund" erscheint; deshalb steht sie an einer Stelle.
@@ -383,10 +386,10 @@ class Reklamation
 	 * @param array<int,array<string,string>> $empfaenger Liste aus empfaenger()
 	 * @param array<string,string>             $admin      name und email des DSB-Admins
 	 *
-	 * @return string Adresse des Admins, '' wenn keine Blindkopie geht (Admin ist
+	 * @return string Adresse des Admins, '' wenn keine Kopie geht (Admin ist
 	 *                Empfänger oder hat keine gültige Adresse)
 	 */
-	public static function blindkopie(array $empfaenger, array $admin): string
+	public static function kopie(array $empfaenger, array $admin): string
 	{
 		$adresse = trim((string) ($admin['email'] ?? ''));
 
@@ -754,7 +757,7 @@ class Reklamation
 	 * - ein Mitglied angemeldet ist und eine gültige E-Mail-Adresse hat
 	 *   (an sie gehen die Antworten), und
 	 * - in den Einstellungen eine Adresse für den DSB-Admin steht (er bekommt
-	 *   jede Reklamation in Blindkopie und springt ein, wo kein Referent
+	 *   jede Reklamation in Kopie und springt ein, wo kein Referent
 	 *   genannt ist).
 	 *
 	 * Beim ersten Link der Seite wird außerdem der Dialog mit dem Formular an
@@ -794,7 +797,7 @@ class Reklamation
 			$GLOBALS['TL_JAVASCRIPT']['wertungsportal_reklamation'] = 'bundles/contaowertungsportal/js/reklamation.js';
 		}
 
-		// data-kopie steuert im Dialog den Hinweis auf die Blindkopie — geht die
+		// data-kopie steuert im Dialog den Hinweis auf die Kopie — geht die
 		// Reklamation direkt an den Admin, gibt es keine
 		return sprintf(
 			'<button type="button" class="wp-reklamation-link" data-kontext="%s" data-signatur="%s" data-betreff="%s" data-text="%s" data-cursor="%d" data-empfaenger="%s" data-kopie="%d" title="%s">Reklamation</button>',
@@ -804,7 +807,7 @@ class Reklamation
 			self::attribut($vorlage['text']),
 			$vorlage['cursor'],
 			self::attribut($namen),
-			'' !== self::blindkopie($kontext['empfaenger'], $admin) ? 1 : 0,
+			'' !== self::kopie($kontext['empfaenger'], $admin) ? 1 : 0,
 			self::attribut('Eine Reklamation zu diesen Daten an '.$namen.' schicken')
 		);
 	}
@@ -819,7 +822,7 @@ class Reklamation
 	 * 3. Betreff und Text brauchbar und gegenüber der Vorbelegung verändert?
 	 *    Sonst 422.
 	 * 4. Bremse: höchstens self::HOECHSTZAHL je self::ZEITFENSTER? Sonst 429.
-	 * 5. Verschicken — an die Empfänger aus dem Kontext, Blindkopie an den
+	 * 5. Verschicken — an die Empfänger aus dem Kontext, Kopie (Cc) an den
 	 *    Admin (sofern er nicht selbst Empfänger ist), Antwort an das Mitglied.
 	 * 6. Speichern, auch wenn der Versand scheiterte — das Backend soll
 	 *    gerade die gescheiterten Fälle zeigen. Dann 502.
@@ -878,7 +881,7 @@ class Reklamation
 		$zeit = time();
 		$volltext = $text."\n\n".self::fusszeile($mitglied, $kontext, $host, $zeit);
 
-		$bcc = self::blindkopie($empfaenger, $admin);
+		$bcc = self::kopie($empfaenger, $admin);
 
 		$versandfehler = self::verschicke($empfaenger, $bcc, $mitglied, $betreff, $volltext);
 
@@ -992,7 +995,7 @@ class Reklamation
 	 * Kommas zerlegt.
 	 *
 	 * @param array<int,array<string,string>> $empfaenger Empfänger
-	 * @param string                           $bcc        Adresse für die Blindkopie, '' für keine
+	 * @param string                           $bcc        Adresse für die Kopie (Cc), '' für keine
 	 * @param array<string,mixed>              $mitglied   Mitglied
 	 * @param string                           $betreff    Betreff
 	 * @param string                           $text       Text samt Fußzeile
@@ -1011,7 +1014,7 @@ class Reklamation
 			$objEmail->replyTo(array(self::name((string) $mitglied['name']).' <'.$mitglied['email'].'>'));
 
 			if ('' !== $bcc) {
-				$objEmail->sendBcc(array($bcc));
+				$objEmail->sendCc(array($bcc));
 			}
 
 			$liste = array();
@@ -1043,7 +1046,8 @@ class Reklamation
 	 * @param array<string,mixed>              $mitglied      Mitglied
 	 * @param array<string,mixed>              $kontext       Kontext
 	 * @param array<int,array<string,string>> $empfaenger    Empfänger
-	 * @param string                           $bcc           Blindkopie
+	 * @param string                           $bcc           Kopie (Cc); die Spalte heißt aus
+	 *                                                        Altgründen weiter bcc
 	 * @param string                           $betreff       Betreff
 	 * @param string                           $text          Text samt Fußzeile
 	 * @param string                           $versandfehler Fehlermeldung, '' bei Erfolg

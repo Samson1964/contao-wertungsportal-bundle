@@ -1,5 +1,15 @@
 # Wertungsportal Changelog
 
+## Version 1.57.0 (2026-11-12)
+
+* Change: Die Kopie jeder Reklamation an den DSB-Admin geht als **Cc** statt als Bcc — der
+  Wertungsreferent sieht, daß der DSB mitliest. Die Adresse bleibt die aus den Einstellungen
+* Change: „Erste Berechnung am" erscheint in Turnierauswertung, Turnierergebnissen und
+  Spielberichtsbogen nur noch mit einem Datum. Die Zeile stand bisher immer auf „unbekannt": nu
+  liefert dieses Datum nicht (nur das der letzten Berechnung)
+* Fix: „Letzte Berechnung am" stand auf „unbekannt", wenn nu die Zeit mit Millisekunden liefert
+  („2026-11-12T08:44:09.363") — Sekundenbruchteile werden jetzt übergangen
+
 ## Version 1.56.1 (2026-11-02)
 
 * Fix: **Spieler-Import aus der Vereinsmitglieder-CSV brach bei 43 % mit einem 500er ab.** Im Export

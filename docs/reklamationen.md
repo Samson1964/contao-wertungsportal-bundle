@@ -48,7 +48,7 @@ Der Link erscheint nur,
 
 | Feld | Bedeutung |
 |---|---|
-| E-Mail-Adresse des DSB-Admins | Bekommt jede Reklamation als Blindkopie und ist Empfänger, wo kein Referent genannt ist. **Ohne Eintrag erscheint der Link nirgends.** |
+| E-Mail-Adresse des DSB-Admins | Bekommt jede Reklamation in Kopie (Cc) und ist Empfänger, wo kein Referent genannt ist. **Ohne Eintrag erscheint der Link nirgends.** |
 | Name des DSB-Admins | Erscheint in Anrede und Empfängerzeile. Ohne Eintrag der Absendername der Reklamationen. |
 | Absenderadresse der Reklamationen | Von dieser Adresse gehen die Reklamationen aus (ab 1.53.0). Ohne Eintrag die Adresse unter **E-Mail-Versand**. |
 | Absendername der Reklamationen | Name, der als Absender erscheint, etwa „DSB \| Reklamation DWZ". Ohne Eintrag der Name unter **E-Mail-Versand**. |
@@ -71,7 +71,7 @@ Nach dem Einspielen:
 |---|---|
 | Von | Absender der Reklamationen (siehe Einrichten) |
 | An | Wertungsreferent bzw. DSB-Admin |
-| Bcc | DSB-Admin — außer er ist selbst Empfänger |
+| Cc | DSB-Admin — außer er ist selbst Empfänger (bis 1.56.1 als Bcc) |
 | Antwort an | das Mitglied, mit der Adresse aus seinem Konto |
 | Betreff | vorbelegt mit „Reklamation zu …", änderbar |
 
@@ -82,7 +82,7 @@ Zeile „Was stimmt nicht?". Das Mitglied darf alles überschreiben.
 
 Über dem Formular nennt der Dialog den Empfänger und die Antwortadresse. Der
 Satz „Eine Kopie erhält der Deutsche Schachbund" steht nur da, wenn wirklich
-eine Blindkopie geht — also nicht, wenn die Reklamation ohnehin an den
+eine Kopie geht — also nicht, wenn die Reklamation ohnehin an den
 DSB-Admin gerichtet ist.
 
 Angehängt wird eine **Fußzeile**, die das Mitglied weder sieht noch ändern

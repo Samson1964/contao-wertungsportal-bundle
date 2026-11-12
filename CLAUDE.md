@@ -592,6 +592,22 @@ fehlten gegenüber dem Bestand; `clubs?vkz=10100` → leere Liste, HTTP 200.
   Vereinsimport legt daraus `clubVkz = 'C03'` an — und die dreistellige Nummer trifft vor `C0300`.
   Gegenbeweis: eine Zeile `C03` in zurückgerollter Transaktion → Karteikarte zeigt den Kreis.
 
+## Änderungen 1.57.0 (TODO vom 12.11.2026)
+
+- **„Erste Berechnung am"** stand in Auswertung, Ergebnissen und Spielberichtsbogen IMMER auf
+  „unbekannt" — fest so gesetzt. nu liefert kein Datum der ersten Berechnung (Turnierinfo und
+  `/evaluation` kennen nur `lastCalculated`), der Bestand auch nicht. `Berechnet` ist jetzt '', die
+  Vorlagen zeigen die Zeile nur mit Wert (Franks Vorgabe „ausblenden, wenn kein Datum vorhanden").
+  Ein Datum gäbe es höchstens aus der alten DeWIS-Sicherung — nicht umgesetzt.
+- **`lastCalculated` kommt mit Millisekunden** („2026-11-12T08:44:09.363"); `Helper::ApiDatum()`
+  übergeht Sekundenbruchteile jetzt. Vorher stand auch „Letzte Berechnung am" auf „unbekannt".
+- **Reklamation: Kopie an den DSB-Admin als Cc statt Bcc.** `Reklamation::blindkopie()` heißt jetzt
+  `kopie()`; die Spalte `tl_wertungsportal_reklamationen.bcc` behält ihren Namen (kein migrate), nur
+  die Beschriftung sagt „Kopie". Die Adresse bleibt die aus den Einstellungen
+  (`wertungsportal_reklamation_email`), nichts ist fest verdrahtet. Prüfweg: `Contao\Email` holt in
+  4.13 den Dienst `mailer` (der ist austauschbar, `contao.mailer` nicht) → aufzeichnender Mailer
+  im Prüfstand, Kopfzeilen To/Cc/Bcc lesen.
+
 ## Fallstricke / Besonderheiten
 
 - **Überschrift und Linkleiste der Suchmodule (ab 1.50.0):** Spieler, Verein, Verband und Turnier

@@ -24,7 +24,7 @@ use Contao\Model\Collection;
  * @property string $empfaengerName   Namen der Empfänger, durch Komma getrennt
  * @property string $empfaengerEmail  Adressen der Empfänger, durch Komma getrennt
  * @property string $empfaengerArt    referent | admin
- * @property string $bcc              Adresse der Blindkopie, leer wenn keine
+ * @property string $bcc              Adresse der Kopie (bis 1.56.1 Bcc, seit 1.57.0 Cc), leer wenn keine
  * @property string $bereich          Ansicht, aus der die Reklamation kam
  * @property string $url              Adresse der Seite
  * @property string $turnierUuid      Turnier-UUID, leer außerhalb von Turnierseiten

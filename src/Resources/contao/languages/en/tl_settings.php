@@ -12,7 +12,7 @@
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_inserttags_legend'] = 'Insert tags';
 
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_reklamation_legend'] = 'Complaints';
-$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_reklamation_email'] = array('E-mail address of the DSB administrator', 'Receives a blind copy of every complaint and is the recipient where a view names no rating officer. Without an address the link "Reklamation" does not appear.');
+$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_reklamation_email'] = array('E-mail address of the DSB administrator', 'Receives a copy (Cc) of every complaint and is the recipient where a view names no rating officer. Without an address the link "Reklamation" does not appear.');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_reklamation_name'] = array('Name of the DSB administrator', 'Used in the salutation and recipient line. Defaults to the sender name.');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_reklamation_absender'] = array('Sender address for complaints', 'Complaint e-mails are sent from this address. If empty, the sender address under "E-mail sending" is used.');
 $GLOBALS['TL_LANG']['tl_settings']['wertungsportal_reklamation_absendername'] = array('Sender name for complaints', 'Name shown as the sender of complaint e-mails. If empty, the sender name under "E-mail sending" is used.');

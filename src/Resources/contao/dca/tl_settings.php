@@ -602,7 +602,7 @@ $GLOBALS['TL_DCA']['tl_settings']['fields']['insert_verein_replaces'] = array
 
 // DSB-Admin für Reklamationen (ab 1.51.0, Helper\Reklamation): Empfänger,
 // wenn eine Ansicht keinen Wertungsreferenten nennt, und Empfänger einer
-// Blindkopie jeder Reklamation. Ohne Adresse erscheint der Link nicht
+// Kopie (Cc) jeder Reklamation. Ohne Adresse erscheint der Link nicht
 $GLOBALS['TL_DCA']['tl_settings']['fields']['wertungsportal_reklamation_email'] = array
 (
 	'label'                   => &$GLOBALS['TL_LANG']['tl_settings']['wertungsportal_reklamation_email'],
