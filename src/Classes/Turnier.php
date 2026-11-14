@@ -86,6 +86,14 @@ class Turnier extends \Contao\Module
 		$this->Template->shl = 'h2'; // Standard-Überschriftgröße 2
 		$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation(); // Navigation ausgeben, im Modul abschaltbar
 
+		// Alter DeWIS-Code statt UUID (ab 1.58.0): weiterleiten, bei mehrfach
+		// vergebenem Code eine Auswahl zeigen. Unbekannte Codes gehen weiter
+		// den bisherigen Weg (Fehlermeldung von nu)
+		if(!$search && $turniercode !== '' && !\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::istUuid($turniercode) && $this->alterCode($turniercode, $view == 'results' && !$id))
+		{
+			return;
+		}
+
 		if($search)
 		{
 			/*********************************************************
@@ -266,6 +274,7 @@ class Turnier extends \Contao\Module
 				'Turniername'           => $scoresheet->Turniername,
 				'Turnierende'           => $scoresheet->Turnierende,
 				'Berechnet'             => $scoresheet->Berechnet,
+				'Altcode'               => $scoresheet->Altcode,
 				'Nachberechnet'         => $scoresheet->Nachberechnet,
 				'Auswerter1'            => $zustaendig['anzeige'],
 				'Auswerter2'            => $scoresheet->Auswerter2,
@@ -349,6 +358,7 @@ class Turnier extends \Contao\Module
 				'Turniername'           => $ergebnisse->Turniername,
 				'Turnierende'           => $ergebnisse->Turnierende,
 				'Berechnet'             => $ergebnisse->Berechnet,
+				'Altcode'               => $ergebnisse->Altcode,
 				'Nachberechnet'         => $ergebnisse->Nachberechnet,
 				'Auswerter1'            => $zustaendig['anzeige'],
 				'Auswerter2'            => $ergebnisse->Auswerter2,
@@ -407,6 +417,7 @@ class Turnier extends \Contao\Module
 				'Turniername'           => $auswertung->Turniername,
 				'Turnierende'           => $auswertung->Turnierende,
 				'Berechnet'             => $auswertung->Berechnet,
+				'Altcode'               => $auswertung->Altcode,
 				'Nachberechnet'         => $auswertung->Nachberechnet,
 				'Auswerter1'            => $zustaendig['anzeige'],
 				'Auswerter2'            => $auswertung->Auswerter2,
@@ -449,6 +460,84 @@ class Turnier extends \Contao\Module
 			$this->Template->form_bisjahr = $formular->FormBisjahr;
 			$this->Template->form_letztemonate = $formular->FormLetzteMonate;
 		}
+	}
+
+	/**
+	 * Behandelt eine Adresse mit altem DeWIS-Turniercode (ab 1.58.0).
+	 *
+	 * Gehört der Code genau einem Turnier, folgt eine dauerhafte
+	 * Weiterleitung (301) auf dessen neue Adresse — so finden auch
+	 * Suchmaschinen und Lesezeichen das Turnier wieder. Tragen ihn mehrere
+	 * Turniere (74 Codes in DeWIS), zeigt die Seite eine Auswahl mit Name,
+	 * Verband und Turnierende.
+	 *
+	 * Die alte Ergebnisseite führt auf die neue Ergebnisseite, alles andere
+	 * (auch der alte Spielberichtsbogen mit DeWIS-Spielernummer) auf die
+	 * Auswertung — siehe Altcodes::ziel().
+	 *
+	 * @param string $code       Code aus der Adresse, keine UUID
+	 * @param bool   $ergebnisse true, wenn die Ergebnisseite verlangt war
+	 *
+	 * @throws \Contao\CoreBundle\Exception\RedirectResponseException bei genau einem Treffer
+	 *
+	 * @return bool true, wenn die Auswahl vorbereitet ist (compile() endet
+	 *              dann); false, wenn der Code unbekannt ist
+	 */
+	protected function alterCode($code, $ergebnisse)
+	{
+		global $objPage;
+
+		$treffer = \Schachbulle\ContaoWertungsportalBundle\Helper\Altcodes::nachCode((string) $code);
+
+		if(!$treffer) return false;
+
+		// Die Seitenadresse ist unter Contao 4.13 relativ („dwz-turniere");
+		// eine Weiterleitung braucht sie absolut, sonst löst der Browser sie
+		// gegen die alte Adresse auf und landet eine Ebene zu tief
+		$seite = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl();
+
+		if(!preg_match('~^https?://~i', $seite))
+		{
+			// Schema, Host und Basispfad aus der laufenden Anfrage; ohne sie
+			// (Konsole) bleibt Environment::get('base')
+			$anfrage = \Contao\System::getContainer()->get('request_stack')->getCurrentRequest();
+			$basis = $anfrage ? $anfrage->getSchemeAndHttpHost().$anfrage->getBasePath().'/' : \Contao\Environment::get('base');
+			$seite = $basis.ltrim($seite, '/');
+		}
+
+		$suffix = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix();
+
+		if(count($treffer) === 1)
+		{
+			throw new \Contao\CoreBundle\Exception\RedirectResponseException(\Schachbulle\ContaoWertungsportalBundle\Helper\Altcodes::ziel($seite, (string) $treffer[0]['uuid'], (bool) $ergebnisse, $suffix), 301);
+		}
+
+		$auswahl = array();
+
+		foreach($treffer as $t)
+		{
+			$auswahl[] = array
+			(
+				'link'         => \Schachbulle\ContaoWertungsportalBundle\Helper\Altcodes::ziel($seite, (string) $t['uuid'], (bool) $ergebnisse, $suffix),
+				'name'         => (string) $t['tname'],
+				'organisation' => (string) $t['organisation'],
+				'ende'         => \Schachbulle\ContaoWertungsportalBundle\Helper\Altcodes::datum((string) $t['finishedOn']),
+				// Dubletten tragen oft denselben Namen und dasselbe Datum —
+				// Runden und erste Berechnung helfen beim Unterscheiden
+				'runden'       => (int) $t['rounds'],
+				'berechnet'    => \Schachbulle\ContaoWertungsportalBundle\Helper\Altcodes::datum((string) $t['computedOn']),
+			);
+		}
+
+		$objPage->pageTitle = 'Turniercode '.$code;
+
+		$this->Template = new \Contao\FrontendTemplate('wertungsportal_turnierauswertung');
+		$this->Template->hl = 'h1';
+		$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation();
+		$this->Template->subHeadline = 'Turniercode '.\Contao\StringUtil::specialchars((string) $code);
+		$this->Template->altcodeAuswahl = $auswahl;
+
+		return true;
 	}
 
 	/**

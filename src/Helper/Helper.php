@@ -628,7 +628,8 @@ class Helper extends \Contao\Frontend
 	 *
 	 * Die Adressen bleiben damit in beiden Fassungen dieselben — auch die von
 	 * außen gesetzten Verweise. Übersetzt werden nur Schlüssel in der Form
-	 * einer UUID, wie nu die Turniercodes vergibt.
+	 * einer UUID, wie nu die Turniercodes vergibt — und seit 1.58.0 alte
+	 * DeWIS-Codes, die in tl_wertungsportal_altcodes stehen.
 	 *
 	 * @return void
 	 */
@@ -645,6 +646,19 @@ class Helper extends \Contao\Frontend
 
 		foreach($offen as $schluessel)
 		{
+			// Alter DeWIS-Code mit zweitem Glied (ab 1.58.0): „<code>/Ergebnisse"
+			// oder „<code>/<DeWIS-Spielernummer>". Turnier::alterCode() leitet
+			// weiter; die Spielernummer zählt dort nur als Hinweis auf den
+			// alten Spielberichtsbogen
+			if(!self::istUuid($schluessel) && \Schachbulle\ContaoWertungsportalBundle\Helper\Altcodes::nachCode((string) $schluessel))
+			{
+				$wert = (string) \Contao\Input::get($schluessel);
+				\Contao\Input::setGet('code', $schluessel);
+				\Contao\Input::setGet('view', 'results');
+				if($wert !== 'Ergebnisse') \Contao\Input::setGet('id', $wert);
+				continue;
+			}
+
 			if(!self::istUuid($schluessel)) continue;
 
 			// Der Lesezugriff streicht den Parameter aus der Liste der unbenutzten

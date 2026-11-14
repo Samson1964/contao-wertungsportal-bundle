@@ -25,6 +25,9 @@ Ersetzt die SOAP-Schnittstelle von DeWIS und kommuniziert mit der REST-Schnittst
 * [Turnierseiten: Nichtmitglieder und Erwartungswerte](docs/turnierseiten.md) — warum
   Nichtmitglieder keine neue DWZ bekommen, woher ihre Eingangswertung stammt und wie der
   Erwartungswert je Partie im Spielberichtsbogen zustande kommt
+* [Alte Turniercodes aus DeWIS](docs/turniercodes.md) — alte Verweise wie
+  `C619-C05-WAM.html` leiten auf die neue Turnierseite weiter; „Erste Berechnung am" aus
+  DeWIS; Übernahme mit `wertungsportal:turniercodes`
 * [Vereinslisten-Schnittstelle](docs/vereinslisten-api.md) — Mitgliederlisten als
   JSON für Vereinswebsites: Abruf, Zugangsschlüssel, Verwaltung und Sperren
 * [Verbände: Landesverbände, Bezirke, Kreise](docs/verbaende.md) — kommen seit 1.55.0 aus dem

@@ -608,6 +608,21 @@ fehlten gegenüber dem Bestand; `clubs?vkz=10100` → leere Liste, HTTP 200.
   4.13 den Dienst `mailer` (der ist austauschbar, `contao.mailer` nicht) → aufzeichnender Mailer
   im Prüfstand, Kopfzeilen To/Cc/Bcc lesen.
 
+## Alte Turniercodes aus DeWIS (ab 1.58.0)
+
+- Quelle: `mapping/tcode_uui.csv` (portal64 `tournamentmaster`, latin-1, `""` als Maskierung, 66.685 Zeilen;
+  Ordner `mapping/` steht in `.git/info/exclude`, enthält eine Mail mit echten Namen). Tabelle
+  `tl_wertungsportal_altcodes`, Import `wertungsportal:turniercodes` (Bestand einmal laden, INSERT in
+  Blöcken zu 500, UPDATE nur bei Unterschied; 66.685 Zeilen in 3 s).
+- Gemessen 14.11.2026 an 5.163 übernommenen Turnieren in contao-test-413: enddate = finishedOn bei allen,
+  lastCalculated = recomputedOn (bzw. computedOn ohne Nachberechnung), 286 um einen Tag versetzt. Neu
+  sind nur `tcode` und `computedOn` → Seiten zeigen weiter die nu-Werte.
+- `Altcodes::nachCode()` vergleicht nach der SQL-Abfrage noch einmal genau (unicode_ci setzt Ö = O).
+- Weiterleitung in `Turnier::alterCode()` (301). Unter 4.13 ist `getTurnierseiteUrl()` relativ und
+  `Environment::get('base')` auf der Konsole `https:///` → Basis aus der laufenden Anfrage.
+- In beiden Testinstallationen nur die Tabelle angelegt (NICHT `contao:migrate`: will dort fremde
+  Tabellen wie tl_digiviewer löschen). contao-test-413: voller Import; contao-test (5.7): 100 Zeilen.
+
 ## Fallstricke / Besonderheiten
 
 - **Überschrift und Linkleiste der Suchmodule (ab 1.50.0):** Spieler, Verein, Verband und Turnier

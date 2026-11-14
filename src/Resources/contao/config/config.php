@@ -116,6 +116,15 @@ $GLOBALS['BE_MOD']['wertungsportal'] = array
 			'tl_wertungsportal_reklamationen',
 		),
 	),
+	// Alte Turniercodes aus DeWIS und ihre UUID bei nu (ab 1.58.0). Gefüllt
+	// mit dem Befehl wertungsportal:turniercodes
+	'wp-altcodes' => array
+	(
+		'tables'         => array
+		(
+			'tl_wertungsportal_altcodes',
+		),
+	),
 	'wp-sperren'   => array
 	(
 		'tables'         => array
@@ -253,3 +262,4 @@ $GLOBALS['TL_MODELS']['tl_wertungsportal_besucher'] = \Schachbulle\ContaoWertung
 $GLOBALS['TL_MODELS']['tl_wertungsportal_referenten'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalReferentenModel::class;
 $GLOBALS['TL_MODELS']['tl_wertungsportal_sperren'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalSperrenModel::class;
 $GLOBALS['TL_MODELS']['tl_wertungsportal_reklamationen'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalReklamationenModel::class;
+$GLOBALS['TL_MODELS']['tl_wertungsportal_altcodes'] = \Schachbulle\ContaoWertungsportalBundle\Models\WertungsportalAltcodesModel::class;

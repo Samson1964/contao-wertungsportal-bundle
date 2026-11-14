@@ -65,6 +65,12 @@
 						<td width="30%" class="col_1 label bottom-line">Code:</td>
 						<td width="70%" class="col_2 value bottom-line"><?= $this->turnierheader['Turniercode'] ?></td>
 					</tr>
+					<?php if(!empty($this->turnierheader['Altcode'])): ?>
+					<tr class="row_1a">
+						<td class="col_1 label bottom-line">Alter Turniercode:</td>
+						<td class="col_2 value bottom-line"><?= \Contao\StringUtil::specialchars($this->turnierheader['Altcode']) ?></td>
+					</tr>
+					<?php endif; ?>
 					<tr class="row_2">
 						<td class="col_1 label bottom-line">Auswerter:</td>
 						<td class="col_2 value bottom-line"><?= $this->turnierheader['Auswerter1'] ?></td>
@@ -156,6 +162,12 @@
 						<td width="30%" class="col_1 label bottom-line">Code:</td>
 						<td width="70%" class="col_2 value bottom-line"><?= $this->turnierheader['Turniercode'] ?></td>
 					</tr>
+					<?php if(!empty($this->turnierheader['Altcode'])): ?>
+					<tr class="row_1a">
+						<td class="col_1 label bottom-line">Alter Turniercode:</td>
+						<td class="col_2 value bottom-line"><?= \Contao\StringUtil::specialchars($this->turnierheader['Altcode']) ?></td>
+					</tr>
+					<?php endif; ?>
 					<tr class="row_2">
 						<td class="col_1 label bottom-line">Auswerter:</td>
 						<td class="col_2 value bottom-line"><?= $this->turnierheader['Auswerter1'] ?></td>

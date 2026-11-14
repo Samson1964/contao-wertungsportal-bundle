@@ -50,7 +50,10 @@ class Turnierauswertung
 		$this->daten['Turnierergebnislink']   = sprintf('<a href="'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/%s/Ergebnisse'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">Turnierergebnisse</a>', $this->apiTurnierinfo['body']['tournament']['uuid']);
 		$this->daten['Turniercode']           = $this->apiTurnierinfo['body']['tournament']['uuid'];
 		$this->daten['Turnierende']           = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::ApiDatum($this->apiTurnierinfo['body']['tournament']['enddate'] ?? null, 'Y-m-d', 'd.m.Y');
-		$this->daten['Berechnet']             = ''; // nu liefert nur lastCalculated, kein Datum der ersten Berechnung — leer blendet die Zeile aus
+		// Erste Berechnung und alter Code kommen aus dem DeWIS-Export (ab 1.58.0,
+		// Helper\Altcodes) — nu liefert beides nicht. Leer blendet die Zeile aus
+		$this->daten['Berechnet']             = \Schachbulle\ContaoWertungsportalBundle\Helper\Altcodes::ersteBerechnung((string) $this->daten['Turniercode']);
+		$this->daten['Altcode']               = \Schachbulle\ContaoWertungsportalBundle\Helper\Altcodes::code((string) $this->daten['Turniercode']);
 		$this->daten['Nachberechnet']         = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::ApiDatum($this->apiTurnierinfo['body']['tournament']['lastCalculated'] ?? null, 'Y-m-d\TH:i:s', 'd.m.Y H:i');
 		$this->daten['Auswerter1']            = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Gesperrt() ? 'Sie müssen sich anmelden, um diese Daten sehen zu können.' : $this->apiTurnierinfo['body']['tournament']['referentFirstname'].' '.$this->apiTurnierinfo['body']['tournament']['referentLastname'].' / {{email::'.$this->apiTurnierinfo['body']['tournament']['referentEmail'].'}}';
 		$this->daten['Auswerter2']            = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Gesperrt() ? 'Sie müssen sich anmelden, um diese Daten sehen zu können.' : $this->apiTurnierinfo['body']['tournament']['additionalReferentFirstname'].' '.$this->apiTurnierinfo['body']['tournament']['additionalReferentLastname'];

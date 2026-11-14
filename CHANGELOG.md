@@ -1,5 +1,16 @@
 # Wertungsportal Changelog
 
+## Version 1.58.0 (2026-11-14)
+
+* Add: **Alte Turniercodes aus DeWIS** (Export aus portal64, 66.685 Turniere) in der neuen Tabelle
+  `tl_wertungsportal_altcodes`, übernommen mit dem Befehl `wertungsportal:turniercodes <datei>`
+  (latin-1 oder UTF-8, `--dry-run`, beliebig oft). Backend: Wertungsportal → Alte Turniercodes
+* Add: Alte Adressen mit Turniercode (`turniere/C619-C05-WAM.html`, `…/Ergebnisse.html`, alter
+  Spielberichtsbogen) leiten dauerhaft (301) auf die neue Turnierseite weiter; tragen mehrere
+  Turniere denselben Code, zeigt die Seite eine Auswahl
+* Add: „Erste Berechnung am" und „Alter Turniercode" im Kopf von Auswertung, Ergebnissen und
+  Spielberichtsbogen für die aus DeWIS übernommenen Turniere
+
 ## Version 1.57.0 (2026-11-12)
 
 * Change: Die Kopie jeder Reklamation an den DSB-Admin geht als **Cc** statt als Bcc — der

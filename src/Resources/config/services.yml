@@ -108,6 +108,14 @@ services:
         tags:
             - { name: console.command, command: 'wertungsportal:mitgliedergruppe' }
 
+    # Übernimmt die alten Turniercodes aus DeWIS (ab 1.58.0):
+    # wertungsportal:turniercodes <datei>, mit --dry-run zum Zählen
+    Schachbulle\ContaoWertungsportalBundle\Command\TurniercodesCommand:
+        arguments:
+            - '@contao.framework'
+        tags:
+            - { name: console.command, command: 'wertungsportal:turniercodes' }
+
     # Füllt die Suchalias-Felder des Bestands beim contao:migrate.
     # Ausdrücklich registriert, weil dieses Bundle ohne Autoconfigure arbeitet
     Schachbulle\ContaoWertungsportalBundle\Migration\AliasMigration:

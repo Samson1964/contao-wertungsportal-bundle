@@ -62,6 +62,10 @@ und einem Location-Header folgt ein Browser nur bei 3xx. Jetzt wirft
 `Controller::redirect()` die `RedirectResponseException`, die beide Fassungen
 in eine echte Weiterleitung (303) umsetzen.
 
+Turnierseiten mit altem DeWIS-Code (`turniere/C619-C05-WAM.html`, auch mit
+`/Ergebnisse`) leiten seit 1.58.0 dauerhaft (301) auf die Adresse mit der UUID
+um — siehe [Alte Turniercodes](turniercodes.md).
+
 ## Geprüft
 
 * Unter Contao 4.13 (Prüfinstallation mit `.html`) sind die Ausgaben von elf
