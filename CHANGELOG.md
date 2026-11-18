@@ -18,6 +18,8 @@
   Archivturniere unter `turniere/A<Nummer>` und alten ELOBASE-Codes
 * Add: Ergebnisse der Archivturniere (`turniere/A<Nummer>/Ergebnisse`) als Kreuztabelle oder
   Rundenansicht
+* Add: **Archivwerte im DWZ-Diagramm** der Karteikarte (grau hinterlegt, ohne geschätzte Leistung),
+  Diagramm auch auf der Archiv-Karteikarte `spieler/G<Nummer>`
 * Change: `doctrine/dbal` ist jetzt eine direkte Abhängigkeit (^3.3 || ^4.0)
 
 ## Version 1.59.0 (2026-11-18)

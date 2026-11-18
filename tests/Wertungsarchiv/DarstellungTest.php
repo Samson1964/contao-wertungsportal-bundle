@@ -72,6 +72,32 @@ class DarstellungTest extends TestCase
     }
 
     /**
+     * Diagrammpunkt: DWZ nach dem Turnier, Leistung nur aus der
+     * Turnierleistung (nie die ELOBASE-Erfolgszahl), nichts zum Schätzen.
+     */
+    public function testDiagrammpunkt(): void
+    {
+        $p = Darstellung::diagrammpunkt(array(
+            'archiv' => 'elobase', 'code' => '9546-663-SXJ', 'partien' => 5, 'dwz' => 1610,
+            'leistung' => 33596, 'turnierleistung' => null, 't_name' => 'Open', 't_ende' => null,
+        ));
+
+        $this->assertSame('ZDB', $p['nummer']);
+        $this->assertSame('1995', $p['jahr']);
+        $this->assertSame(1610, $p['dwz']);
+        $this->assertSame(0, $p['leistung']);
+        $this->assertSame(0, $p['gegner']);
+        $this->assertSame('Open', $p['bezeichnung']);
+        $this->assertTrue($p['archiv']);
+
+        $d = Darstellung::diagrammpunkt(array('archiv' => 'dewis', 'code' => 'B053-000-DWZ', 'dwz' => 1800, 'turnierleistung' => 1925, 't_ende' => '2010-05-02'));
+        $this->assertSame('DeWIS', $d['nummer']);
+        $this->assertSame('2010', $d['jahr']);
+        $this->assertSame(1925, $d['leistung']);
+        $this->assertSame('B053-000-DWZ', $d['bezeichnung']);
+    }
+
+    /**
      * Suchmuster für alle Schreibweisen der Archive, Platzhalter maskiert.
      */
     public function testNamensmuster(): void

@@ -324,7 +324,7 @@ class Spieler extends \Contao\Module
 				// Reklamation neben dem Wertungsreferenten — an ihn, ohne ihn an den DSB-Admin
 				$this->Template->reklamation  = $gesperrt ? '' : \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerKarteikarte((string) $kartei->Titelname, (string) $id, (string) \Contao\Environment::get('uri'), \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::empfaenger($zustaendig)));
 				$this->Template->kartei       = $kartei->Kartei;
-				$this->Template->altkartei    = $this->altkartei((string) $kartei->NuId);
+				$this->Template->altkartei    = $this->altkartei((string) $kartei->NuId, $kartei);
 				$this->Template->diagramm     = $kartei->Diagramm;
 				$this->Template->diagrammKomplett = $kartei->DiagrammKomplett;
 			}
@@ -355,12 +355,16 @@ class Spieler extends \Contao\Module
 	 * Ein Fehler der Archivdatenbank darf die Karteikarte nicht kippen: Er
 	 * kommt ins Systemprotokoll, die Karteikarte erscheint ohne Archiv.
 	 *
-	 * @param string $nuId NU-Nummer der Karteikarte
+	 * Die Archivzeilen kommen außerdem als Punkte vor das DWZ-Diagramm der
+	 * Karteikarte (Karteikarte::mitArchiv(), ab 2.0.0).
+	 *
+	 * @param string                                                        $nuId   NU-Nummer der Karteikarte
+	 * @param \Schachbulle\ContaoWertungsportalBundle\Helper\Karteikarte|null $kartei Karteikarte, deren Diagramm die Archivpunkte bekommt
 	 *
 	 * @return array<int,array<string,mixed>> Zeilen wie Karteikarte::Kartei,
 	 *                                        leer ohne Zugriff oder ohne Archivdaten
 	 */
-	protected function altkartei(string $nuId): array
+	protected function altkartei(string $nuId, ?\Schachbulle\ContaoWertungsportalBundle\Helper\Karteikarte $kartei = null): array
 	{
 		if ('' === $nuId || !\Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Zugriff::erlaubt())
 		{
@@ -380,9 +384,17 @@ class Spieler extends \Contao\Module
 			$basis = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl();
 			$suffix = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix();
 
+			$zeilen = $archiv->altkartei($gesamt);
+
+			// Diagramm: älteste zuerst, die Karteizeilen kommen neueste zuerst
+			if (null !== $kartei)
+			{
+				$kartei->mitArchiv(array_map(array(\Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Darstellung::class, 'diagrammpunkt'), array_reverse($zeilen)));
+			}
+
 			return array_map(static function (array $zeile) use ($basis, $suffix): array {
 				return \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Darstellung::karteizeile($zeile, $basis, $suffix);
-			}, $archiv->altkartei($gesamt));
+			}, $zeilen);
 		}
 		catch (\Throwable $e)
 		{
@@ -485,9 +497,15 @@ class Spieler extends \Contao\Module
 
 			$basis = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl();
 			$suffix = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix();
+			$zeilen = $archiv->altkartei($id, true);
 			$kartei = array_map(static function (array $zeile) use ($basis, $suffix): array {
 				return \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Darstellung::karteizeile($zeile, $basis, $suffix);
-			}, $archiv->altkartei($id, true));
+			}, $zeilen);
+
+			// DWZ-Diagramm wie auf der Karteikarte, ganz aus dem Archiv; bei
+			// mehr als 50 Punkten breit und waagerecht scrollbar
+			$punkte = array_map(array(\Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Darstellung::class, 'diagrammpunkt'), array_reverse($zeilen));
+			$diagramm = \Schachbulle\ContaoWertungsportalBundle\Helper\Karteikarte::diagramm($punkte, max(700, count($punkte) * 14));
 		}
 		catch (\Contao\CoreBundle\Exception\RedirectResponseException $e)
 		{
@@ -506,6 +524,7 @@ class Spieler extends \Contao\Module
 		$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation();
 		$this->Template->gesamt = $gesamt;
 		$this->Template->kartei = $kartei;
+		$this->Template->diagramm = $diagramm;
 
 		return true;
 	}

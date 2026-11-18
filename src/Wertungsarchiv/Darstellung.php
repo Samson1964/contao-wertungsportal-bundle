@@ -166,6 +166,38 @@ class Darstellung
     }
 
     /**
+     * Macht aus einer Karteizeile einen Punkt für das DWZ-Diagramm der
+     * Karteikarte (Helper\Karteikarte::diagramm()).
+     *
+     * DWZ ist die DWZ nach dem Turnier, Leistung nur die Turnierleistung
+     * (DeWIS, Portal) — die Erfolgszahl von ELOBASE ist kein Leistungsmaß.
+     * Gegnerschnitt und Punkte bleiben 0: Das Diagramm soll für Archivpunkte
+     * nichts schätzen (`archiv` = true schaltet das ab).
+     *
+     * @param array<string,mixed> $zeile Karteizeile aus Archiv::altkartei()
+     *
+     * @return array<string,mixed> nummer, jahr, dwz, leistung, gegner, punkte,
+     *                             partien, bezeichnung, archiv
+     */
+    public static function diagrammpunkt(array $zeile): array
+    {
+        $code = (string) ($zeile['code'] ?? $zeile['t_quell_id'] ?? '');
+        $archiv = (string) ($zeile['archiv'] ?? '');
+
+        return array(
+            'nummer'      => array('elobase' => 'ZDB', 'dewis' => 'DeWIS', 'wp' => 'Portal')[$archiv] ?? $archiv,
+            'jahr'        => self::jahr($zeile['t_ende'] ?? $zeile['ende'] ?? null, $code),
+            'dwz'         => (int) ($zeile['dwz'] ?? 0),
+            'leistung'    => (int) ($zeile['turnierleistung'] ?? 0),
+            'gegner'      => 0,
+            'punkte'      => 0,
+            'partien'     => (int) ($zeile['partien'] ?? 0),
+            'bezeichnung' => self::kurzname((string) ($zeile['t_name'] ?? '') ?: ('' !== $code ? $code : 'DWZ-Ausgangswert')),
+            'archiv'      => true,
+        );
+    }
+
+    /**
      * Ordnet eine Zeile einer Tabelle der Turnier-JSON ihren Feldnamen zu
      * (`{felder: [...], zeilen: [...]}` — Felder über den Namen lesen, nie
      * über die Position).

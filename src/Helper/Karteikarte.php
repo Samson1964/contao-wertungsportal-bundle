@@ -306,28 +306,56 @@ class Karteikarte
 		// Einträge mit dem neuesten zuerst — deshalb umdrehen).
 		// Bei mehr als 50 Turnieren wird nur das gekürzte Diagramm direkt
 		// angezeigt; das komplette wandert ins Template-Overlay (Lightbox).
-		$chronologisch = array_reverse($diagramm);
+		$this->daten['DiagrammPunkte'] = array_reverse($diagramm);
+		$this->baueDiagramme($this->daten['DiagrammPunkte']);
+	}
 
+	/**
+	 * Stellt dem Diagramm die Punkte aus dem Wertungsarchiv voran (ab 2.0.0).
+	 *
+	 * Die Archivpunkte sind älter als alles, was nu liefert, und kommen
+	 * deshalb links vor die Punkte von nu; die DWZ-Linie läuft so über die
+	 * ganze Spielerlaufbahn. Gezeichnet werden sie grau hinterlegt
+	 * (diagramm()). Aufgerufen nur für Mitglieder mit Zugriff aufs Archiv.
+	 *
+	 * @param array<int,array<string,mixed>> $archivPunkte Punkte in zeitlicher
+	 *        Folge, älteste zuerst (Wertungsarchiv\Darstellung::diagrammpunkt()),
+	 *        jeder mit `archiv` = true
+	 *
+	 * @return void
+	 */
+	public function mitArchiv(array $archivPunkte): void
+	{
+		if (!$archivPunkte)
+		{
+			return;
+		}
+
+		$this->baueDiagramme(array_merge($archivPunkte, (array) ($this->daten['DiagrammPunkte'] ?? array())));
+	}
+
+	/**
+	 * Baut Diagramm und — bei mehr als 50 Punkten — das vollständige
+	 * Diagramm fürs Overlay; direkt gezeigt werden dann die letzten 50.
+	 *
+	 * @param array<int,array<string,mixed>> $chronologisch Punkte, älteste zuerst
+	 *
+	 * @return void
+	 */
+	protected function baueDiagramme(array $chronologisch): void
+	{
 		if(count($chronologisch) > 50)
 		{
-			$this->daten['Diagramm'] = $this->erstelleDiagramm(array_slice($chronologisch, -50));
-			$this->daten['DiagrammKomplett'] = $this->erstelleDiagramm($chronologisch, max(700, count($chronologisch) * 14));
+			$this->daten['Diagramm'] = self::diagramm(array_slice($chronologisch, -50));
+			$this->daten['DiagrammKomplett'] = self::diagramm($chronologisch, max(700, count($chronologisch) * 14));
 		}
 		else
 		{
-			$this->daten['Diagramm'] = $this->erstelleDiagramm($chronologisch);
+			$this->daten['Diagramm'] = self::diagramm($chronologisch);
 			$this->daten['DiagrammKomplett'] = '';
 		}
 	}
 
-	// ─────────────────────────────────────────────
-	//  Funktion erstelleDiagramm
-	//  Baut ein SVG-Liniendiagramm für DWZ und Leistung über die
-	//  Turnierauswertungen (chronologisch von links nach rechts).
-	//  Leistungslücken (keine Leistung unter 5 Partien) werden geschätzt,
-	//  damit die Leistungskurve ohne Unterbrechungen durchläuft.
-	//  Rückgabe '' bei weniger als 2 verwertbaren Punkten.
-	// ─────────────────────────────────────────────
 	/**
 	 * Beurteilt, ob eine DWZ-Umstufung überhaupt etwas aussagt.
 	 *
@@ -364,15 +392,37 @@ class Karteikarte
 		return true;
 	}
 
-	private function erstelleDiagramm($punkte, $breite = 700)
+	/**
+	 * Baut das SVG-Liniendiagramm für DWZ und Leistung (chronologisch von
+	 * links nach rechts).
+	 *
+	 * Fehlende Leistungen von nu werden geschätzt (Gegnerschnitt + 800 ×
+	 * Punkteanteil − 400) und Lücken zwischen bekannten Werten überbrückt,
+	 * damit die Leistungskurve durchläuft. **Für Punkte aus dem
+	 * Wertungsarchiv (`archiv` = true) geschieht beides nicht** (ab 2.0.0):
+	 * ELOBASE führt keine Leistung, und eine über Jahrzehnte überbrückte
+	 * Linie wäre erfunden. Archivpunkte zeigen nur, was die Kartei hat (DWZ,
+	 * bei DeWIS auch die Leistung); ihr Bereich ist grau hinterlegt.
+	 *
+	 * Statisch (seit 2.0.0), damit auch die Archiv-Karteikarte ohne nu-Daten
+	 * es nutzen kann.
+	 *
+	 * @param array<int,array<string,mixed>> $punkte Punkte mit jahr, dwz, leistung,
+	 *        gegner, punkte, partien, bezeichnung, nummer, optional archiv
+	 * @param int                            $breite Breite in Pixeln; > 700 für das
+	 *        breite Komplett-Diagramm im Overlay
+	 *
+	 * @return string SVG, '' bei weniger als 2 verwertbaren Punkten
+	 */
+	public static function diagramm($punkte, $breite = 700)
 	{
 		// Fehlende Leistungen aus den Turnierdaten schätzen (lineare
-		// Näherung: Gegnerschnitt + 800 × Score-Anteil − 400)
+		// Näherung: Gegnerschnitt + 800 × Score-Anteil − 400) — nicht im Archiv
 		foreach($punkte as $k => $p)
 		{
 			$punkte[$k]['geschaetzt'] = false;
 
-			if($p['leistung'] <= 0 && $p['gegner'] > 0 && $p['partien'] > 0)
+			if(empty($p['archiv']) && $p['leistung'] <= 0 && $p['gegner'] > 0 && $p['partien'] > 0)
 			{
 				$punkte[$k]['leistung'] = (int) round($p['gegner'] + 800 * $p['punkte'] / $p['partien'] - 400);
 				$punkte[$k]['geschaetzt'] = true;
@@ -385,17 +435,18 @@ class Karteikarte
 
 		// Verbleibende Leistungslücken linear zwischen den Nachbarwerten
 		// interpolieren (Ränder: nächstliegender bekannter Wert)
+		// (nur zwischen Punkten von nu; Archivpunkte bleiben, wie sie sind)
 		$bekannt = array();
 		foreach($punkte as $k => $p)
 		{
-			if($p['leistung'] > 0) $bekannt[] = $k;
+			if($p['leistung'] > 0 && empty($p['archiv'])) $bekannt[] = $k;
 		}
 
 		if(count($bekannt))
 		{
 			for($k = 0; $k < count($punkte); $k++)
 			{
-				if($punkte[$k]['leistung'] > 0) continue;
+				if($punkte[$k]['leistung'] > 0 || !empty($punkte[$k]['archiv'])) continue;
 
 				$vor = null;
 				$nach = null;
@@ -444,6 +495,17 @@ class Karteikarte
 		// der umgebende Overlay-Container scrollt horizontal
 		$style = ($breite > 700) ? 'width:'.$breite.'px;max-width:none;height:auto;' : 'max-width:100%;height:auto;';
 		$svg = '<svg class="dwz-diagramm" viewBox="0 0 '.$breite.' '.$hoehe.'" xmlns="http://www.w3.org/2000/svg" role="img" style="'.$style.'">';
+
+		// Bereich des Wertungsarchivs grau hinterlegen — vor den Gitterlinien,
+		// damit sie sichtbar bleiben (die Archivpunkte stehen zusammenhängend
+		// vorn, siehe mitArchiv())
+		$archiv = array_keys(array_filter($punkte, function($p) { return !empty($p['archiv']); }));
+		if($archiv)
+		{
+			$x1 = max($links, $xpos(min($archiv)) - $dx / 2);
+			$x2 = min($breite - $rechts, $xpos(max($archiv)) + $dx / 2);
+			$svg .= '<rect x="'.round($x1, 1).'" y="'.$oben.'" width="'.round($x2 - $x1, 1).'" height="'.$innenH.'" fill="#e9edf2"/>';
+		}
 
 		// Horizontale Gitterlinien mit Y-Beschriftung
 		$schritt = (($max - $min) / 100 > 6) ? 200 : 100;
@@ -508,6 +570,11 @@ class Karteikarte
 		$svg .= '<text x="'.($lx + 30).'" y="'.($ly + 4).'" font-size="11" fill="#333333">DWZ</text>';
 		$svg .= '<line x1="'.($lx + 70).'" y1="'.$ly.'" x2="'.($lx + 94).'" y2="'.$ly.'" stroke="#e0821e" stroke-width="2" stroke-dasharray="4 3"/>';
 		$svg .= '<text x="'.($lx + 100).'" y="'.($ly + 4).'" font-size="11" fill="#333333">Leistung</text>';
+		if($archiv)
+		{
+			$svg .= '<rect x="'.($lx + 160).'" y="'.($ly - 6).'" width="24" height="12" fill="#e9edf2" stroke="#c5ccd6" stroke-width="1"/>';
+			$svg .= '<text x="'.($lx + 190).'" y="'.($ly + 4).'" font-size="11" fill="#333333">Wertungsarchiv (ohne geschätzte Leistung)</text>';
+		}
 		$svg .= '</svg>';
 
 		return $svg;

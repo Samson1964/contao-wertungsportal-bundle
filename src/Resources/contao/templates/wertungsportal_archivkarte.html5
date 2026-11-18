@@ -82,4 +82,12 @@ $g = $this->gesamt;
 		</div>
 	<?php endif; ?>
 
+	<?php if($this->diagramm): ?>
+		<?php // DWZ-Diagramm aus dem Archiv; breit gebaut, deshalb waagerecht scrollbar ?>
+		<div class="diagramm">
+			<h3>DWZ und Leistung</h3>
+			<div style="overflow-x:auto"><?= $this->diagramm ?></div>
+		</div>
+	<?php endif; ?>
+
 </div>
