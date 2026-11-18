@@ -29,7 +29,7 @@ class Schema
     /**
      * Fassung des Schemas; wird in archiv_info vermerkt.
      */
-    public const FASSUNG = 2;
+    public const FASSUNG = 3;
 
     /**
      * Baut das Soll-Schema.
@@ -92,9 +92,27 @@ class Schema
         $t->addColumn('geschlecht', Types::STRING, array('length' => 4, 'notnull' => false));
         $t->addColumn('geburtsjahr', Types::SMALLINT, array('notnull' => false));
         $t->addColumn('extra', Types::TEXT, array('notnull' => false));
+        // Gesamtperson (Etappe 2), gesetzt von Gesamtpersonen::bilden()
+        $t->addColumn('gesamt_id', Types::INTEGER, array('unsigned' => true, 'notnull' => false));
         $t->setPrimaryKey(array('id'));
         $t->addUniqueIndex(array('kennung'), 'person_kennung');
         $t->addIndex(array('name'), 'person_name');
+        $t->addIndex(array('gesamt_id'), 'person_gesamt');
+
+        // Gesamtpersonen: zusammenhängende Archivpersonen über bestätigte
+        // Kanten. id = kleinste archiv_person.id der Gruppe, damit ein neuer
+        // Lauf dieselben Nummern vergibt
+        $t = $schema->createTable('archiv_gesamtperson');
+        $t->addColumn('id', Types::INTEGER, array('unsigned' => true));
+        $t->addColumn('nu_id', Types::STRING, array('length' => 16, 'notnull' => false) + $genau);
+        $t->addColumn('name', Types::STRING, array('length' => 255, 'notnull' => false));
+        $t->addColumn('geburtsjahr', Types::SMALLINT, array('notnull' => false));
+        $t->addColumn('personen', Types::INTEGER, array('unsigned' => true, 'default' => 0));
+        $t->addColumn('archive', Types::STRING, array('length' => 32, 'default' => ''));
+        $t->addColumn('pruefen', Types::STRING, array('length' => 128, 'default' => ''));
+        $t->setPrimaryKey(array('id'));
+        $t->addIndex(array('nu_id'), 'gesamt_nu');
+        $t->addIndex(array('name'), 'gesamt_name');
 
         // Kanten zwischen Personen verschiedener Archive (Brücke). Alle Kanten
         // der Übergabe gelten als bestätigt (Frank, 18.11.2026); der Status

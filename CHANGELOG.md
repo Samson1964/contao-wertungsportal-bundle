@@ -7,6 +7,9 @@
   von Contaos DCA, angelegt mit `wertungsportal:archiv-schema`
 * Add: Import der Übergabe mit `wertungsportal:archiv-import <archiv>` (Prüfsummen, blockweise,
   wiederholbar): Turnierliste, Personen samt Brücke zwischen den Archiven, Kartei
+* Add: Gesamtpersonen aus den Kanten der Brücke: `wertungsportal:archiv-personen`
+* Add: Schalter **Zugriff auf das Wertungsarchiv** in tl_member (contao:migrate) — die Ausgabe
+  des Archivs sehen nur angemeldete Mitglieder mit diesem Schalter
 * Change: `doctrine/dbal` ist jetzt eine direkte Abhängigkeit (^3.3 || ^4.0)
 
 ## Version 1.59.0 (2026-11-18)
