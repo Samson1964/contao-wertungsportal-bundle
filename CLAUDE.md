@@ -608,6 +608,25 @@ fehlten gegenüber dem Bestand; `clubs?vkz=10100` → leere Liste, HTTP 200.
   4.13 den Dienst `mailer` (der ist austauschbar, `contao.mailer` nicht) → aufzeichnender Mailer
   im Prüfstand, Kopfzeilen To/Cc/Bcc lesen.
 
+## Wertungsarchiv (2.0.0, Zweig `2.x`, im Bau)
+
+- Auftrag: `Umbau auf DWZ-Archiv/UEBERGABE.md` (Ordner unversioniert, Personendaten; steht in
+  `.git/info/exclude`). Die Aufbereitung gehört einer anderen Sitzung: Das Bundle liest NUR
+  `Aufbereitung/ausgabe/<archiv>/`, Datenwünsche kommen dort unter „Rückfragen“, nie im Bundle umrechnen.
+- `master` bleibt 1.x (Fehlerkorrekturen als 1.59.x); `2.x` regelmäßig mit `master` zusammenführen.
+- Eigene Datenbank über `Wertungsarchiv\Verbindung` (DBAL `DriverManager` + `DsnParser`; DBAL 4 kennt
+  `url` nicht mehr), NICHT als Doctrine-Bundle-Verbindung (würde Contaos Konfiguration umbauen).
+  Lokal: Datenbank `wertungsarchiv_test`, Zugang in `contao-test-413/.env.local`, Pfad = die Ausgabe
+  im Umbau-Ordner.
+- Schema in `Wertungsarchiv\Schema` (utf8mb4 ausdrücklich, sonst nimmt MariaDB utf8mb3); Vergleich filtert
+  DROP TABLE/COLUMN heraus. Befehle `wertungsportal:archiv-schema`, `wertungsportal:archiv-import` (alle
+  Befehle müssen mit `wertungsportal:` beginnen, KonsolenbefehleTest).
+- Import: Feldzuordnung in `Importeur::FELDER`, alles Übrige nach `extra` (JSON). Kanten jünger → älter
+  (PKZ-Kante steht in elobase UND dewis → eindeutiger Schlüssel verhindert Doppel). Kantenstatus bleibt
+  beim erneuten Import (nur neu gesetzt). Kartei je Archiv ersetzt (DELETE in Paketen zu 50.000).
+- Entscheidungen Frank 18.11.2026: alle Kanten bestätigt, Ausgabe = jüngste Quelle, monatlich neuer
+  Abzug. Details `docs/wertungsarchiv.md`.
+
 ## Akademische Titel an den Spielernamen (ab 1.59.0)
 
 - Quelle: `tl_wertungsportal_persons.titel` (Spieler-Import, Spalte „Titel"; Export 02.11.2026: 2.694 Personen, Werte

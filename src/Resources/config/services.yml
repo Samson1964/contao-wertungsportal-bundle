@@ -108,6 +108,25 @@ services:
         tags:
             - { name: console.command, command: 'wertungsportal:mitgliedergruppe' }
 
+    # Wertungsarchiv (ab 2.0.0): eigene Datenbank, Zugang in .env.local.
+    # Ohne WERTUNGSARCHIV_DATABASE_URL ist das Archiv abgeschaltet
+    Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Verbindung:
+        arguments:
+            - '%env(default::WERTUNGSARCHIV_DATABASE_URL)%'
+            - '%env(default::WERTUNGSARCHIV_PFAD)%'
+
+    Schachbulle\ContaoWertungsportalBundle\Command\ArchivSchemaCommand:
+        arguments:
+            - '@Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Verbindung'
+        tags:
+            - { name: console.command, command: 'wertungsportal:archiv-schema' }
+
+    Schachbulle\ContaoWertungsportalBundle\Command\ArchivImportCommand:
+        arguments:
+            - '@Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Verbindung'
+        tags:
+            - { name: console.command, command: 'wertungsportal:archiv-import' }
+
     # Übernimmt die alten Turniercodes aus DeWIS (ab 1.58.0):
     # wertungsportal:turniercodes <datei>, mit --dry-run zum Zählen
     Schachbulle\ContaoWertungsportalBundle\Command\TurniercodesCommand:

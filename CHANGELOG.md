@@ -1,5 +1,14 @@
 # Wertungsportal Changelog
 
+## Version 2.0.0 (in Arbeit, Zweig 2.x)
+
+* Add: **Wertungsarchiv** (ELOBASE, DeWIS, Wertungsportal) in einer eigenen, zweiten Datenbank
+  (`WERTUNGSARCHIV_DATABASE_URL`, `WERTUNGSARCHIV_PFAD` in `.env.local`); Tabellen außerhalb
+  von Contaos DCA, angelegt mit `wertungsportal:archiv-schema`
+* Add: Import der Übergabe mit `wertungsportal:archiv-import <archiv>` (Prüfsummen, blockweise,
+  wiederholbar): Turnierliste, Personen samt Brücke zwischen den Archiven, Kartei
+* Change: `doctrine/dbal` ist jetzt eine direkte Abhängigkeit (^3.3 || ^4.0)
+
 ## Version 1.59.0 (2026-11-18)
 
 * Add: **Akademische Titel** aus dem monatlichen Spieler-Import (Spalte „Titel") erscheinen an

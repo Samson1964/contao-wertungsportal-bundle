@@ -4,6 +4,8 @@ Ersetzt die SOAP-Schnittstelle von DeWIS und kommuniziert mit der REST-Schnittst
 
 ## Dokumentation
 
+* [Wertungsarchiv](docs/wertungsarchiv.md) — **ab 2.0.0, im Bau:** ELOBASE, DeWIS und
+  Wertungsportal in einer eigenen Datenbank; Einrichten, Import, Entscheidungen
 * [Insert-Tags mit Wertungsdaten](docs/insert-tags.md) — `{{dwz::…}}`, `{{elo::…}}`,
   `{{ftitel::…}}` und `{{verein::…}}` mit der NU-Nummer (früher Helper-Bundle mit DeWIS-ID)
 * [Adressen der Frontend-Seiten](docs/frontend-adressen.md) — Karteikarte, Verein, Verband,
