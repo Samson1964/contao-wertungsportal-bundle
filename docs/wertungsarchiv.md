@@ -126,9 +126,49 @@ DeWIS-Person mit ihren anonymen Portalzeilen, keine Fehlverkettung.
 | nur Portal | 2.026 |
 | nur ELOBASE | 81 (20 ohne PKZ-Zuordnung, 61 mit DeWIS-ID, die der DeWIS-Übergabe fehlt) |
 
+## Backend: Wertungsportal → Wertungsarchiv
+
+| Ansicht | Inhalt |
+| --- | --- |
+| Überblick | Turniere, Personen und Karteizeilen je Archiv mit Stand der Übergabe und des Imports; Kanten nach Quelle und Status; Zahl der Gesamtpersonen |
+| Suche | Namensanfang (auch „Mueller,Klaus“ wie in ELOBASE — gesucht wird mit und ohne Leerzeichen nach dem Komma), NU-Nummer, Kennung einer Archivperson (`Z:`, `D:`, `N:`, `W:`) oder Nummer der Gesamtperson (`#123`) |
+| Gesamtperson | ihre Archivpersonen mit Karteizeilen und Zeitraum, alle Kanten — auch abgelehnte, die aus der Gruppe hinausführen |
+| Prüffälle | Gesamtpersonen mit Prüfvermerk, abgelehnte Kanten |
+
+Jede Kante lässt sich **ablehnen** oder **wieder bestätigen**. Das ändert nur ihren Status (mit
+Zeitpunkt, Eintrag im Systemprotokoll mit Benutzername); die Gruppe trennt sich beim nächsten
+Lauf von `wertungsportal:archiv-personen`. Ein erneuter Import ändert den Status nicht.
+
+Geprüft 18.11.2026: Kante NU4005028 → D:10000004 abgelehnt, Gesamtpersonen neu gebildet — die
+Portalperson stand allein, DeWIS- und ELOBASE-Person blieben verbunden; wieder bestätigt, neu
+gebildet — alles wie vorher.
+
+## Ausgabe (Etappe 3)
+
+Alles nur mit Zugriff (siehe „Wer das Archiv sieht“). Für alle anderen bleiben Karteikarte,
+Suche und Turnierseiten, wie sie waren.
+
+| Wo | Was |
+| --- | --- |
+| Karteikarte `spieler/NU…` | Unter den Turnieren von nu die **älteren Turniere** aus ELOBASE und DeWIS, neueste zuerst — nur solche, die keine jüngere Quelle führt (ein DeWIS-Turnier entfällt, wenn das Portal es hat; ein ELOBASE-Turnier, wenn DeWIS es hat). Die „Datenübernahme nach DeWIS“ zeigt nu selbst. Erste Spalte: ZDB oder DeWIS. |
+| Karteikarte `spieler/G<Nummer>` | Für Spieler **ohne NU-Nummer**, die nur noch im Archiv stehen: Name, Geburtsjahr, Archive, die ganze Kartei einschließlich der Portalzeilen aus dem Archiv. Mit NU-Nummer leitet die Adresse auf die normale Karteikarte weiter. |
+| Spielersuche | Zweite Trefferliste „Aus dem Wertungsarchiv (heute nicht mehr gemeldet)“ — Gesamtpersonen ohne NU-Nummer, gesucht in allen Schreibweisen („Müller, Klaus“, „Müller,Klaus“, „Mueller,Klaus“). |
+| Turnierseite `turniere/A<Nummer>` | Ein Turnier aus dem Archiv: Kopf, Teilnehmer mit DWZ vorher/nachher, Punkten, Partien, We, Leistung; Teilnehmer mit NU-Nummer verlinkt. Rekonstruktionen und Abweichungen von der Kartei sind vermerkt. |
+| Turnierseite `turniere/<ELOBASE-Code>` | Alte Verweise aus der Zeit vor DeWIS. DeWIS-Codes (auch die 2011–2013 in beiden Archiven) leiten wie seit 1.58.0 auf die jüngere Fassung bei nu. |
+
+**Turniere vor der ersten Mitgliedschaft** (`vor_erster_anmeldung = 1`) stehen grau mit gestrichelter
+Linie links da, Erklärung im `title` (Frank Binding, 18.11.2026: kennzeichnen, nicht ausblenden).
+
+Einheiten werden nur für die Anzeige umgerechnet (`Wertungsarchiv\Darstellung`): Halbpunkte → „4½“,
+We · 1000 → „7,215“. ELOBASE führt in der Kartei die **Erfolgszahl**, nicht die Turnierleistung — sie
+erscheint nicht in der Spalte „Lstg.“. Ein Fehler der Archivdatenbank kippt keine Seite: Er kommt ins
+Systemprotokoll, die Seite erscheint ohne Archiv.
+
 ## Stand
 
 - Etappe 1 (Datenbank, Schema, Import): umgesetzt, lokal mit der vollen Übergabe geprüft.
-- Etappe 2: Gesamtpersonen gebildet, Schalter in tl_member; Backend-Ansicht der Zuordnungen offen.
-- Etappe 3 (Ausgabe: Karteikarte, Turnierseiten, Suche): offen.
+- Etappe 2: Gesamtpersonen, Schalter in tl_member, Backend-Ansicht mit Ablehnen/Bestätigen von Kanten.
+- Etappe 3: Karteikarte mit älteren Turnieren, Archiv-Karteikarte G<Nummer>, Archivtreffer in der
+  Spielersuche, Archivturniere A<Nummer> und ELOBASE-Codes. Noch nicht: Partien/Kreuztabelle der
+  Archivturniere, Diagramm mit Archivwerten.
 - Etappe 4 (monatlicher Abzug des Wertungsportals): offen.

@@ -192,12 +192,13 @@
 				</thead>
 				<tbody>
 					<?php $row = 1; ?>
-					<?php if($this->altkartei): ?>
+					<?php if($this->kartei): ?>
 						<?php $x = 0; ?>
-						<?php foreach($this->altkartei as $d): ?>
-							<?php $x++; $class = ($x < count($this->altkartei)) ? ' bottom-line' : ''; ?>
-							<tr class="row_<?= $row ?> elobase">
-								<td class="col_0<?= $class ?> right-line"><?= $d['nummer'] ?></td>
+						<?php foreach($this->kartei as $d): ?>
+							<?php $x++; $class = ($x < count($this->kartei) || $this->altkartei) ? ' bottom-line' : ''; ?>
+							<?php // DWZ-Umstufungen (typ=upgrade) farblich hervorheben ?>
+							<tr class="row_<?= $row ?> <?= (isset($d['typ']) && $d['typ'] == 'upgrade') ? 'upgrade' : 'dewis' ?>">
+								<td class="col_0<?= $class ?> right-line align-right"><?= $d['nummer'] ?></td>
 								<td class="col_1<?= $class ?> right-line"><?= $d['jahr'] ?></td>
 								<td class="col_2<?= $class ?> right-line"><?= $d['turnier'] ?></td>
 								<td class="col_3<?= $class ?> right-line"><?= $d['punkte'] ?></td>
@@ -211,13 +212,13 @@
 							<?php $row++; ?>
 						<?php endforeach; ?>
 					<?php endif; ?>
-					<?php if($this->kartei): ?>
+					<?php if($this->altkartei): ?>
 						<?php $x = 0; ?>
-						<?php foreach($this->kartei as $d): ?>
-							<?php $x++; $class = ($x < count($this->kartei)) ? ' bottom-line' : ''; ?>
-							<?php // DWZ-Umstufungen (typ=upgrade) farblich hervorheben ?>
-							<tr class="row_<?= $row ?> <?= (isset($d['typ']) && $d['typ'] == 'upgrade') ? 'upgrade' : 'dewis' ?>">
-								<td class="col_0<?= $class ?> right-line align-right"><?= $d['nummer'] ?></td>
+						<?php foreach($this->altkartei as $d): ?>
+							<?php $x++; $class = ($x < count($this->altkartei)) ? ' bottom-line' : ''; ?>
+							<?php // Ältere Turniere aus dem Wertungsarchiv (ab 2.0.0); vor der ersten Mitgliedschaft gekennzeichnet ?>
+							<tr class="row_<?= $row ?> elobase<?= !empty($d['vor']) ? ' wp-vor-mitgliedschaft' : '' ?>"<?= !empty($d['vor']) ? ' title="Turnier vor der ersten Mitgliedschaft"' : '' ?>>
+								<td class="col_0<?= $class ?> right-line"><?= $d['nummer'] ?></td>
 								<td class="col_1<?= $class ?> right-line"><?= $d['jahr'] ?></td>
 								<td class="col_2<?= $class ?> right-line"><?= $d['turnier'] ?></td>
 								<td class="col_3<?= $class ?> right-line"><?= $d['punkte'] ?></td>

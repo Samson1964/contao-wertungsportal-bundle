@@ -1,0 +1,224 @@
+<?php
+/**
+ * Backend-Template des Moduls „Wertungsarchiv" (ab 2.0.0)
+ *
+ * Vier Ansichten: Überblick, Suche, Gesamtperson, Prüffälle. Markup und
+ * Fluchtlinie wie im Modul „Rohdaten" (Klassen wp-werkzeug…, wp-stat… aus der
+ * backend.css des Bundles).
+ */
+$maske = static function ($text) { return htmlspecialchars((string) $text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); };
+$zahl = static function ($n) { return number_format((int) $n, 0, ',', '.'); };
+$archivname = array('elobase' => 'ELOBASE', 'dewis' => 'DeWIS', 'wp' => 'Wertungsportal');
+// Links innerhalb des Moduls. Hier gebaut, nicht in der Modulklasse: Eine
+// Closure als Template-Variable ruft Contao beim Lesen selbst auf
+$link = static function (string $parameter): string {
+	return \Contao\Backend::addToUrl($parameter, true, array('gesamt', 'ansicht', 'q'));
+};
+?>
+<div id="tl_buttons">
+	<?php if($this->eingerichtet && $this->ansicht !== 'ueberblick'): ?>
+		<a href="<?= $maske($link('')) ?>" class="header_back" title="Zum Überblick">Überblick</a>
+	<?php endif; ?>
+</div>
+
+<h2 class="sub_headline wp-werkzeug-kopf">Wertungsarchiv</h2>
+
+<div class="wp-werkzeug">
+
+<?php if(!$this->eingerichtet): ?>
+
+	<p class="tl_info wp-werkzeug-meldung">
+		Das Wertungsarchiv ist nicht eingerichtet: <code>WERTUNGSARCHIV_DATABASE_URL</code> fehlt in
+		<code>.env.local</code>. Einrichtung siehe docs/wertungsarchiv.md.
+	</p>
+
+<?php elseif($this->veraltet): ?>
+
+	<p class="tl_error wp-werkzeug-meldung">
+		Die Archivdatenbank entspricht nicht dem Schema dieser Fassung (<?= (int) $this->veraltet ?> Änderung(en) offen).
+		Bitte auf der Konsole <code>vendor/bin/contao-console wertungsportal:archiv-schema --force</code> ausführen.
+	</p>
+
+<?php else: ?>
+
+	<form action="" method="get" class="wp-archiv-suche">
+		<input type="hidden" name="do" value="<?= $maske(\Contao\Input::get('do')) ?>">
+		<div class="tl_formbody_edit">
+			<div class="tl_tbox cf">
+				<div class="widget w50">
+					<h3><label for="ctrl_q">Gesamtperson suchen</label></h3>
+					<input type="search" name="q" id="ctrl_q" class="tl_text" value="<?= $maske($this->q) ?>" placeholder="Müller, Klaus · NU4005028 · D:10000004 · #123">
+					<p class="tl_help tl_tip">Namensanfang (auch „Mueller,Klaus" wie in ELOBASE), NU-Nummer, Kennung einer Archivperson oder Nummer der Gesamtperson.</p>
+				</div>
+				<div class="widget w50 m12">
+					<button type="submit" class="tl_submit">Suchen</button>
+					<a href="<?= $maske($link('ansicht=pruefen')) ?>" class="tl_submit" style="margin-left:8px">Prüffälle</a>
+				</div>
+			</div>
+		</div>
+	</form>
+
+	<?php if($this->ansicht === 'ueberblick'): ?>
+		<?php $u = $this->ueberblick; ?>
+
+		<h3 class="wp-stat-ueberschrift">Bestand</h3>
+		<div class="wp-stat-scroll">
+		<table class="tl_listing wp-stat-tabelle">
+			<thead><tr><th>Archiv</th><th>Turniere</th><th>Personen</th><th>Karteizeilen</th><th>Übergabe vom</th><th>Importiert</th></tr></thead>
+			<tbody>
+			<?php foreach($u['archive'] as $a => $w): ?>
+				<tr>
+					<td><?= $maske($archivname[$a] ?? $a) ?></td>
+					<td><?= $zahl($w['turniere']) ?></td>
+					<td><?= $zahl($w['personen']) ?></td>
+					<td><?= $zahl($w['kartei']) ?></td>
+					<td><?= $maske(substr((string) ($u['importe'][$a]['erstellt'] ?? ''), 0, 10)) ?></td>
+					<td><?= $maske(substr((string) ($u['importe'][$a]['importiert'] ?? ''), 0, 16)) ?></td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+		</div>
+
+		<h3 class="wp-stat-ueberschrift">Brücke</h3>
+		<div class="wp-stat-scroll">
+		<table class="tl_listing wp-stat-tabelle">
+			<thead><tr><th>Quelle der Kante</th><th>Status</th><th>Kanten</th></tr></thead>
+			<tbody>
+			<?php foreach($u['kanten'] as $k): ?>
+				<tr><td><?= $maske($k['quelle']) ?></td><td><?= $maske($k['status']) ?></td><td><?= $zahl($k['zahl']) ?></td></tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+		</div>
+		<p class="tl_help wp-werkzeug-text">
+			<?= $zahl($u['gesamt']) ?> Gesamtpersonen, davon <a href="<?= $maske($link('ansicht=pruefen')) ?>"><?= $zahl($u['pruefen']) ?> mit Prüfvermerk</a>.
+			Kanten zeigen vom jüngeren aufs ältere Archiv: <code>pkz</code> DeWIS → ELOBASE, <code>turniere</code>/<code>externenr</code>
+			Portal → DeWIS, <code>dublette</code> Portal → zweite DeWIS-Person.
+		</p>
+
+	<?php elseif($this->ansicht === 'suche' || $this->ansicht === 'pruefen'): ?>
+
+		<?php $liste = $this->ansicht === 'suche' ? $this->treffer : $this->pruefliste; ?>
+		<h3 class="wp-stat-ueberschrift"><?= $this->ansicht === 'suche' ? 'Treffer' : 'Gesamtpersonen mit Prüfvermerk' ?> (<?= count($liste) ?>)</h3>
+
+		<?php if(!$liste): ?>
+			<p class="tl_help wp-werkzeug-text">Nichts gefunden.</p>
+		<?php else: ?>
+			<div class="wp-stat-scroll">
+			<table class="tl_listing wp-stat-tabelle">
+				<thead><tr><th>Nr.</th><th>Name</th><th>Geb.</th><th>NU-Nummer</th><th>Archive</th><th>Personen</th><th>Prüfen</th></tr></thead>
+				<tbody>
+				<?php foreach($liste as $g): ?>
+					<tr>
+						<td><a href="<?= $maske($link('gesamt='.(int) $g['id'])) ?>">#<?= (int) $g['id'] ?></a></td>
+						<td><a href="<?= $maske($link('gesamt='.(int) $g['id'])) ?>"><?= $maske($g['name'] ?? '–') ?></a></td>
+						<td><?= $maske($g['geburtsjahr'] ?? '') ?></td>
+						<td><?= $maske($g['nu_id'] ?? '') ?></td>
+						<td><?= $maske($g['archive']) ?></td>
+						<td><?= $zahl($g['personen']) ?></td>
+						<td><?= $maske($g['pruefen']) ?></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+			</div>
+		<?php endif; ?>
+
+		<?php if($this->ansicht === 'pruefen'): ?>
+			<h3 class="wp-stat-ueberschrift">Abgelehnte Kanten (<?= count($this->abgelehnt) ?>)</h3>
+			<?php if(!$this->abgelehnt): ?>
+				<p class="tl_help wp-werkzeug-text">Keine.</p>
+			<?php else: ?>
+				<div class="wp-stat-scroll">
+				<table class="tl_listing wp-stat-tabelle">
+					<thead><tr><th>Von</th><th>Nach</th><th>Quelle</th><th>Geändert</th></tr></thead>
+					<tbody>
+					<?php foreach($this->abgelehnt as $k): ?>
+						<tr>
+							<td><a href="<?= $maske($link('gesamt='.(int) $k['von_gesamt'])) ?>"><?= $maske($k['von']) ?></a> <?= $maske($k['von_name']) ?></td>
+							<td><a href="<?= $maske($link('gesamt='.(int) $k['nach_gesamt'])) ?>"><?= $maske($k['nach']) ?></a> <?= $maske($k['nach_name']) ?></td>
+							<td><?= $maske($k['quelle']) ?></td>
+							<td><?= $k['geaendert'] ? date('d.m.Y H:i', (int) $k['geaendert']) : '' ?></td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table>
+				</div>
+			<?php endif; ?>
+		<?php endif; ?>
+
+	<?php elseif($this->ansicht === 'gesamt'): ?>
+
+		<?php if(!$this->daten): ?>
+			<p class="tl_error wp-werkzeug-meldung">Diese Gesamtperson gibt es nicht (mehr) — nach einem neuen Lauf von archiv-personen können sich Nummern ändern, wenn Gruppen zerfallen.</p>
+		<?php else: ?>
+			<?php $g = $this->daten['gesamt']; ?>
+
+			<h3 class="wp-stat-ueberschrift">Gesamtperson #<?= (int) $g['id'] ?>: <?= $maske($g['name'] ?? '–') ?></h3>
+			<p class="tl_help wp-werkzeug-text">
+				<?= $g['geburtsjahr'] ? 'Geburtsjahr '.$maske($g['geburtsjahr']).' · ' : '' ?>
+				<?= $g['nu_id'] ? 'NU-Nummer '.$maske($g['nu_id']).' · ' : '' ?>
+				Archive: <?= $maske($g['archive']) ?>
+				<?= $g['pruefen'] ? ' · <strong>Prüfen: '.$maske($g['pruefen']).'</strong>' : '' ?>
+			</p>
+
+			<h3 class="wp-stat-ueberschrift">Archivpersonen (<?= count($this->daten['personen']) ?>)</h3>
+			<div class="wp-stat-scroll">
+			<table class="tl_listing wp-stat-tabelle">
+				<thead><tr><th>Archiv</th><th>Kennung</th><th>Name</th><th>G</th><th>Geb.</th><th>Karteizeilen</th><th>Zeitraum</th></tr></thead>
+				<tbody>
+				<?php foreach($this->daten['personen'] as $p): ?>
+					<tr>
+						<td><?= $maske($archivname[$p['archiv']] ?? $p['archiv']) ?></td>
+						<td><code><?= $maske($p['kennung']) ?></code></td>
+						<td><?= $maske($p['name'] ?? '–') ?></td>
+						<td><?= $maske($p['geschlecht'] ?? '') ?></td>
+						<td><?= $maske($p['geburtsjahr'] ?? '') ?></td>
+						<td><?= $zahl($p['kartei']) ?></td>
+						<td><?= $maske(trim(($p['erstes'] ?? '').' – '.($p['letztes'] ?? ''), ' –')) ?></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+			</div>
+
+			<h3 class="wp-stat-ueberschrift">Kanten (<?= count($this->daten['kanten']) ?>)</h3>
+			<p class="tl_help wp-werkzeug-text">
+				Eine abgelehnte Kante trennt die Gruppe beim nächsten Lauf von
+				<code>wertungsportal:archiv-personen</code>; bis dahin bleibt die Zuordnung, wie sie ist.
+				Jede Änderung steht im Systemprotokoll.
+			</p>
+			<div class="wp-stat-scroll">
+			<table class="tl_listing wp-stat-tabelle">
+				<thead><tr><th>Von</th><th>Nach</th><th>Quelle</th><th>Belege</th><th>Status</th><th></th></tr></thead>
+				<tbody>
+				<?php foreach($this->daten['kanten'] as $k): ?>
+					<?php $neu = $k['status'] === 'abgelehnt' ? 'bestaetigt' : 'abgelehnt'; ?>
+					<tr<?= $k['status'] === 'abgelehnt' ? ' style="opacity:.6"' : '' ?>>
+						<td><code><?= $maske($k['von']) ?></code> <?= $maske($k['von_name']) ?><?= (int) $k['von_gesamt'] !== (int) $g['id'] && $k['von_gesamt'] ? ' <a href="'.$maske($link('gesamt='.(int) $k['von_gesamt'])).'">#'.(int) $k['von_gesamt'].'</a>' : '' ?></td>
+						<td><code><?= $maske($k['nach']) ?></code> <?= $maske($k['nach_name']) ?><?= (int) $k['nach_gesamt'] !== (int) $g['id'] && $k['nach_gesamt'] ? ' <a href="'.$maske($link('gesamt='.(int) $k['nach_gesamt'])).'">#'.(int) $k['nach_gesamt'].'</a>' : '' ?></td>
+						<td><?= $maske($k['quelle']) ?></td>
+						<td><?= $maske($k['gewicht'] ?? '') ?></td>
+						<td><?= $maske($k['status']) ?></td>
+						<td>
+							<form action="<?= $maske(\Contao\Environment::get('request')) ?>" method="post" style="margin:0">
+								<input type="hidden" name="FORM_SUBMIT" value="wp_archiv_kante">
+								<input type="hidden" name="REQUEST_TOKEN" value="<?= $maske($this->token) ?>">
+								<input type="hidden" name="kante" value="<?= (int) $k['id'] ?>">
+								<input type="hidden" name="status" value="<?= $neu ?>">
+								<button type="submit" class="tl_submit"<?= $neu === 'abgelehnt' ? ' onclick="return confirm(\'Diese Kante ablehnen? Die Gruppe wird beim nächsten Lauf von archiv-personen getrennt.\')"' : '' ?>><?= $neu === 'abgelehnt' ? 'Ablehnen' : 'Wieder bestätigen' ?></button>
+							</form>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+			</div>
+		<?php endif; ?>
+
+	<?php endif; ?>
+
+<?php endif; ?>
+
+</div>

@@ -178,6 +178,10 @@ class Spieler extends \Contao\Module
 				// Hinweis nur, wenn tatsächlich örtliche Treffer dabei sind
 				$lokaleSuche = count(array_filter($daten, function($eintrag) { return $eintrag['Quelle'] === 'Lokal'; })) > 0;
 
+				// Spieler, die nur noch im Wertungsarchiv stehen (ab 2.0.0) —
+				// nur für Mitglieder mit Zugriff, sonst leer
+				$archivTreffer = $this->archivsuche((string) $check_search['nachname'], (string) $check_search['vorname']);
+
 				// Kam von der Schnittstelle ein Fehler und hat auch der örtliche
 				// Bestand nichts, gehört das auf die Seite — bis 1.44.0 blieb
 				// die Trefferliste dann wortlos leer, als gäbe es den Namen nicht
@@ -186,6 +190,15 @@ class Spieler extends \Contao\Module
 					$this->Template->fehler = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::apiFehler($resultArr);
 				}
 			}
+		}
+
+		/*********************************************************
+		 * Karteikarte einer Person, die nur im Wertungsarchiv steht
+		 * (ab 2.0.0): ID im Format "G12345" (Nummer der Gesamtperson)
+		*/
+		if($id && preg_match('/^G(\d+)$/', $id, $treffer) && $this->archivkarte((int) $treffer[1]))
+		{
+			return;
 		}
 
 		/*********************************************************
@@ -311,6 +324,7 @@ class Spieler extends \Contao\Module
 				// Reklamation neben dem Wertungsreferenten — an ihn, ohne ihn an den DSB-Admin
 				$this->Template->reklamation  = $gesperrt ? '' : \Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::link(\Schachbulle\ContaoWertungsportalBundle\Helper\Reklamation::fuerKarteikarte((string) $kartei->Titelname, (string) $id, (string) \Contao\Environment::get('uri'), \Schachbulle\ContaoWertungsportalBundle\Helper\Zustaendigkeit::empfaenger($zustaendig)));
 				$this->Template->kartei       = $kartei->Kartei;
+				$this->Template->altkartei    = $this->altkartei((string) $kartei->NuId);
 				$this->Template->diagramm     = $kartei->Diagramm;
 				$this->Template->diagrammKomplett = $kartei->DiagrammKomplett;
 			}
@@ -323,9 +337,177 @@ class Spieler extends \Contao\Module
 		$this->Subtemplate->lokal = isset($lokaleSuche) ? $lokaleSuche : false;
 		// Eine Suche ohne Treffer bekommt Tipps — aber nicht, wenn schon eine
 		// Fehlermeldung erklärt, warum die Liste leer ist
-		$this->Subtemplate->keineTreffer = isset($daten) && !count($daten) && empty($this->Template->fehler);
+		$this->Subtemplate->archiv = $archivTreffer ?? array();
+		$this->Subtemplate->keineTreffer = isset($daten) && !count($daten) && empty($archivTreffer) && empty($this->Template->fehler);
 		$this->Template->searchresult = $this->Subtemplate->parse();
 		$this->Template->searchform = true;
+	}
+
+	/**
+	 * Liefert die älteren Turniere einer Person aus dem Wertungsarchiv
+	 * (ELOBASE, DeWIS) für die Tabelle der Karteikarte (ab 2.0.0).
+	 *
+	 * Nur für Mitglieder mit dem Schalter „Zugriff auf das Wertungsarchiv"
+	 * (Wertungsarchiv\Zugriff) — für alle anderen bleibt die Karteikarte, wie
+	 * sie war. Turniere, die das Portal oder DeWIS selbst führen, entfallen
+	 * (Regel „jüngste Quelle", siehe Wertungsarchiv\Archiv::altkartei()).
+	 *
+	 * Ein Fehler der Archivdatenbank darf die Karteikarte nicht kippen: Er
+	 * kommt ins Systemprotokoll, die Karteikarte erscheint ohne Archiv.
+	 *
+	 * @param string $nuId NU-Nummer der Karteikarte
+	 *
+	 * @return array<int,array<string,mixed>> Zeilen wie Karteikarte::Kartei,
+	 *                                        leer ohne Zugriff oder ohne Archivdaten
+	 */
+	protected function altkartei(string $nuId): array
+	{
+		if ('' === $nuId || !\Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Zugriff::erlaubt())
+		{
+			return array();
+		}
+
+		try
+		{
+			$archiv = \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Archiv::aus(\Contao\System::getContainer()->get(\Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Verbindung::class));
+			$gesamt = $archiv ? $archiv->gesamtNachNu($nuId) : null;
+
+			if (null === $gesamt)
+			{
+				return array();
+			}
+
+			$basis = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl();
+			$suffix = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix();
+
+			return array_map(static function (array $zeile) use ($basis, $suffix): array {
+				return \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Darstellung::karteizeile($zeile, $basis, $suffix);
+			}, $archiv->altkartei($gesamt));
+		}
+		catch (\Throwable $e)
+		{
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog('Wertungsarchiv: Karteikarte '.$nuId.' ohne Archiv — '.$e->getMessage(), __METHOD__, 'ERROR');
+
+			return array();
+		}
+	}
+
+	/**
+	 * Sucht Spieler, die nur noch im Wertungsarchiv stehen (ab 2.0.0).
+	 *
+	 * Nur für Mitglieder mit Zugriff (Wertungsarchiv\Zugriff). Gefunden werden
+	 * Gesamtpersonen OHNE NU-Nummer — wer eine hat, steht schon in der
+	 * normalen Trefferliste. Ein Fehler der Archivdatenbank kommt ins
+	 * Systemprotokoll, die Suche bleibt dann ohne Archivtreffer.
+	 *
+	 * @param string $nachname Nachname oder sein Anfang (Rohstring der Eingabe)
+	 * @param string $vorname  Vorname oder sein Anfang
+	 *
+	 * @return array<int,array<string,mixed>> name, geburtsjahr, archive, link
+	 */
+	protected function archivsuche(string $nachname, string $vorname): array
+	{
+		if ('' === trim($nachname) || !\Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Zugriff::erlaubt())
+		{
+			return array();
+		}
+
+		try
+		{
+			$archiv = \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Archiv::aus(\Contao\System::getContainer()->get(\Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Verbindung::class));
+
+			if (!$archiv)
+			{
+				return array();
+			}
+
+			$seite = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseiteUrl();
+			$suffix = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix();
+
+			return array_map(static function (array $g) use ($seite, $suffix): array {
+				return array(
+					'name'        => (string) $g['name'],
+					'geburtsjahr' => (string) ($g['geburtsjahr'] ?? ''),
+					'archive'     => (string) $g['archive'],
+					'link'        => $seite.'/G'.(int) $g['id'].$suffix,
+				);
+			}, $archiv->sucheOhneNu($nachname, $vorname));
+		}
+		catch (\Throwable $e)
+		{
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog('Wertungsarchiv: Suche „'.$nachname.'" ohne Archiv — '.$e->getMessage(), __METHOD__, 'ERROR');
+
+			return array();
+		}
+	}
+
+	/**
+	 * Karteikarte einer Gesamtperson aus dem Wertungsarchiv (ab 2.0.0),
+	 * Adresse `spieler/G<Nummer>`.
+	 *
+	 * Für Personen OHNE NU-Nummer — sie stehen bei nu nicht mehr. Hat die
+	 * Gesamtperson doch eine, geht es auf ihre normale Karteikarte. Gezeigt
+	 * werden Name, Geburtsjahr, Archive und die Kartei nach „jüngster Quelle"
+	 * einschließlich des Portalarchivs (Archiv::altkartei($id, true)).
+	 *
+	 * Ohne Zugriff geschieht nichts: Die Adresse endet wie jede unbekannte
+	 * Spieler-ID ohne Karteikarte.
+	 *
+	 * @param int $id Nummer der Gesamtperson
+	 *
+	 * @return bool true, wenn die Karteikarte vorbereitet ist (compile() endet dann)
+	 *
+	 * @throws \Contao\CoreBundle\Exception\RedirectResponseException wenn die Person eine NU-Nummer hat
+	 */
+	protected function archivkarte(int $id): bool
+	{
+		global $objPage;
+
+		if (!\Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Zugriff::erlaubt())
+		{
+			return false;
+		}
+
+		try
+		{
+			$archiv = \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Archiv::aus(\Contao\System::getContainer()->get(\Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Verbindung::class));
+			$gesamt = $archiv ? $archiv->gesamtperson($id) : null;
+
+			if (null === $gesamt)
+			{
+				return false;
+			}
+
+			if (!empty($gesamt['nu_id']))
+			{
+				\Contao\Controller::redirect(\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseiteUrl().'/'.$gesamt['nu_id'].\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix());
+			}
+
+			$basis = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl();
+			$suffix = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix();
+			$kartei = array_map(static function (array $zeile) use ($basis, $suffix): array {
+				return \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Darstellung::karteizeile($zeile, $basis, $suffix);
+			}, $archiv->altkartei($id, true));
+		}
+		catch (\Contao\CoreBundle\Exception\RedirectResponseException $e)
+		{
+			throw $e;
+		}
+		catch (\Throwable $e)
+		{
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog('Wertungsarchiv: Karteikarte G'.$id.' nicht lesbar — '.$e->getMessage(), __METHOD__, 'ERROR');
+
+			return false;
+		}
+
+		$objPage->pageTitle = 'DWZ-Karteikarte (Archiv) '.$gesamt['name'];
+
+		$this->Template = new \Contao\FrontendTemplate('wertungsportal_archivkarte');
+		$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation();
+		$this->Template->gesamt = $gesamt;
+		$this->Template->kartei = $kartei;
+
+		return true;
 	}
 
 }

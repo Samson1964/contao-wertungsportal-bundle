@@ -1,0 +1,115 @@
+<?php
+/**
+ * Turnier aus dem Wertungsarchiv (ab 2.0.0)
+ *
+ * Zeigt den gemeinsamen Teil der Turnier-JSON (wertungsarchiv-turnier/1):
+ * Turnierkopf und Teilnehmer in den Einheiten von ELOBASE (Halbpunkte,
+ * We · 1000), umgerechnet nur für die Anzeige (Wertungsarchiv\Darstellung).
+ * Nur für Mitglieder mit „Zugriff auf das Wertungsarchiv" (Turnier::archivTurnier()).
+ */
+use Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Darstellung;
+
+$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/default.css';
+$e = static function ($text) { return htmlspecialchars((string) $text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); };
+$archivname = array('elobase' => 'ELOBASE (ZDB)', 'dewis' => 'DeWIS', 'wp' => 'Wertungsportal');
+$t = $this->turnier;
+$k = $this->kopf;
+$kennzeichen = array_filter(explode(',', (string) $t['kennzeichen']));
+
+// Nach Platz, sonst nach Nummer — Rekonstruktionen kennen keinen Platz
+$teilnehmer = $this->teilnehmer;
+usort($teilnehmer, static function ($a, $b) {
+	return array((int) ($a['platz'] ?? 0) ?: PHP_INT_MAX, (int) $a['nr']) <=> array((int) ($b['platz'] ?? 0) ?: PHP_INT_MAX, (int) $b['nr']);
+});
+?>
+<div class="<?= $this->class ?> dewis block"<?= $this->cssID ?>>
+
+	<?php if($this->navigation): ?>
+		<div class="dewislinks noprint">
+			<ul>
+			<?php foreach($this->navigation as $d): ?>
+				<?= $d ?>
+			<?php endforeach; ?>
+			</ul>
+		</div>
+	<?php endif; ?>
+
+	<h2><?= $e($this->subHeadline) ?></h2>
+
+	<p class="lokalhinweis">
+		Aus dem Wertungsarchiv (<?= $e($archivname[$t['archiv']] ?? $t['archiv']) ?>) — nur für die Erprobung freigeschaltet.
+		<?php if(!empty($t['rekonstruiert'])): ?>
+			<br><strong>Rekonstruiert:</strong> Zu diesem Turnier gibt es keine Auswertungsdatei mehr; die Teilnehmer stammen aus den Karteikarten, Paarungen und Runden sind nicht bekannt.
+		<?php endif; ?>
+		<?php if(!empty($this->json['weicht_von_kartei_ab'])): ?>
+			<br><strong>Die Karteikarten weichen von dieser Auswertung ab</strong> (spätere Korrekturen ohne Neuberechnung). Maßgeblich ist die Karteikarte.
+		<?php endif; ?>
+	</p>
+
+	<div class="table_responsiv">
+		<table class="header">
+			<tbody>
+				<tr><td width="30%" class="label bottom-line">Code:</td><td width="70%" class="value bottom-line"><?= $e($k['code'] ?? $t['code'] ?? $t['quell_id']) ?></td></tr>
+				<?php if(!empty($k['ende']) || !empty($t['ende'])): ?>
+					<tr><td class="label bottom-line">Turnierende:</td><td class="value bottom-line"><?= $e(preg_replace('/^(\d{4})-(\d{2})-(\d{2}).*/', '$3.$2.$1', (string) ($k['ende'] ?? $t['ende']))) ?></td></tr>
+				<?php endif; ?>
+				<?php if(!empty($k['ausgewertet'])): ?>
+					<tr><td class="label bottom-line">Ausgewertet:</td><td class="value bottom-line"><?= $e($k['ausgewertet']) ?></td></tr>
+				<?php endif; ?>
+				<?php if(!empty($k['auswerter'])): ?>
+					<tr><td class="label bottom-line">Auswerter:</td><td class="value bottom-line"><?= $e($k['auswerter']) ?></td></tr>
+				<?php endif; ?>
+				<tr><td class="label bottom-line">Spieler/Partien/Runden:</td><td class="value bottom-line"><?= $e($k['spieler'] ?? $t['spieler'] ?? '') ?> / <?= $e($k['partien'] ?? $t['partien'] ?? '') ?> / <?= $e($k['runden'] ?? $t['runden'] ?? '') ?></td></tr>
+				<?php if($kennzeichen): ?>
+					<tr><td class="label bottom-line">Kennzeichen:</td><td class="value bottom-line"><?= $e(implode(', ', $kennzeichen)) ?></td></tr>
+				<?php endif; ?>
+			</tbody>
+		</table>
+	</div>
+
+	<?php if(!$this->json): ?>
+		<p class="error">Zu diesem Turnier gibt es keine Turnierdatei — nur den Eintrag in der Turnierliste.</p>
+	<?php else: ?>
+		<div class="table_responsiv">
+			<table class="body">
+				<thead>
+					<tr>
+						<th class="right-line">Pl.</th>
+						<th class="right-line">Name</th>
+						<th class="right-line">Verein</th>
+						<th class="right-line">DWZ vorher</th>
+						<th class="right-line">Pkt.</th>
+						<th class="right-line">Par.</th>
+						<th class="right-line">We</th>
+						<th class="right-line">Lstg.</th>
+						<th>DWZ nachher</th>
+					</tr>
+				</thead>
+				<tbody>
+				<?php foreach($teilnehmer as $s): ?>
+					<?php $nuId = $this->nu[(string) ($s['person'] ?? '')] ?? ''; ?>
+					<tr>
+						<td class="right-line bottom-line"><?= $e($s['platz'] ?? '') ?></td>
+						<td class="right-line bottom-line">
+							<?php if($nuId): ?>
+								<a href="<?= $e($this->spielerseite.'/'.$nuId.$this->suffix) ?>"><?= $e($s['name'] ?? '–') ?></a>
+							<?php else: ?>
+								<?= $e($s['name'] ?? '–') ?>
+							<?php endif; ?>
+							<?= !empty($s['titel']) ? ' <span class="wp-titel">'.$e($s['titel']).'</span>' : '' ?>
+						</td>
+						<td class="right-line bottom-line"><?= $e($s['verein'] ?? '') ?></td>
+						<td class="right-line bottom-line"><?= Darstellung::dwz($s['dwz_vorher'] ?? null, $s['index_vorher'] ?? null) ?></td>
+						<td class="right-line bottom-line"><?= $e(Darstellung::punkte($s['punkte_halbe'] ?? null)) ?></td>
+						<td class="right-line bottom-line"><?= $e($s['partien'] ?? '') ?></td>
+						<td class="right-line bottom-line"><?= $e(Darstellung::we($s['we1000'] ?? null)) ?></td>
+						<td class="right-line bottom-line"><?= empty($s['turnierleistung']) ? '' : (int) $s['turnierleistung'] ?></td>
+						<td class="bottom-line"><?= Darstellung::dwz($s['dwz_nachher'] ?? null, $s['index_nachher'] ?? null) ?></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+		</div>
+	<?php endif; ?>
+
+</div>

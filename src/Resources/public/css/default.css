@@ -564,6 +564,21 @@
 	font-style				: italic;
 }
 
+/* Karteikarte: ältere Turniere aus dem Wertungsarchiv (ab 2.0.0) leicht
+   abgesetzt; Turniere vor der ersten Mitgliedschaft gekennzeichnet (Frank
+   Binding, 18.11.2026: kennzeichnen, nicht ausblenden) — grauer Text und
+   gestrichelte Linie links, Erklärung im title */
+.dewis table.body tr.elobase td {
+	background-color		: #F5F7FA;
+}
+.dewis table.body tr.wp-vor-mitgliedschaft td {
+	color					: #6b6b6b;
+}
+.dewis table.body tr.wp-vor-mitgliedschaft td.col_0 {
+	border-left				: 3px dashed #9a9a9a;
+	cursor					: help;
+}
+
 /* Karteikarte: DWZ/Leistungs-Diagramm und Overlay (Lightbox) fuer alle Turniere */
 .dewis .diagramm {
 	margin-top				: 20px;

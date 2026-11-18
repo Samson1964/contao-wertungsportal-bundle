@@ -10,6 +10,12 @@
 * Add: Gesamtpersonen aus den Kanten der Brücke: `wertungsportal:archiv-personen`
 * Add: Schalter **Zugriff auf das Wertungsarchiv** in tl_member (contao:migrate) — die Ausgabe
   des Archivs sehen nur angemeldete Mitglieder mit diesem Schalter
+* Add: Backend-Modul **Wertungsarchiv**: Überblick, Suche nach Gesamtpersonen, Archivpersonen und
+  Kanten einer Gesamtperson, Prüffälle; Kanten ablehnen oder wieder bestätigen
+* Add: Ausgabe des Archivs — nur für Mitglieder mit Zugriff: ältere Turniere aus ELOBASE und DeWIS
+  auf der Karteikarte (Regel „jüngste Quelle“, Turniere vor der ersten Mitgliedschaft gekennzeichnet),
+  Karteikarte `spieler/G<Nummer>` für Spieler ohne NU-Nummer, Archivtreffer in der Spielersuche,
+  Archivturniere unter `turniere/A<Nummer>` und alten ELOBASE-Codes
 * Change: `doctrine/dbal` ist jetzt eine direkte Abhängigkeit (^3.3 || ^4.0)
 
 ## Version 1.59.0 (2026-11-18)

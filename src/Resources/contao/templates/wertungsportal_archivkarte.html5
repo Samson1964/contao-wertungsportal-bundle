@@ -1,0 +1,85 @@
+<?php
+/**
+ * Karteikarte einer Person aus dem Wertungsarchiv (ab 2.0.0), Adresse
+ * spieler/G<Nummer>. Für Spieler ohne NU-Nummer, die nur noch im Archiv
+ * stehen. Nur für Mitglieder mit „Zugriff auf das Wertungsarchiv"
+ * (Spieler::archivkarte()). Die Zeilen kommen fertig aus
+ * Wertungsarchiv\Darstellung::karteizeile() (Texte dort maskiert).
+ */
+$GLOBALS['TL_CSS'][] = 'bundles/contaowertungsportal/css/default.css';
+$e = static function ($text) { return htmlspecialchars((string) $text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); };
+$archivname = array('elobase' => 'ELOBASE', 'dewis' => 'DeWIS', 'wp' => 'Wertungsportal');
+$g = $this->gesamt;
+?>
+<div class="<?= $this->class ?> dewis block"<?= $this->cssID ?>>
+
+	<?php if($this->navigation): ?>
+		<div class="dewislinks noprint">
+			<ul>
+			<?php foreach($this->navigation as $d): ?>
+				<?= $d ?>
+			<?php endforeach; ?>
+			</ul>
+		</div>
+	<?php endif; ?>
+
+	<h2>DWZ-Karteikarte <?= $e($g['name'] ?? '–') ?></h2>
+
+	<p class="lokalhinweis">
+		Aus dem Wertungsarchiv — der Spieler ist heute nicht mehr gemeldet. Nur für die Erprobung freigeschaltet.
+		Grau mit gestrichelter Linie: Turnier vor der ersten Mitgliedschaft.
+	</p>
+
+	<div class="table_responsiv">
+		<table class="header">
+			<tbody>
+				<tr><td width="30%" class="label bottom-line">Name:</td><td width="70%" class="value bottom-line"><?= $e($g['name'] ?? '–') ?></td></tr>
+				<?php if(!empty($g['geburtsjahr'])): ?>
+					<tr><td class="label bottom-line">Geburtsjahr:</td><td class="value bottom-line"><?= $e($g['geburtsjahr']) ?></td></tr>
+				<?php endif; ?>
+				<tr><td class="label bottom-line">Archive:</td><td class="value bottom-line"><?= $e(implode(', ', array_map(static function ($a) use ($archivname) { return $archivname[$a] ?? $a; }, array_filter(explode(',', (string) $g['archive']))))) ?></td></tr>
+				<tr><td class="label bottom-line">Archivnummer:</td><td class="value bottom-line">G<?= (int) $g['id'] ?></td></tr>
+			</tbody>
+		</table>
+	</div>
+
+	<?php if(!$this->kartei): ?>
+		<p>Keine Karteieinträge.</p>
+	<?php else: ?>
+		<div class="table_responsiv">
+			<table class="body">
+				<thead>
+					<tr>
+						<th class="right-line">Quelle</th>
+						<th class="right-line">Jahr</th>
+						<th class="right-line">Turnier</th>
+						<th class="right-line">Pkt.</th>
+						<th class="right-line">Par.</th>
+						<th class="right-line">We</th>
+						<th class="right-line">E</th>
+						<th class="right-line">Gegn.</th>
+						<th class="right-line">Lstg.</th>
+						<th>DWZ</th>
+					</tr>
+				</thead>
+				<tbody>
+				<?php foreach($this->kartei as $d): ?>
+					<tr class="elobase<?= !empty($d['vor']) ? ' wp-vor-mitgliedschaft' : '' ?>"<?= !empty($d['vor']) ? ' title="Turnier vor der ersten Mitgliedschaft"' : '' ?>>
+						<td class="col_0 right-line bottom-line"><?= $d['nummer'] ?></td>
+						<td class="right-line bottom-line"><?= $d['jahr'] ?></td>
+						<td class="right-line bottom-line"><?= $d['turnier'] ?></td>
+						<td class="right-line bottom-line"><?= $d['punkte'] ?></td>
+						<td class="right-line bottom-line"><?= $d['partien'] ?></td>
+						<td class="right-line bottom-line"><?= $d['we'] ?></td>
+						<td class="right-line bottom-line"><?= $d['e'] ?></td>
+						<td class="right-line bottom-line"><?= $d['gegner'] ?></td>
+						<td class="right-line bottom-line"><?= $d['leistung'] ?></td>
+						<td class="bottom-line"><?= $d['dwz-neu'] ?></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+		</div>
+	<?php endif; ?>
+
+</div>

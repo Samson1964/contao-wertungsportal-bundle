@@ -53,6 +53,29 @@
 	</table>
 <?php endif; ?>
 
+<?php if($this->archiv): ?>
+	<?php // Spieler, die nur noch im Wertungsarchiv stehen (ab 2.0.0), nur für Mitglieder mit Zugriff ?>
+	<h3 class="wp-archiv-treffer">Aus dem Wertungsarchiv (heute nicht mehr gemeldet): <?= count($this->archiv) ?></h3>
+	<table class="body">
+		<thead>
+			<tr>
+				<th class="right-line">Spielername</th>
+				<th class="right-line">Geb.</th>
+				<th>Archive</th>
+			</tr>
+		</thead>
+		<tbody>
+		<?php foreach($this->archiv as $a): ?>
+			<tr>
+				<td class="right-line bottom-line"><a href="<?= \Contao\StringUtil::specialchars($a['link']) ?>"><?= \Contao\StringUtil::specialchars($a['name']) ?></a></td>
+				<td class="right-line bottom-line"><?= \Contao\StringUtil::specialchars($a['geburtsjahr']) ?></td>
+				<td class="bottom-line"><?= \Contao\StringUtil::specialchars(str_replace(array('elobase', 'dewis', 'wp'), array('ELOBASE', 'DeWIS', 'Portal'), $a['archive'])) ?></td>
+			</tr>
+		<?php endforeach; ?>
+		</tbody>
+	</table>
+<?php endif; ?>
+
 <?php if($this->debugausgabe): ?>
 <pre>
 	<?php print_r($this->debugausgabe); ?>

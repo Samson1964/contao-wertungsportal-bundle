@@ -86,6 +86,11 @@ $GLOBALS['BE_MOD']['wertungsportal'] = array
 		// Gezieltes Leeren einzelner Cache-Einträge (Turnier, Spieler, Verein)
 		'callback'       => 'Schachbulle\ContaoWertungsportalBundle\Classes\Cacheverwaltung',
 	),
+	// Wertungsarchiv (ab 2.0.0): Daten in der eigenen Archivdatenbank, daher kein DCA
+	'wp-archiv' => array
+	(
+		'callback'       => 'Schachbulle\ContaoWertungsportalBundle\Classes\Wertungsarchiv',
+	),
 	'wp-rohdaten' => array
 	(
 		// Antwort einer Schnittstellenfunktion unveraendert als Datei

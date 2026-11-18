@@ -94,6 +94,15 @@ class Turnier extends \Contao\Module
 			return;
 		}
 
+		// Turnier aus dem Wertungsarchiv (ab 2.0.0): „A<id>" oder ein
+		// ELOBASE-Code, den nu nicht kennt. Nur für Mitglieder mit Zugriff
+		// (Wertungsarchiv\Zugriff); DeWIS-Codes leitet alterCode() schon auf
+		// die jüngere Fassung bei nu weiter
+		if(!$search && $turniercode !== '' && !\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::istUuid($turniercode) && $this->archivTurnier((string) \Contao\Input::get('code')))
+		{
+			return;
+		}
+
 		if($search)
 		{
 			/*********************************************************
@@ -536,6 +545,68 @@ class Turnier extends \Contao\Module
 		$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation();
 		$this->Template->subHeadline = 'Turniercode '.\Contao\StringUtil::specialchars((string) $code);
 		$this->Template->altcodeAuswahl = $auswahl;
+
+		return true;
+	}
+
+	/**
+	 * Zeigt ein Turnier aus dem Wertungsarchiv (Etappe 3, ab 2.0.0).
+	 *
+	 * Adressen: `turniere/A<id>` (archiv_turnier.id, so verlinkt die
+	 * Karteikarte) oder `turniere/<ELOBASE-Code>` (alte Verweise aus der Zeit
+	 * vor DeWIS). Angezeigt wird der gemeinsame Teil der Turnier-JSON:
+	 * Turnierkopf und Teilnehmer; Rekonstruktionen und Abweichungen von der
+	 * Kartei werden vermerkt. Teilnehmer mit NU-Nummer verlinken auf ihre
+	 * Karteikarte.
+	 *
+	 * Ohne Zugriff (Wertungsarchiv\Zugriff) geschieht nichts — die Adresse
+	 * geht den bisherigen Weg zu nu und endet dort mit „nicht gefunden".
+	 *
+	 * @param string $code Code aus der Adresse, keine UUID
+	 *
+	 * @return bool true, wenn die Seite vorbereitet ist (compile() endet dann)
+	 */
+	protected function archivTurnier($code)
+	{
+		global $objPage;
+
+		if(!\Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Zugriff::erlaubt()) return false;
+
+		try
+		{
+			$archiv = \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Archiv::aus(\Contao\System::getContainer()->get(\Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Verbindung::class));
+			if(!$archiv) return false;
+
+			$turnier = preg_match('/^A(\d+)$/', $code, $m) ? $archiv->turnier((int) $m[1]) : $archiv->elobaseTurnier($code);
+			if(!$turnier) return false;
+
+			$json = $archiv->json($turnier);
+			$teilnehmer = $json ? \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Darstellung::zeilen((array) ($json['teilnehmer'] ?? array())) : array();
+			$nu = $archiv->nuNachKennung(array_column($teilnehmer, 'person'));
+		}
+		catch(\Throwable $e)
+		{
+			\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::systemlog('Wertungsarchiv: Turnier '.$code.' nicht lesbar — '.$e->getMessage(), __METHOD__, 'ERROR');
+
+			return false;
+		}
+
+		$kopf = (array) ($json['turnier'] ?? array());
+		$name = (string) ($kopf['name'] ?? $turnier['name'] ?? $turnier['quell_id']);
+
+		$objPage->pageTitle = $name;
+
+		$this->Template = new \Contao\FrontendTemplate('wertungsportal_archivturnier');
+		$this->Template->hl = 'h1';
+		$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation();
+		$this->Template->subHeadline = $name;
+		$this->Template->turnier = $turnier;
+		$this->Template->kopf = $kopf;
+		$this->Template->json = $json;
+		$this->Template->teilnehmer = $teilnehmer;
+		$this->Template->nu = $nu;
+		$this->Template->spielerseite = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseiteUrl();
+		$this->Template->suffix = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix();
 
 		return true;
 	}
