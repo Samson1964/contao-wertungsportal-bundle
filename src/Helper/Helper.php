@@ -1668,10 +1668,82 @@ class Helper extends \Contao\Frontend
 	 */
 	public static function Spielername($person)
 	{
-		if($person['nuLigaPersonId']) $return = sprintf('<a href="'.self::getSpielerseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">%s</a>', $person['nuLigaPersonId'], sprintf('%s, %s', $person['lastname'], $person['firstname']));
-		else $return = sprintf('%s', sprintf('%s, %s', $person['lastname'], $person['firstname']));
+		// Akademischer Titel hinten an (ab 1.59.0): „Müller, Hans, Dr."
+		$name = self::mitTitel(sprintf('%s, %s', $person['lastname'], $person['firstname']), self::titel($person['nuLigaPersonId'] ?? ''), ', ');
+
+		if($person['nuLigaPersonId']) $return = sprintf('<a href="'.self::getSpielerseiteUrl().'/%s'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix().'">%s</a>', $person['nuLigaPersonId'], $name);
+		else $return = $name;
 
 		return $return;
+	}
+
+	/**
+	 * Titel je NU-Nummer, einmal je Seitenaufruf geladen; null = noch nicht.
+	 *
+	 * @var array<string,string>|null
+	 */
+	protected static $titelListe = null;
+
+	/**
+	 * Liefert den akademischen Titel eines Spielers („Dr.", „Prof. Dr." …).
+	 *
+	 * Der Titel kommt aus dem monatlichen Spieler-Import der
+	 * Mitgliederverwaltung (Spalte „Titel" → tl_wertungsportal_persons.titel),
+	 * nicht von nu. Beim ersten Aufruf werden alle Titel auf einmal geladen —
+	 * im Export vom 02.11.2026 waren es 2.694 Personen —, damit eine Liste mit
+	 * hunderten Spielern keine Abfrage je Zeile auslöst.
+	 *
+	 * @param mixed $nuId NU-Nummer (nuLigaPersonId), leer für Teilnehmer ohne Person
+	 *
+	 * @return string Titel, '' wenn keiner hinterlegt ist oder die Datenbank
+	 *                nicht erreichbar war
+	 */
+	public static function titel($nuId)
+	{
+		$nuId = (string) $nuId;
+		if($nuId === '') return '';
+
+		if(self::$titelListe === null)
+		{
+			self::$titelListe = array();
+
+			try
+			{
+				$objTitel = \Contao\Database::getInstance()->execute("SELECT nuLigaPersonId, titel FROM tl_wertungsportal_persons WHERE titel != '' AND nuLigaPersonId != ''");
+
+				while($objTitel->next())
+				{
+					self::$titelListe[(string) $objTitel->nuLigaPersonId] = trim((string) $objTitel->titel);
+				}
+			}
+			catch(\Throwable $e)
+			{
+				// Ohne Titel weiterarbeiten — ein Name ist auch ohne „Dr." richtig
+			}
+		}
+
+		return self::$titelListe[$nuId] ?? '';
+	}
+
+	/**
+	 * Hängt den Titel an einen Namen in der Form „Nachname, Vorname".
+	 *
+	 * Schreibweise nach Vorgabe von Frank Binding (18.11.2026): Der Titel
+	 * steht hinten, wie in den DWZ-Listen des DSB („Müller,Hans,Dr."). Das
+	 * Trennzeichen richtet sich nach der Stelle — die Listen schreiben
+	 * „Müller, Hans", die Karteikarte „Müller,Hans".
+	 *
+	 * @param string $name     Name ohne Titel
+	 * @param string $titel    Titel, '' für keinen
+	 * @param string $trenner  Zeichen zwischen Name und Titel, z. B. ', ' oder ','
+	 *
+	 * @return string Name mit Titel, ohne Titel unverändert
+	 */
+	public static function mitTitel($name, $titel, $trenner = ', ')
+	{
+		$titel = trim((string) $titel);
+
+		return $titel === '' ? (string) $name : $name.$trenner.$titel;
 	}
 
 	/**

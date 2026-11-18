@@ -1,5 +1,14 @@
 # Wertungsportal Changelog
 
+## Version 1.59.0 (2026-11-18)
+
+* Add: **Akademische Titel** aus dem monatlichen Spieler-Import (Spalte „Titel") erscheinen an
+  den Spielernamen: in Listen hinten an („Müller, Hans, Dr.") — Spielersuche, Vereinsliste,
+  DWZ-Listen der Verbände, Bestenliste, Turnierauswertung, -ergebnisse, Spielberichtsbogen —, in
+  den Überschriften von Karteikarte und Spielberichtsbogen vorn („Dr. Hans Müller"). Die Titel
+  werden einmal je Seitenaufruf geladen (rund 2.700 Personen)
+* Add: Vereinslisten-Schnittstelle liefert das Feld `akademischerTitel` (`titel` bleibt der FIDE-Titel)
+
 ## Version 1.58.0 (2026-11-14)
 
 * Add: **Alte Turniercodes aus DeWIS** (Export aus portal64, 66.685 Turniere) in der neuen Tabelle

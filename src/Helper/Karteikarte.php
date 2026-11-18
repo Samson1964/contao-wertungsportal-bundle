@@ -45,8 +45,11 @@ class Karteikarte
 		 * Kopfdaten
 		*/
 
-		$this->daten['Spielername']  = sprintf("%s,%s", $body['lastname'], $body['firstname']);
-		$this->daten['Titelname']    = $body['firstname'].' '.$body['lastname'];
+		// Akademischer Titel aus dem Spieler-Import (ab 1.59.0): hinten an den
+		// Namen in Listenform, vorn in der Überschrift („Dr. Hans Müller")
+		$titel = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::titel($body['nuLigaPersonId'] ?? '');
+		$this->daten['Spielername']  = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::mitTitel(sprintf("%s,%s", $body['lastname'], $body['firstname']), $titel, ',');
+		$this->daten['Titelname']    = ($titel !== '' ? $titel.' ' : '').$body['firstname'].' '.$body['lastname'];
 		$this->daten['Geburtsjahr']  = $GLOBALS['TL_CONFIG']['wertungsportal_geburtsjahr_ausblenden'] ? '****' : $body['birthyear'];
 		$this->daten['Geschlecht']   = $GLOBALS['TL_CONFIG']['wertungsportal_geschlecht_ausblenden'] ? '*' : ($body['gender'] == 'MALE' ? 'M' : ($body['gender'] == 'FEMALE' ? 'W' : strtoupper($body['gender'])));
 		$this->daten['NuId']         = $body['nuLigaPersonId'];

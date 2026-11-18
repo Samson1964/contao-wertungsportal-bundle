@@ -608,6 +608,17 @@ fehlten gegenüber dem Bestand; `clubs?vkz=10100` → leere Liste, HTTP 200.
   4.13 den Dienst `mailer` (der ist austauschbar, `contao.mailer` nicht) → aufzeichnender Mailer
   im Prüfstand, Kopfzeilen To/Cc/Bcc lesen.
 
+## Akademische Titel an den Spielernamen (ab 1.59.0)
+
+- Quelle: `tl_wertungsportal_persons.titel` (Spieler-Import, Spalte „Titel"; Export 02.11.2026: 2.694 Personen, Werte
+  nur Dr., Prof. Dr., Prof., Dr. Dr.). `Helper::titel(nuId)` lädt beim ersten Aufruf ALLE Titel in eine Liste.
+- Schreibweise (Frank 18.11.2026: „Richtig ist Müller,Hans,Dr.", veröffentlichen ja, „alles"): hinten an,
+  Trennzeichen der Stelle (`Helper::mitTitel()`); Überschriften in Vorname-Nachname-Form mit Titel vorn
+  („DWZ-Karteikarte Dr. Hans Müller") — meine Lesart, gemeldet.
+- Vereinslisten-Schnittstelle: Feld `akademischerTitel` — `titel` ist dort der FIDE-Titel. Ranglisten
+  liefern `titel` (national) schon seit jeher. DWZ-/Swiss-Chess-Dateien und Insert-Tags unverändert (Namen
+  kommen dort aus den nu-Downloads bzw. es gibt keine).
+
 ## Alte Turniercodes aus DeWIS (ab 1.58.0)
 
 - Quelle: `mapping/tcode_uui.csv` (portal64 `tournamentmaster`, latin-1, `""` als Maskierung, 66.685 Zeilen;

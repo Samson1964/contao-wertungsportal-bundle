@@ -244,6 +244,9 @@ class VereinslisteApi
 				'id'              => $nuId,
 				'nachname'        => (string) ($person['lastname'] ?? ''),
 				'vorname'         => (string) ($person['firstname'] ?? ''),
+				// Akademischer Titel aus dem Spieler-Import (ab 1.59.0), '' wenn keiner.
+				// Nicht „titel" — das ist hier seit jeher der FIDE-Titel
+				'akademischerTitel' => \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::titel($nuId),
 				'geburtsjahr'     => (string) ($person['birthyear'] ?? ''),
 				'geschlecht'      => self::geschlecht((string) ($person['gender'] ?? '')),
 				'mitgliedsnummer' => $mitgliedsnummer,

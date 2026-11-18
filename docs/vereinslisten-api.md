@@ -45,6 +45,7 @@ Beide Parameter sind Pflicht. Erlaubt ist nur GET.
       "id": "1234567",
       "nachname": "Bauer",
       "vorname": "Bernd",
+      "akademischerTitel": "Dr.",
       "geburtsjahr": "1980",
       "geschlecht": "M",
       "mitgliedsnummer": "77",
@@ -72,6 +73,7 @@ Beide Parameter sind Pflicht. Erlaubt ist nur GET.
 | `letzteAuswertung` | Kalenderwoche der letzten Auswertung (JJJJ-WW) |
 | `elo` | FIDE-Wertung Standardschach, `null` wenn keine vorliegt |
 | `eloSchnell` / `eloBlitz` | FIDE-Wertungen für Schnell- und Blitzschach, `null` wenn keine vorliegt |
+| `akademischerTitel` | Akademischer Titel aus der Mitgliederverwaltung („Dr.", „Prof. Dr." …), leer wenn keiner (ab 1.59.0) |
 | `titel` / `nation` | FIDE-Titel und Nation, leer wenn nichts vorliegt |
 | `quelle` | `api`, `cache` oder `lokal` — woher die Daten stammen |
 
