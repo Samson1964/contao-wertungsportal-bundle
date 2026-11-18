@@ -187,7 +187,8 @@ $link = static function (string $parameter): string {
 			<p class="tl_help wp-werkzeug-text">
 				Eine abgelehnte Kante trennt die Gruppe beim nächsten Lauf von
 				<code>wertungsportal:archiv-personen</code>; bis dahin bleibt die Zuordnung, wie sie ist.
-				Jede Änderung steht im Systemprotokoll.
+				Jede Änderung steht im Systemprotokoll. „Entfallen“ heißt: Der jüngste Abzug führt die Kante
+				nicht mehr; sie verbindet nichts, kommt aber zurück, sobald ein Abzug sie wieder enthält.
 			</p>
 			<div class="wp-stat-scroll">
 			<table class="tl_listing wp-stat-tabelle">
@@ -195,13 +196,14 @@ $link = static function (string $parameter): string {
 				<tbody>
 				<?php foreach($this->daten['kanten'] as $k): ?>
 					<?php $neu = $k['status'] === 'abgelehnt' ? 'bestaetigt' : 'abgelehnt'; ?>
-					<tr<?= $k['status'] === 'abgelehnt' ? ' style="opacity:.6"' : '' ?>>
+					<tr<?= $k['status'] !== 'bestaetigt' ? ' style="opacity:.6"' : '' ?>>
 						<td><code><?= $maske($k['von']) ?></code> <?= $maske($k['von_name']) ?><?= (int) $k['von_gesamt'] !== (int) $g['id'] && $k['von_gesamt'] ? ' <a href="'.$maske($link('gesamt='.(int) $k['von_gesamt'])).'">#'.(int) $k['von_gesamt'].'</a>' : '' ?></td>
 						<td><code><?= $maske($k['nach']) ?></code> <?= $maske($k['nach_name']) ?><?= (int) $k['nach_gesamt'] !== (int) $g['id'] && $k['nach_gesamt'] ? ' <a href="'.$maske($link('gesamt='.(int) $k['nach_gesamt'])).'">#'.(int) $k['nach_gesamt'].'</a>' : '' ?></td>
 						<td><?= $maske($k['quelle']) ?></td>
 						<td><?= $maske($k['gewicht'] ?? '') ?></td>
-						<td><?= $maske($k['status']) ?></td>
+						<td><?= $k['status'] === 'entfallen' ? '<span title="Der jüngste Abzug führt diese Kante nicht mehr">entfallen</span>' : $maske($k['status']) ?></td>
 						<td>
+							<?php if($k['status'] !== 'entfallen'): ?>
 							<form action="<?= $maske(\Contao\Environment::get('request')) ?>" method="post" style="margin:0">
 								<input type="hidden" name="FORM_SUBMIT" value="wp_archiv_kante">
 								<input type="hidden" name="REQUEST_TOKEN" value="<?= $maske($this->token) ?>">
@@ -209,6 +211,7 @@ $link = static function (string $parameter): string {
 								<input type="hidden" name="status" value="<?= $neu ?>">
 								<button type="submit" class="tl_submit"<?= $neu === 'abgelehnt' ? ' onclick="return confirm(\'Diese Kante ablehnen? Die Gruppe wird beim nächsten Lauf von archiv-personen getrennt.\')"' : '' ?>><?= $neu === 'abgelehnt' ? 'Ablehnen' : 'Wieder bestätigen' ?></button>
 							</form>
+							<?php endif; ?>
 						</td>
 					</tr>
 				<?php endforeach; ?>

@@ -20,6 +20,10 @@
   Rundenansicht
 * Add: **Archivwerte im DWZ-Diagramm** der Karteikarte (grau hinterlegt, ohne geschätzte Leistung),
   Diagramm auch auf der Archiv-Karteikarte `spieler/G<Nummer>`
+* Add: **Monatlicher Abzug des Wertungsportals**: `archiv-import wp` erklärt Brücken, die der neue
+  Abzug nicht mehr führt, für „entfallen“ (Schemafassung 4, Spalte `archiv_kante.gesehen` —
+  `archiv-schema --force`), schützt Klarnamen vor Hash- und Leernamen und meldet Turniere und
+  Personen, die nicht mehr in der Übergabe stehen
 * Change: `doctrine/dbal` ist jetzt eine direkte Abhängigkeit (^3.3 || ^4.0)
 
 ## Version 1.59.0 (2026-11-18)

@@ -108,4 +108,33 @@ class ImporteurTest extends TestCase
 
         $this->assertSame(array(), Importeur::kanten('wp', array('person' => 'W:1-2', 'erg_dewis_person' => null)));
     }
+
+    /**
+     * Hashnamen und Namen ohne Buchstaben sind keine Klarnamen — sie dürfen
+     * einen vorhandenen Namen beim monatlichen Abzug nicht überschreiben.
+     */
+    public function testKlarname(): void
+    {
+        $this->assertSame('Aanstoot, Gerd', Importeur::klarname('Aanstoot, Gerd'));
+        $this->assertSame('Ли, Ан', Importeur::klarname('Ли, Ан'));
+        $this->assertNull(Importeur::klarname('0280F8ACBD6337FC, 3F54FDEBA5269772'));
+        $this->assertNull(Importeur::klarname('0280F8ACBD6337FC,3F54FDEBA5269772'));
+        $this->assertNull(Importeur::klarname(','));
+        $this->assertNull(Importeur::klarname(''));
+        $this->assertNull(Importeur::klarname(null));
+    }
+
+    /**
+     * Nur Kanten, deren Ausgangsperson zum Archiv gehört, kann ein neuer
+     * Abzug für entfallen erklären; ELOBASE führt keine eigenen.
+     */
+    public function testEigeneKanten(): void
+    {
+        $this->assertSame(array('N:', 'W:'), Importeur::EIGENE_KANTEN['wp']);
+        $this->assertSame(array(), Importeur::EIGENE_KANTEN['elobase']);
+
+        foreach (Importeur::kanten('wp', array('person' => 'W:1-2', 'erg_dewis_person' => 'D:5', 'erg_dewis_dublette' => 'D:6')) as $k) {
+            $this->assertSame('W:', substr($k['von'], 0, 2));
+        }
+    }
 }

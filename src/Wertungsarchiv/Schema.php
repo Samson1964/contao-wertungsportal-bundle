@@ -29,7 +29,7 @@ class Schema
     /**
      * Fassung des Schemas; wird in archiv_info vermerkt.
      */
-    public const FASSUNG = 3;
+    public const FASSUNG = 4;
 
     /**
      * Baut das Soll-Schema.
@@ -116,7 +116,9 @@ class Schema
 
         // Kanten zwischen Personen verschiedener Archive (Brücke). Alle Kanten
         // der Übergabe gelten als bestätigt (Frank, 18.11.2026); der Status
-        // bleibt, damit sich eine Zusammenführung zurücknehmen lässt
+        // bleibt, damit sich eine Zusammenführung zurücknehmen lässt.
+        // Status: bestaetigt, abgelehnt (von Hand), entfallen (fehlt im
+        // jüngsten Abzug, siehe Importeur::personen())
         $t = $schema->createTable('archiv_kante');
         $t->addColumn('id', Types::INTEGER, array('unsigned' => true, 'autoincrement' => true));
         $t->addColumn('von', Types::STRING, array('length' => 48) + $genau);
@@ -125,6 +127,9 @@ class Schema
         $t->addColumn('gewicht', Types::INTEGER, array('notnull' => false));
         $t->addColumn('status', Types::STRING, array('length' => 16, 'default' => 'bestaetigt'));
         $t->addColumn('geaendert', Types::INTEGER, array('unsigned' => true, 'default' => 0));
+        // Zeitpunkt des letzten Imports, dessen Übergabe die Kante führte (ab
+        // Fassung 4): Daran erkennt der monatliche Abzug entfallene Brücken
+        $t->addColumn('gesehen', Types::INTEGER, array('unsigned' => true, 'default' => 0));
         $t->setPrimaryKey(array('id'));
         $t->addUniqueIndex(array('von', 'nach', 'quelle'), 'kante_paar');
         $t->addIndex(array('nach'), 'kante_nach');

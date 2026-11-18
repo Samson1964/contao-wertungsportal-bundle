@@ -73,6 +73,9 @@ class ArchivImportCommand extends Command
                 ."aufs ältere Archiv, die Personen müssen dafür nicht schon da sein.\n"
                 ."Wiederholbar: Turniere und Personen werden aktualisiert, die Kartei des\n"
                 ."Archivs ersetzt. Vorher wertungsportal:archiv-schema --force.\n\n"
+                ."Monatlicher Abzug des Wertungsportals: neue Übergabe nach\n"
+                ."WERTUNGSARCHIV_PFAD/wp, dann archiv-import wp und archiv-personen. Kanten,\n"
+                ."die der neue Abzug nicht mehr führt, werden „entfallen“ (nicht gelöscht).\n\n"
                 ."Beispiele:\n"
                 ."  wertungsportal:archiv-import elobase\n"
                 ."  wertungsportal:archiv-import wp /pfad/zur/uebergabe/wp --nur=kartei\n"
@@ -160,6 +163,8 @@ class ArchivImportCommand extends Command
                 $p = $importeur->personen($archiv, $ordner);
                 $ergebnis[] = array('Personen', $p['personen'], round(microtime(true) - $t).' s');
                 $ergebnis[] = array('Kanten (gelesen)', $p['kanten'], '');
+                $ergebnis[] = array('Kanten entfallen', $p['entfallen'], '');
+                $ergebnis[] = array('Kanten wieder da', $p['wieder'], '');
             } else {
                 $ergebnis[] = array('Kartei', $importeur->kartei($archiv, $ordner), round(microtime(true) - $t).' s');
             }
@@ -168,6 +173,18 @@ class ArchivImportCommand extends Command
         $db->executeStatement('REPLACE INTO archiv_info (schluessel, wert) VALUES (?, ?)', array('import_'.$archiv, json_encode(array('erstellt' => $uebergabe['erstellt'] ?? null, 'importiert' => date('c'), 'teile' => $teile), JSON_UNESCAPED_UNICODE)));
 
         $io->table(array('Teil', 'Zeilen', 'Dauer'), $ergebnis);
+
+        // Was der neue Abzug nicht mehr führt, bleibt stehen — nur melden
+        $uebrig = $importeur->uebrig($archiv, $uebergabe);
+
+        if ($uebrig['turniere'] > 0 || $uebrig['personen'] > 0) {
+            $io->note(sprintf('Nicht mehr in der Übergabe, aber in der Datenbank: %d Turniere, %d Personen. Sie bleiben stehen (der Import löscht nichts).', $uebrig['turniere'], $uebrig['personen']));
+        }
+
+        if (\in_array('personen', $teile, true)) {
+            $io->note('Jetzt wertungsportal:archiv-personen laufen lassen — erst danach gelten neue und entfallene Kanten in der Ausgabe (Gesamtpersonen).');
+        }
+
         $io->success('Archiv „'.$archiv.'" übernommen in '.round(microtime(true) - $start).' s.');
 
         return 0;

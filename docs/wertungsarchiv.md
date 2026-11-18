@@ -166,6 +166,40 @@ We · 1000 → „7,215“. ELOBASE führt in der Kartei die **Erfolgszahl**, ni
 erscheint nicht in der Spalte „Lstg.“. Ein Fehler der Archivdatenbank kippt keine Seite: Er kommt ins
 Systemprotokoll, die Seite erscheint ohne Archiv.
 
+## Monatlicher Abzug des Wertungsportals (Etappe 4)
+
+Entscheidung 7.4 (Frank Binding, 18.11.2026): jeden Monat ein **neuer Abzug** aus dem Backend von
+nu, die Aufbereitung (W1–W5) läuft erneut, dann der Import. Das Bundle liest nichts aus den
+Spiegeltabellen. Ablauf:
+
+1. Aufbereitung erzeugt `ausgabe/wp/` neu (andere Sitzung, `Aufbereitung/README.md`).
+2. Den Ordner per FTP neben den alten legen (`wp.neu`), dann umbenennen: alten `wp` → `wp.alt`,
+   `wp.neu` → `wp`. So zeigen die Turnierseiten nie auf halb übertragene Dateien.
+3. Import und Gesamtpersonen:
+
+```bash
+vendor/bin/contao-console wertungsportal:archiv-import wp
+```
+
+```bash
+vendor/bin/contao-console wertungsportal:archiv-personen
+```
+
+4. Läuft alles, `wp.alt` löschen.
+
+Was der Import dabei tut:
+
+| Was | Wie |
+| --- | --- |
+| Turniere, Personen | aktualisiert über `turnier` bzw. `person`; IDs und damit die Adressen `turniere/A<Nummer>` bleiben. Nichts wird gelöscht: Was der neue Abzug nicht mehr führt, meldet der Befehl („Nicht mehr in der Übergabe …“). |
+| Namen | Ein Name ohne Buchstaben oder ein Hashname des Portals überschreibt keinen vorhandenen Namen (`Importeur::klarname()`, UEBERGABE.md 3). |
+| Kartei | Die Kartei des Portals wird ganz ersetzt. Während des Imports (gemessen 13½ Minuten, davon 10 für die Kartei) fehlen auf den Karteikarten die Portalzeilen des Archivs — nachts laufen lassen. |
+| Kanten | Jede Kante trägt in `gesehen` den Zeitpunkt des letzten Imports, der sie führte. Kanten des Portals (`N:`/`W:` → `D:`), die der neue Abzug nicht mehr führt, werden **„entfallen“** — sonst hielte eine geänderte Brücke (W:x → D:a, jetzt → D:b) zwei fremde Personen zusammen. Taucht sie wieder auf, gilt sie wieder als bestätigt. Von Hand abgelehnte Kanten bleiben abgelehnt. PKZ-Kanten (ELOBASE ↔ DeWIS) sind abgeschlossen und bleiben unberührt. |
+
+Erst `archiv-personen` macht neue und entfallene Kanten in der Ausgabe wirksam. Im Backend steht eine
+entfallene Kante grau und ohne Knopf. Die Spalte `gesehen` kam mit Schemafassung 4 — einmal
+`wertungsportal:archiv-schema --force`.
+
 ## Stand
 
 - Etappe 1 (Datenbank, Schema, Import): umgesetzt, lokal mit der vollen Übergabe geprüft.
@@ -173,4 +207,5 @@ Systemprotokoll, die Seite erscheint ohne Archiv.
 - Etappe 3: Karteikarte mit älteren Turnieren, Archiv-Karteikarte G<Nummer>, Archivtreffer in der
   Spielersuche, Archivturniere A<Nummer> und ELOBASE-Codes. Ergebnisse als Kreuztabelle oder
   Rundenansicht. Archivwerte im DWZ-Diagramm.
-- Etappe 4 (monatlicher Abzug des Wertungsportals): offen.
+- Etappe 4 (monatlicher Abzug des Wertungsportals): Import nachführend (entfallene Kanten, Klarnamen,
+  Meldung übriger Zeilen). Offen auf Seiten der Aufbereitung: Rückfrage R4 (W1–W5 auf neuen Abzug).

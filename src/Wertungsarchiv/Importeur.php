@@ -201,6 +201,37 @@ class Importeur
     }
 
     /**
+     * Prüft, ob ein Name ein Klarname ist.
+     *
+     * Kein Klarname sind: leere Werte, Werte ohne einen einzigen Buchstaben
+     * (die Übergabe führt drei Portalpersonen mit dem Namen „,") und die
+     * Hashnamen des Portals („0280F8ACBD6337FC, 3F54FDEBA5269772"). Die
+     * Aufbereitung setzt Hashnamen schon auf null; geprüft wird trotzdem,
+     * weil die Regel „ein Hashname überschreibt nie einen Klarnamen"
+     * (UEBERGABE.md, 3) auch für jeden künftigen Abzug gelten muss.
+     *
+     * @param mixed $name Name aus der Personenliste
+     *
+     * @return string|null Der Name, oder null, wenn er kein Klarname ist
+     */
+    public static function klarname($name): ?string
+    {
+        if (!\is_string($name) || !preg_match('/\p{L}/u', $name) || preg_match('/^[0-9A-F]{16}\s*,\s*[0-9A-F]{16}$/', trim($name))) {
+            return null;
+        }
+
+        return $name;
+    }
+
+    /**
+     * Präfixe der Personenkennungen, deren Kanten ein Archiv selbst führt
+     * (Kante „von" = Person dieses Archivs). Nur diese Kanten kann ein neuer
+     * Abzug für entfallen erklären. Die PKZ-Kanten stehen in zwei Listen
+     * (ELOBASE und DeWIS) und bleiben deshalb außen vor.
+     */
+    public const EIGENE_KANTEN = array('elobase' => array(), 'dewis' => array('D:'), 'wp' => array('N:', 'W:'));
+
+    /**
      * Übernimmt die Turnierliste eines Archivs.
      *
      * Dubletten werden als Verweis auf das ältere Archiv eingetragen:
@@ -256,30 +287,41 @@ class Importeur
      * Ein Hashname überschreibt nie einen Klarnamen (UEBERGABE.md, 3): Die
      * Übergabe führt in `personen.name` schon den jüngsten Klarnamen; beim
      * Aktualisieren bleibt ein vorhandener Name stehen, wenn die neue Zeile
-     * keinen hat.
+     * keinen Klarnamen hat (klarname()).
+     *
+     * Kanten (monatlicher Abzug, Etappe 4): Jede gelesene Kante bekommt den
+     * Zeitpunkt dieses Laufs in `gesehen`. Eigene Kanten des Archivs
+     * (EIGENE_KANTEN), die der neue Abzug nicht mehr führt, werden danach
+     * „entfallen" — sonst hielte eine geänderte Brücke (W:x → D:a, jetzt
+     * W:x → D:b) über die alte Kante zwei fremde Personen zusammen. Eine
+     * entfallene Kante, die wieder auftaucht, gilt wieder als bestätigt.
+     * Von Hand abgelehnte Kanten bleiben abgelehnt. Gelöscht wird nichts.
+     * Das Nachführen läuft erst, wenn die ganze Liste gelesen ist — bricht
+     * der Import ab, bleibt der Kantenbestand, wie er war.
      *
      * @param string $archiv Kennung des Archivs
      * @param string $ordner Ordner der Übergabe dieses Archivs
      *
-     * @return array{personen:int,kanten:int}
+     * @return array{personen:int,kanten:int,entfallen:int,wieder:int}
      */
     public function personen(string $archiv, string $ordner): array
     {
         $felder = self::FELDER['personen'][$archiv];
         $personen = array();
         $kanten = array();
-        $zahl = array('personen' => 0, 'kanten' => 0);
+        $zahl = array('personen' => 0, 'kanten' => 0, 'entfallen' => 0, 'wieder' => 0);
         $jetzt = time();
 
         foreach (Liste::zeilen($ordner.'/personen.jsonl') as $zeile) {
             $w = self::spalten($felder, $zeile);
             $w['archiv'] = $archiv;
+            $w['name'] = self::klarname($w['name'] ?? null);
             $w['geburtsjahr'] = is_numeric($w['geburtsjahr'] ?? null) ? (int) $w['geburtsjahr'] : null;
             $personen[] = $w;
             ++$zahl['personen'];
 
             foreach (self::kanten($archiv, $zeile) as $k) {
-                $kanten[] = $k + array('status' => 'bestaetigt', 'geaendert' => $jetzt);
+                $kanten[] = $k + array('status' => 'bestaetigt', 'geaendert' => $jetzt, 'gesehen' => $jetzt);
                 ++$zahl['kanten'];
             }
 
@@ -298,7 +340,52 @@ class Importeur
         $this->schreibe('archiv_person', $personen, true, array('name'));
         $this->schreibe('archiv_kante', $kanten, true, array(), array('status', 'geaendert'));
 
+        // Wieder aufgetauchte Kanten bestätigen, nicht mehr geführte eigene
+        // Kanten für entfallen erklären
+        $zahl['wieder'] = (int) $this->db->executeStatement(
+            "UPDATE archiv_kante SET status = 'bestaetigt', geaendert = ? WHERE status = 'entfallen' AND gesehen = ?",
+            array($jetzt, $jetzt)
+        );
+
+        $praefixe = self::EIGENE_KANTEN[$archiv];
+
+        if ($praefixe) {
+            $zahl['entfallen'] = (int) $this->db->executeStatement(
+                "UPDATE archiv_kante SET status = 'entfallen', geaendert = ?
+                 WHERE status = 'bestaetigt' AND gesehen < ? AND quelle != 'pkz'
+                   AND (".implode(' OR ', array_fill(0, \count($praefixe), 'von LIKE ?')).')',
+                array_merge(array($jetzt, $jetzt), array_map(static function (string $p): string { return $p.'%'; }, $praefixe))
+            );
+        }
+
         return $zahl;
+    }
+
+    /**
+     * Zählt Turniere und Personen eines Archivs, die in der Datenbank stehen,
+     * aber nicht mehr in der Übergabe (etwa ein bei nu gelöschtes Turnier).
+     *
+     * Der Import löscht nichts (Turniere und Personen werden nur
+     * aktualisiert); diese Zahl zeigt, ob ein neuer Abzug etwas nicht mehr
+     * führt. Gerechnet über die Zeilenzahlen aus `uebergabe.json`: Jede Zeile
+     * der Liste steht nach dem Import in der Datenbank, der Rest ist übrig.
+     *
+     * @param string              $archiv    Kennung des Archivs
+     * @param array<string,mixed> $uebergabe Inhalt von uebergabe.json
+     *
+     * @return array{turniere:int,personen:int} Übrige Zeilen, 0 wenn keine
+     */
+    public function uebrig(string $archiv, array $uebergabe): array
+    {
+        $ergebnis = array();
+
+        foreach (array('turniere' => 'archiv_turnier', 'personen' => 'archiv_person') as $teil => $tabelle) {
+            $liste = (int) ($uebergabe['dateien'][$teil.'.jsonl']['zeilen'] ?? 0);
+            $bestand = (int) $this->db->fetchOne('SELECT COUNT(*) FROM '.$tabelle.' WHERE archiv = ?', array($archiv));
+            $ergebnis[$teil] = max(0, $bestand - $liste);
+        }
+
+        return $ergebnis;
     }
 
     /**
