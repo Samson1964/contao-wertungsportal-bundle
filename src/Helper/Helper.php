@@ -659,6 +659,14 @@ class Helper extends \Contao\Frontend
 				continue;
 			}
 
+			// Archivturnier „A<Nummer>/Ergebnisse" (ab 2.0.0)
+			if(preg_match('/^A\d+$/', (string) $schluessel) && 'Ergebnisse' === (string) \Contao\Input::get($schluessel))
+			{
+				\Contao\Input::setGet('code', $schluessel);
+				\Contao\Input::setGet('view', 'results');
+				continue;
+			}
+
 			if(!self::istUuid($schluessel)) continue;
 
 			// Der Lesezugriff streicht den Parameter aus der Liste der unbenutzten

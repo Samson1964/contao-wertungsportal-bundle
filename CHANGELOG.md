@@ -16,6 +16,8 @@
   auf der Karteikarte (Regel „jüngste Quelle“, Turniere vor der ersten Mitgliedschaft gekennzeichnet),
   Karteikarte `spieler/G<Nummer>` für Spieler ohne NU-Nummer, Archivtreffer in der Spielersuche,
   Archivturniere unter `turniere/A<Nummer>` und alten ELOBASE-Codes
+* Add: Ergebnisse der Archivturniere (`turniere/A<Nummer>/Ergebnisse`) als Kreuztabelle oder
+  Rundenansicht
 * Change: `doctrine/dbal` ist jetzt eine direkte Abhängigkeit (^3.3 || ^4.0)
 
 ## Version 1.59.0 (2026-11-18)

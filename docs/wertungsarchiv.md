@@ -154,6 +154,7 @@ Suche und Turnierseiten, wie sie waren.
 | Karteikarte `spieler/G<Nummer>` | Für Spieler **ohne NU-Nummer**, die nur noch im Archiv stehen: Name, Geburtsjahr, Archive, die ganze Kartei einschließlich der Portalzeilen aus dem Archiv. Mit NU-Nummer leitet die Adresse auf die normale Karteikarte weiter. |
 | Spielersuche | Zweite Trefferliste „Aus dem Wertungsarchiv (heute nicht mehr gemeldet)“ — Gesamtpersonen ohne NU-Nummer, gesucht in allen Schreibweisen („Müller, Klaus“, „Müller,Klaus“, „Mueller,Klaus“). |
 | Turnierseite `turniere/A<Nummer>` | Ein Turnier aus dem Archiv: Kopf, Teilnehmer mit DWZ vorher/nachher, Punkten, Partien, We, Leistung; Teilnehmer mit NU-Nummer verlinkt. Rekonstruktionen und Abweichungen von der Kartei sind vermerkt. |
+| Turnierseite `turniere/A<Nummer>/Ergebnisse` | Partien: **Kreuztabelle**, wenn jeder gegen jeden gespielt hat (bis 30 Spieler, mindestens 90 % aller Paare — an den Partien entschieden, weil DeWIS als Rundenzahl oft nur 5 führt), sonst **Rundenansicht** mit Ergebnis und Gegner je Runde. Ohne Farben: Der gemeinsame Teil führt keine (Rückfrage R3). Ein leeres Feld heißt, die Turnierdatei nennt kein Ergebnis. „Erg.“ zählt wie in der Auswertung nur gewertete Partien. |
 | Turnierseite `turniere/<ELOBASE-Code>` | Alte Verweise aus der Zeit vor DeWIS. DeWIS-Codes (auch die 2011–2013 in beiden Archiven) leiten wie seit 1.58.0 auf die jüngere Fassung bei nu. |
 
 **Turniere vor der ersten Mitgliedschaft** (`vor_erster_anmeldung = 1`) stehen grau mit gestrichelter
@@ -169,6 +170,6 @@ Systemprotokoll, die Seite erscheint ohne Archiv.
 - Etappe 1 (Datenbank, Schema, Import): umgesetzt, lokal mit der vollen Übergabe geprüft.
 - Etappe 2: Gesamtpersonen, Schalter in tl_member, Backend-Ansicht mit Ablehnen/Bestätigen von Kanten.
 - Etappe 3: Karteikarte mit älteren Turnieren, Archiv-Karteikarte G<Nummer>, Archivtreffer in der
-  Spielersuche, Archivturniere A<Nummer> und ELOBASE-Codes. Noch nicht: Partien/Kreuztabelle der
-  Archivturniere, Diagramm mit Archivwerten.
+  Spielersuche, Archivturniere A<Nummer> und ELOBASE-Codes. Ergebnisse als Kreuztabelle oder
+  Rundenansicht. Noch nicht: Diagramm mit Archivwerten.
 - Etappe 4 (monatlicher Abzug des Wertungsportals): offen.

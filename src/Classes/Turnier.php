@@ -583,6 +583,13 @@ class Turnier extends \Contao\Module
 			$json = $archiv->json($turnier);
 			$teilnehmer = $json ? \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Darstellung::zeilen((array) ($json['teilnehmer'] ?? array())) : array();
 			$nu = $archiv->nuNachKennung(array_column($teilnehmer, 'person'));
+
+			// Ergebnisse (…/Ergebnisse): Kreuztabelle oder Rundenansicht aus
+			// den Partien der Turnierdatei
+			$partien = $json ? \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Darstellung::zeilen((array) ($json['partien'] ?? array())) : array();
+			$ergebnisse = ('results' === \Contao\Input::get('view') && $partien)
+				? \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Ergebnistabelle::bauen($teilnehmer, $partien)
+				: null;
 		}
 		catch(\Throwable $e)
 		{
@@ -607,6 +614,11 @@ class Turnier extends \Contao\Module
 		$this->Template->nu = $nu;
 		$this->Template->spielerseite = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getSpielerseiteUrl();
 		$this->Template->suffix = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix();
+		$this->Template->ergebnisse = $ergebnisse;
+		$this->Template->hatPartien = (bool) $partien;
+		$adresse = \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/A'.(int) $turnier['id'];
+		$this->Template->linkAuswertung = $adresse.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix();
+		$this->Template->linkErgebnisse = $adresse.'/Ergebnisse'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix();
 
 		return true;
 	}

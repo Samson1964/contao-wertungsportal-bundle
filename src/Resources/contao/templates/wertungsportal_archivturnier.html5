@@ -67,8 +67,110 @@ usort($teilnehmer, static function ($a, $b) {
 		</table>
 	</div>
 
+	<?php if($this->hatPartien): ?>
+		<p class="wp-archiv-ansicht">
+			<?= $this->ergebnisse ? '<a href="'.$e($this->linkAuswertung).'">Auswertung</a>' : '<strong>Auswertung</strong>' ?>
+			|
+			<?= $this->ergebnisse ? '<strong>Ergebnisse</strong>' : '<a href="'.$e($this->linkErgebnisse).'">Ergebnisse</a>' ?>
+		</p>
+	<?php endif; ?>
+
 	<?php if(!$this->json): ?>
 		<p class="error">Zu diesem Turnier gibt es keine Turnierdatei — nur den Eintrag in der Turnierliste.</p>
+	<?php elseif($this->ergebnisse): ?>
+		<?php $erg = $this->ergebnisse; ?>
+		<p class="lokalhinweis">Die Archive führen keine Farben — die Tabelle zeigt Ergebnis und Gegner (Nummer der Zeile). Ein leeres Feld: Die Turnierdatei nennt für diese Partie kein Ergebnis. „Erg.“ zählt nur die gewerteten Partien.</p>
+
+		<?php // Obere Scrollleiste wie bei den Ergebnissen von nu (Skript unten) ?>
+		<div class="table_responsiv_top noprint"><div class="table_responsiv_top_inner"></div></div>
+		<div class="table_responsiv scrollsync">
+		<?php if($erg['kreuz']): ?>
+			<table class="body kreuztabelle">
+				<thead>
+					<tr class="head">
+						<th class="right-line">Nr.</th>
+						<th class="right-line">Spielername</th>
+						<th class="right-line">DWZ</th>
+						<th class="right-line" title="Punkte/Partien laut Auswertung — nur gewertete Partien">Erg.</th>
+						<?php foreach($erg['spieler'] as $g): ?>
+							<th class="kreuz-zelle right-line" title="<?= $e($g['name'] ?? '') ?>"><?= (int) $g['pos'] ?></th>
+						<?php endforeach; ?>
+					</tr>
+				</thead>
+				<tbody>
+				<?php foreach($erg['spieler'] as $s): ?>
+					<tr>
+						<td class="align-right right-line bottom-line"><?= (int) $s['pos'] ?></td>
+						<td class="right-line bottom-line"><?= $e($s['name'] ?? '–') ?></td>
+						<td class="right-line bottom-line"><?= Darstellung::dwz($s['dwz'], $s['index']) ?></td>
+						<td class="right-line bottom-line"><?= $e(Darstellung::punkte($s['punkte_halbe'])) ?><?= null !== $s['partien'] ? '/'.(int) $s['partien'] : '' ?></td>
+						<?php foreach($erg['spieler'] as $g): ?>
+							<?php if($g['pos'] === $s['pos']): ?>
+								<td class="kreuz-zelle kreuz-diagonale right-line bottom-line"></td>
+							<?php else: ?>
+								<td class="kreuz-zelle right-line bottom-line"><?php foreach(($s['kreuz'][$g['pos']] ?? array()) as $r): ?><span class="result"><?= $e($r) ?></span><?php endforeach; ?></td>
+							<?php endif; ?>
+						<?php endforeach; ?>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+		<?php else: ?>
+			<table class="body">
+				<thead>
+					<tr class="head">
+						<th class="right-line">Nr.</th>
+						<th class="right-line">Spielername</th>
+						<th class="right-line">DWZ</th>
+						<th class="right-line" title="Punkte/Partien laut Auswertung — nur gewertete Partien">Erg.</th>
+						<?php for($r = 1; $r <= $erg['runden']; $r++): ?>
+							<th class="<?= $r < $erg['runden'] ? 'right-line' : '' ?>"><?= $r ?></th>
+						<?php endfor; ?>
+					</tr>
+				</thead>
+				<tbody>
+				<?php foreach($erg['spieler'] as $s): ?>
+					<tr>
+						<td class="align-right right-line bottom-line"><?= (int) $s['pos'] ?></td>
+						<td class="right-line bottom-line"><?= $e($s['name'] ?? '–') ?></td>
+						<td class="right-line bottom-line"><?= Darstellung::dwz($s['dwz'], $s['index']) ?></td>
+						<td class="right-line bottom-line"><?= $e(Darstellung::punkte($s['punkte_halbe'])) ?><?= null !== $s['partien'] ? '/'.(int) $s['partien'] : '' ?></td>
+						<?php for($r = 1; $r <= $erg['runden']; $r++): ?>
+							<td class="right-line bottom-line">
+							<?php foreach(($s['runden'][$r] ?? array()) as $p): ?>
+								<div title="<?= $e($p['gegner_name'] ?? '') ?>"><span class="result"><?= $e($p['ergebnis']) ?></span> <span class="opponent"><?= null !== $p['gegner_pos'] ? (int) $p['gegner_pos'] : '' ?></span></div>
+							<?php endforeach; ?>
+							</td>
+						<?php endfor; ?>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+		<?php endif; ?>
+		</div>
+
+		<script>
+		(function()
+		{
+			// Obere Scrollleiste mit der Tabelle synchronisieren (wie bei nu)
+			document.querySelectorAll('.dewis .table_responsiv.scrollsync').forEach(function(unten)
+			{
+				var oben = unten.previousElementSibling;
+				if(!oben || !oben.classList.contains('table_responsiv_top')) return;
+				var inner = oben.firstElementChild;
+				var tabelle = unten.querySelector('table');
+				if(!tabelle) return;
+
+				function breite() { inner.style.width = tabelle.offsetWidth + 'px'; }
+				breite();
+				window.addEventListener('resize', breite);
+
+				var sperre = false;
+				oben.addEventListener('scroll', function() { if(sperre) return; sperre = true; unten.scrollLeft = oben.scrollLeft; sperre = false; });
+				unten.addEventListener('scroll', function() { if(sperre) return; sperre = true; oben.scrollLeft = unten.scrollLeft; sperre = false; });
+			});
+		})();
+		</script>
 	<?php else: ?>
 		<div class="table_responsiv">
 			<table class="body">
