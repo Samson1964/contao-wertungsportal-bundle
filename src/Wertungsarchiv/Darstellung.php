@@ -23,6 +23,41 @@ class Darstellung
     public const JAHRZEHNT = array('7' => 1970, '8' => 1980, '9' => 1990, 'A' => 2000, 'B' => 2010, 'C' => 2020);
 
     /**
+     * Kurzbezeichnung je Archiv für die Spalte Nr. bzw. Quelle.
+     */
+    public const KUERZEL = array('elobase' => 'ZDB', 'dewis' => 'DeWIS', 'wp' => 'Portal');
+
+    /**
+     * Langbezeichnung je Archiv für den Tooltip.
+     */
+    public const ARCHIVNAME = array('elobase' => 'ELOBASE (ZDB)', 'dewis' => 'DeWIS', 'wp' => 'Wertungsportal');
+
+    /**
+     * Archivsymbol (Karton mit Deckel und Griffschlitz) als Inline-SVG in
+     * Textfarbe. Eigene Zeichnung statt der academicons-Schriftart, damit
+     * weder eine Schrift noch eine Lizenzangabe nachgeladen werden muss.
+     */
+    public const SYMBOL = '<svg class="wp-archivsymbol" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path fill="currentColor" d="M1 2h14v4H1zM2 7h12v7H2zm4 2v1.5h4V9z"/></svg>';
+
+    /**
+     * Herkunft einer Archivzeile für die Spalte Nr. (Karteikarte) bzw.
+     * Quelle (Archivkarte): Archivsymbol, dahinter das Kürzel („ZDB",
+     * „DeWIS", „Portal"); Langname im Tooltip.
+     *
+     * @param string $archiv Archivkennung elobase, dewis oder wp; Unbekanntes
+     *                       erscheint maskiert als Kürzel
+     *
+     * @return string HTML
+     */
+    public static function quelle(string $archiv): string
+    {
+        $kuerzel = htmlspecialchars(self::KUERZEL[$archiv] ?? $archiv, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $name = htmlspecialchars(self::ARCHIVNAME[$archiv] ?? $archiv, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+        return '<span class="wp-archivquelle" title="Aus dem Wertungsarchiv: '.$name.'">'.self::SYMBOL.' '.$kuerzel.'</span>';
+    }
+
+    /**
      * Halbpunkte als Punktzahl: 9 → „4½", 8 → „4", 1 → „½".
      *
      * @param mixed $halbe Halbpunkte, null = keine Angabe
@@ -51,6 +86,26 @@ class Darstellung
     public static function we($we1000): string
     {
         return (null === $we1000 || '' === $we1000) ? '' : number_format((int) $we1000 / 1000, 3, ',', '');
+    }
+
+    /**
+     * Entwicklungskoeffizient E: ganze Zahlen ohne Nachkommastelle („30"),
+     * sonst mit Komma („39,3"). Das Portal liefert ihn als Kommazahl
+     * („28.0"), DeWIS und ELOBASE ganzzahlig.
+     *
+     * @param mixed $e Koeffizient, null/''/0 = keine Angabe
+     *
+     * @return string Anzeige, '' ohne Angabe oder bei nicht numerischem Wert
+     */
+    public static function e($e): string
+    {
+        if (!is_numeric($e) || 0.0 === (float) $e) {
+            return '';
+        }
+
+        $wert = round((float) $e, 1);
+
+        return floor($wert) === $wert ? (string) (int) $wert : number_format($wert, 1, ',', '');
     }
 
     /**
@@ -113,8 +168,12 @@ class Darstellung
      * - Turnier: Link auf `turniere/A<id>`, wenn es eine Turnierdatei gibt;
      *   Einträge ohne Turnier (Ausgangswerte, „ungültig:…") als
      *   „DWZ-Ausgangswert".
-     * - Leistung: nur die Turnierleistung (DeWIS). ELOBASE führt in der Kartei
+     * - Leistung: nur die Turnierleistung (DeWIS, Portal; ELOBASE erst mit
+     *   `erg_turnierleistung`, Rückfrage R5). ELOBASE führt in der Kartei
      *   die Erfolgszahl, die kein Leistungsmaß ist — sie bleibt weg.
+     * - E: `extra.e_koeffizient` (DeWIS, Portal), sonst
+     *   `extra.erg_e_koeffizient` (ELOBASE nach R5).
+     * - nummer: Archivsymbol mit Kürzel (quelle()), HTML.
      * - `vor`: Turnier vor der ersten Mitgliedschaft (Frank Binding,
      *   18.11.2026: kennzeichnen, nicht ausblenden).
      *
@@ -150,13 +209,13 @@ class Darstellung
         $archiv = (string) ($zeile['archiv'] ?? '');
 
         return array(
-            'nummer'   => array('elobase' => 'ZDB', 'dewis' => 'DeWIS', 'wp' => 'Portal')[$archiv] ?? $archiv,
+            'nummer'   => self::quelle($archiv),
             'jahr'     => self::jahr($zeile['t_ende'] ?? $zeile['ende'] ?? null, $code),
             'turnier'  => $turnier,
             'punkte'   => self::punkte($zeile['punkte_halbe'] ?? null),
             'partien'  => null === ($zeile['partien'] ?? null) ? '' : (string) (int) $zeile['partien'],
             'we'       => self::we($zeile['we1000'] ?? null),
-            'e'        => isset($extra['e_koeffizient']) ? $e($extra['e_koeffizient']) : '',
+            'e'        => self::e($extra['e_koeffizient'] ?? $extra['erg_e_koeffizient'] ?? null),
             'gegner'   => empty($zeile['gegnerschnitt']) ? '' : (string) (int) $zeile['gegnerschnitt'],
             'leistung' => empty($zeile['turnierleistung']) ? '' : (string) (int) $zeile['turnierleistung'],
             'dwz-neu'  => self::dwz($zeile['dwz'] ?? null, $zeile['dwz_index'] ?? null),
@@ -185,7 +244,7 @@ class Darstellung
         $archiv = (string) ($zeile['archiv'] ?? '');
 
         return array(
-            'nummer'      => array('elobase' => 'ZDB', 'dewis' => 'DeWIS', 'wp' => 'Portal')[$archiv] ?? $archiv,
+            'nummer'      => self::KUERZEL[$archiv] ?? $archiv,
             'jahr'        => self::jahr($zeile['t_ende'] ?? $zeile['ende'] ?? null, $code),
             'dwz'         => (int) ($zeile['dwz'] ?? 0),
             'leistung'    => (int) ($zeile['turnierleistung'] ?? 0),

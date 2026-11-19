@@ -218,7 +218,7 @@
 							<?php $x++; $class = ($x < count($this->altkartei)) ? ' bottom-line' : ''; ?>
 							<?php // Ältere Turniere aus dem Wertungsarchiv (ab 2.0.0); vor der ersten Mitgliedschaft gekennzeichnet ?>
 							<tr class="row_<?= $row ?> elobase<?= !empty($d['vor']) ? ' wp-vor-mitgliedschaft' : '' ?>"<?= !empty($d['vor']) ? ' title="Turnier vor der ersten Mitgliedschaft"' : '' ?>>
-								<td class="col_0<?= $class ?> right-line"><?= $d['nummer'] ?></td>
+								<td class="col_0<?= $class ?> wp-archivnr right-line"><?= $d['nummer'] ?></td>
 								<td class="col_1<?= $class ?> right-line"><?= $d['jahr'] ?></td>
 								<td class="col_2<?= $class ?> right-line"><?= $d['turnier'] ?></td>
 								<td class="col_3<?= $class ?> right-line"><?= $d['punkte'] ?></td>

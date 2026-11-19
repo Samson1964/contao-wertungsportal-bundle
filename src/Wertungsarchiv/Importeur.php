@@ -40,6 +40,11 @@ class Importeur
      * nicht steht, wandert nach `extra`. Felder, die nur zum Verknüpfen
      * dienen (Schlüssel, Brücke), stehen in SCHLUESSEL bzw. werden eigens
      * behandelt und ebenfalls nach `extra` geschrieben.
+     *
+     * Kartei ELOBASE: `erg_turnierleistung`, `erg_gegnerschnitt` (und
+     * `erg_e_koeffizient` in `extra`) liefert die Aufbereitung erst auf
+     * Rückfrage R5 aus der Turnierdatei nach; fehlen sie, bleiben die
+     * Spalten leer.
      */
     public const FELDER = array(
         'turniere' => array(
@@ -53,7 +58,7 @@ class Importeur
             'wp'      => array('kennung' => 'person', 'name' => 'name', 'geburtsjahr' => 'geburtsjahr'),
         ),
         'kartei' => array(
-            'elobase' => array('code' => 'code', 'quelle' => 'quelle', 'partien' => 'partien', 'punkte_halbe' => 'punkte_halbe', 'dwz_vorher' => 'erg_dwz_vorher', 'index_vorher' => 'erg_index_vorher', 'dwz' => 'dwz', 'dwz_index' => 'dwz_index', 'we1000' => 'we', 'leistung' => 'erfolg', 'einzelpartie' => 'erg_einzelpartie', 'vor_erster_anmeldung' => 'erg_vor_erster_anmeldung'),
+            'elobase' => array('code' => 'code', 'quelle' => 'quelle', 'partien' => 'partien', 'punkte_halbe' => 'punkte_halbe', 'dwz_vorher' => 'erg_dwz_vorher', 'index_vorher' => 'erg_index_vorher', 'dwz' => 'dwz', 'dwz_index' => 'dwz_index', 'we1000' => 'we', 'leistung' => 'erfolg', 'turnierleistung' => 'erg_turnierleistung', 'gegnerschnitt' => 'erg_gegnerschnitt', 'einzelpartie' => 'erg_einzelpartie', 'vor_erster_anmeldung' => 'erg_vor_erster_anmeldung'),
             'dewis'   => array('code' => 'code', 'ende' => 'ende', 'partien' => 'partien', 'punkte_halbe' => 'punkte_halbe', 'dwz_vorher' => 'dwz_vorher', 'index_vorher' => 'index_vorher', 'dwz' => 'dwz', 'dwz_index' => 'dwz_index', 'we1000' => 'we', 'turnierleistung' => 'turnierleistung', 'gegnerschnitt' => 'gegnerschnitt', 'vor_erster_anmeldung' => 'erg_vor_erster_anmeldung'),
             'wp'      => array('ende' => 'ende', 'partien' => 'partien', 'punkte_halbe' => 'punkte_halbe', 'dwz_vorher' => 'dwz_vorher', 'index_vorher' => 'index_vorher', 'dwz' => 'dwz', 'dwz_index' => 'dwz_index', 'we1000' => 'we1000', 'turnierleistung' => 'turnierleistung', 'gegnerschnitt' => 'gegnerschnitt'),
         ),

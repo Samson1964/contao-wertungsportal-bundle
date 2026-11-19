@@ -87,6 +87,24 @@ class ImporteurTest extends TestCase
     }
 
     /**
+     * ELOBASE-Kartei: Die auf Rückfrage R5 ergänzten Felder landen in den
+     * Spalten turnierleistung/gegnerschnitt, E in extra; ohne sie bleiben
+     * die Spalten leer (null), die Erfolgszahl bleibt `leistung`.
+     */
+    public function testElobaseKarteiErgaenzt(): void
+    {
+        $felder = Importeur::FELDER['kartei']['elobase'];
+        $mit = Importeur::spalten($felder, array('code' => '9309-642-V04', 'erfolg' => 2060, 'erg_turnierleistung' => 1990, 'erg_gegnerschnitt' => 1850, 'erg_e_koeffizient' => 17));
+
+        $this->assertSame(array(2060, 1990, 1850), array($mit['leistung'], $mit['turnierleistung'], $mit['gegnerschnitt']));
+        $this->assertSame('{"erg_e_koeffizient":17}', $mit['extra']);
+
+        $ohne = Importeur::spalten($felder, array('code' => '9309-642-V04', 'erfolg' => 2060));
+        $this->assertNull($ohne['turnierleistung']);
+        $this->assertNull($ohne['gegnerschnitt']);
+    }
+
+    /**
      * Kanten zeigen vom jüngeren aufs ältere Archiv. Die PKZ-Brücke steht in
      * ELOBASE (als Zahl) und DeWIS (als Kennung) — beide ergeben dieselbe
      * Kante, damit sie nur einmal entsteht.

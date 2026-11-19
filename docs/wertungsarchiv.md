@@ -150,10 +150,10 @@ Suche und Turnierseiten, wie sie waren.
 
 | Wo | Was |
 | --- | --- |
-| Karteikarte `spieler/NU…` | Unter den Turnieren von nu die **älteren Turniere** aus ELOBASE und DeWIS, neueste zuerst — nur solche, die keine jüngere Quelle führt (ein DeWIS-Turnier entfällt, wenn das Portal es hat; ein ELOBASE-Turnier, wenn DeWIS es hat). Die „Datenübernahme nach DeWIS“ zeigt nu selbst. Erste Spalte: ZDB oder DeWIS. |
+| Karteikarte `spieler/NU…` | Unter den Turnieren von nu die **älteren Turniere** aus ELOBASE und DeWIS, neueste zuerst — nur solche, die keine jüngere Quelle führt (ein DeWIS-Turnier entfällt, wenn das Portal es hat; ein ELOBASE-Turnier, wenn DeWIS es hat). Die „Datenübernahme nach DeWIS“ zeigt nu selbst. Erste Spalte: Archivsymbol mit „ZDB“ oder „DeWIS“, linksbündig (Langname im Tooltip). |
 | Karteikarte `spieler/G<Nummer>` | Für Spieler **ohne NU-Nummer**, die nur noch im Archiv stehen: Name, Geburtsjahr, Archive, die ganze Kartei einschließlich der Portalzeilen aus dem Archiv. Mit NU-Nummer leitet die Adresse auf die normale Karteikarte weiter. |
 | Spielersuche | Zweite Trefferliste „Aus dem Wertungsarchiv (heute nicht mehr gemeldet)“ — Gesamtpersonen ohne NU-Nummer, gesucht in allen Schreibweisen („Müller, Klaus“, „Müller,Klaus“, „Mueller,Klaus“). |
-| Turnierseite `turniere/A<Nummer>` | Ein Turnier aus dem Archiv: Kopf, Teilnehmer mit DWZ vorher/nachher, Punkten, Partien, We, Leistung; Teilnehmer mit NU-Nummer verlinkt. Rekonstruktionen und Abweichungen von der Kartei sind vermerkt. |
+| Turnierseite `turniere/A<Nummer>` | Ein Turnier aus dem Archiv: Kopf, Teilnehmer mit Verein, DWZ vorher/nachher, Punkten, Partien, We, E, Gegnerschnitt, Leistung; Teilnehmer mit NU-Nummer verlinkt. Rekonstruktionen und Abweichungen von der Kartei sind vermerkt. |
 | Turnierseite `turniere/A<Nummer>/Ergebnisse` | Partien: **Kreuztabelle**, wenn jeder gegen jeden gespielt hat (bis 30 Spieler, mindestens 90 % aller Paare — an den Partien entschieden, weil DeWIS als Rundenzahl oft nur 5 führt), sonst **Rundenansicht** mit Ergebnis und Gegner je Runde. Ohne Farben: Der gemeinsame Teil führt keine (Rückfrage R3). Ein leeres Feld heißt, die Turnierdatei nennt kein Ergebnis. „Erg.“ zählt wie in der Auswertung nur gewertete Partien. |
 | DWZ-Diagramm (Karteikarte NU… und G<Nummer>) | Die Archivwerte stehen vor den Werten von nu auf **grauem Grund** (Legende „Wertungsarchiv“). Die DWZ-Linie läuft durch; Leistung nur, wo das Archiv eine Turnierleistung führt (DeWIS, Portal) — für Archivturniere wird **nichts geschätzt**, weder aus Gegnerschnitt und Punkten noch durch Überbrücken (`archiv` = true am Punkt, `Darstellung::diagrammpunkt()`). Ab 50 Punkten wie bisher die letzten 50 plus Gesamtdiagramm. Die G-Karteikarte ist ganz grau, sie hat nur Archivwerte. |
 | Turnierseite `turniere/<ELOBASE-Code>` | Alte Verweise aus der Zeit vor DeWIS. DeWIS-Codes (auch die 2011–2013 in beiden Archiven) leiten wie seit 1.58.0 auf die jüngere Fassung bei nu. |
@@ -163,7 +163,18 @@ Linie links da, Erklärung im `title` (Frank Binding, 18.11.2026: kennzeichnen, 
 
 Einheiten werden nur für die Anzeige umgerechnet (`Wertungsarchiv\Darstellung`): Halbpunkte → „4½“,
 We · 1000 → „7,215“. ELOBASE führt in der Kartei die **Erfolgszahl**, nicht die Turnierleistung — sie
-erscheint nicht in der Spalte „Lstg.“. Ein Fehler der Archivdatenbank kippt keine Seite: Er kommt ins
+erscheint nicht in der Spalte „Lstg.“.
+
+**E, Gegnerschnitt und Leistung (19.11.2026):** DeWIS und Portal führen alle drei in der Kartei
+(E in `extra.e_koeffizient`). Die ELOBASE-Kartei führt keinen davon; die Turnierdatei hat Gegnerschnitt
+und Turnierleistung im gemeinsamen Teil, E nur roh (`efaktor`). Die Aufbereitung soll sie je Karteisatz als
+`erg_e_koeffizient`, `erg_gegnerschnitt`, `erg_turnierleistung` ergänzen (Rückfrage R5); das Bundle
+liest diese Namen bereits, danach `archiv-import elobase --nur=kartei`. In der Archivturnier-Ansicht
+stehen die Spalten „E“ und „Gegn.“; „E“ bleibt leer, bis die Turnierdateien `e_koeffizient` im
+gemeinsamen Teil führen (R5). Rekonstruierte Turniere (ohne Turnierdatei) haben weder Verein noch
+Gegnerschnitt oder Leistung.
+
+Ein Fehler der Archivdatenbank kippt keine Seite: Er kommt ins
 Systemprotokoll, die Seite erscheint ohne Archiv.
 
 ## Monatlicher Abzug des Wertungsportals (Etappe 4)
@@ -206,6 +217,7 @@ entfallene Kante grau und ohne Knopf. Die Spalte `gesehen` kam mit Schemafassung
 - Etappe 2: Gesamtpersonen, Schalter in tl_member, Backend-Ansicht mit Ablehnen/Bestätigen von Kanten.
 - Etappe 3: Karteikarte mit älteren Turnieren, Archiv-Karteikarte G<Nummer>, Archivtreffer in der
   Spielersuche, Archivturniere A<Nummer> und ELOBASE-Codes. Ergebnisse als Kreuztabelle oder
-  Rundenansicht. Archivwerte im DWZ-Diagramm.
+  Rundenansicht. Archivwerte im DWZ-Diagramm. Archivsymbol in der Spalte Nr./Quelle, Spalten E
+  und Gegn. im Archivturnier; E/Gegnerschnitt/Leistung für ELOBASE warten auf Rückfrage R5.
 - Etappe 4 (monatlicher Abzug des Wertungsportals): Import nachführend (entfallene Kanten, Klarnamen,
   Meldung übriger Zeilen). Offen auf Seiten der Aufbereitung: Rückfrage R4 (W1–W5 auf neuen Abzug).

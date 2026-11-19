@@ -24,6 +24,12 @@
   Abzug nicht mehr führt, für „entfallen“ (Schemafassung 4, Spalte `archiv_kante.gesehen` —
   `archiv-schema --force`), schützt Klarnamen vor Hash- und Leernamen und meldet Turniere und
   Personen, die nicht mehr in der Übergabe stehen
+* Add: Archivzeilen der Karteikarte (Spalte Nr.) und der Archiv-Karteikarte (Spalte Quelle) zeigen ein
+  **Archivsymbol** vor „ZDB“, „DeWIS“ bzw. „Portal“, linksbündig
+* Add: Archivturniere mit den Spalten **E** (Entwicklungskoeffizient) und **Gegn.** (Gegnerschnitt)
+* Add: Import der ELOBASE-Kartei übernimmt `erg_turnierleistung`, `erg_gegnerschnitt` und
+  `erg_e_koeffizient`, sobald die Aufbereitung sie liefert (Rückfrage R5)
+* Change: E erscheint ohne „.0“ und mit Komma („28“, „39,3“)
 * Change: `doctrine/dbal` ist jetzt eine direkte Abhängigkeit (^3.3 || ^4.0)
 
 ## Version 1.59.0 (2026-11-18)

@@ -57,7 +57,11 @@ class DarstellungTest extends TestCase
             't_id' => 42, 't_name' => 'Open <Test> & Co', 't_ende' => null, 't_json' => 'turniere/1995/9546-663-SXJ.json', 't_kennzeichen' => '',
         ), '/dwz-turniere', '.html');
 
-        $this->assertSame('ZDB', $z['nummer']);
+        $this->assertStringContainsString('wp-archivsymbol', $z['nummer']);
+        $this->assertStringEndsWith('</svg> ZDB</span>', $z['nummer']);
+        $this->assertStringContainsString('title="Aus dem Wertungsarchiv: ELOBASE (ZDB)"', $z['nummer']);
+        $this->assertSame('', $z['e']);
+        $this->assertSame('', $z['gegner']);
         $this->assertSame('1995', $z['jahr']);
         $this->assertStringContainsString('href="/dwz-turniere/A42.html"', $z['turnier']);
         $this->assertStringContainsString('Open &lt;Test&gt; &amp; Co', $z['turnier']);
@@ -68,7 +72,37 @@ class DarstellungTest extends TestCase
 
         $ausgang = Darstellung::karteizeile(array('archiv' => 'dewis', 'code' => 'B053-000-DWZ', 't_id' => 7, 't_kennzeichen' => 'kein_turnier', 'dwz' => 799, 'dwz_index' => 1), '/t', '');
         $this->assertSame('DWZ-Ausgangswert (B053-000-DWZ)', $ausgang['turnier']);
-        $this->assertSame('DeWIS', $ausgang['nummer']);
+        $this->assertStringEndsWith('</svg> DeWIS</span>', $ausgang['nummer']);
+    }
+
+    /**
+     * E, Gegnerschnitt und Turnierleistung: DeWIS und Portal aus Spalten
+     * bzw. extra.e_koeffizient, ELOBASE (nach Rückfrage R5) aus
+     * erg_e_koeffizient in extra.
+     */
+    public function testKoeffizientGegnerLeistung(): void
+    {
+        $d = Darstellung::karteizeile(array('archiv' => 'dewis', 'code' => 'B145-K00-ECO', 'gegnerschnitt' => 2499, 'turnierleistung' => 2523, 'extra' => '{"e_koeffizient":30}'), '/t', '');
+        $this->assertSame(array('30', '2499', '2523'), array($d['e'], $d['gegner'], $d['leistung']));
+
+        $w = Darstellung::karteizeile(array('archiv' => 'wp', 'extra' => '{"e_koeffizient":39.3}'), '/t', '');
+        $this->assertSame('39,3', $w['e']);
+
+        $z = Darstellung::karteizeile(array('archiv' => 'elobase', 'gegnerschnitt' => 1850, 'turnierleistung' => 1990, 'leistung' => 2060, 'extra' => '{"erg_e_koeffizient":17}'), '/t', '');
+        $this->assertSame(array('17', '1850', '1990'), array($z['e'], $z['gegner'], $z['leistung']));
+    }
+
+    /**
+     * Entwicklungskoeffizient: ganzzahlig ohne, sonst mit Komma; ohne Wert leer.
+     */
+    public function testE(): void
+    {
+        $this->assertSame('28', Darstellung::e('28.0'));
+        $this->assertSame('30', Darstellung::e(30));
+        $this->assertSame('39,3', Darstellung::e(39.3));
+        $this->assertSame('', Darstellung::e(0));
+        $this->assertSame('', Darstellung::e(null));
+        $this->assertSame('', Darstellung::e('x'));
     }
 
     /**

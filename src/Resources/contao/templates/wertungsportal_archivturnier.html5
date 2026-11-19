@@ -183,6 +183,8 @@ usort($teilnehmer, static function ($a, $b) {
 						<th class="right-line">Pkt.</th>
 						<th class="right-line">Par.</th>
 						<th class="right-line">We</th>
+						<th class="right-line" title="Entwicklungskoeffizient">E</th>
+						<th class="right-line" title="Gegnerschnitt">Gegn.</th>
 						<th class="right-line">Lstg.</th>
 						<th>DWZ nachher</th>
 					</tr>
@@ -205,6 +207,8 @@ usort($teilnehmer, static function ($a, $b) {
 						<td class="right-line bottom-line"><?= $e(Darstellung::punkte($s['punkte_halbe'] ?? null)) ?></td>
 						<td class="right-line bottom-line"><?= $e($s['partien'] ?? '') ?></td>
 						<td class="right-line bottom-line"><?= $e(Darstellung::we($s['we1000'] ?? null)) ?></td>
+						<td class="right-line bottom-line"><?= Darstellung::e($s['e_koeffizient'] ?? null) ?></td>
+						<td class="right-line bottom-line"><?= empty($s['gegnerschnitt']) ? '' : (int) $s['gegnerschnitt'] ?></td>
 						<td class="right-line bottom-line"><?= empty($s['turnierleistung']) ? '' : (int) $s['turnierleistung'] ?></td>
 						<td class="bottom-line"><?= Darstellung::dwz($s['dwz_nachher'] ?? null, $s['index_nachher'] ?? null) ?></td>
 					</tr>

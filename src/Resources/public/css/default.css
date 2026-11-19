@@ -579,6 +579,21 @@
 	cursor					: help;
 }
 
+/* Herkunft einer Archivzeile (Spalte Nr. bzw. Quelle): Archivsymbol, dahinter
+   „ZDB", „DeWIS" oder „Portal" — linksbündig, auch wenn das Theme die
+   Nummernspalte rechtsbündig setzt (Frank Binding, 19.11.2026) */
+.dewis table.body td.wp-archivnr {
+	text-align				: left;
+	white-space				: nowrap;
+}
+.dewis .wp-archivquelle {
+	cursor					: help;
+}
+.dewis .wp-archivsymbol {
+	vertical-align			: -2px;
+	color					: #5a6b7d;
+}
+
 /* Karteikarte: DWZ/Leistungs-Diagramm und Overlay (Lightbox) fuer alle Turniere */
 .dewis .diagramm {
 	margin-top				: 20px;

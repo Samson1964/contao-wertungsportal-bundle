@@ -65,7 +65,7 @@ $g = $this->gesamt;
 				<tbody>
 				<?php foreach($this->kartei as $d): ?>
 					<tr class="elobase<?= !empty($d['vor']) ? ' wp-vor-mitgliedschaft' : '' ?>"<?= !empty($d['vor']) ? ' title="Turnier vor der ersten Mitgliedschaft"' : '' ?>>
-						<td class="col_0 right-line bottom-line"><?= $d['nummer'] ?></td>
+						<td class="col_0 wp-archivnr right-line bottom-line"><?= $d['nummer'] ?></td>
 						<td class="right-line bottom-line"><?= $d['jahr'] ?></td>
 						<td class="right-line bottom-line"><?= $d['turnier'] ?></td>
 						<td class="right-line bottom-line"><?= $d['punkte'] ?></td>
