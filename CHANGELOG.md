@@ -32,6 +32,9 @@
 * Add: `archiv-import elobase` liest `dewis_ersatz.jsonl` (Rückfrage R1) und legt für ELOBASE-Personen,
   deren DeWIS-ID in DeWIS gelöscht wurde, eine Kante zur Ersatzperson an (Quelle `dewis_ersatz`,
   37 Kanten); nicht mehr geführte Ersatzkanten werden „entfallen“
+* Add: Ergebnisse der Archivturniere zeigen die **Farbe** (Rückfrage R3) wie die Ergebnisse von nu —
+  Rundenansicht hell/dunkel hinterlegt, Kreuztabelle weiß/grau, Tooltip „mit Weiß/Schwarz“;
+  ELOBASE führt keine Farbe, dort bleibt die Ansicht wie bisher
 * Change: E erscheint ohne „.0“ und mit Komma („28“, „39,3“)
 * Change: `doctrine/dbal` ist jetzt eine direkte Abhängigkeit (^3.3 || ^4.0)
 

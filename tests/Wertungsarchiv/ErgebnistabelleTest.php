@@ -59,7 +59,10 @@ class ErgebnistabelleTest extends TestCase
         $this->assertSame(4, $s1['pos']);
         // Die Vorlage liest über die Position; die Reihenfolge der Schlüssel folgt den Runden
         ksort($s1['kreuz']);
-        $this->assertSame(array(1 => array('1'), 2 => array('1'), 3 => array('1')), $s1['kreuz']);
+        $sieg = array(array('ergebnis' => '1', 'farbe' => null));
+        $this->assertSame(array(1 => $sieg, 2 => $sieg, 3 => $sieg), $s1['kreuz']);
+        // Ohne Farbangaben (wie ELOBASE) keine Farben
+        $this->assertFalse($e['farben']);
     }
 
     /**
@@ -84,8 +87,32 @@ class ErgebnistabelleTest extends TestCase
 
         $this->assertFalse($e['kreuz']);
         $this->assertSame(3, $e['runden']);
-        $this->assertSame(array(array('gegner' => 4, 'ergebnis' => '1', 'gegner_pos' => 4, 'gegner_name' => 'S4')), $e['spieler'][0]['runden'][1]);
+        $this->assertSame(array(array('gegner' => 4, 'ergebnis' => '1', 'farbe' => null, 'gegner_pos' => 4, 'gegner_name' => 'S4')), $e['spieler'][0]['runden'][1]);
         $this->assertNull($e['spieler'][2]['runden'][3][0]['gegner_pos']);
+    }
+
+    /**
+     * Farbe (R3): w/s erscheinen in Runden und Kreuz, unbekannte Werte werden
+     * null; farben meldet, ob das Turnier überhaupt Farben führt.
+     */
+    public function testFarben(): void
+    {
+        $t = array(array('nr' => 1, 'name' => 'A', 'platz' => 1), array('nr' => 2, 'name' => 'B', 'platz' => 2), array('nr' => 3, 'name' => 'C', 'platz' => 3));
+        $p = array(
+            array('runde' => 1, 'spieler' => 1, 'gegner' => 2, 'ergebnis' => '1', 'farbe' => 'w'),
+            array('runde' => 1, 'spieler' => 2, 'gegner' => 1, 'ergebnis' => '0', 'farbe' => 's'),
+            array('runde' => 2, 'spieler' => 3, 'gegner' => null, 'ergebnis' => '+', 'farbe' => null),
+            array('runde' => 2, 'spieler' => 1, 'gegner' => 3, 'ergebnis' => '1', 'farbe' => 'x'),
+        );
+
+        $e = Ergebnistabelle::bauen($t, $p);
+
+        $this->assertTrue($e['farben']);
+        $this->assertSame('w', $e['spieler'][0]['runden'][1][0]['farbe']);
+        $this->assertSame('s', $e['spieler'][1]['runden'][1][0]['farbe']);
+        $this->assertNull($e['spieler'][2]['runden'][2][0]['farbe']);
+        $this->assertNull($e['spieler'][0]['runden'][2][0]['farbe']);
+        $this->assertSame(array(array('ergebnis' => '1', 'farbe' => 'w')), $e['spieler'][0]['kreuz'][2]);
     }
 
     /**

@@ -10,9 +10,9 @@ namespace Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv;
  *
  * Die Partien der Übergabe stehen je Spieler aus seiner Sicht da (runde,
  * spieler, gegner, ergebnis …); `spieler` und `gegner` sind Nummern der
- * Teilnehmerliste. Farben führt der gemeinsame Teil nicht (`paarung` ist in
- * allen drei Archiven leer, Rückfrage R3 an die Aufbereitung) — die Ansicht
- * kommt deshalb ohne sie aus.
+ * Teilnehmerliste. Die Farbe steht seit Rückfrage R3 in `farbe` (w/s): DeWIS
+ * und Wertungsportal führen sie, ELOBASE nie (null). Die Ansicht zeigt sie,
+ * wo sie bekannt ist, und kommt sonst ohne sie aus.
  *
  * Ob es ein Rundenturnier ist, steht nicht zuverlässig im Kopf: DeWIS führt
  * als Rundenzahl oft nur den Vorgabewert 5. Entschieden wird an den Partien
@@ -42,10 +42,12 @@ class Ergebnistabelle
      * @param array<int,array<string,mixed>> $teilnehmer Zeilen der Teilnehmerliste (Darstellung::zeilen())
      * @param array<int,array<string,mixed>> $partien    Zeilen der Partien (Darstellung::zeilen())
      *
-     * @return array{runden:int,kreuz:bool,spieler:array<int,array<string,mixed>>}
-     *         spieler in Anzeigereihenfolge mit nr, pos, name, platz, dwz, index,
+     * @return array{runden:int,kreuz:bool,farben:bool,spieler:array<int,array<string,mixed>>}
+     *         farben = mindestens eine Partie mit bekannter Farbe; spieler in
+     *         Anzeigereihenfolge mit nr, pos, name, platz, dwz, index,
      *         punkte_halbe, partien, runden (Runde => Liste [gegner, gegner_pos,
-     *         gegner_name, ergebnis]) und kreuz (Gegner-Position => Ergebnisse)
+     *         gegner_name, ergebnis, farbe]) und kreuz (Gegner-Position =>
+     *         Liste [ergebnis, farbe]); farbe ist 'w', 's' oder null
      */
     public static function bauen(array $teilnehmer, array $partien): array
     {
@@ -68,6 +70,7 @@ class Ergebnistabelle
         }
 
         $runden = 0;
+        $farben = false;
 
         foreach ($partien as $p) {
             $nr = (int) ($p['spieler'] ?? 0);
@@ -78,7 +81,10 @@ class Ergebnistabelle
 
             $runde = (int) ($p['runde'] ?? 0);
             $runden = max($runden, $runde);
-            $spieler[$nr]['runden'][$runde][] = array('gegner' => null === ($p['gegner'] ?? null) ? null : (int) $p['gegner'], 'ergebnis' => (string) ($p['ergebnis'] ?? ''));
+            // Nur w/s gelten; alles andere (auch ELOBASE: immer null) heißt unbekannt
+            $farbe = \in_array($p['farbe'] ?? null, array('w', 's'), true) ? $p['farbe'] : null;
+            $farben = $farben || null !== $farbe;
+            $spieler[$nr]['runden'][$runde][] = array('gegner' => null === ($p['gegner'] ?? null) ? null : (int) $p['gegner'], 'ergebnis' => (string) ($p['ergebnis'] ?? ''), 'farbe' => $farbe);
         }
 
         // Anzeigereihenfolge und Positionen
@@ -105,7 +111,7 @@ class Ergebnistabelle
                     $spieler[$nr]['runden'][$r][$k]['gegner_name'] = null !== $g ? ($spieler[$g]['name'] ?? null) : null;
 
                     if (null !== $g && isset($pos[$g])) {
-                        $spieler[$nr]['kreuz'][$pos[$g]][] = $erg['ergebnis'];
+                        $spieler[$nr]['kreuz'][$pos[$g]][] = array('ergebnis' => $erg['ergebnis'], 'farbe' => $erg['farbe']);
                     }
                 }
             }
@@ -114,6 +120,7 @@ class Ergebnistabelle
         return array(
             'runden'  => $runden,
             'kreuz'   => self::istRundenturnier($spieler),
+            'farben'  => $farben,
             'spieler' => array_values($spieler),
         );
     }

@@ -79,7 +79,16 @@ usort($teilnehmer, static function ($a, $b) {
 		<p class="error">Zu diesem Turnier gibt es keine Turnierdatei — nur den Eintrag in der Turnierliste.</p>
 	<?php elseif($this->ergebnisse): ?>
 		<?php $erg = $this->ergebnisse; ?>
-		<p class="lokalhinweis">Die Archive führen keine Farben — die Tabelle zeigt Ergebnis und Gegner (Nummer der Zeile). Ein leeres Feld: Die Turnierdatei nennt für diese Partie kein Ergebnis. „Erg.“ zählt nur die gewerteten Partien.</p>
+		<?php // Farbklassen wie bei den Ergebnissen von nu (default.css); ELOBASE führt keine Farbe ?>
+		<?php $farbname = array('w' => 'Weiß', 's' => 'Schwarz'); $farbklasse = array('w' => 'white', 's' => 'black'); ?>
+		<p class="lokalhinweis">
+			<?php if($erg['farben']): ?>
+				Die Tabelle zeigt Ergebnis und Gegner (Nummer der Zeile); mit Schwarz gespielte Partien sind grau hinterlegt, der Tooltip nennt die Farbe.
+			<?php else: ?>
+				Diese Turnierdatei führt keine Farben — die Tabelle zeigt Ergebnis und Gegner (Nummer der Zeile).
+			<?php endif; ?>
+			Ein leeres Feld: Die Turnierdatei nennt für diese Partie kein Ergebnis. „Erg.“ zählt nur die gewerteten Partien.
+		</p>
 
 		<?php // Obere Scrollleiste wie bei den Ergebnissen von nu (Skript unten) ?>
 		<div class="table_responsiv_top noprint"><div class="table_responsiv_top_inner"></div></div>
@@ -108,7 +117,7 @@ usort($teilnehmer, static function ($a, $b) {
 							<?php if($g['pos'] === $s['pos']): ?>
 								<td class="kreuz-zelle kreuz-diagonale right-line bottom-line"></td>
 							<?php else: ?>
-								<td class="kreuz-zelle right-line bottom-line"><?php foreach(($s['kreuz'][$g['pos']] ?? array()) as $r): ?><span class="result"><?= $e($r) ?></span><?php endforeach; ?></td>
+								<td class="kreuz-zelle right-line bottom-line"><?php foreach(($s['kreuz'][$g['pos']] ?? array()) as $r): ?><span class="result<?= $r['farbe'] ? ' kreuz-'.$r['farbe'] : '' ?>"<?= $r['farbe'] ? ' title="mit '.$farbname[$r['farbe']].'"' : '' ?>><?= $e($r['ergebnis']) ?></span><?php endforeach; ?></td>
 							<?php endif; ?>
 						<?php endforeach; ?>
 					</tr>
@@ -138,7 +147,7 @@ usort($teilnehmer, static function ($a, $b) {
 						<?php for($r = 1; $r <= $erg['runden']; $r++): ?>
 							<td class="right-line bottom-line">
 							<?php foreach(($s['runden'][$r] ?? array()) as $p): ?>
-								<div title="<?= $e($p['gegner_name'] ?? '') ?>"><span class="result"><?= $e($p['ergebnis']) ?></span> <span class="opponent"><?= null !== $p['gegner_pos'] ? (int) $p['gegner_pos'] : '' ?></span></div>
+								<div<?= $p['farbe'] ? ' class="'.$farbklasse[$p['farbe']].'"' : '' ?> title="<?= $e(trim(($p['farbe'] ? 'mit '.$farbname[$p['farbe']].' ' : '').(!empty($p['gegner_name']) ? 'gegen '.$p['gegner_name'] : ''))) ?>"><span class="result"><?= $e($p['ergebnis']) ?></span> <span class="opponent"><?= null !== $p['gegner_pos'] ? (int) $p['gegner_pos'] : '' ?></span></div>
 							<?php endforeach; ?>
 							</td>
 						<?php endfor; ?>
