@@ -147,6 +147,15 @@ class ArchivImportCommand extends Command
             }
         }
 
+        // Die Ersatzliste (R1) liest der ELOBASE-Import mit den Personen —
+        // sie wird genauso geprüft, wenn sie da ist
+        if ('elobase' === $archiv && \in_array('personen', $teile, true) && is_file($ordner.'/dewis_ersatz.jsonl')
+            && !$input->getOption('ohne-pruefsumme') && '' !== ($fehler = Liste::pruefe($ordner, 'dewis_ersatz.jsonl'))) {
+            $io->error($fehler);
+
+            return 2;
+        }
+
         $importeur = new Importeur($db, static function (string $text) use ($io): void {
             $io->writeln('  '.$text);
         });

@@ -29,6 +29,9 @@
 * Add: Archivturniere mit den Spalten **E** (Entwicklungskoeffizient) und **Gegn.** (Gegnerschnitt)
 * Add: Import der ELOBASE-Kartei übernimmt `erg_turnierleistung`, `erg_gegnerschnitt` und
   `erg_e_koeffizient`, sobald die Aufbereitung sie liefert (Rückfrage R5)
+* Add: `archiv-import elobase` liest `dewis_ersatz.jsonl` (Rückfrage R1) und legt für ELOBASE-Personen,
+  deren DeWIS-ID in DeWIS gelöscht wurde, eine Kante zur Ersatzperson an (Quelle `dewis_ersatz`,
+  37 Kanten); nicht mehr geführte Ersatzkanten werden „entfallen“
 * Change: E erscheint ohne „.0“ und mit Komma („28“, „39,3“)
 * Change: `doctrine/dbal` ist jetzt eine direkte Abhängigkeit (^3.3 || ^4.0)
 

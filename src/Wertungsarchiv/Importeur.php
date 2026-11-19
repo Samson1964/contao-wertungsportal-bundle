@@ -206,6 +206,40 @@ class Importeur
     }
 
     /**
+     * Liest die Kante einer Zeile aus `dewis_ersatz.jsonl` (ELOBASE, R1).
+     *
+     * Die Liste führt ELOBASE-Personen, deren DeWIS-ID (Tabelle pkz) in
+     * DeWIS nicht mehr vorkommt, weil DeWIS Personen zusammengelegt hat.
+     * Ist eine eindeutige Ersatz-ID gefunden (`erg_ersatz`), entsteht die
+     * Kante DeWIS-Ersatzperson → ELOBASE-Person mit der Quelle
+     * „dewis_ersatz" (Franks Entscheidung vom 19.11.2026). Über die Quelle
+     * lässt sich die Kante gezielt ablehnen oder zurücknehmen. Zeigen zwei
+     * ELOBASE-Personen auf dieselbe Ersatz-ID (`erg_ersatz_auch_fuer`), ist
+     * das gewollt: Tippfehler-Dubletten der ZDB, die DeWIS zusammengelegt
+     * hat. Schwache Kandidaten (`erg_kandidaten`) werden nie übernommen.
+     *
+     * @param array<string,mixed> $zeile Zeile der Ersatzliste
+     *
+     * @return array<int,array{von:string,nach:string,quelle:string,gewicht:int|null}> Keine oder eine Kante
+     */
+    public static function ersatzKanten(array $zeile): array
+    {
+        $d = self::kennung($zeile['erg_ersatz'] ?? null, 'D');
+
+        if (null === $d || empty($zeile['person'])) {
+            return array();
+        }
+
+        return array(array('von' => $d, 'nach' => (string) $zeile['person'], 'quelle' => self::QUELLE_ERSATZ, 'gewicht' => null));
+    }
+
+    /**
+     * Quelle der Kanten aus `dewis_ersatz.jsonl`; Kanten dieser Quelle führt
+     * allein der ELOBASE-Import nach (auch „entfallen").
+     */
+    public const QUELLE_ERSATZ = 'dewis_ersatz';
+
+    /**
      * Prüft, ob ein Name ein Klarname ist.
      *
      * Kein Klarname sind: leere Werte, Werte ohne einen einzigen Buchstaben
@@ -232,7 +266,8 @@ class Importeur
      * Präfixe der Personenkennungen, deren Kanten ein Archiv selbst führt
      * (Kante „von" = Person dieses Archivs). Nur diese Kanten kann ein neuer
      * Abzug für entfallen erklären. Die PKZ-Kanten stehen in zwei Listen
-     * (ELOBASE und DeWIS) und bleiben deshalb außen vor.
+     * (ELOBASE und DeWIS) und bleiben deshalb außen vor, ebenso die
+     * Ersatzkanten (QUELLE_ERSATZ), die nur der ELOBASE-Import führt.
      */
     public const EIGENE_KANTEN = array('elobase' => array(), 'dewis' => array('D:'), 'wp' => array('N:', 'W:'));
 
@@ -301,6 +336,11 @@ class Importeur
      * W:x → D:b) über die alte Kante zwei fremde Personen zusammen. Eine
      * entfallene Kante, die wieder auftaucht, gilt wieder als bestätigt.
      * Von Hand abgelehnte Kanten bleiben abgelehnt. Gelöscht wird nichts.
+     *
+     * ELOBASE liest zusätzlich `dewis_ersatz.jsonl` (ersatzKanten()). Diese
+     * Kanten beginnen bei einer DeWIS-Person, gehören aber dem ELOBASE-Import:
+     * Der DeWIS-Import lässt sie (wie die pkz-Kanten) beim Nachführen aus,
+     * der ELOBASE-Import erklärt nicht mehr geführte für entfallen.
      * Das Nachführen läuft erst, wenn die ganze Liste gelesen ist — bricht
      * der Import ab, bleibt der Kantenbestand, wie er war.
      *
@@ -343,6 +383,20 @@ class Importeur
         }
 
         $this->schreibe('archiv_person', $personen, true, array('name'));
+
+        // ELOBASE: Ersatz-IDs für in DeWIS gelöschte Personen (R1). Fehlt
+        // die Liste (ältere Übergabe), bleibt es bei den pkz-Kanten.
+        $mitErsatz = 'elobase' === $archiv && is_file($ordner.'/dewis_ersatz.jsonl');
+
+        if ($mitErsatz) {
+            foreach (Liste::zeilen($ordner.'/dewis_ersatz.jsonl') as $zeile) {
+                foreach (self::ersatzKanten($zeile) as $k) {
+                    $kanten[] = $k + array('status' => 'bestaetigt', 'geaendert' => $jetzt, 'gesehen' => $jetzt);
+                    ++$zahl['kanten'];
+                }
+            }
+        }
+
         $this->schreibe('archiv_kante', $kanten, true, array(), array('status', 'geaendert'));
 
         // Wieder aufgetauchte Kanten bestätigen, nicht mehr geführte eigene
@@ -357,9 +411,19 @@ class Importeur
         if ($praefixe) {
             $zahl['entfallen'] = (int) $this->db->executeStatement(
                 "UPDATE archiv_kante SET status = 'entfallen', geaendert = ?
-                 WHERE status = 'bestaetigt' AND gesehen < ? AND quelle != 'pkz'
+                 WHERE status = 'bestaetigt' AND gesehen < ? AND quelle NOT IN ('pkz', ?)
                    AND (".implode(' OR ', array_fill(0, \count($praefixe), 'von LIKE ?')).')',
-                array_merge(array($jetzt, $jetzt), array_map(static function (string $p): string { return $p.'%'; }, $praefixe))
+                array_merge(array($jetzt, $jetzt, self::QUELLE_ERSATZ), array_map(static function (string $p): string { return $p.'%'; }, $praefixe))
+            );
+        }
+
+        // Ersatzkanten, die die neue Liste nicht mehr führt, entfallen. Nur
+        // wenn die Liste da war — sonst fielen alle bei einer älteren
+        // Übergabe ohne die Datei weg.
+        if ($mitErsatz) {
+            $zahl['entfallen'] += (int) $this->db->executeStatement(
+                "UPDATE archiv_kante SET status = 'entfallen', geaendert = ? WHERE status = 'bestaetigt' AND gesehen < ? AND quelle = ?",
+                array($jetzt, $jetzt, self::QUELLE_ERSATZ)
             );
         }
 

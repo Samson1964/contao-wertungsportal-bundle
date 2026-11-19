@@ -33,7 +33,7 @@ Arbeitsverzeichnis, nicht im Repository: Personendaten). Das Bundle liest nur ih
 | --- | --- | --- |
 | `archiv_turnier` | Turnierliste aller Archive: Code, Name, Ende, Verband, Zahlen, JSON-Pfad, Kennzeichen, Verweis auf die Dublette im älteren Archiv | `archiv` + `quell_id` |
 | `archiv_person` | Personen je Archiv: `Z:<PKZ>`, `D:<DeWIS-ID>`, `N:<NU-ID>`, `W:<Turnier>-<Nr>` | `kennung` |
-| `archiv_kante` | Brücke zwischen den Archiven, vom jüngeren aufs ältere: `pkz` (DeWIS → ELOBASE), `turniere`/`externenr` (Portal → DeWIS), `dublette` | `von` + `nach` + `quelle` |
+| `archiv_kante` | Brücke zwischen den Archiven, vom jüngeren aufs ältere: `pkz` (DeWIS → ELOBASE), `dewis_ersatz` (DeWIS-Ersatzperson → ELOBASE), `turniere`/`externenr` (Portal → DeWIS), `dublette` | `von` + `nach` + `quelle` |
 | `archiv_gesamtperson` | Gesamtpersonen: zusammenhängende Archivpersonen über bestätigte Kanten; Nummer = kleinste Personen-ID der Gruppe, Name/Geburtsjahr zuerst aus dem Portal, NU-ID, Prüfvermerke | `id` |
 | `archiv_kartei` | Karteizeilen (Person × Turnier) mit DWZ vorher/nachher, Punkten, Partien, We | `id`; je Archiv ersetzt |
 | `archiv_info` | Schemafassung, Stand des letzten Imports je Archiv | `schluessel` |
@@ -46,6 +46,14 @@ Arbeitsverzeichnis, nicht im Repository: Personendaten). Das Bundle liest nur ih
   nicht.
 - **Ausgabe zeigt die jüngste Quelle** (Wertungsportal vor DeWIS vor ELOBASE), Namen kommen
   über die Brücke dazu.
+- **DeWIS-Ersatzpersonen (19.11.2026, Rückfrage R1):** 61 ELOBASE-Personen zeigen über die
+  Tabelle `pkz` auf DeWIS-IDs, die DeWIS beim Zusammenlegen gelöscht hat. Die Aufbereitung führt sie
+  in `elobase/dewis_ersatz.jsonl`; wo sie eine eindeutige Ersatz-ID gefunden hat (`erg_ersatz`, 37),
+  legt `archiv-import elobase` mit den Personen die Kante DeWIS-Ersatz → ELOBASE an (Quelle
+  `dewis_ersatz`, im Backend einzeln ablehnbar). Bei 16 zeigen dadurch zwei ELOBASE-Personen auf
+  dieselbe DeWIS-Person — gewollt, das sind Tippfehler-Dubletten der ZDB. Schwache Kandidaten
+  (`erg_kandidaten`) werden nicht übernommen. Führt eine neue Liste eine Ersatzkante nicht mehr, wird
+  sie „entfallen“; der DeWIS-Import lässt diese Kanten unberührt.
 - **Monatlich ein neuer Abzug** aus dem Backend von nu; die Aufbereitung läuft erneut, dann
   der Import. Ein Hashname überschreibt nie einen Klarnamen.
 - Die Dateien kommen **per FTP** in einen Ordner außerhalb von `files/`, übernommen wird über

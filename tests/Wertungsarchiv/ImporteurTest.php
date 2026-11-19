@@ -128,6 +128,20 @@ class ImporteurTest extends TestCase
     }
 
     /**
+     * Ersatzliste (R1): Mit erg_ersatz entsteht DeWIS-Ersatz → ELOBASE-Person
+     * mit eigener Quelle; ohne Ersatz keine Kante, auch wenn schwache
+     * Kandidaten genannt sind.
+     */
+    public function testErsatzKanten(): void
+    {
+        $this->assertSame(
+            array(array('von' => 'D:10115767', 'nach' => 'Z:4575747', 'quelle' => 'dewis_ersatz', 'gewicht' => null)),
+            Importeur::ersatzKanten(array('person' => 'Z:4575747', 'dewis_id' => 10119126, 'erg_ersatz' => 10115767, 'erg_weg' => 'geburtsdatum+name', 'erg_ersatz_auch_fuer' => array('Z:4575746')))
+        );
+        $this->assertSame(array(), Importeur::ersatzKanten(array('person' => 'Z:5188648', 'dewis_id' => 10286833, 'erg_ersatz' => null, 'erg_kandidaten' => array(array(10000001, 'X,Y')))));
+    }
+
+    /**
      * Hashnamen und Namen ohne Buchstaben sind keine Klarnamen — sie dürfen
      * einen vorhandenen Namen beim monatlichen Abzug nicht überschreiben.
      */
