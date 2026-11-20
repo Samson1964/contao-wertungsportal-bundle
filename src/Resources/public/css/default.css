@@ -690,7 +690,8 @@
 	margin					: 8px 0 0;
 	padding					: 6px 10px;
 	background-color		: #fff4e5;
-	border-left				: 3px solid #d9822b;
+	border					: 1px solid #f0c48f;
+	border-radius			: 3px;
 	font-size				: 0.9em;
 }
 .wp-archivreklamation .wp-archivreklamation-bisher[hidden] {
