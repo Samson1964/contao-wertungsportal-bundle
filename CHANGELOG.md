@@ -114,7 +114,7 @@
   fällt das Bild dort weg; „Foto ändern" / „Logo/Infos ändern" bleibt für angemeldete Mitglieder stehen.
   Der Kopf der Vereinsseite ist dafür wie die Karteikarte aufgebaut (Flex statt rowspan-Zelle), beide mit
   den gemeinsamen Klassen `wp-kopf`, `wp-kopf-bild`, `wp-kopf-daten`
-* **Einspielen:** Ordner kopieren, `contao:assets:install` (geänderte `default.css` und `reklamation.js`),
+* **Einspielen:** Ordner kopieren, `assets:install` (geänderte `default.css` und `reklamation.js`),
   kein migrate. Wer `wertungsportal_verein.html5` oder `wertungsportal_spieler.html5` im Theme angepasst
   hat: Die Kopfbereiche haben neues Markup
 
@@ -193,7 +193,7 @@
   und spricht von „Spieler" statt „Personen"
 * Change: Hilfetext des Spieler-Imports nennt die drei Exportdateien mit ihren Originalnamen in der
   Reihenfolge des Imports (Vereinsmitglieder, Abgemeldete, Angemeldete)
-* **Einspielen:** `contao:assets:install` (neues Skript `js/aenderung.js`, Stile) und `cache:clear`
+* **Einspielen:** `assets:install` (neues Skript `js/aenderung.js`, Stile) und `cache:clear`
   (neue Route, neuer Cronjob, neuer Befehl). Kein migrate. Danach unter Einstellungen die
   Mitgliedergruppe wählen und einmal `wertungsportal:mitgliedergruppe --dry-run` ansehen. Bei den
   Referenten die Funktions-E-Mail eintragen — sonst steht dort keine E-Mail-Adresse mehr
@@ -228,7 +228,7 @@
   sofort Landesverband 20000, Bezirk Schwaben 27000 nie). `Helper::vkzKette()` kennt jetzt die Stufe
   „erste zwei Stellen + 000"; in den übrigen Landesverbänden ändert sich nichts
 * Change: Die immer leere Tabelle „Zuständiger Wertungsreferent" am Ende der Verbandsliste ist entfernt
-* **Einspielen:** `contao:assets:install` (Stile in `css/default.css`) und `cache:clear`. Kein migrate.
+* **Einspielen:** `assets:install` (Stile in `css/default.css`) und `cache:clear`. Kein migrate.
   Danach unter Einstellungen → Reklamationen den Absender eintragen und, wer mag, das Modul
   „Wertungsreferenten (Baum)" anlegen. Auf schachbund.de den Vereinsbestand prüfen:
   `SELECT id, clubVkz, clubName FROM tl_wertungsportal_clubs WHERE clubVkz = '00000'`
@@ -256,7 +256,7 @@
   dieses Feld nicht mehr
 * **Einspielen:** Beim Kopieren des Ordners auf dem Server von Hand löschen:
   `src/Classes/Referentenuebernahme.php` und
-  `src/Resources/contao/templates/be_wp_referentenuebernahme.html5`. Danach `contao:assets:install`
+  `src/Resources/contao/templates/be_wp_referentenuebernahme.html5`. Danach `assets:install`
   (Stile in `css/default.css` und `css/backend.css`) und `cache:clear`. `contao:migrate` ist nicht
   nötig — das Schema ändert sich nicht. Anschließend das neue Modul anlegen und auf
   `adressen_wertungen.html` gegen das der Adressverwaltung tauschen
@@ -303,7 +303,7 @@
 * Change: `Referentenbaum` liefert neben der verschleierten Adresse (`email`) die Klartextadresse
   (`adresse`) für den Versand — sie gehört in kein Template
 * **Einspielen:** `contao:migrate` (neue Tabelle `tl_wertungsportal_reklamationen`, neue Spalte
-  `tl_wertungsportal_referenten.adresse`), `contao:assets:install` (neues Skript `js/reklamation.js`,
+  `tl_wertungsportal_referenten.adresse`), `assets:install` (neues Skript `js/reklamation.js`,
   Stile in `css/default.css` und `css/backend.css`), `cache:clear` (neue Route und neuer Dienst).
   Danach unter **Wertungsportal → Einstellungen → Reklamationen** die Adresse des DSB-Admins eintragen
   und unter **Referenten** die Übernahme aus der Adressverwaltung ansehen
@@ -337,7 +337,7 @@
   Erwartungswert von nu, eine neue DWZ mit Index 1 (`Spielerwertung::gezaehlteErstDwz()`).
   Damit geht auch der Gegnerschnitt der Summenzeile aus den sichtbaren Zahlen auf
 * Change: Der Tooltip des Spaltenkopfs „DWZ" erklärt die Hervorhebung
-* **Einspielen:** `contao:assets:install` — die Farbe steht in `public/css/default.css`
+* **Einspielen:** `assets:install` — die Farbe steht in `public/css/default.css`
 
 ## Version 1.48.0 (2026-09-25)
 
@@ -524,7 +524,7 @@ neue, gleicht der Abgleich die übrigen ab.
 
 **Neue Spalten — beim Deployment `contao:migrate` ausführen** (`member` und `ratingOldDisplayString` in
 tl_wertungsportal_tournaments_evaluation). Ohne `contao:migrate` läuft alles weiter, nur der Notbetrieb
-kennt die neuen Angaben nicht. Für die geänderte Backend-CSS ist **`contao:assets:install`** nur nötig,
+kennt die neuen Angaben nicht. Für die geänderte Backend-CSS ist **`assets:install`** nur nötig,
 wenn `web/bundles/contaowertungsportal` auf dem Server eine Kopie statt einer Verknüpfung ist.
 
 * Fix: **Nichtmitglieder („Textuelle") bekamen eine neue DWZ ausgewiesen, aber keine alte.** Die
@@ -1877,7 +1877,7 @@ die Grenze auf.
 
 ## Version 1.12.5 (2026-08-03)
 
-**Beim Aktualisieren:** `contao:assets:install` (geändertes Stylesheet).
+**Beim Aktualisieren:** `assets:install` (geändertes Stylesheet).
 
 * **Fix: Das Registrierungsformular war vollständig ungestylt.** Die Ursache war schlicht: Das
   Template band weder `default.css` ein noch trug es die Klasse `dewis` am Rahmen — sämtliche
@@ -1900,7 +1900,7 @@ die Grenze auf.
 
 ## Version 1.12.4 (2026-08-03)
 
-**Beim Aktualisieren:** `contao:assets:install` — es kommen zwei neue Bilddateien dazu.
+**Beim Aktualisieren:** `assets:install` — es kommen zwei neue Bilddateien dazu.
 
 * Add: **Das Bundle bringt jetzt eigene Platzhalterbilder mit** (`standard-verein.svg` und
   `standard-spieler.svg`). Ist in den Einstellungen kein Standardlogo bzw. Standardbild
@@ -2002,7 +2002,7 @@ Beim Einrichten des Bundles in einer frischen Contao-4.13-Installation gefunden.
 
 ## Version 1.12.0 (2026-08-03)
 
-**Beim Aktualisieren:** `contao:migrate` (zwei neue Tabellen), `contao:assets:install`
+**Beim Aktualisieren:** `contao:migrate` (zwei neue Tabellen), `assets:install`
 (geänderte backend.css) und ein Neuaufbau des Produktions-Caches — es kommt eine neue
 Route hinzu, die sonst nicht bekannt wird.
 
@@ -2109,7 +2109,7 @@ Werte sind beschädigt und werden durch das Update nicht repariert.
 * Fix (Nebenbefund): Die Trefferliste sortierte Namen mit Umlauten ans Ende, wenn auf dem Server das Locale de_DE.UTF-8 fehlt. `setlocale` fällt in dem Fall stillschweigend auf „C" zurück, und `strcoll` vergleicht dann Bytes — „Ärmel" landete hinter „Zander". Sortiert wird jetzt über einen eigenen Schlüssel nach deutscher Namensregel (Ä wie A, Ö wie O, Ü wie U, ß wie ss), unabhängig von der Ausstattung des Servers
 * Zum Aufwand: Die örtliche Suche kostet eine indizierte Abfrage über die Aliasfelder plus das Nachladen der Mitgliedschaften — gemessen 8,5 ms bei 300 Treffern. Sie läuft jetzt bei jeder Namenssuche mit
 * Verifiziert mit 16 Tests: Quellenkennzeichnung, Zusammenführung samt Dubletten (Schnittstelle gewinnt, mit ihren Werten), Datensätze ohne nu-Nummer, Sortierung mit Umlauten, leere Fälle sowie der gemeldete Fall selbst — die örtliche Suche nach „Eschen" und nach „Esch" findet beide Spieler
-* ACHTUNG: contao:assets:install (geänderte CSS)
+* ACHTUNG: assets:install (geänderte CSS)
 
 ## Version 1.9.0 (2026-07-30)
 
@@ -2197,7 +2197,7 @@ Werte sind beschädigt und werden durch das Update nicht repariert.
 * **Add: Backend-Modul „Statistik"** (Wertungsportal → Statistik): Übersichtstabelle aller Funktionen mit Abrufen von der API, aus dem Cache, Gesamtzahl und Cache-Anteil je Funktion sowie Gesamtsumme. Der Verlauf wird als gestapeltes Balkendiagramm dargestellt (unten Cache, oben API), umschaltbar **nach Woche oder nach Monat**, Zeitraum wählbar von 30 Tagen bis einem Jahr. Ein Klick auf eine Funktion zeigt deren Verlauf allein
 * Die Diagramme sind serverseitig erzeugtes SVG (wie das DWZ-Diagramm der Karteikarte) — ohne zusätzliche Javascript-Bibliothek, mit Werten in den Tooltips und mitwachsender Balkenbreite
 * Die Zählung ist gegen Fehler abgeschottet: Fehlt die Tabelle (vor contao:migrate), läuft das Frontend unverändert weiter, statt mit einem Fehler abzubrechen
-* ACHTUNG: contao:migrate bzw. Install-Tool nötig (neue Tabelle tl_wertungsportal_stats) sowie contao:assets:install (Backend-CSS)
+* ACHTUNG: contao:migrate bzw. Install-Tool nötig (neue Tabelle tl_wertungsportal_stats) sowie assets:install (Backend-CSS)
 * Verifiziert mit echtem MySQL (19 Tests): Hochzählen statt Neuanlage, getrennte Zählung von Cache und API, Auswertung je Funktion und Zeitraum, Bündelung nach ISO-Kalenderwoche und Monat, Filter je Funktion, Verhalten bei fehlender Tabelle. Backend-Ansicht mit dem echten Template gerendert und geprüft (Diagramm, Tabelle mit Summenzeile, Funktionsauswahl, Hinweis bei noch leerer Statistik)
 
 ## Version 1.2.1 (2026-07-28)
@@ -2280,7 +2280,7 @@ Werte sind beschädigt und werden durch das Update nicht repariert.
 * Add: Lokale Teilstring-Suche als Fallback der Spielersuche (neue Helper::lokaleSpielersuche()): Liefert die Wertungsportal-API keine Treffer (sie vergleicht nur komplette Felder — "müll" findet dort kein "müller"), wird tl_wertungsportal_persons per LIKE über Nachname/Vorname durchsucht (Rohstring mit Umlauten, maximal 300 Treffer, published-Personen, Blacklist-Filterung greift wie bisher in der Aufbereitung). Die Treffer durchlaufen als API-förmiges Ergebnis die normale Aufbereitung inklusive FIDE-Anreicherung und Kartei-Verlinkung; bei Eingaben ohne Komma wird zusätzlich die gedrehte Deutung "Vorname Nachname" probiert. Oberhalb der Trefferliste erscheint ein Hinweis, dass DWZ/letzte Auswertung aus dem lokalen Datenbestand stammen
 * Fix: Vereinssuche findet jetzt Vereine mit Umlauten im Namen ("königsspringer", "großauheim"): Der Suchbegriff wurde bisher geslugt (königsspringer → koenigsspringer) und konnte so beim Vergleich mit den echten Vereinsnamen nie treffen; außerdem verglich stripos nicht multibyte-sicher — jetzt bleibt der Suchbegriff roh und der Vergleich läuft über mb_stripos
 * Add: Die Spielerlisten der Vereinsseite (Rang-/Alphaliste) sind per Klick auf die Spaltenköpfe sortierbar (nochmaliger Klick dreht die Richtung um) — wie im DeWIS-Vorbild über tablesorter; die Tabelle hatte die Sortier-Klassen schon, es fehlte die Einbindung der Assets
-* Change: tablesorter (JS + CSS) liegt jetzt im eigenen Bundle (bundles/contaowertungsportal) statt im alten contao-dewis-bundle — das Karteikarten-Template lädt die Assets aus dem eigenen Bundle, damit ist die letzte Abhängigkeit zum dewis-Bundle im Frontend beseitigt. ACHTUNG: Nach dem Upload contao:assets:install ausführen
+* Change: tablesorter (JS + CSS) liegt jetzt im eigenen Bundle (bundles/contaowertungsportal) statt im alten contao-dewis-bundle — das Karteikarten-Template lädt die Assets aus dem eigenen Bundle, damit ist die letzte Abhängigkeit zum dewis-Bundle im Frontend beseitigt. ACHTUNG: Nach dem Upload assets:install ausführen
 * Add: Karteikarte verlinkt in der Zeile "Historie" wieder die alte EloBase-Karteikarte (altdwz) samt Zugangshinweis (Benutzer/Passwort: dwz): neue Einstellungen "Historie EloBase anzeigen" (Checkbox) und "EloBase-URL" (leer = http://altdwz.schachbund.net/db/spieler.html?zps=) im Bereich Wertungsportal; als zps wird VKZ-Mitgliedsnummer der aktiven (sonst ersten) Mitgliedschaft übergeben
 
 ## Version 1.0.6 (2026-07-26)

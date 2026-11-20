@@ -295,5 +295,5 @@ denselben Weg wie das Frontend: gültiger Zwischenspeicher, dann nu, im Notfall
 der örtliche Datenbestand. Ein eigener Zwischenspeicher entsteht dadurch nicht.
 
 **Beim Deployment:** `contao:migrate` (zwei neue Tabellen) und
-`contao:assets:install` (geänderte `backend.css`). Da eine neue Route
+`assets:install` (geänderte `backend.css`). Da eine neue Route
 hinzukommt, muß außerdem der Produktions-Cache neu gebaut werden.

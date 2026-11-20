@@ -357,7 +357,7 @@ alle drei Ansichten.
   Bedingungen gelten (Franks Regel): keine alte DWZ, `expected` von nu (nicht geschätzt, nicht
   kampflos), neue DWZ mit Index 1. Das Scoresheet setzt sie in `Gegner_DWZ` und den Hinweistext in
   `Gegner_ErstDWZ`; das Template gibt der Zelle die Klasse `erst-dwz` + `title` (CSS in
-  `public/css/default.css` → nach dem Einspielen `contao:assets:install`). Beleg: NU4481210 im
+  `public/css/default.css` → nach dem Einspielen `assets:install`). Beleg: NU4481210 im
   Turnier b6739640…, We 0,294276 = Φ((1195 − 1348)/(200·√2)). Der Gegnerschnitt des Erst-DWZ-
   Spielers SELBST ist aus den sichtbaren Zeilen nicht nachrechenbar (interne Werte der
   Erstbewertung, Restpartien) — das ist kein Fehler des Bundles.
@@ -718,7 +718,7 @@ fehlten gegenüber dem Bestand; `clubs?vkz=10100` → leere Liste, HTTP 200.
   `$this->fehler` in den Templates aus (kein Redirect auf die 404-Seite).
 - Frontend-Links der Module sind roh per sprintf gebaut — im Contao-Vorschaumodus fehlt ihnen
   das `preview.php`-Präfix (im veröffentlichten Zustand egal).
-- Nach Änderungen an `src/Resources/public/` auf dem Server `contao:assets:install` nötig,
+- Nach Änderungen an `src/Resources/public/` auf dem Server `assets:install` nötig,
   nach DCA-/SQL-Änderungen `contao:migrate` bzw. Install-Tool.
 - **Eigene Backend-Formulare nie in einen `tl_listing_container` setzen.** Dessen 15 px Rand und
   die 15 px Rand jedes `.widget` addieren sich (Felder bei 30 px, Text bei 15, `h2.sub_headline`

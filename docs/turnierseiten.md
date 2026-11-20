@@ -170,7 +170,7 @@ die Zahl des jeweils anderen hervorgehoben.
 Gestaltet ist die Markierung über die Klasse `erst-dwz` in
 `public/css/default.css`: dunkles Orange (#B35300, Kontrast 5,0:1 auf Weiß),
 fett, gepunktet unterstrichen, Mauszeiger mit Fragezeichen. **Nach dem
-Einspielen ist `contao:assets:install` nötig**, sonst fehlt die Farbe.
+Einspielen ist `assets:install` nötig**, sonst fehlt die Farbe.
 
 **Was damit nicht aufgeht:** Der Bogen des Erst-DWZ-Spielers selbst. Dessen
 Gegnerschnitt (bei Pugachova 1256) enthält auch Gegner ohne DWZ und

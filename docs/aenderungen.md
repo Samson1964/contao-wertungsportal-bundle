@@ -111,6 +111,6 @@ Reklamationen**, Ansicht „Foto ändern (Karteikarte)" bzw. „Logo/Infos ände
 
 ## Einspielen
 
-`contao:assets:install` (neues Skript, Stile) und `cache:clear` (neue Route,
+`assets:install` (neues Skript, Stile) und `cache:clear` (neue Route,
 neuer Dienst). Der DSB-Admin muss unter Einstellungen → Reklamationen
 eingetragen sein.

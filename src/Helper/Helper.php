@@ -1091,7 +1091,7 @@ class Helper extends \Contao\Frontend
 	 * @param  string $art 'verein' oder 'spieler'
 	 *
 	 * @return string Absolute Adresse ab dem Wurzelverzeichnis der Website
-	 *                (setzt contao:assets:install voraus)
+	 *                (setzt assets:install voraus)
 	 */
 	public static function platzhalterbild($art)
 	{

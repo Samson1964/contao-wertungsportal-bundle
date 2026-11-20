@@ -62,7 +62,7 @@ als Fälschung ein.
 Nach dem Einspielen:
 
 1. `contao:migrate` — legt die Tabelle `tl_wertungsportal_reklamationen` an.
-2. `contao:assets:install` — kopiert Skript und Stylesheet nach `public/bundles/`.
+2. `assets:install` — kopiert Skript und Stylesheet nach `public/bundles/`.
 3. Die Admin-Adresse in den Einstellungen eintragen.
 
 ## Die Nachricht
