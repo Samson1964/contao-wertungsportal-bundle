@@ -32,3 +32,13 @@ wertungsportal_aenderung:
         _controller: Schachbulle\ContaoWertungsportalBundle\Controller\AenderungController
         _scope: frontend
         _token_check: true
+
+# Reklamationen zu Einträgen des Wertungsarchivs (ab 2.0.0): nur Logdatei,
+# kein Versand. Frontend-Bereich und Tokenprüfung wie oben
+wertungsportal_archivreklamation:
+    path: /wertungsportal-api/archiv-reklamation
+    methods: [POST]
+    defaults:
+        _controller: Schachbulle\ContaoWertungsportalBundle\Controller\ArchivreklamationController
+        _scope: frontend
+        _token_check: true

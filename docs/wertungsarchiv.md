@@ -158,7 +158,7 @@ Suche und Turnierseiten, wie sie waren.
 
 | Wo | Was |
 | --- | --- |
-| Karteikarte `spieler/NU…` | Unter den Turnieren von nu die **älteren Turniere** aus ELOBASE und DeWIS, neueste zuerst — nur solche, die keine jüngere Quelle führt (ein DeWIS-Turnier entfällt, wenn das Portal es hat; ein ELOBASE-Turnier, wenn DeWIS es hat). Die „Datenübernahme nach DeWIS“ zeigt nu selbst. Erste Spalte: Archivsymbol mit „ZDB“ oder „DeWIS“, linksbündig (Langname im Tooltip). |
+| Karteikarte `spieler/NU…` | Unter den Turnieren von nu die **älteren Turniere** aus ELOBASE und DeWIS, neueste zuerst — nur solche, die keine jüngere Quelle führt (ein DeWIS-Turnier entfällt, wenn das Portal es hat; ein ELOBASE-Turnier, wenn DeWIS es hat). Die „Datenübernahme nach DeWIS“ zeigt nu selbst. Erste Spalte: Archivsymbol mit „ZDB“ oder „DeWIS“, linksbündig (Langname im Tooltip). ELOBASE-Sätze aus einem **älteren Abzug** der ZDB tragen den Abzug dahinter („ZDB 8/1998“, `kartei.quelle`); „ZDB“ allein ist der letzte Stand. Besuchte Turnierlinks erscheinen violett (`table.wp-kartei a:visited`). |
 | Karteikarte `spieler/G<Nummer>` | Für Spieler **ohne NU-Nummer**, die nur noch im Archiv stehen: Name, Geburtsjahr, Archive, die ganze Kartei einschließlich der Portalzeilen aus dem Archiv. Mit NU-Nummer leitet die Adresse auf die normale Karteikarte weiter. |
 | Spielersuche | Zweite Trefferliste „Aus dem Wertungsarchiv (heute nicht mehr gemeldet)“ — Gesamtpersonen ohne NU-Nummer, gesucht in allen Schreibweisen („Müller, Klaus“, „Müller,Klaus“, „Mueller,Klaus“). |
 | Turnierseite `turniere/A<Nummer>` | Ein Turnier aus dem Archiv: Kopf, Teilnehmer mit Verein, DWZ vorher/nachher, Punkten, Partien, We, E, Gegnerschnitt, Leistung; Teilnehmer mit NU-Nummer verlinkt. Rekonstruktionen und Abweichungen von der Kartei sind vermerkt. |
@@ -166,8 +166,12 @@ Suche und Turnierseiten, wie sie waren.
 | DWZ-Diagramm (Karteikarte NU… und G<Nummer>) | Die Archivwerte stehen vor den Werten von nu auf **grauem Grund** (Legende „Wertungsarchiv“). Die DWZ-Linie läuft durch; Leistung nur, wo das Archiv eine Turnierleistung führt (DeWIS, Portal) — für Archivturniere wird **nichts geschätzt**, weder aus Gegnerschnitt und Punkten noch durch Überbrücken (`archiv` = true am Punkt, `Darstellung::diagrammpunkt()`). Ab 50 Punkten wie bisher die letzten 50 plus Gesamtdiagramm. Die G-Karteikarte ist ganz grau, sie hat nur Archivwerte. |
 | Turnierseite `turniere/<ELOBASE-Code>` | Alte Verweise aus der Zeit vor DeWIS. DeWIS-Codes (auch die 2011–2013 in beiden Archiven) leiten wie seit 1.58.0 auf die jüngere Fassung bei nu. |
 
-**Turniere vor der ersten Mitgliedschaft** (`vor_erster_anmeldung = 1`) stehen grau mit gestrichelter
-Linie links da, Erklärung im `title` (Frank Binding, 18.11.2026: kennzeichnen, nicht ausblenden).
+**Turniere vor der ersten Mitgliedschaft** (`vor_erster_anmeldung = 1`) stehen grau da, mit der Marke
+„vor 1. Anmeldung“ hinter dem Turniernamen (Frank Binding, 18.11.2026: kennzeichnen, nicht ausblenden;
+bis 20.11.2026 eine gestrichelte Linie links von „Nr.“, die wie ein Darstellungsfehler aussah).
+
+Die **Archivturnier-Seite** nennt bei ELOBASE die Herkunft des Turnierkopfs (`extra.kopf_quelle`):
+„ZDB, letzter Stand“, „älterer ZDB-Abzug 7/1997“ oder „nur Turnierdatei“.
 
 Einheiten werden nur für die Anzeige umgerechnet (`Wertungsarchiv\Darstellung`): Halbpunkte → „4½“,
 We · 1000 → „7,215“. ELOBASE führt in der Kartei die **Erfolgszahl**, nicht die Turnierleistung — sie
@@ -184,6 +188,54 @@ Gegnerschnitt oder Leistung.
 
 Ein Fehler der Archivdatenbank kippt keine Seite: Er kommt ins
 Systemprotokoll, die Seite erscheint ohne Archiv.
+
+## Reklamationen (ab 20.11.2026)
+
+Wer das Archiv sehen darf, findet hinter jedem Archiveintrag der Karteikarte (NU… und G…) eine kleine
+Fahne. Sie öffnet einen Dialog mit Gründen zum Ankreuzen und einer Bemerkung; unter der Tabelle steht
+der Knopf **„Turnier fehlt?“** mit Feldern für Turnier, Zeitraum, Ort und Ergebnis. Gründe
+(`Archivreklamation::GRUENDE`, die Schlüssel stehen in der Datei und bleiben fest):
+
+| Schlüssel | Text im Dialog |
+| --- | --- |
+| `fremd` | Gehört nicht zu diesem Spieler (ein anderer, etwa ein Namensvetter, hat das Turnier gespielt) |
+| `doppelt` | Doppelt in der Kartei (dasselbe Turnier steht noch einmal da, oft mit anderem Code oder Datum) |
+| `nie` | Dieses Turnier hat es nicht gegeben |
+| `ergebnis` | Ergebnis falsch (Punkte oder Partienzahl) |
+| `wertung` | Wertungszahlen falsch (DWZ vorher/nachher, We, Leistung) |
+| `datum` | Datum oder Jahr falsch, Turnier steht an der falschen Stelle |
+| `name` | Turniername falsch oder nichtssagend |
+| `nicht_dwz` | Turnier hätte nicht DWZ-gewertet werden dürfen (z. B. Blitz, Schnellschach, Simultan) |
+| `unvollstaendig` | Partien fehlen oder gehören zu einem anderen Turnier |
+| `sonstiges` | Etwas anderes (Bemerkung Pflicht) |
+
+**Ablage:** Nichts wird verschickt. Jede Meldung ist eine JSON-Zeile in
+`var/wertungsarchiv/reklamationen.jsonl` (Format `wertungsarchiv-reklamation/1`): Zeitpunkt, Gründe,
+Bemerkung, Felder, die Karteikarte (NU-Nummer, Gesamtperson, Name), der Eintrag, wie er angezeigt
+wurde (Archiv, Kennung, Code, ZDB-Abzug, Satz, Turnier, Ende, Partien, Punkte, DWZ), Mitglied
+(Nummer, Name, E-Mail) und `status: offen`. Die Datei wird nur angehängt, nie geändert; sie liegt
+außerhalb von `public/` und übersteht Updates und neue Uploads der Archivordner.
+
+**Schlüssel statt Datenbanknummer:** Eine Zeile wird über `archiv|kennung|code|abzug|satz` erkannt
+(`Archivreklamation::schluessel()`), weil der Import die Kartei ersetzt und die Nummern dabei
+wechseln. „Turnier fehlt“ hängt an der NU-Nummer (bzw. an der ersten Archivperson einer G-Karte).
+Reklamierte Zeilen tragen die Marke „reklamiert“ und einen hellen Orangeton; erneut reklamieren geht,
+der Dialog zeigt dann die bisherigen Meldungen — mit Datum, Gründen und Text, aber **ohne den
+Namen** des Melders (nur „Ihre Meldung“ bei eigenen).
+
+**Sicherheit:** Der Kontext jedes Knopfs ist mit `kernel.secret` signiert (wie bei der Reklamation
+der nu-Daten); der Controller (`POST /wertungsportal-api/archiv-reklamation`) nimmt nur Mitglieder mit
+Archivzugriff an, prüft Signatur und Eingabe und bremst bei 60 Meldungen je Stunde. Ein Fehler beim
+Ausgeben des Dialogs nimmt nur die Knöpfe weg, nie die Archivzeilen.
+
+**Nächtlicher Bericht:** Der Cronjob `Archivreklamationsbericht` (5:15 Uhr) schickt dem Webmaster
+(Contao-Einstellung „E-Mail-Adresse des Systemadministrators“, `adminEmail`) eine Textmail mit allen
+Meldungen seit dem letzten Bericht. Ohne neue Meldung geht nichts hinaus. Der Stand steht in
+`var/wertungsarchiv/reklamationen.jsonl.bericht`; scheitert der Versand, versucht es der nächste Lauf
+mit denselben Meldungen. Ohne echten Cronjob beim Hoster löst nur ein Seitenaufruf den Termin aus.
+
+**Abarbeitung:** Die Datei geht an die Aufbereitung (Rückfrage R6 in `UEBERGABE.md`); das Bundle
+ändert an den Daten nichts.
 
 ## Monatlicher Abzug des Wertungsportals (Etappe 4)
 

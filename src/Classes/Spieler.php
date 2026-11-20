@@ -358,6 +358,11 @@ class Spieler extends \Contao\Module
 	 * Die Archivzeilen kommen außerdem als Punkte vor das DWZ-Diagramm der
 	 * Karteikarte (Karteikarte::mitArchiv(), ab 2.0.0).
 	 *
+	 * Jede Zeile bekommt einen Reklamationsknopf und, wenn schon reklamiert
+	 * wurde, die Marke „reklamiert" (Schlüssel `reklamation`, `reklamiert`);
+	 * nebenbei setzt die Methode `$this->Template->archivFehlt`, den Knopf
+	 * „Turnier fehlt?" unter der Tabelle (Wertungsarchiv\Archivreklamation).
+	 *
 	 * @param string                                                        $nuId   NU-Nummer der Karteikarte
 	 * @param \Schachbulle\ContaoWertungsportalBundle\Helper\Karteikarte|null $kartei Karteikarte, deren Diagramm die Archivpunkte bekommt
 	 *
@@ -392,9 +397,16 @@ class Spieler extends \Contao\Module
 				$kartei->mitArchiv(array_map(array(\Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Darstellung::class, 'diagrammpunkt'), array_reverse($zeilen)));
 			}
 
-			return array_map(static function (array $zeile) use ($basis, $suffix): array {
+			$aufbereitet = array_map(static function (array $zeile) use ($basis, $suffix): array {
 				return \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Darstellung::karteizeile($zeile, $basis, $suffix);
 			}, $zeilen);
+
+			// Reklamationsknöpfe je Archivzeile und „Turnier fehlt?" unter der
+			// Tabelle (ab 2.0.0, nur Logdatei, siehe Archivreklamation)
+			$name = (string) (($archiv->gesamtperson($gesamt) ?? array())['name'] ?? '');
+			$this->Template->archivFehlt = \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Archivreklamation::fuerFehlt($nuId, $gesamt, '', $name);
+
+			return \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Archivreklamation::fuerZeilen($zeilen, $aufbereitet, $nuId, $gesamt, $name);
 		}
 		catch (\Throwable $e)
 		{
@@ -502,6 +514,11 @@ class Spieler extends \Contao\Module
 				return \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Darstellung::karteizeile($zeile, $basis, $suffix);
 			}, $zeilen);
 
+			// Reklamation wie auf der Karteikarte; ohne NU-Nummer trägt die
+			// Kennung der ersten Archivperson die Meldungen „Turnier fehlt"
+			$kartei = \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Archivreklamation::fuerZeilen($zeilen, $kartei, '', $id, (string) $gesamt['name']);
+			$fehlt = \Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Archivreklamation::fuerFehlt('', $id, (string) ($zeilen[0]['kennung'] ?? 'G'.$id), (string) $gesamt['name']);
+
 			// DWZ-Diagramm wie auf der Karteikarte, ganz aus dem Archiv; bei
 			// mehr als 50 Punkten breit und waagerecht scrollbar
 			$punkte = array_map(array(\Schachbulle\ContaoWertungsportalBundle\Wertungsarchiv\Darstellung::class, 'diagrammpunkt'), array_reverse($zeilen));
@@ -524,6 +541,7 @@ class Spieler extends \Contao\Module
 		$this->Template->navigation = $this->wertungsportal_ohneNavigation ? array() : \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::Navigation();
 		$this->Template->gesamt = $gesamt;
 		$this->Template->kartei = $kartei;
+		$this->Template->archivFehlt = $fehlt;
 		$this->Template->diagramm = $diagramm;
 
 		return true;

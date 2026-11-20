@@ -169,4 +169,18 @@ class DarstellungTest extends TestCase
             Darstellung::zeilen(array('felder' => array('nr', 'name'), 'zeilen' => array(array(1, 'A'), array(2, 'B'), array(3))))
         );
     }
+
+    /**
+     * Herkunft: ältere ZDB-Abzüge erscheinen mit Monat/Jahr, der letzte Stand
+     * und die anderen Archive ohne (20.11.2026).
+     */
+    public function testQuelleMitAbzug(): void
+    {
+        $this->assertStringContainsString("ZDB <span class=\"wp-archivstand\">7/1997</span>", Darstellung::quelle("elobase", "1997-07"));
+        $this->assertStringContainsString("älterer Abzug vom 7/1997", Darstellung::quelle("elobase", "1997-07"));
+        $this->assertStringNotContainsString("wp-archivstand", Darstellung::quelle("elobase", "ZDB"));
+        $this->assertStringContainsString("letzter Stand der ZDB", Darstellung::quelle("elobase", "ZDB"));
+        $this->assertStringNotContainsString("wp-archivstand", Darstellung::quelle("dewis", "1997-07"));
+        $this->assertSame(Darstellung::quelle("dewis"), Darstellung::quelle("dewis", null));
+    }
 }

@@ -47,7 +47,7 @@ $g = $this->gesamt;
 		<p>Keine Karteieinträge.</p>
 	<?php else: ?>
 		<div class="table_responsiv">
-			<table class="body">
+			<table class="body wp-kartei">
 				<thead>
 					<tr>
 						<th class="right-line">Quelle</th>
@@ -64,10 +64,11 @@ $g = $this->gesamt;
 				</thead>
 				<tbody>
 				<?php foreach($this->kartei as $d): ?>
-					<tr class="elobase<?= !empty($d['vor']) ? ' wp-vor-mitgliedschaft' : '' ?>"<?= !empty($d['vor']) ? ' title="Turnier vor der ersten Mitgliedschaft"' : '' ?>>
+					<?php // Vor der ersten Mitgliedschaft: Marke statt Strich (20.11.2026); reklamierte Zeilen markiert ?>
+					<tr class="elobase<?= !empty($d['vor']) ? ' wp-vor-mitgliedschaft' : '' ?><?= !empty($d['reklamiert']) ? ' wp-reklamiert' : '' ?>">
 						<td class="col_0 wp-archivnr right-line bottom-line"><?= $d['nummer'] ?></td>
 						<td class="right-line bottom-line"><?= $d['jahr'] ?></td>
-						<td class="right-line bottom-line"><?= $d['turnier'] ?></td>
+						<td class="right-line bottom-line"><?= $d['turnier'] ?><?= !empty($d['vor']) ? ' <span class="wp-marke wp-marke-vor" title="Turnier vor der ersten Mitgliedschaft — Zuordnung unsicherer">vor 1. Anmeldung</span>' : '' ?><?= $d['reklamiert'] ?? '' ?><?= $d['reklamation'] ?? '' ?></td>
 						<td class="right-line bottom-line"><?= $d['punkte'] ?></td>
 						<td class="right-line bottom-line"><?= $d['partien'] ?></td>
 						<td class="right-line bottom-line"><?= $d['we'] ?></td>
@@ -80,6 +81,9 @@ $g = $this->gesamt;
 				</tbody>
 			</table>
 		</div>
+		<?php if($this->archivFehlt): ?>
+			<p class="wp-archivreklamation-zeile noprint"><?= $this->archivFehlt ?></p>
+		<?php endif; ?>
 	<?php endif; ?>
 
 	<?php if($this->diagramm): ?>

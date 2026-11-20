@@ -44,17 +44,33 @@ class Darstellung
      * Quelle (Archivkarte): Archivsymbol, dahinter das Kürzel („ZDB",
      * „DeWIS", „Portal"); Langname im Tooltip.
      *
-     * @param string $archiv Archivkennung elobase, dewis oder wp; Unbekanntes
-     *                       erscheint maskiert als Kürzel
+     * ELOBASE-Zeilen nennen zusätzlich den Abzug der ZDB, aus dem sie stammen
+     * (Spalte `quelle` der Kartei): „ZDB" ist der letzte Stand, ältere Abzüge
+     * erscheinen als „ZDB 7/1997" (Frank Binding, 20.11.2026: Je älter der
+     * Abzug, desto unsicherer der Eintrag — man soll es sehen).
+     *
+     * @param string      $archiv Archivkennung elobase, dewis oder wp; Unbekanntes
+     *                            erscheint maskiert als Kürzel
+     * @param string|null $stand  Abzug der ZDB („ZDB" oder „JJJJ-MM"), null
+     *                            oder leer ohne Angabe
      *
      * @return string HTML
      */
-    public static function quelle(string $archiv): string
+    public static function quelle(string $archiv, ?string $stand = null): string
     {
         $kuerzel = htmlspecialchars(self::KUERZEL[$archiv] ?? $archiv, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $name = htmlspecialchars(self::ARCHIVNAME[$archiv] ?? $archiv, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $titel = 'Aus dem Wertungsarchiv: '.$name;
 
-        return '<span class="wp-archivquelle" title="Aus dem Wertungsarchiv: '.$name.'">'.self::SYMBOL.' '.$kuerzel.'</span>';
+        if ('elobase' === $archiv && null !== $stand && preg_match('/^(\d{4})-(\d{2})$/', $stand, $m)) {
+            $monat = (int) $m[2].'/'.$m[1];
+            $kuerzel .= ' <span class="wp-archivstand">'.$monat.'</span>';
+            $titel .= ', älterer Abzug vom '.$monat.' — Einträge aus älteren Abzügen sind unsicherer';
+        } elseif ('elobase' === $archiv && 'ZDB' === $stand) {
+            $titel .= ', letzter Stand der ZDB';
+        }
+
+        return '<span class="wp-archivquelle" title="'.$titel.'">'.self::SYMBOL.' '.$kuerzel.'</span>';
     }
 
     /**
@@ -173,7 +189,7 @@ class Darstellung
      *   die Erfolgszahl, die kein Leistungsmaß ist — sie bleibt weg.
      * - E: `extra.e_koeffizient` (DeWIS, Portal), sonst
      *   `extra.erg_e_koeffizient` (ELOBASE nach R5).
-     * - nummer: Archivsymbol mit Kürzel (quelle()), HTML.
+     * - nummer: Archivsymbol mit Kürzel und ZDB-Abzug (quelle()), HTML.
      * - `vor`: Turnier vor der ersten Mitgliedschaft (Frank Binding,
      *   18.11.2026: kennzeichnen, nicht ausblenden).
      *
@@ -209,7 +225,7 @@ class Darstellung
         $archiv = (string) ($zeile['archiv'] ?? '');
 
         return array(
-            'nummer'   => self::quelle($archiv),
+            'nummer'   => self::quelle($archiv, isset($zeile['quelle']) ? (string) $zeile['quelle'] : null),
             'jahr'     => self::jahr($zeile['t_ende'] ?? $zeile['ende'] ?? null, $code),
             'turnier'  => $turnier,
             'punkte'   => self::punkte($zeile['punkte_halbe'] ?? null),

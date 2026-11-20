@@ -60,6 +60,11 @@ usort($teilnehmer, static function ($a, $b) {
 					<tr><td class="label bottom-line">Auswerter:</td><td class="value bottom-line"><?= $e($k['auswerter']) ?></td></tr>
 				<?php endif; ?>
 				<tr><td class="label bottom-line">Spieler/Partien/Runden:</td><td class="value bottom-line"><?= $e($k['spieler'] ?? $t['spieler'] ?? '') ?> / <?= $e($k['partien'] ?? $t['partien'] ?? '') ?> / <?= $e($k['runden'] ?? $t['runden'] ?? '') ?></td></tr>
+				<?php // Herkunft des Turnierkopfs (ELOBASE): letzter Stand der ZDB, älterer Abzug oder nur die Turnierdatei ?>
+				<?php $kopfQuelle = 'elobase' === $t['archiv'] ? (string) (((array) json_decode((string) ($t['extra'] ?? ''), true))['kopf_quelle'] ?? '') : ''; ?>
+				<?php if('' !== $kopfQuelle): ?>
+					<tr><td class="label bottom-line">Herkunft:</td><td class="value bottom-line"><?= 'ZDB' === $kopfQuelle ? 'ZDB, letzter Stand' : ('Datei' === $kopfQuelle ? 'nur Turnierdatei, nicht in der ZDB' : (preg_match('/^(\d{4})-(\d{2})$/', $kopfQuelle, $m) ? 'älterer ZDB-Abzug '.(int) $m[2].'/'.$m[1].' — weniger zuverlässig' : $e($kopfQuelle))) ?></td></tr>
+				<?php endif; ?>
 				<?php if($kennzeichen): ?>
 					<tr><td class="label bottom-line">Kennzeichen:</td><td class="value bottom-line"><?= $e(implode(', ', $kennzeichen)) ?></td></tr>
 				<?php endif; ?>

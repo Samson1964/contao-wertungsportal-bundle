@@ -32,6 +32,16 @@
 * Add: `archiv-import elobase` liest `dewis_ersatz.jsonl` (Rückfrage R1) und legt für ELOBASE-Personen,
   deren DeWIS-ID in DeWIS gelöscht wurde, eine Kante zur Ersatzperson an (Quelle `dewis_ersatz`,
   37 Kanten); nicht mehr geführte Ersatzkanten werden „entfallen“
+* Add: **Reklamationen im Wertungsarchiv** — Fahne hinter jedem Archiveintrag der Karteikarte, Dialog mit
+  zehn Gründen und Bemerkung, Knopf „Turnier fehlt?“ unter der Tabelle. Ablage nur in
+  `var/wertungsarchiv/reklamationen.jsonl`; reklamierte Zeilen tragen die Marke „reklamiert“, erneutes
+  Reklamieren zeigt die bisherigen Meldungen (ohne Namen). Route `POST /wertungsportal-api/archiv-reklamation`
+* Add: Nächtlicher Cronjob (5:15 Uhr) mailt dem Webmaster (`adminEmail`) die neuen Archivreklamationen
+* Add: ELOBASE-Einträge aus älteren ZDB-Abzügen tragen den Abzug in der Spalte Nr. („ZDB 8/1998“); die
+  Archivturnier-Seite nennt die Herkunft des Turnierkopfs
+* Add: Besuchte Turnierlinks der Karteikarte erscheinen violett
+* Change: Turniere vor der ersten Mitgliedschaft tragen die Marke „vor 1. Anmeldung“ statt der grauen
+  gestrichelten Linie links von „Nr.“
 * Add: Ergebnisse der Archivturniere zeigen die **Farbe** (Rückfrage R3) wie die Ergebnisse von nu —
   Rundenansicht hell/dunkel hinterlegt, Kreuztabelle weiß/grau, Tooltip „mit Weiß/Schwarz“;
   ELOBASE führt keine Farbe, dort bleibt die Ansicht wie bisher

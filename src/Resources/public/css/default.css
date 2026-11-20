@@ -567,16 +567,142 @@
 /* Karteikarte: ältere Turniere aus dem Wertungsarchiv (ab 2.0.0) leicht
    abgesetzt; Turniere vor der ersten Mitgliedschaft gekennzeichnet (Frank
    Binding, 18.11.2026: kennzeichnen, nicht ausblenden) — grauer Text und
-   gestrichelte Linie links, Erklärung im title */
+   die Marke „vor 1. Anmeldung" hinter dem Turnier. Bis 20.11.2026 stand dort
+   eine gestrichelte Linie links von „Nr.", die wie ein Darstellungsfehler aussah */
 .dewis table.body tr.elobase td {
 	background-color		: #F5F7FA;
 }
 .dewis table.body tr.wp-vor-mitgliedschaft td {
 	color					: #6b6b6b;
 }
-.dewis table.body tr.wp-vor-mitgliedschaft td.col_0 {
-	border-left				: 3px dashed #9a9a9a;
+
+/* Kleine Marken hinter dem Turniernamen: „vor 1. Anmeldung", „reklamiert" */
+.dewis .wp-marke {
+	display					: inline-block;
+	margin-left				: 6px;
+	padding					: 0 5px;
+	border					: 1px solid #b8bfc7;
+	border-radius			: 3px;
+	font-size				: 0.78em;
+	line-height				: 1.45;
+	font-style				: normal;
+	white-space				: nowrap;
+	vertical-align			: 1px;
+	color					: #4f5b66;
+	background-color		: #ffffff;
 	cursor					: help;
+}
+.dewis .wp-marke-reklamiert {
+	border-color			: #d9822b;
+	color					: #8a4b0f;
+	background-color		: #fff4e5;
+}
+.dewis table.body tr.wp-reklamiert td {
+	background-color		: #FFFAF2;
+}
+
+/* Abzug der ZDB hinter „ZDB" (ältere Abzüge, z. B. „7/1997") */
+.dewis .wp-archivstand {
+	font-size				: 0.85em;
+	color					: #8a5a00;
+}
+
+/* Besuchte Links in der Karteikarte andersfarbig (Frank Binding, 20.11.2026).
+   :visited erlaubt nur Farben — mehr darf der Browser aus Datenschutzgründen
+   nicht anwenden */
+.dewis table.wp-kartei a:visited {
+	color					: #7a3e9d;
+}
+
+/* Reklamationsknopf je Archivzeile: unauffällige Fahne, die beim Überfahren
+   der Zeile deutlicher wird; „Turnier fehlt?" als Textknopf unter der Tabelle */
+.dewis .wp-archivreklamation-knopf {
+	margin					: 0 0 0 6px;
+	padding					: 0 3px;
+	border					: 0;
+	background				: none;
+	font					: inherit;
+	line-height				: 1;
+	color					: #9aa3ad;
+	cursor					: pointer;
+}
+.dewis tr:hover .wp-archivreklamation-knopf,
+.dewis .wp-archivreklamation-knopf:focus-visible {
+	color					: #d9822b;
+}
+.dewis tr.wp-reklamiert .wp-archivreklamation-knopf {
+	color					: #d9822b;
+}
+.dewis .wp-archivreklamation-knopf.wp-archivreklamation-fehlt {
+	margin					: 0;
+	padding					: 2px 8px;
+	border					: 1px solid #d9822b;
+	border-radius			: 3px;
+	color					: #8a4b0f;
+	background-color		: #fff4e5;
+	font-size				: 0.9em;
+	line-height				: 1.4;
+}
+.dewis p.wp-archivreklamation-zeile {
+	margin-top				: 8px;
+	text-align				: right;
+}
+.dewis .wp-archivreklamation-anzahl {
+	font-size				: 0.85em;
+	color					: #6b6b6b;
+}
+.dewis .wp-unsichtbar,
+.wp-archivreklamation .wp-unsichtbar {
+	position				: absolute;
+	width					: 1px;
+	height					: 1px;
+	overflow				: hidden;
+	clip					: rect(0 0 0 0);
+	white-space				: nowrap;
+}
+
+/* Dialog der Archivreklamation: Gründe als Liste, bisherige Meldungen grau */
+.wp-archivreklamation fieldset {
+	margin					: 10px 0 0;
+	padding					: 6px 10px 8px;
+	border					: 1px solid #dde3e9;
+	border-radius			: 3px;
+}
+.wp-archivreklamation fieldset[hidden] {
+	display					: none;
+}
+.wp-archivreklamation legend {
+	padding					: 0 4px;
+	font-weight				: bold;
+}
+.wp-archivreklamation label.wp-archivreklamation-grund {
+	display					: flex;
+	gap						: 6px;
+	align-items				: flex-start;
+	margin					: 4px 0;
+	font-weight				: normal;
+}
+.wp-archivreklamation label.wp-archivreklamation-grund input {
+	margin-top				: 3px;
+	flex					: 0 0 auto;
+}
+.wp-archivreklamation .wp-archivreklamation-bisher {
+	margin					: 8px 0 0;
+	padding					: 6px 10px;
+	background-color		: #fff4e5;
+	border-left				: 3px solid #d9822b;
+	font-size				: 0.9em;
+}
+.wp-archivreklamation .wp-archivreklamation-bisher[hidden] {
+	display					: none;
+}
+.wp-archivreklamation .wp-archivreklamation-bisher-kopf {
+	margin					: 0 0 4px;
+	font-weight				: bold;
+}
+.wp-archivreklamation .wp-archivreklamation-bisher ul {
+	margin					: 0;
+	padding-left			: 18px;
 }
 
 /* Herkunft einer Archivzeile (Spalte Nr. bzw. Quelle): Archivsymbol, dahinter

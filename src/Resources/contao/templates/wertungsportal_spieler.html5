@@ -175,7 +175,7 @@
 		?>
 
 		<div class="table_responsiv">
-			<table class="body tablesorter">
+			<table class="body tablesorter wp-kartei">
 				<thead>
 					<tr class="row_0">
 						<th class="col_0 right-line" data-sort="zahl">Nr.</th>
@@ -217,10 +217,11 @@
 						<?php foreach($this->altkartei as $d): ?>
 							<?php $x++; $class = ($x < count($this->altkartei)) ? ' bottom-line' : ''; ?>
 							<?php // Ältere Turniere aus dem Wertungsarchiv (ab 2.0.0); vor der ersten Mitgliedschaft gekennzeichnet ?>
-							<tr class="row_<?= $row ?> elobase<?= !empty($d['vor']) ? ' wp-vor-mitgliedschaft' : '' ?>"<?= !empty($d['vor']) ? ' title="Turnier vor der ersten Mitgliedschaft"' : '' ?>>
+							<?php // Vor der ersten Mitgliedschaft: Marke statt Strich (20.11.2026); reklamierte Zeilen markiert ?>
+							<tr class="row_<?= $row ?> elobase<?= !empty($d['vor']) ? ' wp-vor-mitgliedschaft' : '' ?><?= !empty($d['reklamiert']) ? ' wp-reklamiert' : '' ?>">
 								<td class="col_0<?= $class ?> wp-archivnr right-line"><?= $d['nummer'] ?></td>
 								<td class="col_1<?= $class ?> right-line"><?= $d['jahr'] ?></td>
-								<td class="col_2<?= $class ?> right-line"><?= $d['turnier'] ?></td>
+								<td class="col_2<?= $class ?> right-line"><?= $d['turnier'] ?><?= !empty($d['vor']) ? ' <span class="wp-marke wp-marke-vor" title="Turnier vor der ersten Mitgliedschaft — Zuordnung unsicherer">vor 1. Anmeldung</span>' : '' ?><?= $d['reklamiert'] ?? '' ?><?= $d['reklamation'] ?? '' ?></td>
 								<td class="col_3<?= $class ?> right-line"><?= $d['punkte'] ?></td>
 								<td class="col_4<?= $class ?> right-line"><?= $d['partien'] ?></td>
 								<td class="col_5<?= $class ?> right-line"><?= $d['we'] ?></td>
@@ -235,6 +236,10 @@
 				</tbody>
 			</table>
 		</div>
+
+		<?php if($this->archivFehlt): ?>
+			<p class="wp-archivreklamation-zeile noprint"><?= $this->archivFehlt ?></p>
+		<?php endif; ?>
 
 		<?php if($this->diagramm): ?>
 			<div class="diagramm">

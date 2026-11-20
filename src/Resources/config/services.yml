@@ -20,6 +20,13 @@ services:
         arguments:
             - '@contao.framework'
 
+    # Reklamationen zu Einträgen des Wertungsarchivs (Route in routing.yml,
+    # ab 2.0.0). Öffentlich aus demselben Grund wie oben
+    Schachbulle\ContaoWertungsportalBundle\Controller\ArchivreklamationController:
+        public: true
+        arguments:
+            - '@contao.framework'
+
     # Nächtlicher Cronjob: lädt Turnierdaten der letzten Wochen vor, damit
     # nicht jeder erste Besucher auf die Schnittstelle warten muss.
     # Alle 10 Minuten zwischen 1 und 3 Uhr; jeder Lauf macht dort weiter, wo
@@ -39,6 +46,12 @@ services:
     Schachbulle\ContaoWertungsportalBundle\Cron\Aufraeumer:
         tags:
             - { name: contao.cronjob, interval: '0 4 * * *' }
+
+    # Schickt nachts die neuen Reklamationen des Wertungsarchivs an den
+    # Webmaster (adminEmail), ab 2.0.0. Nach dem Aufräumen
+    Schachbulle\ContaoWertungsportalBundle\Cron\Archivreklamationsbericht:
+        tags:
+            - { name: contao.cronjob, interval: '15 5 * * *' }
 
     # Ordnet monatlich die Mitgliedergruppe für DSB-Mitglieder zu (ab 1.54.0):
     # Wessen E-Mail-Adresse im Spielerbestand vorkommt, bekommt sie, die
