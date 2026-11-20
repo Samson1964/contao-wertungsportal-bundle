@@ -620,6 +620,14 @@ class Turnier extends \Contao\Module
 		$this->Template->linkAuswertung = $adresse.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix();
 		$this->Template->linkErgebnisse = $adresse.'/Ergebnisse'.\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix();
 
+		// Ältere ELOBASE-Fassung desselben Turniers (Rückfrage R6): Verweis auf
+		// die gültige ZDB-Fassung über ihren Code (Adresse turniere/<Code>)
+		$extra = (array) json_decode((string) ($turnier['extra'] ?? ''), true);
+		$this->Template->dubletteVon = (string) ($extra['erg_dublette_von'] ?? '');
+		$this->Template->linkDubletteVon = '' !== $this->Template->dubletteVon
+			? \Schachbulle\ContaoWertungsportalBundle\Helper\Helper::getTurnierseiteUrl().'/'.rawurlencode($this->Template->dubletteVon).\Schachbulle\ContaoWertungsportalBundle\Helper\Helper::urlSuffix()
+			: '';
+
 		return true;
 	}
 

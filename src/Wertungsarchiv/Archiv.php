@@ -16,7 +16,13 @@ use Doctrine\DBAL\Connection;
  *
  * - ein DeWIS-Turnier entfällt, wenn ein Portalturnier darauf als Dublette
  *   zeigt (archiv_turnier.dublette_archiv = 'dewis'),
- * - ein ELOBASE-Turnier entfällt, wenn ein DeWIS-Turnier darauf zeigt.
+ * - ein ELOBASE-Turnier entfällt, wenn ein DeWIS-Turnier darauf zeigt,
+ * - ein ELOBASE-Turnier mit dem Kennzeichen `dublette` entfällt: Es ist eine
+ *   ältere Fassung desselben Turniers unter anderem Code (Rückfrage R6,
+ *   20.11.2026). Anders als oben steht der Verweis hier an der Dublette
+ *   selbst (`erg_dublette_von` in `extra`, Code der gültigen ZDB-Fassung) —
+ *   deshalb über das Kennzeichen, nicht über dublette_quell_id, sonst
+ *   verschwände die gültige Fassung.
  *
  * Die Turniere selbst liegen als JSON-Dateien unter WERTUNGSARCHIV_PFAD;
  * gelesen wird nur innerhalb dieses Ordners.
@@ -119,6 +125,7 @@ class Archiv
                      SELECT 1 FROM archiv_turnier j WHERE j.dublette_archiv = 'dewis' AND j.dublette_quell_id = t.quell_id))
                AND NOT (k.archiv = 'elobase' AND t.id IS NOT NULL AND EXISTS (
                      SELECT 1 FROM archiv_turnier j WHERE j.dublette_archiv = 'elobase' AND j.dublette_quell_id = t.quell_id))
+               AND NOT (k.archiv = 'elobase' AND t.id IS NOT NULL AND FIND_IN_SET('dublette', t.kennzeichen) > 0)
              ORDER BY k.id",
             array($gesamtId)
         );

@@ -40,6 +40,9 @@
 * Add: ELOBASE-Einträge aus älteren ZDB-Abzügen tragen den Abzug in der Spalte Nr. („ZDB 8/1998“); die
   Archivturnier-Seite nennt die Herkunft des Turnierkopfs
 * Add: Besuchte Turnierlinks der Karteikarte erscheinen violett
+* Add: ELOBASE-Turniere mit dem Kennzeichen `dublette` (ältere Fassung desselben Turniers unter anderem
+  Code, `erg_dublette_von`, Rückfrage R6) erscheinen in keiner Karteikarte; ihre Turnierseite verweist auf
+  die gültige ZDB-Fassung
 * Change: Turniere vor der ersten Mitgliedschaft tragen die Marke „vor 1. Anmeldung“ statt der grauen
   gestrichelten Linie links von „Nr.“
 * Add: Ergebnisse der Archivturniere zeigen die **Farbe** (Rückfrage R3) wie die Ergebnisse von nu —

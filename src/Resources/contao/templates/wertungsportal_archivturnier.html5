@@ -41,6 +41,9 @@ usort($teilnehmer, static function ($a, $b) {
 		<?php if(!empty($t['rekonstruiert'])): ?>
 			<br><strong>Rekonstruiert:</strong> Zu diesem Turnier gibt es keine Auswertungsdatei mehr; die Teilnehmer stammen aus den Karteikarten, Paarungen und Runden sind nicht bekannt.
 		<?php endif; ?>
+		<?php if($this->dubletteVon): ?>
+			<br><strong>Doppelt erfasst:</strong> Dies ist eine ältere Fassung desselben Turniers unter anderem Code; sie erscheint in keiner Karteikarte. Gültig ist <a href="<?= $e($this->linkDubletteVon) ?>"><?= $e($this->dubletteVon) ?></a>.
+		<?php endif; ?>
 		<?php if(!empty($this->json['weicht_von_kartei_ab'])): ?>
 			<br><strong>Die Karteikarten weichen von dieser Auswertung ab</strong> (spätere Korrekturen ohne Neuberechnung). Maßgeblich ist die Karteikarte.
 		<?php endif; ?>

@@ -170,6 +170,13 @@ Suche und Turnierseiten, wie sie waren.
 „vor 1. Anmeldung“ hinter dem Turniernamen (Frank Binding, 18.11.2026: kennzeichnen, nicht ausblenden;
 bis 20.11.2026 eine gestrichelte Linie links von „Nr.“, die wie ein Darstellungsfehler aussah).
 
+**Doppelt erfasste ELOBASE-Turniere (Rückfrage R6, 20.11.2026):** Die Aufbereitung kennzeichnet die
+ältere Fassung desselben Turniers unter anderem Code mit `dublette` und nennt in `erg_dublette_von`
+(im Bundle `extra`) den Code der gültigen ZDB-Fassung. Solche Turniere erscheinen in keiner
+Karteikarte (`Archiv::altkartei()`, über das Kennzeichen — der Verweis steht an der Dublette, nicht an
+der gültigen Fassung wie bei DeWIS → ELOBASE). Ihre Turnierseite bleibt erreichbar und verweist auf die
+gültige Fassung.
+
 Die **Archivturnier-Seite** nennt bei ELOBASE die Herkunft des Turnierkopfs (`extra.kopf_quelle`):
 „ZDB, letzter Stand“, „älterer ZDB-Abzug 7/1997“ oder „nur Turnierdatei“.
 
