@@ -234,8 +234,14 @@ Meldungen seit dem letzten Bericht. Ohne neue Meldung geht nichts hinaus. Der St
 `var/wertungsarchiv/reklamationen.jsonl.bericht`; scheitert der Versand, versucht es der nächste Lauf
 mit denselben Meldungen. Ohne echten Cronjob beim Hoster löst nur ein Seitenaufruf den Termin aus.
 
-**Abarbeitung:** Die Datei geht an die Aufbereitung (Rückfrage R6 in `UEBERGABE.md`); das Bundle
-ändert an den Daten nichts.
+**Abarbeitung (Frank Binding, 20.11.2026): Berichtigung nur über die Aufbereitung.** Die Datei geht
+an die Aufbereitung (Rückfrage R6 in `UEBERGABE.md`). Dort werden je Grund Belege gesammelt, eine
+Berichtigungsliste als eigene Datei geschrieben, im Probelauf mit Vorher/Nachher je Person geprüft und
+nach Franks Freigabe beim Neuaufbau angewendet; danach wie immer `archiv-import` und
+`archiv-personen`. Das Bundle hat **keine eigene Ausblendliste** und ändert an den Daten nichts — ein
+falscher Eintrag bleibt sichtbar (als „reklamiert“), bis der nächste Neuaufbau ihn berichtigt.
+Vorgeschlagen ist eine Rückmeldung der Aufbereitung (`reklamationen_status.jsonl`), damit die
+Karteikarte „erledigt“ bzw. „abgelehnt“ zeigen kann; gebaut wird sie erst, wenn das Format steht.
 
 ## Monatlicher Abzug des Wertungsportals (Etappe 4)
 
