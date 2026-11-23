@@ -313,6 +313,12 @@ Wer an Index, Eimern, Sortierung oder Zeichensatz etwas ändert, mißt dagegen n
 - Text nur über `text()` → `nachCp437()` (feste Tabelle; `iconv`-TRANSLIT hängt an der Bibliothek
   des Servers). Die Zahlenfelder der alten Fassung sind Bytes und dürfen durch keine Wandlung.
 - Alte Fassung: DWZ ohne Wert = kodierte „0000" (`nn`), Feld 7 leer, Feld 13 im Klartext.
+- **Fassung ab 10.03 (1.60.0, `FASSUNG_ANSI`, Archiv `swiss1003`, Dateizusatz „w"):** wie 10.0, Textfelder
+  über `nachAnsi()` in windows-1252; Eimer/Sortierung aus `schluesselname()` (Feld 0 zurück nach CP437)
+  → SWX byte-gleich mit der 10.0-Fassung. Die Originaldateien von swiss-chess.de sind ab 10.03
+  **verschlüsselt** (`SwissChess-Dateien/fdsb261118/`, SWX-Kennung `FFFFFD66`/`01FA000D`) — nicht nachbauen,
+  Swiss-Chess nicht zerlegen; Weber gibt kein Format heraus. Ob 10.03 unsere Fassung liest, prüft ein
+  Turnierleiter (Stand 23.11.2026 offen). Prüfstand `SwissChess-Dateien/pruefstand/ansi_vergleich.php`.
 
 ## Turnierseiten: Nichtmitglieder und Erwartungswerte (ab 1.45.0)
 

@@ -719,6 +719,70 @@ class SwissChessTest extends TestCase
 		$f = explode(';', rtrim($sc->zeile($this->csvZeile('1813'), $this->eloZeile(array('country' => 'AUT'))), "\r\n"));
 		$this->assertSame('GER', $f[2], 'das Land der CSV geht vor');
 	}
+
+	// ─────────────────────────────────────────────
+	//  Fassung ab Swiss-Chess 10.03: windows-1252
+	// ─────────────────────────────────────────────
+
+	/**
+	 * windows-1252 aus den CSV-Dateien bleibt byte-gleich, UTF-8 aus der
+	 * Elo-Tabelle ergibt dieselben Bytes. Anders als in CP437 bleiben š, Ó, ý
+	 * und ø erhalten; was windows-1252 nicht kennt, wird ASCII; Apostrophe und
+	 * Anführungszeichen werden wie bisher zu ASCII.
+	 */
+	public function testNachAnsi(): void
+	{
+		$this->assertSame('Muster,Max', SwissChess::nachAnsi('Muster,Max'), 'reines ASCII bleibt');
+		$this->assertSame("M\xFCller,J\xF6rg", SwissChess::nachAnsi("M\xFCller,J\xF6rg"), 'windows-1252 bleibt');
+		$this->assertSame("M\xFCller,J\xF6rg", SwissChess::nachAnsi('Müller,Jörg'), 'UTF-8');
+		$this->assertSame("Gro\xDF", SwissChess::nachAnsi('Groß'));
+		$this->assertSame("\x8Aakota,Tom\xE1\x9A", SwissChess::nachAnsi('Šakota,Tomáš'), 'š kennt windows-1252');
+		$this->assertSame("\xD3scar Hol\xFD S\xF8rland", SwissChess::nachAnsi('Óscar Holý Sørland'));
+		$this->assertSame('Lukasz Ozdoba', SwissChess::nachAnsi('Łukasz Ożdoba'), 'nicht in windows-1252: ASCII-Ersatz');
+		$this->assertSame("Bari\x9Aic", SwissChess::nachAnsi('Barišić'), 'š bleibt, ć wird c');
+		$this->assertSame("O'Neill D'Avola", SwissChess::nachAnsi("O\x92Neill D\xB4Avola"), 'Apostrophe werden ASCII');
+		$this->assertSame('"Maxi"', SwissChess::nachAnsi('„Maxi“'));
+		$this->assertSame('AB', SwissChess::nachAnsi("A\u{0416}B"), 'unbekannte Zeichen fallen weg');
+	}
+
+	/**
+	 * Die Zeile der ANSI-Fassung: Namen in windows-1252, Zahlen im Klartext wie
+	 * ab 10.0, Anführungszeichen fallen weg, die Feldzahl bleibt.
+	 */
+	public function testAnsiFassungFelder(): void
+	{
+		$sc = new SwissChessPruefling();
+		$sc->ordne(self::KOPF_NEU);
+		$sc->setzeFassung(SwissChess::FASSUNG_ANSI);
+
+		$f = explode(';', rtrim($sc->zeile($this->csvZeile('1813', "M\xFCller,J\xF6rg \x84Maxi\x93")), "\r\n"));
+
+		$this->assertSame("M\xFCller,J\xF6rg Maxi", $f[0]);
+		$this->assertSame('1813', $f[4]);
+		$this->assertSame('NU4005017', $f[7]);
+		$this->assertCount(SwissChess::FELDER, $f);
+
+		$f = explode(';', rtrim($sc->fideZeile($this->eloZeile(array('surname' => 'Dvořák', 'prename' => 'Zoë'))), "\r\n"));
+		$this->assertSame("Dvor\xE1k,Zo\xEB", $f[0], 'FIDE-Name aus UTF-8');
+	}
+
+	/**
+	 * Eimer und Sortierschlüssel der ANSI-Fassung sind dieselben wie ab 10.0:
+	 * Der Name wird dafür nach CP437 gewandelt. „Böttcher" bleibt in „Bo",
+	 * „Özdemir" in „Oe", „Šakota" landet wie bisher in „Sa".
+	 */
+	public function testAnsiGleicheEimer(): void
+	{
+		foreach (array('Böttcher,Uwe', 'Özdemir,Ali', 'Aßmann,Eva', 'Çelik,Can', 'Šakota,Lena', 'Muster`,Nicola') as $utf8) {
+			$cp437 = SwissChess::nachCp437($utf8);
+			$ansi = SwissChess::schluesselname(SwissChess::nachAnsi($utf8), SwissChess::FASSUNG_ANSI);
+
+			$this->assertSame(SwissChess::eimer($cp437), SwissChess::eimer($ansi), $utf8);
+			$this->assertSame(SwissChess::sortierschluessel($cp437), SwissChess::sortierschluessel($ansi), $utf8);
+		}
+
+		$this->assertSame("B\x94ttcher", SwissChess::schluesselname("B\x94ttcher", SwissChess::FASSUNG_NEU), 'andere Fassungen unverändert');
+	}
 }
 
 /**
