@@ -1241,11 +1241,16 @@ class SwissChess
 	 * 1. Satzzeichen aus SATZZEICHEN_ASCII werden wie bisher zu ASCII
 	 *    („’“ → „'“, „„“ → „"“), damit keine Anführungszeichen und keine neuen
 	 *    Apostrophe in die Textfelder kommen.
-	 * 2. Was windows-1252 kennt, bekommt sein Byte — anders als in CP437 auch
-	 *    „š“, „Ó“, „ý“ oder „ø“. Geprüft wird über die Hin- und Rückwandlung;
-	 *    mbstring ist Teil von PHP und rechnet überall gleich (anders als iconv,
-	 *    siehe ZEICHEN_CP437).
-	 * 3. Sonst greift der ASCII-Ersatz aus ZEICHEN_CP437 („Ł“ → „L“).
+	 * 2. **Nur Zeichen, die auch CP437 kennt** (Umlaute, ß, é, á, ñ …),
+	 *    bekommen ihr Byte in windows-1252. Geprüft wird über die Hin- und
+	 *    Rückwandlung; mbstring ist Teil von PHP und rechnet überall gleich
+	 *    (anders als iconv, siehe ZEICHEN_CP437).
+	 * 3. Alle übrigen bekommen wie bisher den ASCII-Ersatz aus ZEICHEN_CP437
+	 *    („Š“ → „S“, „Ó“ → „O“, „Ł“ → „L“), obwohl windows-1252 manche davon
+	 *    kennt: Swiss-Chess 10.04 findet „Šakota“ nicht, wenn das „Š“ in der
+	 *    Datei steht — getestet am 23.11.2026, die Suche nach „Sakota“ ging ins
+	 *    Leere, und „Š“ läßt sich dort nicht eingeben. Mit dem Ersatz ist jeder
+	 *    Name so auffindbar wie in der Fassung ab 10.0.
 	 * 4. Was nirgends steht, fällt weg.
 	 *
 	 * @param string $text Text in windows-1252 oder UTF-8
@@ -1279,7 +1284,7 @@ class SwissChess
 				{
 					self::$ansi[$zeichen] = $ersatz;
 				}
-				elseif (strlen($byte) === 1 && $byte !== '?' && mb_convert_encoding($byte, 'UTF-8', 'Windows-1252') === $zeichen)
+				elseif (strlen($ersatz) === 1 && ord($ersatz) > 0x7F && strlen($byte) === 1 && $byte !== '?' && mb_convert_encoding($byte, 'UTF-8', 'Windows-1252') === $zeichen)
 				{
 					self::$ansi[$zeichen] = $byte;
 				}

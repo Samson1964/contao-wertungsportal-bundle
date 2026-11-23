@@ -725,9 +725,11 @@ class SwissChessTest extends TestCase
 	// ─────────────────────────────────────────────
 
 	/**
-	 * windows-1252 aus den CSV-Dateien bleibt byte-gleich, UTF-8 aus der
-	 * Elo-Tabelle ergibt dieselben Bytes. Anders als in CP437 bleiben š, Ó, ý
-	 * und ø erhalten; was windows-1252 nicht kennt, wird ASCII; Apostrophe und
+	 * windows-1252 aus den CSV-Dateien bleibt für Umlaute und die übrigen
+	 * Zeichen von CP437 byte-gleich, UTF-8 aus der Elo-Tabelle ergibt dieselben
+	 * Bytes. Zeichen außerhalb von CP437 — auch š, Ó, ý und ø, die
+	 * windows-1252 kennt — werden wie bisher ASCII, sonst findet Swiss-Chess
+	 * 10.04 den Namen nicht (getestet 23.11.2026 mit „Šakota"). Apostrophe und
 	 * Anführungszeichen werden wie bisher zu ASCII.
 	 */
 	public function testNachAnsi(): void
@@ -736,10 +738,12 @@ class SwissChessTest extends TestCase
 		$this->assertSame("M\xFCller,J\xF6rg", SwissChess::nachAnsi("M\xFCller,J\xF6rg"), 'windows-1252 bleibt');
 		$this->assertSame("M\xFCller,J\xF6rg", SwissChess::nachAnsi('Müller,Jörg'), 'UTF-8');
 		$this->assertSame("Gro\xDF", SwissChess::nachAnsi('Groß'));
-		$this->assertSame("\x8Aakota,Tom\xE1\x9A", SwissChess::nachAnsi('Šakota,Tomáš'), 'š kennt windows-1252');
-		$this->assertSame("\xD3scar Hol\xFD S\xF8rland", SwissChess::nachAnsi('Óscar Holý Sørland'));
-		$this->assertSame('Lukasz Ozdoba', SwissChess::nachAnsi('Łukasz Ożdoba'), 'nicht in windows-1252: ASCII-Ersatz');
-		$this->assertSame("Bari\x9Aic", SwissChess::nachAnsi('Barišić'), 'š bleibt, ć wird c');
+		$this->assertSame("Sakota,Tom\xE1s", SwissChess::nachAnsi('Šakota,Tomáš'), 'á bleibt (CP437), š wird s');
+		$this->assertSame("Sakota,Tom\xE1s", SwissChess::nachAnsi("\x8Aakota,Tom\xE1\x9A"), 'auch aus windows-1252');
+		$this->assertSame('Oscar Holy Sorland', SwissChess::nachAnsi('Óscar Holý Sørland'), 'nicht in CP437: ASCII-Ersatz');
+		$this->assertSame("Ren\xE9 Fran\xE7ois Nu\xF1ez", SwissChess::nachAnsi('René François Nuñez'), 'in CP437: windows-1252-Byte');
+		$this->assertSame('Lukasz Ozdoba', SwissChess::nachAnsi('Łukasz Ożdoba'));
+		$this->assertSame('Barisic', SwissChess::nachAnsi('Barišić'));
 		$this->assertSame("O'Neill D'Avola", SwissChess::nachAnsi("O\x92Neill D\xB4Avola"), 'Apostrophe werden ASCII');
 		$this->assertSame('"Maxi"', SwissChess::nachAnsi('„Maxi“'));
 		$this->assertSame('AB', SwissChess::nachAnsi("A\u{0416}B"), 'unbekannte Zeichen fallen weg');

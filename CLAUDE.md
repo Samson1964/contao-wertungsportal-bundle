@@ -317,8 +317,8 @@ Wer an Index, Eimern, Sortierung oder Zeichensatz etwas ändert, mißt dagegen n
   über `nachAnsi()` in windows-1252; Eimer/Sortierung aus `schluesselname()` (Feld 0 zurück nach CP437)
   → SWX byte-gleich mit der 10.0-Fassung. Die Originaldateien von swiss-chess.de sind ab 10.03
   **verschlüsselt** (`SwissChess-Dateien/fdsb261118/`, SWX-Kennung `FFFFFD66`/`01FA000D`) — nicht nachbauen,
-  Swiss-Chess nicht zerlegen; Weber gibt kein Format heraus. Ob 10.03 unsere Fassung liest, prüft ein
-  Turnierleiter (Stand 23.11.2026 offen). Prüfstand `SwissChess-Dateien/pruefstand/ansi_vergleich.php`.
+  Swiss-Chess nicht zerlegen; Weber gibt kein Format heraus. In Swiss-Chess 10.04 geprüft (23.11.2026): Umlaute richtig, CP437-Fassung dort falsch;
+  Zeichen außerhalb CP437 (Š …) als Grundbuchstabe, sonst findet die Suche sie nicht (1.60.1). Prüfstand `SwissChess-Dateien/pruefstand/ansi_vergleich.php`.
 
 ## Turnierseiten: Nichtmitglieder und Erwartungswerte (ab 1.45.0)
 

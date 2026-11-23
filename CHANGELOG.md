@@ -51,6 +51,13 @@
 * Change: E erscheint ohne „.0“ und mit Komma („28“, „39,3“)
 * Change: `doctrine/dbal` ist jetzt eine direkte Abhängigkeit (^3.3 || ^4.0)
 
+## Version 1.60.1 (2026-11-23)
+
+* Fix: Fassung für Swiss-Chess ab 10.03 — Zeichen außerhalb der bisherigen Codepage (Š, ý, ø, Ó …)
+  stehen wieder als Grundbuchstabe in der Datei. Mit „Š“ fand Swiss-Chess 10.04 „Šakota“ nicht, und
+  „Š“ läßt sich dort nicht eingeben. Umlaute, ß, é, á, ñ usw. bleiben in windows-1252; geprüft in
+  Swiss-Chess 10.04: Umlaute richtig (die Fassung ab 10.0 zeigt sie dort falsch)
+
 ## Version 1.60.0 (2026-11-23)
 
 * Add: **Swiss-Chess-Hintergrunddateien für Swiss-Chess ab 10.03** als drittes Archiv
