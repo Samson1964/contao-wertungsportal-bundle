@@ -240,11 +240,15 @@ Das Bundle erzeugt deshalb eine **dritte, unverschlüsselte Fassung**
 Verein, Nation und die übrigen Textfelder in **windows-1252** statt in CP437
 (`SwissChess::nachAnsi()`):
 
-* Was windows-1252 kennt, bekommt sein Byte — auch Zeichen, die CP437 nicht
-  hat und bisher zum Grundbuchstaben wurden: „Šakota", „Tomáš", „Holý",
-  „Sørland", „Óle".
-* Was windows-1252 nicht kennt, wird wie bisher ASCII („Łukasz" → „Lukasz",
-  „ć" → „c").
+* **Dieselben Zeichen wie bisher, nur andere Bytes:** Umlaute, ß und alle
+  übrigen Zeichen, die CP437 kennt (é, á, ñ, ç …), stehen mit ihrem Byte in
+  windows-1252.
+* Zeichen außerhalb von CP437 werden **wie bisher** zum Grundbuchstaben —
+  auch die, die windows-1252 kennt: „Šakota" → „Sakota", „Holý" → „Holy",
+  „Łukasz" → „Lukasz". Swiss-Chess 10.04 findet einen Namen mit „Š" in der
+  Datei nicht: Die Suche nach „Sakota" ging am 23.11.2026 ins Leere, und
+  „Š" läßt sich in der Suche nicht eingeben (1.60.0 schrieb das „Š" noch,
+  1.60.1 nicht mehr).
 * Apostrophe und Anführungszeichen werden wie bisher ASCII (`´` und `’` →
   `'`, `„` und `“` fallen weg) — davon hängen die Erkennung der Felder 15–28
   und die Sortierung ab.
@@ -257,19 +261,17 @@ Mitgliedschaften, ohne FIDE-Daten) gemessen:
 
 * gleiche Satzzahl, gleiche Reihenfolge, **SWX byte-gleich**, alle Zahlen- und
   Kennungsfelder byte-gleich;
-* 102.076 Namen der ANSI-Fassung sind byte-gleich mit der CSV; die zwei übrigen
-  enthalten `´` bzw. `’`;
-* 13 Namen bekommen ihre richtige Schreibweise zurück, die CP437 bisher
-  vereinfachte (Prüfstand `SwissChess-Dateien/pruefstand/ansi_vergleich.php`).
+* jede Zeile enthält, im jeweiligen Zeichensatz gelesen, **denselben Text**
+  wie in der Fassung ab 10.0;
+* 102.063 Namen sind byte-gleich mit der CSV; die 15 übrigen enthalten Zeichen
+  außerhalb von CP437 (13) oder `´` bzw. `’` (2) (Prüfstand
+  `SwissChess-Dateien/pruefstand/ansi_vergleich.php`).
 
-> **Nicht geprüft ist, ob Swiss-Chess 10.03 diese Datei liest.** Annahme ist,
-> daß 10.03 unverschlüsselte Dateien weiter annimmt und deren Text als ANSI
-> liest — dazu paßt, daß eine CP437-Datei dort falsche Umlaute zeigt. Zu
-> prüfen in Swiss-Chess 10.03: Datei als Hintergrunddatei einstellen, nach
-> „Böttcher", „Müller", „Özdemir" und „Šakota" suchen. Stehen die Namen
-> richtig da und lassen sie sich übernehmen, gilt die Fassung. Fehlen
-> Spieler, liegt es am Index (dann die Kennung in der SWX); stehen falsche
-> Zeichen da, am Zeichensatz.
+**Geprüft in Swiss-Chess 10.04 (23.11.2026, Demo-Version):** Die Fassung ab
+10.0 zeigt dort falsche Umlaute, die ANSI-Fassung richtige; 10.04 liest also
+unverschlüsselte Dateien weiter und deutet ihren Text als ANSI. Gesucht wurde
+nach „Böttcher", „Müller", „Özdemir"; „Šakota" fand die Suche mit 1.60.0
+nicht (siehe oben).
 
 ## Die alte Fassung: binär kodierte Zahlen
 
