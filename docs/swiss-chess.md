@@ -12,20 +12,23 @@ DOS-Pakete daneben:
 
 ```
 files/wertungsportal/downloads/JJJJ/
-├── swiss10/dsb-swiss10_JJJJMMTT.zip    Swiss-Chess ab 10.0
-└── swiss/dsb-swiss_JJJJMMTT.zip        ältere Fassungen
+├── swiss1003/dsb-swiss1003_JJJJMMTT.zip    Swiss-Chess ab 10.03 (Namen in ANSI)
+├── swiss10/dsb-swiss10_JJJJMMTT.zip        Swiss-Chess ab 10.0
+└── swiss/dsb-swiss_JJJJMMTT.zip            ältere Fassungen
 ```
 
 Jedes Archiv enthält das Dateipaar `fdsbJJMMTT.LST` und `.SWX`; die Dateien
-der alten Fassung tragen ein „a" am Namensende, damit sie sich nicht
-überschreiben, wenn jemand beide Archive in denselben Ordner entpackt. Die
-Fassung mit nuLiga-ID braucht laut swiss-chess.de **Swiss-Chess ab 10.0**.
+der Fassung ab 10.03 tragen ein „w" am Namensende, die der alten Fassung ein
+„a", damit sie sich nicht überschreiben, wenn jemand mehrere Archive in
+denselben Ordner entpackt. Die Fassung mit nuLiga-ID braucht laut
+swiss-chess.de **Swiss-Chess ab 10.0**; zur Fassung ab 10.03 siehe unten.
 
-Von beiden Archiven wandert zusätzlich eine Kopie **unter festem Namen** ins
+Von allen Archiven wandert zusätzlich eine Kopie **unter festem Namen** ins
 Exportverzeichnis:
 
 ```
 files/wertungsportal/downloads/export/
+├── swiss1003/dsb-swiss1003.zip
 ├── swiss10/dsb-swiss10.zip
 └── swiss/dsb-swiss.zip
 ```
@@ -182,7 +185,8 @@ Mitgliedschaften, beim Swiss-Chess-Programmierer steht dort bei allen „GER".
 
 ### Zeichensatz
 
-Swiss-Chess erwartet die Namen in der **DOS-Codepage 437**. Die spieler.csv und
+Swiss-Chess bis 10.02 erwartet die Namen in der **DOS-Codepage 437** (zur
+Fassung ab 10.03 siehe unten). Die spieler.csv und
 die vereine.csv kommen in windows-1252, die Namen der Elo-Tabelle in UTF-8;
 beides wandelt `SwissChess::nachCp437()` über eine feste Tabelle:
 
@@ -208,6 +212,64 @@ dasselbe, „´" aber stand als 0xEF in der Datei, und das ist in CP437 „∩".
 Namen reiner FIDE-Spieler liefen außerdem durch die Wandlung für windows-1252,
 obwohl die Elo-Tabelle sie in UTF-8 führt — in der Datei des Programmierers
 sind sie allerdings durchweg ASCII.
+
+## Die Fassung ab Swiss-Chess 10.03: Namen in ANSI (ab 1.60.0)
+
+Die Update-Informationen von Swiss-Chess 10.03 (`swiss-chess.de/dt_updinfo.pdf`)
+sagen: Weil die Spielerdaten jetzt von nuLiga kommen, sind die
+Hintergrunddateien „von ASCII nach ANSI" umgestellt, Zeichen wie é, û, ê sind
+damit möglich, und die Dateien von swiss-chess.de funktionieren nur noch ab
+10.03. Eine Datei in CP437 zeigt in 10.03 falsche Umlaute.
+
+**Die Dateien von swiss-chess.de sind ab 10.03 verschlüsselt.** Gemessen am
+23.11.2026 an `fdsb261118` (Stand 18.11.2026):
+
+* Die LST ist 419.798.704 Byte groß — mehr als doppelt so groß wie bisher —,
+  durchgehend ein Vielfaches von 16 Byte, mit 7,99 Bit Entropie je Byte und
+  tausendfach wiederholten 16-Byte-Blöcken: eine Blockverschlüsselung.
+* Die SWX ist weiter lesbar, aber anders gekennzeichnet: Satz 0 trägt die
+  Gesamtzahl der Sätze (2.018.263) und `FFFFFD66` statt 0 und `FFFFFE44`,
+  Satz 701 `0BD51C90` und `01FA000D`. Die Offsets zeigen auf eine
+  entschlüsselte Fassung von rund 198,5 MB.
+
+Diese Fassung läßt sich nicht nachbauen, ohne Swiss-Chess zu zerlegen; das
+geschieht hier nicht. Eine Formatbeschreibung gibt der Hersteller nicht heraus.
+
+Das Bundle erzeugt deshalb eine **dritte, unverschlüsselte Fassung**
+(`SwissChess::FASSUNG_ANSI`): genau wie die Fassung ab 10.0, nur stehen Name,
+Verein, Nation und die übrigen Textfelder in **windows-1252** statt in CP437
+(`SwissChess::nachAnsi()`):
+
+* Was windows-1252 kennt, bekommt sein Byte — auch Zeichen, die CP437 nicht
+  hat und bisher zum Grundbuchstaben wurden: „Šakota", „Tomáš", „Holý",
+  „Sørland", „Óle".
+* Was windows-1252 nicht kennt, wird wie bisher ASCII („Łukasz" → „Lukasz",
+  „ć" → „c").
+* Apostrophe und Anführungszeichen werden wie bisher ASCII (`´` und `’` →
+  `'`, `„` und `“` fallen weg) — davon hängen die Erkennung der Felder 15–28
+  und die Sortierung ab.
+* **Eimer, Sortierung und Index bleiben unverändert**: Für die Schlüssel wird
+  Feld 0 zurück nach CP437 gewandelt (`SwissChess::schluesselname()`). Die SWX
+  trägt die Kennungen der Fassung ab 10.0 (`FFFFFE44`, `01000000`).
+
+Gegen die Fassung ab 10.0 aus dem LV-0-Export vom 18.11.2026 (102.078
+Mitgliedschaften, ohne FIDE-Daten) gemessen:
+
+* gleiche Satzzahl, gleiche Reihenfolge, **SWX byte-gleich**, alle Zahlen- und
+  Kennungsfelder byte-gleich;
+* 102.076 Namen der ANSI-Fassung sind byte-gleich mit der CSV; die zwei übrigen
+  enthalten `´` bzw. `’`;
+* 13 Namen bekommen ihre richtige Schreibweise zurück, die CP437 bisher
+  vereinfachte (Prüfstand `SwissChess-Dateien/pruefstand/ansi_vergleich.php`).
+
+> **Nicht geprüft ist, ob Swiss-Chess 10.03 diese Datei liest.** Annahme ist,
+> daß 10.03 unverschlüsselte Dateien weiter annimmt und deren Text als ANSI
+> liest — dazu paßt, daß eine CP437-Datei dort falsche Umlaute zeigt. Zu
+> prüfen in Swiss-Chess 10.03: Datei als Hintergrunddatei einstellen, nach
+> „Böttcher", „Müller", „Özdemir" und „Šakota" suchen. Stehen die Namen
+> richtig da und lassen sie sich übernehmen, gilt die Fassung. Fehlen
+> Spieler, liegt es am Index (dann die Kennung in der SWX); stehen falsche
+> Zeichen da, am Zeichensatz.
 
 ## Die alte Fassung: binär kodierte Zahlen
 

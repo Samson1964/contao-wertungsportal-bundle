@@ -13,10 +13,12 @@ namespace Schachbulle\ContaoWertungsportalBundle\Classes;
  * * **SWX** — ein Index über den Namensanfang, damit das Programm nicht die
  *   ganze Liste durchsuchen muß.
  *
- * Es gibt zwei Fassungen, die sich im Inhalt der LST unterscheiden:
+ * Es gibt drei Fassungen, die sich im Inhalt der LST unterscheiden:
  *
  * * `FASSUNG_NEU` für **Swiss-Chess ab 10.0**: alle Felder im Klartext, die
  *   Spielerkennung ist die nuLiga-ID (`NU4005017`).
+ * * `FASSUNG_ANSI` für **Swiss-Chess ab 10.03**: wie FASSUNG_NEU, aber die
+ *   Textfelder in windows-1252 statt CP437 (ab 1.60.0, siehe nachAnsi()).
  * * `FASSUNG_ALT` für ältere Fassungen: die Zahlenfelder stehen binär
  *   kodiert, die Spielerkennung ist eine Zahl.
  *
@@ -45,6 +47,21 @@ class SwissChess
 	 * Fassung für Swiss-Chess ab 10.0: alle Felder im Klartext.
 	 */
 	const FASSUNG_NEU = 'sc10';
+
+	/**
+	 * Fassung für Swiss-Chess ab 10.03: wie FASSUNG_NEU, die Textfelder aber in
+	 * windows-1252 („ANSI“) statt in der DOS-Codepage 437.
+	 *
+	 * Laut den Update-Informationen von Swiss-Chess 10.03 sind die
+	 * Hintergrunddateien „von ASCII nach ANSI“ umgestellt; eine Datei in CP437
+	 * zeigt dort falsche Umlaute. Die eigenen Dateien von swiss-chess.de sind ab
+	 * 10.03 verschlüsselt (fdsb261118, gemessen 23.11.2026) und lassen sich
+	 * nicht nachbauen. Diese Fassung ist deshalb die bisherige unverschlüsselte
+	 * mit anderem Zeichensatz; Eimer, Sortierung und Index bleiben, wie sie an
+	 * der Datei vom 09.09.2026 ausgemessen sind. **Ob Swiss-Chess 10.03 sie so
+	 * liest, ist nicht geprüft** — siehe docs/swiss-chess.md.
+	 */
+	const FASSUNG_ANSI = 'sc1003';
 
 	/**
 	 * Fassung für ältere Swiss-Chess-Ausgaben: Zahlenfelder binär kodiert.
@@ -200,6 +217,23 @@ class SwissChess
 	);
 
 	/**
+	 * Satzzeichen, die auch die ANSI-Fassung durch ASCII ersetzt, obwohl
+	 * windows-1252 sie kennt.
+	 *
+	 * So bleibt die Regel „keine Anführungszeichen in Textfeldern“ (die Felder
+	 * 15 bis 28 sind daran zu erkennen), und Apostrophe stehen wie in der Datei
+	 * des Programmierers als „'“ — davon hängt auch die Sortierung ab (TIEF).
+	 */
+	const SATZZEICHEN_ASCII = array('’', '‘', '‚', '´', '“', '”', '„', '–', '—', '…', "\u{00A0}");
+
+	/**
+	 * Merker für nachAnsi(): bereits gewandelte Zeichen.
+	 *
+	 * @var array
+	 */
+	protected static $ansi = array();
+
+	/**
 	 * Merker für nachCp437(): bereits gewandelte Zeichen.
 	 *
 	 * @var array
@@ -309,7 +343,7 @@ class SwissChess
 	 * @param string $quelle   Verzeichnis mit spieler.csv und vereine.csv
 	 * @param string $ziel     Verzeichnis für die erzeugten Dateien; wird bei
 	 *                         Bedarf angelegt
-	 * @param string $fassung  self::FASSUNG_NEU oder self::FASSUNG_ALT
+	 * @param string $fassung  self::FASSUNG_NEU, self::FASSUNG_ANSI oder self::FASSUNG_ALT
 	 * @param string $name     Dateiname ohne Endung, üblich ist `fdsbJJMMTT`
 	 * @param callable|null $melder Wird je Fortschrittsmeldung mit einem Text
 	 *                              aufgerufen; ohne Angabe bleibt es still
@@ -438,7 +472,7 @@ class SwissChess
 	 * steht zweimal in der Liste, jeweils mit seinem Verein.
 	 *
 	 * @param string $datei   Pfad zur spieler.csv
-	 * @param string $fassung self::FASSUNG_NEU oder self::FASSUNG_ALT
+	 * @param string $fassung self::FASSUNG_NEU, self::FASSUNG_ANSI oder self::FASSUNG_ALT
 	 *
 	 * @return array Liste aus ['fideId' => FIDE-Kennung oder 0,
 	 *               'csv' => Felder der CSV-Zeile]
@@ -841,8 +875,8 @@ class SwissChess
 	}
 
 	/**
-	 * Bereitet ein Textfeld auf: Wandlung nach CP437 und Kürzung auf 40
-	 * Zeichen.
+	 * Bereitet ein Textfeld auf: Wandlung nach CP437 (in der ANSI-Fassung nach
+	 * windows-1252) und Kürzung auf 40 Zeichen.
 	 *
 	 * **Wichtig:** Nur Textfelder dürfen durch die Kodierwandlung laufen. Die
 	 * Zahlenfelder der alten Fassung enthalten Bytes, die in windows-1252
@@ -850,13 +884,14 @@ class SwissChess
 	 * der ganzen Zeile zerstörte sie. Genau das ist beim ersten Versuch
 	 * passiert — aus 0x82 wurde 0x60, und die Zahl war unlesbar.
 	 *
-	 * Da CP437 ein Einbyte-Zeichensatz ist, entspricht die Kürzung auf 40
-	 * Bytes genau 40 Zeichen; ein Umlaut kann dabei nicht zerschnitten werden.
+	 * Da CP437 und windows-1252 Einbyte-Zeichensätze sind, entspricht die
+	 * Kürzung auf 40 Bytes genau 40 Zeichen; ein Umlaut kann dabei nicht
+	 * zerschnitten werden.
 	 *
 	 * @param string $wert Text in windows-1252 (spieler.csv, vereine.csv) oder
 	 *                     UTF-8 (Elo-Tabelle)
 	 *
-	 * @return string Text in CP437, höchstens 40 Zeichen
+	 * @return string Text in CP437 bzw. windows-1252, höchstens 40 Zeichen
 	 */
 	protected function text($wert)
 	{
@@ -864,7 +899,7 @@ class SwissChess
 		// einziger der 300.000 geprüften Vereinsnamen eines. Sie würden auch
 		// die Felder 15 bis 28 nachahmen, die genau daran zu erkennen sind.
 		// Erst nach der Wandlung, die aus „ und “ selbst welche macht
-		$raus = str_replace('"', '', self::nachCp437((string) $wert));
+		$raus = str_replace('"', '', $this->fassung === self::FASSUNG_ANSI ? self::nachAnsi((string) $wert) : self::nachCp437((string) $wert));
 
 		// rtrim NACH dem Kuerzen: Sonst bliebe bei einem abgeschnittenen
 		// Vereinsnamen ein Leerzeichen am Ende stehen; die Originaldatei hat
@@ -1141,6 +1176,8 @@ class SwissChess
 			$vorige = (int) $eimer[$s]['anzahl'];
 		}
 
+		// Die ANSI-Fassung trägt die Kennung von 10.0: Woran 10.03 seine eigene
+		// (verschlüsselte) Fassung erkennt, ist nicht offengelegt
 		$kennung = $this->fassung === self::FASSUNG_ALT ? self::KENNUNG_ALT : self::KENNUNG_NEU;
 
 		return $roh.pack('VV', $groesse, $kennung);
@@ -1193,6 +1230,94 @@ class SwissChess
 		}
 
 		return $raus;
+	}
+
+	/**
+	 * Wandelt Text in windows-1252 („ANSI“) für die Fassung ab Swiss-Chess 10.03.
+	 *
+	 * Eingang wie bei nachCp437(): windows-1252 aus den CSV-Dateien oder UTF-8
+	 * aus der Elo-Tabelle. Jedes Zeichen außerhalb von ASCII wird so behandelt:
+	 *
+	 * 1. Satzzeichen aus SATZZEICHEN_ASCII werden wie bisher zu ASCII
+	 *    („’“ → „'“, „„“ → „"“), damit keine Anführungszeichen und keine neuen
+	 *    Apostrophe in die Textfelder kommen.
+	 * 2. Was windows-1252 kennt, bekommt sein Byte — anders als in CP437 auch
+	 *    „š“, „Ó“, „ý“ oder „ø“. Geprüft wird über die Hin- und Rückwandlung;
+	 *    mbstring ist Teil von PHP und rechnet überall gleich (anders als iconv,
+	 *    siehe ZEICHEN_CP437).
+	 * 3. Sonst greift der ASCII-Ersatz aus ZEICHEN_CP437 („Ł“ → „L“).
+	 * 4. Was nirgends steht, fällt weg.
+	 *
+	 * @param string $text Text in windows-1252 oder UTF-8
+	 *
+	 * @return string Text in windows-1252
+	 */
+	public static function nachAnsi($text)
+	{
+		$text = (string) $text;
+
+		if (!preg_match('/[\x80-\xFF]/', $text)) return $text;
+
+		if (!preg_match('//u', $text)) $text = (string) mb_convert_encoding($text, 'UTF-8', 'Windows-1252');
+
+		$raus = '';
+
+		foreach ((array) preg_split('//u', $text, -1, PREG_SPLIT_NO_EMPTY) as $zeichen)
+		{
+			if (strlen($zeichen) === 1)
+			{
+				$raus .= $zeichen;
+				continue;
+			}
+
+			if (!array_key_exists($zeichen, self::$ansi))
+			{
+				$byte = (string) mb_convert_encoding($zeichen, 'Windows-1252', 'UTF-8');
+				$ersatz = self::ZEICHEN_CP437[$zeichen] ?? '';
+
+				if (in_array($zeichen, self::SATZZEICHEN_ASCII, true))
+				{
+					self::$ansi[$zeichen] = $ersatz;
+				}
+				elseif (strlen($byte) === 1 && $byte !== '?' && mb_convert_encoding($byte, 'UTF-8', 'Windows-1252') === $zeichen)
+				{
+					self::$ansi[$zeichen] = $byte;
+				}
+				else
+				{
+					// Nur ein Ersatz aus ASCII taugt — ein CP437-Byte wäre in
+					// windows-1252 ein anderes Zeichen
+					self::$ansi[$zeichen] = preg_match('/^[\x20-\x7E]+$/', $ersatz) ? $ersatz : '';
+				}
+			}
+
+			$raus .= self::$ansi[$zeichen];
+		}
+
+		return $raus;
+	}
+
+	/**
+	 * Liefert den Namen, aus dem Eimer und Sortierschlüssel gebildet werden.
+	 *
+	 * Die Regeln (UMSCHRIFT, TIEF) sind an CP437 ausgemessen. In der
+	 * ANSI-Fassung steht Feld 0 in windows-1252; es wird für die Schlüssel nach
+	 * CP437 gewandelt. So stehen alle Sätze in derselben Reihenfolge und in
+	 * denselben Eimern wie in der Fassung ab 10.0 — nur die Bytes der Namen
+	 * unterscheiden sich. Bei einem Namen mit „Œ“ oder „Þ“ (in windows-1252
+	 * ein Zeichen, im Ersatz zwei) kann sich der Schlüssel am Ende minimal
+	 * unterscheiden; das betrifft nur die Reihenfolge innerhalb des Eimers.
+	 *
+	 * @param string $feld0   Name wie in Feld 0 der fertigen Zeile
+	 * @param string $fassung Fassung der Zeile
+	 *
+	 * @return string Name in CP437
+	 */
+	public static function schluesselname($feld0, $fassung)
+	{
+		if ($fassung !== self::FASSUNG_ANSI || !preg_match('/[\x80-\xFF]/', (string) $feld0)) return (string) $feld0;
+
+		return self::nachCp437((string) mb_convert_encoding((string) $feld0, 'UTF-8', 'Windows-1252'));
 	}
 
 	/**
@@ -1273,7 +1398,8 @@ class SwissChess
 	 * Eimer und Sortierschlüssel kommen aus Feld 0 der fertigen Zeile — aus
 	 * dem Namen in CP437 und gekürzt, genau wie er in der Datei steht. Die
 	 * Umschrift der Sonderzeichen setzt diese Kodierung voraus; die spieler.csv
-	 * kommt in windows-1252, die Elo-Tabelle in UTF-8.
+	 * kommt in windows-1252, die Elo-Tabelle in UTF-8. In der ANSI-Fassung
+	 * wird Feld 0 dafür zurück nach CP437 gewandelt (schluesselname()).
 	 *
 	 * @param string $gruppe GRUPPE_FIDE oder GRUPPE_DSB: Rangfolge bei gleichem
 	 *                       Sortierschlüssel
@@ -1285,7 +1411,7 @@ class SwissChess
 	 */
 	protected function inEimer($gruppe, $zeile)
 	{
-		$name = substr($zeile, 0, (int) strpos($zeile, ';'));
+		$name = self::schluesselname(substr($zeile, 0, (int) strpos($zeile, ';')), $this->fassung);
 		$e = self::eimer($name);
 
 		if ($e === null) return false;
@@ -1505,12 +1631,12 @@ class SwissChess
 	/**
 	 * Setzt die Fassung für den nächsten Lauf.
 	 *
-	 * @param string $fassung self::FASSUNG_NEU oder self::FASSUNG_ALT
+	 * @param string $fassung self::FASSUNG_NEU, self::FASSUNG_ANSI oder self::FASSUNG_ALT
 	 *
 	 * @return void
 	 */
 	public function setzeFassung($fassung)
 	{
-		$this->fassung = $fassung === self::FASSUNG_ALT ? self::FASSUNG_ALT : self::FASSUNG_NEU;
+		$this->fassung = in_array($fassung, array(self::FASSUNG_ALT, self::FASSUNG_ANSI), true) ? $fassung : self::FASSUNG_NEU;
 	}
 }

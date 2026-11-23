@@ -16,18 +16,21 @@ use Symfony\Component\Console\Output\OutputInterface;
  * Erzeugt die Hintergrunddateien für Swiss-Chess aus der Deutschland-Datei
  * des Wertungsportals und legt sie im Jahresarchiv ab.
  *
- * Es entstehen zwei Archive, aufgeteilt wie die CSV- und DOS-Pakete daneben:
+ * Es entstehen drei Archive, aufgeteilt wie die CSV- und DOS-Pakete daneben:
  *
+ *     files/wertungsportal/downloads/JJJJ/swiss1003/dsb-swiss1003_JJJJMMTT.zip
  *     files/wertungsportal/downloads/JJJJ/swiss10/dsb-swiss10_JJJJMMTT.zip
  *     files/wertungsportal/downloads/JJJJ/swiss/dsb-swiss_JJJJMMTT.zip
  *
- * Das erste ist für **Swiss-Chess ab 10.0** (alle Felder im Klartext,
- * Spielerkennung ist die nuLiga-ID), das zweite für **ältere Fassungen**
- * (Zahlenfelder binär kodiert). Jedes Archiv enthält das Dateipaar LST und
- * SWX.
+ * Das erste ist für **Swiss-Chess ab 10.03** (Namen in windows-1252, ab
+ * 1.60.0), das zweite für **Swiss-Chess ab 10.0** (alle Felder im Klartext,
+ * Spielerkennung ist die nuLiga-ID, Namen in CP437), das dritte für **ältere
+ * Fassungen** (Zahlenfelder binär kodiert). Jedes Archiv enthält das Dateipaar
+ * LST und SWX.
  *
- * Von beiden wandert eine Kopie unter festem Namen ins Exportverzeichnis:
+ * Von allen wandert eine Kopie unter festem Namen ins Exportverzeichnis:
  *
+ *     files/wertungsportal/downloads/export/swiss1003/dsb-swiss1003.zip
  *     files/wertungsportal/downloads/export/swiss10/dsb-swiss10.zip
  *     files/wertungsportal/downloads/export/swiss/dsb-swiss.zip
  *
@@ -51,14 +54,15 @@ class SwissChessCommand extends Command
     protected static $defaultName = 'wertungsportal:swisschess';
 
     /**
-     * Die beiden Fassungen: Fassungskennung => [Ordner, Namensteil des
-     * Archivs, Zusatz am Namen der LST].
+     * Die Fassungen: Fassungskennung => [Ordner, Namensteil des Archivs,
+     * Zusatz am Namen der LST, Überschrift].
      *
-     * Der Zusatz „a" beim alten Format sorgt dafür, daß die beiden Dateipaare
-     * sich nicht überschreiben, wenn jemand beide Archive in denselben Ordner
-     * entpackt.
+     * Die Zusätze „w" (windows-1252) und „a" (alt) sorgen dafür, daß sich die
+     * Dateipaare nicht überschreiben, wenn jemand mehrere Archive in denselben
+     * Ordner entpackt.
      */
     private const FASSUNGEN = [
+        SwissChess::FASSUNG_ANSI => ['swiss1003', 'dsb-swiss1003', 'w', 'Swiss-Chess ab 10.03 (Namen in ANSI)'],
         SwissChess::FASSUNG_NEU => ['swiss10', 'dsb-swiss10', '', 'Swiss-Chess ab 10.0'],
         SwissChess::FASSUNG_ALT => ['swiss', 'dsb-swiss', 'a', 'Ältere Swiss-Chess-Fassungen'],
     ];
@@ -93,11 +97,13 @@ class SwissChessCommand extends Command
             ->addOption('quelle', null, InputOption::VALUE_REQUIRED, 'Verzeichnis mit entpackter spieler.csv und vereine.csv')
             ->addOption('ziel', null, InputOption::VALUE_REQUIRED, 'Archivverzeichnis (Vorgabe: files/wertungsportal/downloads/JJJJ)')
             ->setHelp(
-                "Legt zwei Archive im Jahresarchiv ab:\n".
+                "Legt drei Archive im Jahresarchiv ab:\n".
+                "  JJJJ/swiss1003/dsb-swiss1003_JJJJMMTT.zip   Swiss-Chess ab 10.03 (ANSI)\n".
                 "  JJJJ/swiss10/dsb-swiss10_JJJJMMTT.zip   Swiss-Chess ab 10.0\n".
                 "  JJJJ/swiss/dsb-swiss_JJJJMMTT.zip       ältere Fassungen\n\n".
                 "Jedes Archiv enthält das Dateipaar LST und SWX. Eine Kopie unter\n".
-                "festem Namen liegt zusätzlich in export/swiss10/ und export/swiss/.\n\n".
+                "festem Namen liegt zusätzlich in export/swiss1003/, export/swiss10/\n".
+                "und export/swiss/.\n\n".
                 "Ohne --quelle wird export/csv/LV-0-csv.zip entpackt; die Datei\n".
                 "erzeugt der Befehl wertungsportal:converter.\n\n".
                 "Die Sätze der DSB-Mitglieder stammen aus dieser CSV, ihre FIDE-Angaben\n".
@@ -111,7 +117,7 @@ class SwissChessCommand extends Command
     }
 
     /**
-     * Erzeugt beide Archive.
+     * Erzeugt alle drei Archive.
      *
      * @param InputInterface  $input  Schalter --quelle und --ziel
      * @param OutputInterface $output Ziel für Fortschritt und Ergebnis
@@ -246,7 +252,7 @@ class SwissChessCommand extends Command
      *
      * @param string $archivdatei Vollständiger Pfad des datierten Archivs
      * @param string $wurzel      Wurzelverzeichnis der Installation
-     * @param string $ordner      Unterordner im Export, `swiss` oder `swiss10`
+     * @param string $ordner      Unterordner im Export, `swiss`, `swiss10` oder `swiss1003`
      * @param string $name        Fester Dateiname der Kopie
      *
      * @return string Pfad der Kopie, oder leer wenn sie nicht angelegt werden

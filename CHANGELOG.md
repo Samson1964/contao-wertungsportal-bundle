@@ -51,6 +51,16 @@
 * Change: E erscheint ohne „.0“ und mit Komma („28“, „39,3“)
 * Change: `doctrine/dbal` ist jetzt eine direkte Abhängigkeit (^3.3 || ^4.0)
 
+## Version 1.60.0 (2026-11-23)
+
+* Add: **Swiss-Chess-Hintergrunddateien für Swiss-Chess ab 10.03** als drittes Archiv
+  `swiss1003/dsb-swiss1003_JJJJMMTT.zip` (Export `export/swiss1003/dsb-swiss1003.zip`, Dateien
+  `fdsbJJMMTTw`): Namen und Vereine in windows-1252 („ANSI“) statt CP437, damit 10.03 die Umlaute
+  richtig zeigt; Š, á, ý, ø und Ó bleiben erhalten. Eimer, Sortierung und Index wie in der Fassung ab
+  10.0 (gegen den Export vom 18.11.2026: SWX byte-gleich, alle Zahlenfelder gleich). Die Dateien von
+  swiss-chess.de sind ab 10.03 verschlüsselt und nicht nachbaubar — ob 10.03 diese unverschlüsselte
+  Fassung liest, ist noch nicht in Swiss-Chess geprüft (`docs/swiss-chess.md`)
+
 ## Version 1.59.0 (2026-11-18)
 
 * Add: **Akademische Titel** aus dem monatlichen Spieler-Import (Spalte „Titel") erscheinen an
