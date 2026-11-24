@@ -158,7 +158,7 @@ Suche und Turnierseiten, wie sie waren.
 
 | Wo | Was |
 | --- | --- |
-| Karteikarte `spieler/NU…` | Unter den Turnieren von nu die **älteren Turniere** aus ELOBASE und DeWIS, neueste zuerst — nur solche, die keine jüngere Quelle führt (eine DeWIS-Zeile entfällt, wenn die Person im selben Portalturnier unter ihrer NU-Nummer steht — siehe „DeWIS oder Portal“ unten; ein ELOBASE-Turnier, wenn DeWIS es hat). Die „Datenübernahme nach DeWIS“ zeigt nu selbst. Erste Spalte: Archivsymbol mit „ZDB“ oder „DeWIS“, linksbündig (Langname im Tooltip). ELOBASE-Sätze aus einem **älteren Abzug** der ZDB tragen den Abzug dahinter („ZDB 8/1998“, `kartei.quelle`); „ZDB“ allein ist der letzte Stand. Besuchte Turnierlinks erscheinen violett (`table.wp-kartei a:visited`). |
+| Karteikarte `spieler/NU…` | Unter den Turnieren von nu die **älteren Turniere** aus ELOBASE und DeWIS, neueste zuerst — nur solche, die keine jüngere Quelle führt (eine DeWIS-Zeile entfällt, wenn die Person im selben Portalturnier unter ihrer NU-Nummer steht — siehe „DeWIS oder Portal“ unten; eine ELOBASE-Zeile, wenn die Person im selben DeWIS-Turnier steht — siehe „ELOBASE oder DeWIS“). Die „Datenübernahme nach DeWIS“ zeigt nu selbst. Erste Spalte: Archivsymbol mit „ZDB“ oder „DeWIS“, linksbündig (Langname im Tooltip). ELOBASE-Sätze aus einem **älteren Abzug** der ZDB tragen den Abzug dahinter („ZDB 8/1998“, `kartei.quelle`); „ZDB“ allein ist der letzte Stand. Besuchte Turnierlinks erscheinen violett (`table.wp-kartei a:visited`). |
 | Karteikarte `spieler/G<Nummer>` | Für Spieler **ohne NU-Nummer**, die nur noch im Archiv stehen: Name, Geburtsjahr, Archive, die ganze Kartei einschließlich der Portalzeilen aus dem Archiv. Mit NU-Nummer leitet die Adresse auf die normale Karteikarte weiter. |
 | Spielersuche | Zweite Trefferliste „Aus dem Wertungsarchiv (heute nicht mehr gemeldet)“ — Gesamtpersonen ohne NU-Nummer, gesucht in allen Schreibweisen („Müller, Klaus“, „Müller,Klaus“, „Mueller,Klaus“). |
 | Turnierseite `turniere/A<Nummer>` | Ein Turnier aus dem Archiv: Kopf, Teilnehmer mit Verein, DWZ vorher/nachher, Punkten, Partien, We, E, Gegnerschnitt, Leistung; Teilnehmer mit NU-Nummer verlinkt. Rekonstruktionen und Abweichungen von der Kartei sind vermerkt. |
@@ -186,6 +186,23 @@ Gemessen an einer Stichprobe von 300 Archiv-Karteikarten: Sämtliche Portalzeile
 DWZ) stehen jetzt als DeWIS-Zeilen da, 37 Karteikarten bekamen 1–2 Zeilen zurück, die vorher ganz
 fehlten. Von 131 Karteikarten mit NU-Nummer bekam eine eine DeWIS-Zeile zurück, die übrigen blieben
 gleich. Rechenzeit je Karteikarte etwa 20 ms.
+
+**ELOBASE oder DeWIS — ebenfalls je Zeile (24.11.2026):** Beide Archive überschneiden sich nur bei den
+Turnieren mit Ende Januar 2011 bis Juli 2013 (12.078 Turniercodes). DeWIS hat sie am 27./28.07.2013 aus
+ELOBASE übernommen (Auswertungsdatum in DeWIS; Meldung „DeWIS geht nach einem Reset wieder an den Start“
+vom 12.08.2013) und rechnet erst seit dem 13.08.2013 selbst aus; davor steht in DeWIS nur die
+„Datenübernahme nach DeWIS“ zum 31.12.2010. Vergleich der ELOBASE-Zeilen dieser Turniere mit DeWIS:
+
+| Befund | Zeilen |
+| --- | --- |
+| gleiche DWZ und gleicher Index | 404.600 |
+| abweichend (fast nur 2013 — DeWIS hat nachgerechnet; es gilt DeWIS) | 21.014 |
+| DeWIS-Zeile bei derselben Gesamtperson über eine andere Archivperson | 27 |
+| DeWIS führt die Person in diesem Turnier gar nicht (andere oder zweite DeWIS-Person) | 298 bei 91 Gesamtpersonen |
+
+Die letzten 298 Zeilen fielen mit der Regel je Turnier ganz von der Karteikarte (Beispiel: eine
+DWZ-Kette 1301-17 → 1325-19 mit fehlendem Turnier dazwischen). Jetzt entfällt eine ELOBASE-Zeile nur,
+wenn dieselbe Gesamtperson im DeWIS-Turnier eine Zeile hat.
 
 **Doppelt erfasste ELOBASE-Turniere (Rückfrage R6, 20.11.2026):** Die Aufbereitung kennzeichnet die
 ältere Fassung desselben Turniers unter anderem Code mit `dublette` und nennt in `erg_dublette_von`

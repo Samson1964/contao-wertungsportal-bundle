@@ -56,6 +56,10 @@
   „Portal“ ohne neue DWZ, die Karteikarte mit NU-Nummer verlor die Zeilen ganz (etwa nach Jahren
   ohne Mitgliedschaft). Jetzt verdrängt nur noch eine Portalzeile derselben Person, die nu live zeigt
   (Karteikarte mit NU-Nummer) bzw. die eine neue DWZ hat (Karteikarte G<Nummer>)
+* Fix: Ebenso **ELOBASE gegen DeWIS je Karteizeile**: DeWIS hat beim Import der ELOBASE-Turniere
+  2011 bis Juli 2013 einzelne Spieler einer anderen oder zweiten DeWIS-Person zugeordnet. Deren
+  ELOBASE-Zeile fiel bisher ganz von der Karteikarte (298 Zeilen bei 91 Personen); jetzt entfällt sie nur,
+  wenn dieselbe Person im DeWIS-Turnier steht
 
 ## Version 1.60.1 (2026-11-23)
 

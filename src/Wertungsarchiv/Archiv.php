@@ -18,7 +18,10 @@ use Doctrine\DBAL\Connection;
  *   zeigt (archiv_turnier.dublette_archiv = 'dewis') UND dieselbe Person
  *   dort eine brauchbare Zeile hat — entschieden je Zeile, weil nu Spieler
  *   ohne NU-Nummer nur anonymisiert führt (Einzelheiten bei altkartei()),
- * - ein ELOBASE-Turnier entfällt, wenn ein DeWIS-Turnier darauf zeigt,
+ * - eine ELOBASE-Zeile entfällt, wenn ein DeWIS-Turnier darauf zeigt UND
+ *   dieselbe Person dort eine Zeile hat — ebenfalls je Zeile, weil DeWIS
+ *   beim Import der ELOBASE-Turniere 2011 bis Juli 2013 (27./28.07.2013)
+ *   einzelne Spieler einer anderen oder zweiten DeWIS-Person zugeordnet hat,
  * - ein ELOBASE-Turnier mit dem Kennzeichen `dublette` entfällt: Es ist eine
  *   ältere Fassung desselben Turniers unter anderem Code (Rückfrage R6,
  *   20.11.2026). Anders als oben steht der Verweis hier an der Dublette
@@ -118,6 +121,14 @@ class Archiv
      * - Karteikarte G<Nummer>: eine Portalzeile MIT neuer DWZ; eine
      *   Portalzeile ohne neue DWZ entfällt dort zugunsten der DeWIS-Zeile.
      *
+     * Ebenso ELOBASE gegen DeWIS (24.11.2026): DeWIS hat die Turniere von
+     * 2011 bis Juli 2013 am 27./28.07.2013 aus ELOBASE übernommen und dabei
+     * einzelne Spieler einer anderen oder einer zweiten DeWIS-Person
+     * zugeordnet (gemessen: 298 Zeilen bei 91 Gesamtpersonen). Eine
+     * ELOBASE-Zeile entfällt deshalb nur, wenn dieselbe Gesamtperson im
+     * DeWIS-Turnier eine Zeile hat. Weichen die Werte ab (rund 21.000 Zeilen,
+     * fast nur 2013, von DeWIS nachgerechnet), gilt weiter DeWIS.
+     *
      * @param int  $gesamtId  Nummer der Gesamtperson
      * @param bool $mitPortal true: auch die Karteizeilen des Portalarchivs
      *
@@ -157,7 +168,11 @@ class Archiv
                      WHERE j.dublette_archiv = 'dewis' AND j.dublette_quell_id = t.quell_id
                        AND pw.gesamt_id = p.gesamt_id AND $verdraengt))
                AND NOT (k.archiv = 'elobase' AND t.id IS NOT NULL AND EXISTS (
-                     SELECT 1 FROM archiv_turnier j WHERE j.dublette_archiv = 'elobase' AND j.dublette_quell_id = t.quell_id))
+                     SELECT 1 FROM archiv_turnier j
+                     JOIN archiv_kartei kj ON kj.turnier_id = j.id
+                     JOIN archiv_person pj ON pj.id = kj.person_id
+                     WHERE j.dublette_archiv = 'elobase' AND j.dublette_quell_id = t.quell_id
+                       AND pj.gesamt_id = p.gesamt_id))
                AND NOT (k.archiv = 'elobase' AND t.id IS NOT NULL AND FIND_IN_SET('dublette', t.kennzeichen) > 0)
              ORDER BY k.id",
             array($gesamtId)
