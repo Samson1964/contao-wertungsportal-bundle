@@ -14,8 +14,10 @@ use Doctrine\DBAL\Connection;
  * Karteikarte heißt das: Das Wertungsportal kommt live von nu; aus dem
  * Archiv kommen nur Turniere, die keine jüngere Quelle führt —
  *
- * - ein DeWIS-Turnier entfällt, wenn ein Portalturnier darauf als Dublette
- *   zeigt (archiv_turnier.dublette_archiv = 'dewis'),
+ * - eine DeWIS-Zeile entfällt, wenn ein Portalturnier darauf als Dublette
+ *   zeigt (archiv_turnier.dublette_archiv = 'dewis') UND dieselbe Person
+ *   dort eine brauchbare Zeile hat — entschieden je Zeile, weil nu Spieler
+ *   ohne NU-Nummer nur anonymisiert führt (Einzelheiten bei altkartei()),
  * - ein ELOBASE-Turnier entfällt, wenn ein DeWIS-Turnier darauf zeigt,
  * - ein ELOBASE-Turnier mit dem Kennzeichen `dublette` entfällt: Es ist eine
  *   ältere Fassung desselben Turniers unter anderem Code (Rückfrage R6,
@@ -101,6 +103,21 @@ class Archiv
      * Einzelpartiesätze (ELOBASE: Bit 15 der Erfolgszahl) sind Bausteine
      * einer Auswertung, keine eigene Zeile der Karteikarte, und entfallen.
      *
+     * DeWIS gegen Portal wird je Zeile entschieden, nicht je Turnier (ab
+     * 2.0.0, Fall vom 24.11.2026): nu hat den DeWIS-Bestand übernommen, zeigt
+     * Spieler ohne NU-Nummer aber anonymisiert — DWZ vorher eingeklammert,
+     * ohne Index, ohne neue DWZ (W:-Personen, in der Übergabe 879.014 Zeilen,
+     * bei 287.450 davon hat DeWIS die neue DWZ). Wer nach Jahren Pause wieder
+     * Mitglied wird, bekommt eine neue NU-Nummer, deren Karteikarte diese
+     * Turniere nicht kennt. Deshalb entfällt eine DeWIS-Zeile nur, wenn
+     * dieselbe Person im Portalturnier eine Zeile hat, die wirklich gezeigt
+     * wird und taugt:
+     *
+     * - Karteikarte mit NU-Nummer: eine Zeile der N:-Person — nur die zeigt
+     *   nu live auf dieser Karteikarte,
+     * - Karteikarte G<Nummer>: eine Portalzeile MIT neuer DWZ; eine
+     *   Portalzeile ohne neue DWZ entfällt dort zugunsten der DeWIS-Zeile.
+     *
      * @param int  $gesamtId  Nummer der Gesamtperson
      * @param bool $mitPortal true: auch die Karteizeilen des Portalarchivs
      *
@@ -114,15 +131,31 @@ class Archiv
         // nu auf der Karteikarte selbst; ohne Portal stünde sie doppelt da
         $ohneAusgang = $mitPortal ? '' : "AND NOT (k.archiv = 'dewis' AND t.kennzeichen LIKE '%kein_turnier%')";
 
+        // Welche Portalzeile eine DeWIS-Zeile verdrängt (siehe oben): live
+        // gezeigt wird nur die N:-Person, im Portalarchiv nur eine vollständige
+        $verdraengt = $mitPortal ? 'w.dwz IS NOT NULL' : "pw.kennung LIKE 'N:%'";
+
+        // Gegenstück: eine Portalzeile ohne neue DWZ weicht der DeWIS-Zeile
+        // derselben Person (nur Karteikarte G<Nummer>, sonst kein Portal dabei)
+        $ohneAnonym = $mitPortal ? "AND NOT (k.archiv = 'wp' AND k.dwz IS NULL AND t.dublette_archiv = 'dewis' AND EXISTS (
+                     SELECT 1 FROM archiv_turnier d
+                     JOIN archiv_kartei kd ON kd.turnier_id = d.id
+                     JOIN archiv_person pd ON pd.id = kd.person_id
+                     WHERE d.archiv = 'dewis' AND d.quell_id = t.dublette_quell_id AND pd.gesamt_id = p.gesamt_id))" : '';
+
         $zeilen = $this->db->fetchAllAssociative(
             "SELECT k.*, p.kennung,
                     t.id AS t_id, t.quell_id AS t_quell_id, t.name AS t_name, t.ende AS t_ende, t.json AS t_json, t.kennzeichen AS t_kennzeichen
              FROM archiv_person p
              JOIN archiv_kartei k ON k.person_id = p.id
              LEFT JOIN archiv_turnier t ON t.id = k.turnier_id
-             WHERE p.gesamt_id = ? AND p.archiv IN ($archive) AND k.einzelpartie = 0 $ohneAusgang
+             WHERE p.gesamt_id = ? AND p.archiv IN ($archive) AND k.einzelpartie = 0 $ohneAusgang $ohneAnonym
                AND NOT (k.archiv = 'dewis' AND t.id IS NOT NULL AND EXISTS (
-                     SELECT 1 FROM archiv_turnier j WHERE j.dublette_archiv = 'dewis' AND j.dublette_quell_id = t.quell_id))
+                     SELECT 1 FROM archiv_turnier j
+                     JOIN archiv_kartei w ON w.turnier_id = j.id
+                     JOIN archiv_person pw ON pw.id = w.person_id
+                     WHERE j.dublette_archiv = 'dewis' AND j.dublette_quell_id = t.quell_id
+                       AND pw.gesamt_id = p.gesamt_id AND $verdraengt))
                AND NOT (k.archiv = 'elobase' AND t.id IS NOT NULL AND EXISTS (
                      SELECT 1 FROM archiv_turnier j WHERE j.dublette_archiv = 'elobase' AND j.dublette_quell_id = t.quell_id))
                AND NOT (k.archiv = 'elobase' AND t.id IS NOT NULL AND FIND_IN_SET('dublette', t.kennzeichen) > 0)

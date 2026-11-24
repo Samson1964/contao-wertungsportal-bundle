@@ -50,6 +50,12 @@
   ELOBASE führt keine Farbe, dort bleibt die Ansicht wie bisher
 * Change: E erscheint ohne „.0“ und mit Komma („28“, „39,3“)
 * Change: `doctrine/dbal` ist jetzt eine direkte Abhängigkeit (^3.3 || ^4.0)
+* Fix: **DeWIS gegen Portal wird je Karteizeile entschieden, nicht je Turnier.** nu führt Spieler ohne
+  NU-Nummer nur anonymisiert (DWZ vorher eingeklammert, ohne Index und neue DWZ). Bisher verdrängte ein
+  solches Portalturnier die vollständige DeWIS-Zeile: Die Karteikarte `spieler/G<Nummer>` zeigte
+  „Portal“ ohne neue DWZ, die Karteikarte mit NU-Nummer verlor die Zeilen ganz (etwa nach Jahren
+  ohne Mitgliedschaft). Jetzt verdrängt nur noch eine Portalzeile derselben Person, die nu live zeigt
+  (Karteikarte mit NU-Nummer) bzw. die eine neue DWZ hat (Karteikarte G<Nummer>)
 
 ## Version 1.60.1 (2026-11-23)
 
