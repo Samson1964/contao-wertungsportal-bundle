@@ -1,44 +1,43 @@
 {#
  # DWZ-Archiv-Suche (ab 1.61.0), gerendert von DwzArchivSucheController.
  #
- # Formular per GET, damit Ergebnisse verlinkbar sind. Klassen von Bootstrap
- # (Theme dsb2026) für Felder, Knopf und Tabelle; das Übrige in
- # public/css/dwzarchiv.css. Der Ergebnisbereich ist eine aria-live-Region.
+ # Formular per GET, damit Ergebnisse verlinkbar sind. Gestaltung komplett in
+ # public/css/dwzarchiv.css (ab 1.61.1): Das Theme auf schachbund.de lädt kein
+ # Bootstrap, Bootstrap-Klassen liefen dort ins Leere. Der Ergebnisbereich ist
+ # eine aria-live-Region.
  #}
 {% set feld = 'wp-dwzarchiv-' ~ id %}
 <div class="mod_wertungsportal_dwzarchiv block wp-dwzarchiv{{ klasse ? ' ' ~ klasse }}"{% if cssId %} id="{{ cssId }}"{% endif %}>
     {% if ueberschrift %}<{{ ueberschrift.tag }}>{{ ueberschrift.text }}</{{ ueberschrift.tag }}>{% endif %}
 
     <form method="get" action="{{ aktion }}" class="wp-dwzarchiv-formular">
-        <div class="wp-dwzarchiv-felder">
-            <div class="wp-dwzarchiv-feld">
-                <label for="{{ feld }}-datum" class="form-label">{{ t.datum }}</label>
-                <input type="date" id="{{ feld }}-datum" name="datum" value="{{ datum }}"{% if min %} min="{{ min }}"{% endif %}{% if max %} max="{{ max }}"{% endif %} class="form-control" required>
+        <div class="wp-dwzarchiv-feld wp-dwzarchiv-feld--datum">
+            <label for="{{ feld }}-datum">{{ t.datum }}</label>
+            <input type="date" id="{{ feld }}-datum" name="datum" value="{{ datum }}"{% if min %} min="{{ min }}"{% endif %}{% if max %} max="{{ max }}"{% endif %} class="wp-dwzarchiv-eingabe" required>
+        </div>
+        {% if verbandswahl %}
+            <div class="wp-dwzarchiv-feld wp-dwzarchiv-feld--verband">
+                <label for="{{ feld }}-verband">{{ t.verband }}</label>
+                <select id="{{ feld }}-verband" name="verband" class="wp-dwzarchiv-eingabe wp-dwzarchiv-auswahl">
+                    {% for code, name in verbaende %}
+                        <option value="{{ code }}"{% if code ~ '' == verband %} selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
             </div>
-            {% if verbandswahl %}
-                <div class="wp-dwzarchiv-feld">
-                    <label for="{{ feld }}-verband" class="form-label">{{ t.verband }}</label>
-                    <select id="{{ feld }}-verband" name="verband" class="form-select">
-                        {% for code, name in verbaende %}
-                            <option value="{{ code }}"{% if code ~ '' == verband %} selected{% endif %}>{{ name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            {% endif %}
-            {% if formate|length > 1 %}
-                <div class="wp-dwzarchiv-feld">
-                    <label for="{{ feld }}-format" class="form-label">{{ t.format }}</label>
-                    <select id="{{ feld }}-format" name="format" class="form-select">
-                        <option value="">{{ t.alle }}</option>
-                        {% for schluessel, name in formate %}
-                            <option value="{{ schluessel }}"{% if schluessel == format %} selected{% endif %}>{{ name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            {% endif %}
+        {% endif %}
+        {% if formate|length > 1 %}
             <div class="wp-dwzarchiv-feld">
-                <button type="submit" class="btn btn-primary">{{ t.suchen }}</button>
+                <label for="{{ feld }}-format">{{ t.format }}</label>
+                <select id="{{ feld }}-format" name="format" class="wp-dwzarchiv-eingabe wp-dwzarchiv-auswahl">
+                    <option value="">{{ t.alle }}</option>
+                    {% for schluessel, name in formate %}
+                        <option value="{{ schluessel }}"{% if schluessel == format %} selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
             </div>
+        {% endif %}
+        <div class="wp-dwzarchiv-feld wp-dwzarchiv-feld--knopf">
+            <button type="submit" class="wp-dwzarchiv-knopf">{{ t.suchen }}</button>
         </div>
     </form>
 
@@ -47,47 +46,58 @@
             <p class="wp-dwzarchiv-leer">{{ t.keine }}</p>
         {% else %}
             <p class="wp-dwzarchiv-kopf">{{ t.ergebnis|format(datum|date('d.m.Y')) }} – {{ verbandsname }}</p>
-            {% for gruppe in ergebnis %}
-                {{ _self.tabelle(gruppe, t, true) }}
-            {% endfor %}
+            {{ _self.tabelle(ergebnis, t, true) }}
         {% endif %}
     </div>
 
     {% if neueste is not empty %}
         <div class="wp-dwzarchiv-neueste">
             <p class="wp-dwzarchiv-kopf">{{ t.neueste }}</p>
-            {% for gruppe in neueste %}
-                {{ _self.tabelle(gruppe, t, false) }}
-            {% endfor %}
+            {{ _self.tabelle(neueste, t, false) }}
         </div>
     {% endif %}
 </div>
 
-{# Tabelle einer Formatgruppe; ohne Abstandsspalte bei den neuesten Dateien #}
-{% macro tabelle(gruppe, t, mitAbstand) %}
-    <div class="table-responsive">
-        <table class="table table-sm wp-dwzarchiv-tabelle">
-            <caption>{{ gruppe.titel }}</caption>
+{#
+ # Eine Tabelle für alle Formatgruppen: je Gruppe ein tbody mit einer
+ # Kopfzeile, je Tag Stand und Abstand nur einmal (rowspan über die Dateien
+ # desselben Tags). Ohne Abstandsspalte bei den neuesten Dateien. Unter 576 px
+ # ersetzen die Zusätze .wp-dwzarchiv-schmal die Spalten .wp-dwzarchiv-breit
+ # (Abstand unter dem Stand, Größe unter dem Dateinamen), sonst scrollt die
+ # Tabelle auf dem Handy seitwärts.
+ #}
+{% macro tabelle(gruppen, t, mitAbstand) %}
+    {% set spalten = mitAbstand ? 4 : 3 %}
+    <div class="wp-dwzarchiv-rahmen">
+        <table class="wp-dwzarchiv-tabelle">
             <thead>
                 <tr>
-                    <th scope="col">{{ t.datei }}</th>
                     <th scope="col">{{ t.tag }}</th>
-                    {% if mitAbstand %}<th scope="col">{{ t.abstand }}</th>{% endif %}
-                    <th scope="col" class="wp-dwzarchiv-groesse">{{ t.groesse }}</th>
-                    <th scope="col">{{ t.quelle }}</th>
+                    {% if mitAbstand %}<th scope="col" class="wp-dwzarchiv-breit">{{ t.abstand }}</th>{% endif %}
+                    <th scope="col">{{ t.datei }}</th>
+                    <th scope="col" class="wp-dwzarchiv-groesse wp-dwzarchiv-breit">{{ t.groesse }}</th>
                 </tr>
             </thead>
-            <tbody>
-                {% for zeile in gruppe.zeilen %}
-                    <tr>
-                        <td><a href="{{ zeile.url }}" download>{{ zeile.name }}</a></td>
-                        <td>{{ zeile.datum }}</td>
-                        {% if mitAbstand %}<td>{{ zeile.abstand ?: t.genau }}</td>{% endif %}
-                        <td class="wp-dwzarchiv-groesse">{{ zeile.groesse }}</td>
-                        <td>{{ zeile.quelle }}</td>
+            {% for gruppe in gruppen %}
+                <tbody>
+                    <tr class="wp-dwzarchiv-gruppe">
+                        <th scope="colgroup" colspan="{{ spalten }}">{{ gruppe.titel }}</th>
                     </tr>
-                {% endfor %}
-            </tbody>
+                    {% for tag in gruppe.tage %}
+                        {% set anzahl = tag.dateien|length %}
+                        {% for datei in tag.dateien %}
+                            <tr class="{{ loop.first ? 'wp-dwzarchiv-tag' : 'wp-dwzarchiv-weitere' }}{{ tag.genau and mitAbstand ? ' wp-dwzarchiv-genau' }}">
+                                {% if loop.first %}
+                                    <td{% if anzahl > 1 %} rowspan="{{ anzahl }}"{% endif %}>{{ tag.datum }}{% if mitAbstand %}<span class="wp-dwzarchiv-schmal wp-dwzarchiv-abstand">{{ tag.abstand ?: t.genau }}</span>{% endif %}</td>
+                                    {% if mitAbstand %}<td{% if anzahl > 1 %} rowspan="{{ anzahl }}"{% endif %} class="wp-dwzarchiv-abstand wp-dwzarchiv-breit">{{ tag.abstand ?: t.genau }}</td>{% endif %}
+                                {% endif %}
+                                <td><a href="{{ datei.url }}" download title="{{ t.quelle }}: {{ datei.quelle }}">{{ datei.name }}</a><span class="wp-dwzarchiv-schmal">{{ datei.groesse }}</span></td>
+                                <td class="wp-dwzarchiv-groesse wp-dwzarchiv-breit">{{ datei.groesse }}</td>
+                            </tr>
+                        {% endfor %}
+                    {% endfor %}
+                </tbody>
+            {% endfor %}
         </table>
     </div>
 {% endmacro %}

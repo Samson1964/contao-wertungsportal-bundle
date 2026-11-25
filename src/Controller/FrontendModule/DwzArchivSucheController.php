@@ -154,14 +154,14 @@ class DwzArchivSucheController extends AbstractFrontendModuleController
 		$ergebnis = array();
 		foreach ($gruppen as $gruppe => $liste) {
 			if ('' === $format || $format === $gruppe) {
-				$ergebnis[] = array('gruppe' => $gruppe, 'titel' => $t['gruppen'][$gruppe] ?? $gruppe, 'zeilen' => $this->zeilen(Archivindex::suche($liste, $datum, $nachbarn)));
+				$ergebnis[] = array('gruppe' => $gruppe, 'titel' => $t['gruppen'][$gruppe] ?? $gruppe, 'tage' => $this->tage(Archivindex::suche($liste, $datum, $nachbarn)));
 			}
 		}
 
 		$neueste = array();
 		if ($model->wertungsportal_dwzarchiv_neueste) {
 			foreach ($gruppen as $gruppe => $liste) {
-				$neueste[] = array('gruppe' => $gruppe, 'titel' => $t['gruppen'][$gruppe] ?? $gruppe, 'zeilen' => $this->zeilen(Archivindex::suche($liste, end($liste)['datum'])));
+				$neueste[] = array('gruppe' => $gruppe, 'titel' => $t['gruppen'][$gruppe] ?? $gruppe, 'tage' => $this->tage(Archivindex::suche($liste, end($liste)['datum'])));
 			}
 		}
 
@@ -205,15 +205,19 @@ class DwzArchivSucheController extends AbstractFrontendModuleController
 	/**
 	 * Bereitet die Suchtreffer einer Gruppe für die Vorlage auf.
 	 *
+	 * Ein Eintrag je Tag; mehrere Dateien desselben Tags (`_v2`, ws822 und
+	 * ws833) bleiben beisammen, damit die Vorlage Stand und Abstand nur einmal
+	 * ausgibt (rowspan) statt sie je Datei zu wiederholen.
+	 *
 	 * @param list<array{datum: string, abstand: int, dateien: list<array>}> $treffer Ergebnis von Archivindex::suche()
 	 *
-	 * @return list<array> Je Datei: name, url, datum (TT.MM.JJJJ), abstand (Text, leer bei genauem Treffer),
-	 *                     groesse (Text), quelle (Text)
+	 * @return list<array> Je Tag: datum (TT.MM.JJJJ), abstand (Text, leer bei genauem Treffer),
+	 *                     genau (bool), dateien (je Datei name, url, groesse als Text, quelle als Text)
 	 */
-	private function zeilen(array $treffer): array
+	private function tage(array $treffer): array
 	{
 		$t = $GLOBALS['TL_LANG']['MSC']['wp_dwzarchiv'] ?? array();
-		$zeilen = array();
+		$tage = array();
 
 		foreach ($treffer as $tag) {
 			$abstand = '';
@@ -222,20 +226,27 @@ class DwzArchivSucheController extends AbstractFrontendModuleController
 				$abstand = sprintf($t[$schluessel] ?? '%d', abs($tag['abstand']));
 			}
 
+			$dateien = array();
 			foreach ($tag['dateien'] as $datei) {
-				$zeilen[] = array
+				$dateien[] = array
 				(
 					'name'    => $datei['name'],
 					'url'     => $this->generateUrl('wertungsportal_dwzarchiv_download', array('pfad' => $datei['pfad'])),
-					'datum'   => substr($tag['datum'], 6, 2).'.'.substr($tag['datum'], 4, 2).'.'.substr($tag['datum'], 0, 4),
-					'abstand' => $abstand,
 					'groesse' => self::groesse($datei['groesse']),
 					'quelle'  => $t['quellen'][$datei['quelle']] ?? $datei['quelle'],
 				);
 			}
+
+			$tage[] = array
+			(
+				'datum'   => substr($tag['datum'], 6, 2).'.'.substr($tag['datum'], 4, 2).'.'.substr($tag['datum'], 0, 4),
+				'abstand' => $abstand,
+				'genau'   => 0 === $tag['abstand'],
+				'dateien' => $dateien,
+			);
 		}
 
-		return $zeilen;
+		return $tage;
 	}
 
 	/**

@@ -1,5 +1,16 @@
 # Wertungsportal Changelog
 
+## Version 1.61.1 (2026-11-25)
+
+* Fix: DWZ-Archiv-Suche — „Nachbardateien“ zählt den nächsten Tag mit. Mit 1 und ohne Datei am
+  gesuchten Tag kamen zwei Tage davor und zwei danach, jetzt einer davor und einer danach
+* Change: DWZ-Archiv-Suche mit eigener Gestaltung statt Bootstrap-Klassen (das Theme auf
+  schachbund.de lädt kein Bootstrap): Formular als Kasten mit gleich hohen Feldern, eine Tabelle
+  für alle Formate mit Zwischenzeilen statt einer Tabelle je Format, Dateien desselben Tags in
+  einer Zeile, genauer Treffer hinterlegt, Spalte „Quelle“ als Tooltip am Dateinamen. Auf dem
+  Handy stehen Abstand und Größe unter Stand und Dateiname. Nach dem Einspielen `assets:install`
+  und `cache:clear` (Twig-Vorlage)
+
 ## Version 1.61.0 (2026-11-25)
 
 * Add: **Frontend-Modul „DWZ-Archiv-Suche“** (`wertungsportal_dwzarchiv`): Datum, Verband und Format

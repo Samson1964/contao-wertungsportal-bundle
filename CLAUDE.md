@@ -657,6 +657,10 @@ Download-Elementen auf schachbund.de. Auftrag: `F:\Nextcloud\cloud.frankhoppeber
   Converter/Swiss-Chess löschen nichts (Frank, 25.11.2026). Swiss-Chess in VIER Gruppen (Frank, 25.11.2026).
 - Verbandscodes 0–9, A–H, L (DBSB), M (Schwalbe) wie im Downloader; Namen aus `API::landesverbaende()`.
   In PHP sind 0–9 Ganzzahlschlüssel → in der DCA `isAssociative`, im Controller immer als Zeichenkette vergleichen.
+- **Eigenes CSS, kein Bootstrap** (1.61.1, Frank: „Nimm eigenes CSS“): Das Theme auf schachbund.de lädt kein
+  Bootstrap und setzt `table { display: block }` sowie graue 60-px-`select`. Alle Regeln unter `.wp-dwzarchiv`.
+  Eine Tabelle, je Format ein `tbody`; unter 576 px `.wp-dwzarchiv-schmal` statt `.wp-dwzarchiv-breit`.
+  „Nachbardateien“ = Tage je Seite, ohne Treffer zählt der nächste Tag mit (1 = einer davor, einer danach).
 - Download nur über `Archivindex::aufloesen()` (genau `<quelle>/<JJJJ>/<ordner>/<name>`, realpath im Basisordner).
 - Prüfstand: künstlicher Bestand (133.364 Dateien, Erzeuger `dwzarchiv_bestand.php` im Scratchpad-Muster), per
   Junction als `files/wertungsportal` und `files/dewis` in beide Testinstallationen; Modul über den Dienst

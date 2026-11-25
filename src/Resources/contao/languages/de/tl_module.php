@@ -42,6 +42,6 @@ $GLOBALS['TL_LANG']['tl_module']['dwz_gender_options'] = array
 $GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_legend'] = 'DWZ-Archiv';
 $GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_verband'] = array('Verband', 'Fester Verband, etwa auf der Unterseite eines Landesverbands. „Auswahl anzeigen“ läßt den Besucher wählen.');
 $GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_auswahl'] = 'Auswahl anzeigen';
-$GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_nachbarn'] = array('Nachbardateien', 'So viele weitere Tage davor und danach zusätzlich anzeigen (0 bis 10).');
+$GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_nachbarn'] = array('Nachbardateien', 'So viele Tage davor und danach anzeigen (0 bis 10). Bei 1 ohne Datei am gesuchten Tag: der nächste Tag davor und der nächste danach.');
 $GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_formate'] = array('Formate', 'Angebotene Formate. Ohne Auswahl werden alle angeboten.');
 $GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_neueste'] = array('Neueste Dateien anzeigen', 'Unter dem Ergebnis die jüngsten Dateien je Format ausgeben.');

@@ -197,15 +197,18 @@ final class Archivindex
 	/**
 	 * Sucht in einer nach Datum sortierten Liste die Dateien zum Datum.
 	 *
-	 * Gibt es Dateien genau zu diesem Tag, kommen sie zurück. Sonst die
-	 * nächsten davor und danach — immer beide, auch bei gleichem Abstand. Vor
-	 * dem ersten bzw. nach dem letzten Bestand fehlt die jeweils andere Seite.
-	 * Mit `$nachbarn` kommen auf jeder Seite so viele weitere Tage hinzu.
+	 * `$nachbarn` ist die Zahl der Tage je Seite. Gibt es Dateien genau zu
+	 * diesem Tag, kommen sie mit so vielen Tagen davor und danach zurück. Sonst
+	 * so viele Tage davor und danach, mindestens aber der nächste auf jeder
+	 * Seite — immer beide, auch bei gleichem Abstand. Bei 1 und einer Lücke
+	 * also genau ein Tag davor und einer danach (bis 1.61.0 kamen hier zwei,
+	 * weil der nächste Tag nicht mitzählte). Vor dem ersten bzw. nach dem
+	 * letzten Bestand fehlt die jeweils andere Seite.
 	 * Mehrere Dateien am selben Tag (ws822 und ws833, `_v2`) bilden eine Zeile.
 	 *
 	 * @param list<array> $liste    Einträge einer Formatgruppe, nach `datum` aufsteigend
 	 * @param string      $datum    Gesuchter Tag, JJJJMMTT
-	 * @param int         $nachbarn Zusätzliche Tage je Seite, 0 oder mehr
+	 * @param int         $nachbarn Tage je Seite, 0 oder mehr
 	 *
 	 * @return list<array{datum: string, abstand: int, dateien: list<array>}>
 	 *         Nach Datum aufsteigend; `abstand` in Tagen, negativ = früher, 0 = genau.
@@ -240,10 +243,11 @@ final class Archivindex
 		$nachbarn = max(0, $nachbarn);
 		$genau = $links < \count($tage) && $tage[$links]['datum'] === $datum;
 
-		// Ohne genauen Treffer zählt der nächste Tag davor und danach schon
-		// selbst als Ergebnis, die Nachbarn kommen dazu
-		$von = $genau ? $links - $nachbarn : $links - 1 - $nachbarn;
-		$bis = $genau ? $links + $nachbarn : $links + $nachbarn;
+		// Ohne genauen Treffer zählt der nächste Tag davor und danach mit;
+		// $links zeigt dann schon auf den ersten Tag danach
+		$seite = $genau ? $nachbarn : max(1, $nachbarn);
+		$von = $links - $seite;
+		$bis = $genau ? $links + $seite : $links + $seite - 1;
 
 		$gesucht = self::tag($datum);
 		$ergebnis = array();

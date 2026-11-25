@@ -36,6 +36,6 @@ $GLOBALS['TL_LANG']['tl_module']['dwz_gender_options'] = array
 $GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_legend'] = 'DWZ archive';
 $GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_verband'] = array('Federation', 'Fixed federation, e.g. on the page of a state federation. "Show selection" lets the visitor choose.');
 $GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_auswahl'] = 'Show selection';
-$GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_nachbarn'] = array('Neighbouring files', 'Additionally show this many days before and after (0 to 10).');
+$GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_nachbarn'] = array('Neighbouring files', 'Show this many days before and after (0 to 10). With 1 and no file on the requested day: the nearest day before and the nearest day after.');
 $GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_formate'] = array('Formats', 'Formats offered. Without a selection, all are offered.');
 $GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_neueste'] = array('Show newest files', 'Below the result, list the newest files of each format.');

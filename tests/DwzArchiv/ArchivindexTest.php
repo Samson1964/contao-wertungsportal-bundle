@@ -213,8 +213,9 @@ class ArchivindexTest extends TestCase
 	}
 
 	/**
-	 * Nachbarn: je Seite n weitere Tage, beim Treffer wie bei der Lücke;
-	 * am Rand so viele, wie es gibt.
+	 * Nachbarn: n Tage je Seite. Beim Treffer kommen sie zum Tag hinzu, in
+	 * einer Lücke zählt der nächste Tag mit (1 = genau einer davor und einer
+	 * danach, bis 1.61.0 kamen zwei); am Rand so viele, wie es gibt.
 	 */
 	public function testSucheMitNachbarn(): void
 	{
@@ -225,8 +226,16 @@ class ArchivindexTest extends TestCase
 			self::kurz(Archivindex::suche($liste, '20260824', 1))
 		);
 		$this->assertSame(
-			array(array('20260822', -3), array('20260824', -1), array('20260826', 1), array('20260828', 3)),
+			array(array('20260824', -1), array('20260826', 1)),
 			self::kurz(Archivindex::suche($liste, '20260825', 1))
+		);
+		$this->assertSame(
+			array(array('20260822', -3), array('20260824', -1), array('20260826', 1), array('20260828', 3)),
+			self::kurz(Archivindex::suche($liste, '20260825', 2))
+		);
+		$this->assertSame(
+			array(array('20260824', -1), array('20260826', 1)),
+			self::kurz(Archivindex::suche($liste, '20260825', 0))
 		);
 		$this->assertSame(
 			array(array('20260820', 0), array('20260822', 2), array('20260824', 4)),
