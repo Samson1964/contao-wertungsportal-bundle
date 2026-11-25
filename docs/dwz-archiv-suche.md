@@ -17,7 +17,8 @@ braucht keine Download-Elemente mehr. Es läuft unter Contao 4.13 und 5.7 mit de
 2. Unter *Themes → Module* ein Modul „DWZ-Archiv-Suche“ anlegen:
    - **Verband:** leer lassen („Auswahl anzeigen“), damit der Besucher wählt. Auf den Unterseiten
      der Landesverbände den Verband fest einstellen; dann verschwindet die Auswahl.
-   - **Nachbardateien:** so viele weitere Tage davor und danach zeigen (0 bis 10, Vorgabe 0).
+   - **Nachbardateien:** so viele Tage davor und danach zeigen (0 bis 10, Vorgabe 0). Bei 1 und
+     ohne Datei am gesuchten Tag: genau ein Tag davor und einer danach.
    - **Formate:** welche Formatgruppen angeboten werden. Ohne Auswahl werden alle angeboten.
    - **Neueste Dateien anzeigen:** unter dem Ergebnis die jüngsten Dateien je Format.
 3. Einen Hinweistext über dem Formular als Text-Element in den Artikel setzen.
@@ -92,9 +93,12 @@ Treffer da.
 - Genauer Tag vorhanden → diese Datei(en), Abstand „genau“.
 - Sonst der nächste Tag davor und der nächste danach, immer beide, auch bei gleichem Abstand.
   Vor dem ersten Bestand fehlt „davor“, nach dem letzten fehlt „danach“.
-- Mit Nachbardateien kommen auf jeder Seite n weitere Tage hinzu.
+- Nachbardateien = n Tage je Seite. Beim genauen Treffer kommen sie zum Tag hinzu. Ohne Treffer
+  zählt der nächste Tag mit: n Tage davor und n danach, mindestens je einer (bis 1.61.0 kamen dort
+  n + 1, weil der nächste Tag nicht mitzählte).
 - DeWIS und Wertungsportal stehen in einer Liste. Am 15.07.2026 findet die Suche deshalb DeWIS
-  vom 04.07. und Wertungsportal vom 24.07. Die Spalte „Quelle“ nennt die Herkunft.
+  vom 04.07. und Wertungsportal vom 24.07. Die Herkunft steht im Tooltip des Dateinamens (bis
+  1.61.0 als eigene Spalte „Quelle“).
 - Das Datum wird auf den Bestand des Verbands begrenzt (`min`/`max` des Datumsfelds). Sonst wiese
   der Browser das Formular morgens ab, bevor die Tagesdatei da ist.
 - Alle Werte kommen per GET (`?datum=JJJJ-MM-TT&verband=3&format=csv`), Ergebnisse sind
@@ -165,9 +169,17 @@ Vor dem Ersetzen der alten Seiten Stichproben gegen die Akkordeons vergleichen: 
   Attribute überliest. `getResponse()` hat keinen Parametertyp (4.13: `Template`, 5:
   `FragmentTemplate`).
 - Vorlage `src/Resources/views/dwz_archiv_suche.html.twig` (`@ContaoWertungsportal/…`), gerendert
-  mit `render()`. Felder, Knopf und Tabelle tragen Bootstrap-Klassen (Theme dsb2026), das Übrige
-  steht in `public/css/dwzarchiv.css`. Labels an allen Feldern, Ergebnisbereich mit `aria-live`.
-  Breite Tabellen scrollen auf dem Handy in ihrem `table-responsive`-Rahmen.
+  mit `render()`. Labels an allen Feldern, Ergebnisbereich mit `aria-live`.
+- **Gestaltung komplett in `public/css/dwzarchiv.css`** (ab 1.61.1). 1.61.0 setzte auf Bootstrap-
+  Klassen; das Theme auf schachbund.de lädt aber kein Bootstrap — das Datumsfeld blieb im
+  Browserstil, die Auswahllisten bekamen die grauen 60-px-Felder des Themes. Jede Regel beginnt mit
+  `.wp-dwzarchiv`, damit sie die allgemeinen Theme-Regeln für `select`, `table`, `th`, `td`
+  überstimmt (das Theme setzt u. a. `table { display: block }`). Farben als Variablen
+  `--wp-dwzarchiv-*` am Modul, ein anderes Theme stellt sie dort um.
+- **Eine Tabelle für alle Formate:** je Format ein `tbody` mit Kopfzeile, je Tag eine Zeile;
+  mehrere Dateien desselben Tags teilen sich Stand und Abstand (`rowspan`). Der genaue Treffer ist
+  hinterlegt. Unter 576 px rücken Abstand und Größe als kleine Zeile unter Stand bzw. Dateiname
+  (`.wp-dwzarchiv-schmal` statt `.wp-dwzarchiv-breit`), sonst scrollte die Tabelle seitwärts.
 - Texte in `languages/*/default.php` (`$GLOBALS['TL_LANG']['MSC']['wp_dwzarchiv']`).
 - **Twig im prod-Modus:** Eine geänderte Vorlage wirkt erst nach `cache:clear` (oder nach dem
   Löschen von `var/cache/prod/twig`).

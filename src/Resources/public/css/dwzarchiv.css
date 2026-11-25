@@ -1,42 +1,278 @@
-/* DWZ-Archiv-Suche (ab 1.61.0). Felder, Knopf und Tabelle tragen die
-   Bootstrap-Klassen des Themes; hier steht nur, was Bootstrap nicht regelt. */
+/* DWZ-Archiv-Suche (ab 1.61.0, eigene Gestaltung ab 1.61.1).
 
-.wp-dwzarchiv-felder {
+   Alles hier, ohne Bootstrap: Das Theme auf schachbund.de lädt keins, die
+   Bootstrap-Klassen aus 1.61.0 liefen ins Leere. Jede Regel beginnt mit
+   .wp-dwzarchiv, damit sie die allgemeinen Regeln des Themes für select, th
+   und td überstimmt. Farben nach dem Theme (Text, Petrol der Überschriften,
+   Linien); als Variablen hier, damit ein anderes Theme sie an einer Stelle
+   umstellen kann. Keine url() in Variablen (Chrome löst sie dort anders auf). */
+
+.wp-dwzarchiv {
+	--wp-dwzarchiv-text: #001821;
+	--wp-dwzarchiv-petrol: #004f6e;
+	--wp-dwzarchiv-petrol-dunkel: #003a52;
+	--wp-dwzarchiv-grau: #5d6d74;
+	--wp-dwzarchiv-linie: #dcdcdd;
+	--wp-dwzarchiv-rand: #b9c0c4;
+	--wp-dwzarchiv-flaeche: #f0f2f4;
+	--wp-dwzarchiv-hervor: #e6f6fb;
+	--wp-dwzarchiv-radius: 6px;
+	color: var(--wp-dwzarchiv-text);
+}
+
+/* --- Formular ---------------------------------------------------------- */
+
+.wp-dwzarchiv .wp-dwzarchiv-formular {
 	display: flex;
 	flex-wrap: wrap;
-	gap: .75rem 1rem;
 	align-items: flex-end;
-	margin-bottom: 1rem;
+	gap: 16px 20px;
+	margin: 0 0 24px;
+	padding: 20px;
+	background: var(--wp-dwzarchiv-flaeche);
+	border-radius: var(--wp-dwzarchiv-radius);
 }
 
-.wp-dwzarchiv-feld {
-	flex: 0 1 auto;
-	min-width: 10rem;
+.wp-dwzarchiv .wp-dwzarchiv-feld {
+	flex: 1 1 200px;
+	min-width: 0;
+	margin: 0;
 }
 
-.wp-dwzarchiv-kopf {
-	font-weight: bold;
-	margin: 1rem 0 .5rem;
+.wp-dwzarchiv .wp-dwzarchiv-feld--datum {
+	flex: 0 1 190px;
 }
 
-.wp-dwzarchiv-tabelle caption {
-	caption-side: top;
-	font-weight: bold;
+.wp-dwzarchiv .wp-dwzarchiv-feld--verband {
+	flex: 2 1 280px;
 }
 
-/* Dateinamen nicht am Bindestrich trennen; zu breite Tabellen scrollen in
-   ihrem .table-responsive-Rahmen */
-.wp-dwzarchiv-tabelle th,
-.wp-dwzarchiv-tabelle td {
+.wp-dwzarchiv .wp-dwzarchiv-feld--knopf {
+	flex: 0 0 auto;
+}
+
+.wp-dwzarchiv .wp-dwzarchiv-feld label {
+	display: block;
+	margin: 0 0 6px;
+	color: var(--wp-dwzarchiv-petrol);
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1.3;
+}
+
+.wp-dwzarchiv .wp-dwzarchiv-eingabe {
+	display: block;
+	box-sizing: border-box;
+	width: 100%;
+	height: 44px;
+	margin: 0;
+	padding: 0 12px;
+	border: 1px solid var(--wp-dwzarchiv-rand);
+	border-radius: var(--wp-dwzarchiv-radius);
+	background-color: #fff;
+	box-shadow: none;
+	color: var(--wp-dwzarchiv-text);
+	font: inherit;
+	font-size: 15px;
+	line-height: 42px;
+}
+
+/* Eigener Pfeil, damit alle Browser gleich aussehen; Platz rechts dafür */
+.wp-dwzarchiv .wp-dwzarchiv-auswahl {
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+	padding-right: 36px;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23004f6e' stroke-width='2'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 12px center;
+	background-size: 12px 8px;
+	text-overflow: ellipsis;
+}
+
+.wp-dwzarchiv .wp-dwzarchiv-eingabe:hover {
+	border-color: var(--wp-dwzarchiv-petrol);
+}
+
+.wp-dwzarchiv .wp-dwzarchiv-eingabe:focus-visible,
+.wp-dwzarchiv .wp-dwzarchiv-knopf:focus-visible {
+	outline: 2px solid var(--wp-dwzarchiv-petrol);
+	outline-offset: 2px;
+}
+
+.wp-dwzarchiv .wp-dwzarchiv-knopf {
+	display: block;
+	box-sizing: border-box;
+	height: 44px;
+	margin: 0;
+	padding: 0 22px;
+	border: 0;
+	border-radius: var(--wp-dwzarchiv-radius);
+	background: var(--wp-dwzarchiv-petrol);
+	color: #fff;
+	font: inherit;
+	font-size: 15px;
+	font-weight: 700;
+	line-height: 44px;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.wp-dwzarchiv .wp-dwzarchiv-knopf:hover {
+	background: var(--wp-dwzarchiv-petrol-dunkel);
+}
+
+/* --- Ergebnis ---------------------------------------------------------- */
+
+.wp-dwzarchiv .wp-dwzarchiv-kopf {
+	margin: 0 0 10px;
+	color: var(--wp-dwzarchiv-petrol);
+	font-size: 18px;
+	font-weight: 700;
+	line-height: 1.35;
+}
+
+.wp-dwzarchiv .wp-dwzarchiv-ergebnis,
+.wp-dwzarchiv .wp-dwzarchiv-neueste {
+	margin-bottom: 28px;
+}
+
+/* Zu breite Tabellen scrollen in diesem Rahmen, nicht die Seite */
+.wp-dwzarchiv .wp-dwzarchiv-rahmen {
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+/* display: table gegen die Theme-Regel table { display: block } */
+.wp-dwzarchiv .wp-dwzarchiv-tabelle {
+	display: table;
+	width: auto;
+	margin: 0;
+	overflow: visible;
+	border-collapse: collapse;
+	border-spacing: 0;
+	font-size: 15px;
+	line-height: 1.4;
+}
+
+.wp-dwzarchiv .wp-dwzarchiv-tabelle th,
+.wp-dwzarchiv .wp-dwzarchiv-tabelle td {
+	padding: 8px 12px;
+	border: 0;
+	background: none;
+	color: var(--wp-dwzarchiv-text);
+	font-size: inherit;
+	font-weight: 400;
+	line-height: inherit;
+	text-align: left;
+	text-transform: none;
+	vertical-align: top;
 	white-space: nowrap;
 }
 
-.wp-dwzarchiv-tabelle .wp-dwzarchiv-groesse {
-	text-align: right;
+.wp-dwzarchiv .wp-dwzarchiv-tabelle thead th {
+	padding-top: 0;
+	padding-bottom: 6px;
+	border-bottom: 2px solid var(--wp-dwzarchiv-petrol);
+	color: var(--wp-dwzarchiv-grau);
+	font-size: 13px;
+	font-weight: 700;
 }
 
+/* Kopfzeile je Format */
+.wp-dwzarchiv .wp-dwzarchiv-tabelle .wp-dwzarchiv-gruppe th {
+	padding: 18px 12px 6px;
+	border-bottom: 1px solid var(--wp-dwzarchiv-linie);
+	color: var(--wp-dwzarchiv-petrol);
+	font-size: 15px;
+	font-weight: 700;
+}
+
+.wp-dwzarchiv .wp-dwzarchiv-tabelle tbody:first-of-type .wp-dwzarchiv-gruppe th {
+	padding-top: 12px;
+}
+
+/* Linie nur zwischen Tagen, nicht zwischen Dateien desselben Tags */
+.wp-dwzarchiv .wp-dwzarchiv-tabelle tr.wp-dwzarchiv-tag + tr.wp-dwzarchiv-tag > td,
+.wp-dwzarchiv .wp-dwzarchiv-tabelle tr.wp-dwzarchiv-weitere + tr.wp-dwzarchiv-tag > td {
+	border-top: 1px solid var(--wp-dwzarchiv-linie);
+}
+
+.wp-dwzarchiv .wp-dwzarchiv-tabelle tr.wp-dwzarchiv-weitere > td {
+	padding-top: 0;
+}
+
+.wp-dwzarchiv .wp-dwzarchiv-tabelle .wp-dwzarchiv-abstand {
+	color: var(--wp-dwzarchiv-grau);
+}
+
+/* Genauer Treffer: leicht hinterlegt */
+.wp-dwzarchiv .wp-dwzarchiv-tabelle tr.wp-dwzarchiv-genau > td {
+	background: var(--wp-dwzarchiv-hervor);
+}
+
+.wp-dwzarchiv .wp-dwzarchiv-tabelle .wp-dwzarchiv-genau .wp-dwzarchiv-abstand {
+	color: var(--wp-dwzarchiv-petrol);
+	font-weight: 700;
+}
+
+.wp-dwzarchiv .wp-dwzarchiv-tabelle td a {
+	color: var(--wp-dwzarchiv-petrol);
+	font-weight: 700;
+	text-decoration: none;
+}
+
+.wp-dwzarchiv .wp-dwzarchiv-tabelle td a:hover,
+.wp-dwzarchiv .wp-dwzarchiv-tabelle td a:focus-visible {
+	text-decoration: underline;
+}
+
+.wp-dwzarchiv .wp-dwzarchiv-tabelle .wp-dwzarchiv-groesse {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+/* Zusätze für schmale Fenster, auf breiten ausgeblendet */
+.wp-dwzarchiv .wp-dwzarchiv-schmal {
+	display: none;
+}
+
+/* --- Handy ------------------------------------------------------------- */
+
 @media (max-width: 575px) {
-	.wp-dwzarchiv-feld {
+	.wp-dwzarchiv .wp-dwzarchiv-formular {
+		padding: 16px;
+	}
+
+	.wp-dwzarchiv .wp-dwzarchiv-feld,
+	.wp-dwzarchiv .wp-dwzarchiv-feld--datum,
+	.wp-dwzarchiv .wp-dwzarchiv-feld--verband,
+	.wp-dwzarchiv .wp-dwzarchiv-feld--knopf {
 		flex: 1 1 100%;
+	}
+
+	.wp-dwzarchiv .wp-dwzarchiv-knopf {
+		width: 100%;
+	}
+
+	.wp-dwzarchiv .wp-dwzarchiv-tabelle {
+		font-size: 14px;
+	}
+
+	.wp-dwzarchiv .wp-dwzarchiv-tabelle .wp-dwzarchiv-breit {
+		display: none;
+	}
+
+	.wp-dwzarchiv .wp-dwzarchiv-tabelle .wp-dwzarchiv-schmal {
+		display: block;
+		color: var(--wp-dwzarchiv-grau);
+		font-size: 13px;
+		font-weight: 400;
+	}
+
+	.wp-dwzarchiv .wp-dwzarchiv-tabelle th,
+	.wp-dwzarchiv .wp-dwzarchiv-tabelle td {
+		padding-right: 8px;
+		padding-left: 8px;
 	}
 }
