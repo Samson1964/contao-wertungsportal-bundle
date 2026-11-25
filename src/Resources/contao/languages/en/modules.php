@@ -34,3 +34,6 @@ $GLOBALS['TL_LANG']['MOD']['wp-altcodes'] = array('Old tournament codes', 'Tourn
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_referenten'] = array('Rating officers','The rating officers of the associations as a hierarchy, with address and protected e-mail');
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_referentenbaum'] = array('Rating officers (tree)','Associations as a nested list (without DSB) with code and name; per officer first and last name and e-mail');
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_referententabelle'] = array('Rating officers (table)','Associations in order of their code with their published rating officers: name, office e-mail and contact data from the address book');
+
+// DWZ archive search (since 1.61.0)
+$GLOBALS['TL_LANG']['FMD']['wertungsportal_dwzarchiv'] = array('DWZ archive search', 'Dated DWZ files from the archive folders by date, federation and format');

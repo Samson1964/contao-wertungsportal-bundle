@@ -1,3 +1,11 @@
+# Basisordner der DWZ-Archivsuche (ab 1.61.0), relativ zur Wurzel der
+# Installation. Reihenfolge = Vorrang bei gleichem Dateinamen. In der
+# config/config.yaml der Installation überschreibbar
+parameters:
+    wertungsportal.dwz_archiv.basisordner:
+        wertungsportal: files/wertungsportal/downloads
+        dewis: files/dewis
+
 services:
     # Öffentliche Schnittstelle für Vereinslisten (Route in routing.yml).
     # Muß öffentlich sein, damit der Router den Controller auflösen kann
@@ -115,6 +123,42 @@ services:
             - '@contao.framework'
         tags:
             - { name: console.command, command: 'wertungsportal:turniercodes' }
+
+    # DWZ-Archivsuche (ab 1.61.0): Verzeichnis der datierten Dateien unter den
+    # Basisordnern, je Verband im Pool cache.app (docs/dwz-archiv-suche.md)
+    Schachbulle\ContaoWertungsportalBundle\DwzArchiv\Archivindex:
+        arguments:
+            - '%kernel.project_dir%'
+            - '%wertungsportal.dwz_archiv.basisordner%'
+            - '@cache.app'
+            - '@?logger'
+
+    # Frontend-Modul „DWZ-Archiv-Suche“. Fragment-Controller statt FE_MOD,
+    # weil es den Weg über FE_MOD in Contao 5 nicht mehr gibt. Das Tag
+    # ersetzt #[AsFrontendModule] (ohne Autoconfigure wirkungslos);
+    # container.service_subscriber gibt dem AbstractController seine Dienste
+    # (twig, router)
+    Schachbulle\ContaoWertungsportalBundle\Controller\FrontendModule\DwzArchivSucheController:
+        arguments:
+            - '@Schachbulle\ContaoWertungsportalBundle\DwzArchiv\Archivindex'
+        tags:
+            - { name: contao.frontend_module, category: wertungsportal, type: wertungsportal_dwzarchiv }
+            - { name: container.service_subscriber }
+
+    # Auslieferung der Archivdateien (Route in routing.yml). Öffentlich, damit
+    # der Router den Controller auflösen kann
+    Schachbulle\ContaoWertungsportalBundle\Controller\DwzArchivDownloadController:
+        public: true
+        arguments:
+            - '@Schachbulle\ContaoWertungsportalBundle\DwzArchiv\Archivindex'
+
+    # Baut den Index der DWZ-Archivsuche auf und zeigt den Bestand:
+    # wertungsportal:dwz-archiv
+    Schachbulle\ContaoWertungsportalBundle\Command\DwzArchivCommand:
+        arguments:
+            - '@Schachbulle\ContaoWertungsportalBundle\DwzArchiv\Archivindex'
+        tags:
+            - { name: console.command, command: 'wertungsportal:dwz-archiv' }
 
     # Füllt die Suchalias-Felder des Bestands beim contao:migrate.
     # Ausdrücklich registriert, weil dieses Bundle ohne Autoconfigure arbeitet

@@ -37,3 +37,6 @@ $GLOBALS['TL_LANG']['MOD']['wp-altcodes'] = array('Alte Turniercodes', 'Turnierc
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_referenten'] = array('Wertungsreferenten','Die Wertungsreferenten der Verbände als Gliederung, mit Anschrift und geschützter E-Mail-Adresse');
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_referentenbaum'] = array('Wertungsreferenten (Baum)','Die Verbände als verschachtelte Liste (ohne DSB) mit Kennziffer und Namen, je Referent Vor- und Nachname und E-Mail-Adresse');
 $GLOBALS['TL_LANG']['FMD']['wertungsportal_referententabelle'] = array('Wertungsreferenten (Tabelle)','Die Verbände nach Kennziffer mit ihren veröffentlichten Referenten: Name, Funktions-E-Mail und Kontaktdaten aus der Adressverwaltung. Ohne Linkleiste, Überschrift aus dem Modul — Ersatz für das Modul der Adressverwaltung');
+
+// DWZ-Archiv-Suche (ab 1.61.0)
+$GLOBALS['TL_LANG']['FMD']['wertungsportal_dwzarchiv'] = array('DWZ-Archiv-Suche', 'Datierte DWZ-Dateien aus den Archivordnern nach Datum, Verband und Format');

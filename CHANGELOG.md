@@ -1,5 +1,20 @@
 # Wertungsportal Changelog
 
+## Version 1.61.0 (2026-11-25)
+
+* Add: **Frontend-Modul „DWZ-Archiv-Suche“** (`wertungsportal_dwzarchiv`): Datum, Verband und Format
+  wählen, angezeigt werden die Dateien zu diesem Tag, sonst die nächsten davor und danach mit dem
+  Abstand in Tagen. Liest `files/wertungsportal/downloads` und `files/dewis` direkt (ohne
+  Dateiverwaltung), neue Dateien erscheinen ohne Pflege. Verband fest einstellbar (Unterseiten der
+  Landesverbände), Formate wählbar, Nachbardateien, Block „Neueste Dateien“. Swiss-Chess in vier
+  Gruppen (bis 7, 8 und 9, 10.0 bis 10.02, ab 10.03). Fragment-Controller mit Twig-Vorlage, läuft
+  unter 4.13 und 5.7 (`docs/dwz-archiv-suche.md`)
+* Add: Auslieferung der Archivdateien über `/wertungsportal-api/dwz-archiv/…` — nur Dateien nach dem
+  Namensmuster innerhalb der Basisordner, sonst 404
+* Add: Konsolenbefehl `wertungsportal:dwz-archiv` — baut den Index auf und zeigt Bestand, Lücken und
+  unpassende Dateien. Nach dem Einspielen: `contao:migrate` (vier Spalten in `tl_module`),
+  `assets:install`, `cache:clear`
+
 ## Version 1.60.1 (2026-11-23)
 
 * Fix: Fassung für Swiss-Chess ab 10.03 — Zeichen außerhalb der bisherigen Codepage (Š, ý, ø, Ó …)
