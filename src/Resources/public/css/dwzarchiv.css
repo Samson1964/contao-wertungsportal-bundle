@@ -1,0 +1,42 @@
+/* DWZ-Archiv-Suche (ab 1.61.0). Felder, Knopf und Tabelle tragen die
+   Bootstrap-Klassen des Themes; hier steht nur, was Bootstrap nicht regelt. */
+
+.wp-dwzarchiv-felder {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .75rem 1rem;
+	align-items: flex-end;
+	margin-bottom: 1rem;
+}
+
+.wp-dwzarchiv-feld {
+	flex: 0 1 auto;
+	min-width: 10rem;
+}
+
+.wp-dwzarchiv-kopf {
+	font-weight: bold;
+	margin: 1rem 0 .5rem;
+}
+
+.wp-dwzarchiv-tabelle caption {
+	caption-side: top;
+	font-weight: bold;
+}
+
+/* Dateinamen nicht am Bindestrich trennen; zu breite Tabellen scrollen in
+   ihrem .table-responsive-Rahmen */
+.wp-dwzarchiv-tabelle th,
+.wp-dwzarchiv-tabelle td {
+	white-space: nowrap;
+}
+
+.wp-dwzarchiv-tabelle .wp-dwzarchiv-groesse {
+	text-align: right;
+}
+
+@media (max-width: 575px) {
+	.wp-dwzarchiv-feld {
+		flex: 1 1 100%;
+	}
+}

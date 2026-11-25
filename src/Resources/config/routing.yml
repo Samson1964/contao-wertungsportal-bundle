@@ -42,3 +42,14 @@ wertungsportal_archivreklamation:
         _controller: Schachbulle\ContaoWertungsportalBundle\Controller\ArchivreklamationController
         _scope: frontend
         _token_check: true
+
+# Auslieferung der Dateien der DWZ-Archivsuche (ab 1.61.0). Ohne Contao-Bereich:
+# Der Controller braucht weder Anmeldung noch Framework. Welche Pfade zu einer
+# Datei führen, prüft Archivindex::aufloesen(), alles andere ergibt 404
+wertungsportal_dwzarchiv_download:
+    path: /wertungsportal-api/dwz-archiv/{pfad}
+    methods: [GET, HEAD]
+    requirements:
+        pfad: .+
+    defaults:
+        _controller: Schachbulle\ContaoWertungsportalBundle\Controller\DwzArchivDownloadController

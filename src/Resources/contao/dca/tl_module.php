@@ -143,3 +143,59 @@ $GLOBALS['TL_DCA']['tl_module']['fields']['wertungsportal_ohneNavigation'] = arr
 	),
 	'sql'                                => "char(1) NOT NULL default ''",
 );
+
+/**
+ * DWZ-Archiv-Suche (ab 1.61.0, Fragment-Controller DwzArchivSucheController).
+ * Ein Hinweistext über dem Formular steht als Text-Element im Artikel.
+ */
+$GLOBALS['TL_DCA']['tl_module']['palettes']['wertungsportal_dwzarchiv'] = '{title_legend},name,headline,type;{wertungsportal_dwzarchiv_legend},wertungsportal_dwzarchiv_verband,wertungsportal_dwzarchiv_nachbarn,wertungsportal_dwzarchiv_formate,wertungsportal_dwzarchiv_neueste;{protected_legend:hide},protected;{expert_legend:hide},cssID';
+
+// Fester Verband (Unterseiten der Landesverbände) oder leer = Auswahl im
+// Formular. Die Namen kommen aus API::landesverbaende(), siehe
+// DwzArchivSucheController::verbandsnamen()
+$GLOBALS['TL_DCA']['tl_module']['fields']['wertungsportal_dwzarchiv_verband'] = array
+(
+	'label'                              => &$GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_verband'],
+	'exclude'                            => true,
+	'inputType'                          => 'select',
+	'options'                            => \Schachbulle\ContaoWertungsportalBundle\Controller\FrontendModule\DwzArchivSucheController::verbandsnamen(),
+	'eval'                               => array
+	(
+		// Codes 0–9 sind in PHP Ganzzahlschlüssel; die Schlüssel sind trotzdem die Werte
+		'isAssociative'                  => true,
+		'includeBlankOption'             => true,
+		'blankOptionLabel'               => &$GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_auswahl'],
+		'tl_class'                       => 'w50',
+	),
+	'sql'                                => "varchar(1) NOT NULL default ''",
+);
+
+$GLOBALS['TL_DCA']['tl_module']['fields']['wertungsportal_dwzarchiv_nachbarn'] = array
+(
+	'label'                              => &$GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_nachbarn'],
+	'exclude'                            => true,
+	'inputType'                          => 'text',
+	'eval'                               => array('rgxp' => 'natural', 'maxlength' => 2, 'tl_class' => 'w50'),
+	'sql'                                => "smallint(5) unsigned NOT NULL default 0",
+);
+
+// Angebotene Formatgruppen; keine Auswahl = alle
+$GLOBALS['TL_DCA']['tl_module']['fields']['wertungsportal_dwzarchiv_formate'] = array
+(
+	'label'                              => &$GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_formate'],
+	'exclude'                            => true,
+	'inputType'                          => 'checkbox',
+	'options'                            => \Schachbulle\ContaoWertungsportalBundle\DwzArchiv\Archivindex::GRUPPEN,
+	'reference'                          => &$GLOBALS['TL_LANG']['MSC']['wp_dwzarchiv']['gruppen'],
+	'eval'                               => array('multiple' => true, 'tl_class' => 'clr'),
+	'sql'                                => 'blob NULL',
+);
+
+$GLOBALS['TL_DCA']['tl_module']['fields']['wertungsportal_dwzarchiv_neueste'] = array
+(
+	'label'                              => &$GLOBALS['TL_LANG']['tl_module']['wertungsportal_dwzarchiv_neueste'],
+	'exclude'                            => true,
+	'inputType'                          => 'checkbox',
+	'eval'                               => array('tl_class' => 'clr', 'isBoolean' => true),
+	'sql'                                => "char(1) NOT NULL default ''",
+);

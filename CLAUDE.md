@@ -659,6 +659,28 @@ fehlten gegenüber dem Bestand; `clubs?vkz=10100` → leere Liste, HTTP 200.
 - In beiden Testinstallationen nur die Tabelle angelegt (NICHT `contao:migrate`: will dort fremde
   Tabellen wie tl_digiviewer löschen). contao-test-413: voller Import; contao-test (5.7): 100 Zeilen.
 
+## DWZ-Archiv-Suche (ab 1.61.0)
+
+Doku `docs/dwz-archiv-suche.md`. Frontend-Modul `wertungsportal_dwzarchiv` ersetzt die Akkordeon-Seiten mit
+Download-Elementen auf schachbund.de. Auftrag: `F:\Nextcloud\cloud.frankhoppeberlin.de\Scans\CLAUDE.md` (25.11.2026).
+
+- **Erstes Modul als Fragment-Controller** (`Controller/FrontendModule/DwzArchivSucheController`), nicht in
+  `FE_MOD`. Registriert über das Tag `contao.frontend_module` + `container.service_subscriber` in services.yml —
+  `#[AsFrontendModule]` wirkt ohne Autoconfigure nicht. `getResponse($template, …)` OHNE Parametertyp (4.13
+  `Template`, 5 `FragmentTemplate`), Rückgabe `Response`. Unter 4.13 ist `contao.fragment.registry` privat; der
+  Controller heißt dort `contao.fragment._contao.frontend_module.wertungsportal_dwzarchiv`.
+- **Erste Twig-Vorlage des Bundles:** `src/Resources/views/` = `@ContaoWertungsportal/…`. Im prod-Modus wirkt
+  eine Änderung erst nach `cache:clear` bzw. Löschen von `var/cache/prod/twig`.
+- `DwzArchiv\Archivindex` ist ohne Contao prüfbar; deshalb `scandir()` statt Symfony Finder (Tests ohne
+  Composer-Autoloader). Cache je Verband in `cache.app`, Schlüssel mit Fingerabdruck der Ordnerzeiten —
+  Converter/Swiss-Chess löschen nichts (Frank, 25.11.2026). Swiss-Chess in VIER Gruppen (Frank, 25.11.2026).
+- Verbandscodes 0–9, A–H, L (DBSB), M (Schwalbe) wie im Downloader; Namen aus `API::landesverbaende()`.
+  In PHP sind 0–9 Ganzzahlschlüssel → in der DCA `isAssociative`, im Controller immer als Zeichenkette vergleichen.
+- Download nur über `Archivindex::aufloesen()` (genau `<quelle>/<JJJJ>/<ordner>/<name>`, realpath im Basisordner).
+- Prüfstand: künstlicher Bestand (133.364 Dateien, Erzeuger `dwzarchiv_bestand.php` im Scratchpad-Muster), per
+  Junction als `files/wertungsportal` und `files/dewis` in beide Testinstallationen; Modul über den Dienst
+  rendern (`ModuleModel::setRow()`), Download über `$kernel->handle()`. Junctions danach wieder entfernen.
+
 ## Fallstricke / Besonderheiten
 
 - **Überschrift und Linkleiste der Suchmodule (ab 1.50.0):** Spieler, Verein, Verband und Turnier
